@@ -1,0 +1,15 @@
+# {{.Name}} ({{.Type}})
+
+{{- if len (.Description | trimspace) }}
+{{ .Description | trimspace }}
+{{- end }}
+
+
+
+{{ if .HasExample -}}
+## 样例
+
+{{tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}

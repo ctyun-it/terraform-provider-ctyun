@@ -1,0 +1,25 @@
+# {{.Name}} ({{.Type}})
+
+{{- if len (.Description | trimspace) }}
+{{ .Description | trimspace }}
+{{- end }}
+
+
+
+{{ if .HasExample -}}
+## 样例
+
+{{tffile .ExampleFile }}
+{{- end }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+
+
+{{- if .HasImport }}
+## 导入
+
+使用以下语法支持导入：
+
+{{codefile "shell" .ImportFile }}
+{{- end }}
