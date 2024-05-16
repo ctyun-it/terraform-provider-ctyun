@@ -8,7 +8,7 @@
 terraform {
   required_providers {
     ctyun = {
-      source = "www.ctyun.cn/ctyun/ctyun"
+      source = "ctyun-it/ctyun"
     }
   }
 }

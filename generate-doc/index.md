@@ -22,46 +22,6 @@
 
 
 
-##  安装说明
-
-- linux系统的安装
-  1. 把terraform-provider-ctyun放置在某个目录中，如`/opt/terraform`
-  2. 修改`~/.terraformrc`文件，并添加下面内容
-
-```
-provider_installation {
-
-  dev_overrides {
-      "www.ctyun.cn/ctyun/ctyun"="/opt/terraform/"
-  }
-
-  # For all other providers, install them directly from their origin provider
-  # registries as normal. If you omit this, Terraform will _only_ use
-  # the dev_overrides block, and so no other providers will be available.
-  direct {}
-}
-```
-
-- windows系统的安装
-  1. 把terraform-provider-ctyun放置在某个目录中，如`D:/Go/gobin`
-  2. 修改`C:/Users/你的用户名/AppData/Roaming/terraform.rc`文件，并添加下面内容
-
-```
-provider_installation {
-
-  dev_overrides {
-      "www.ctyun.cn/ctyun/ctyun"="D:/Go/gobin/"
-  }
-
-  # For all other providers, install them directly from their origin provider
-  # registries as normal. If you omit this, Terraform will _only_ use
-  # the dev_overrides block, and so no other providers will be available.
-  direct {}
-}
-```
-
-
-
 ## 安装验证
 
 - 新建目录，建立main.tf文件，并且输入下面内容
@@ -70,7 +30,7 @@ provider_installation {
 terraform {
   required_providers {
     ctyun = {
-      source = "www.ctyun.cn/ctyun/ctyun"
+      source = "ctyun-it/ctyun"
     }
   }
 }
@@ -84,21 +44,30 @@ provider "ctyun" {
 }
 ```
 
-- 执行`terraform plan`命令，若出现下面内容则说明安装成功
+- 执行`terraform init`命令查看是否成功
 
-```
-terraform plan
-╷
-│ Warning: Provider development overrides are in effect
-│
-│ The following provider development overrides are set in the CLI configuration:
-│  - www.ctyun.cn/ctyun/ctyun in D:\Go\gobin
-│
-│ The behavior may therefore not match any released version of the provider and applying changes may cause the state to become incompatible with published releases.
-╵
 
-No changes. Your infrastructure matches the configuration.
-```
+
+## 开发调试指南
+
+- 在`C:\Users\用户名\AppData\Roaming`目录中新建terraform.rc
+
+- 在文件中写入
+
+  ```
+  provider_installation {
+
+    dev_overrides {
+        "ctyun-it/ctyun"="D:/Go/gobin/"
+    }
+
+    # For all other providers, install them directly from their origin provider
+    # registries as normal. If you omit this, Terraform will _only_ use
+    # the dev_overrides block, and so no other providers will be available.
+    direct {}
+  }
+  ```
+
 
 
 ## 最佳实践&建议配置
@@ -149,7 +118,7 @@ No changes. Your infrastructure matches the configuration.
 terraform {
   required_providers {
     ctyun = {
-      source = "www.ctyun.cn/ctyun/ctyun"
+      source = "ctyun-it/ctyun"
     }
   }
 }
