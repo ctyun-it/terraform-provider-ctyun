@@ -3,12 +3,6 @@ module terraform-provider-ctyun
 go 1.21
 
 require (
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-core v1.0.2
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctebs v1.0.2
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs v1.0.2
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctiam v1.0.2
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctimage v1.0.2
-	github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctvpc v1.0.2
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/terraform-plugin-framework v1.4.2
 	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0

@@ -2,7 +2,6 @@ package resource
 
 import (
 	"context"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	terraform_extend "terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "terraform-provider-ctyun/internal/extend/terraform/defaults"
 )

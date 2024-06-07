@@ -3,8 +3,8 @@ package business
 import (
 	"context"
 	"fmt"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 )
 
 type EcsService struct {

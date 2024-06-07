@@ -1,13 +1,13 @@
 package common
 
 import (
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-core"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctebs"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctiam"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctimage"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctvpc"
 	"sync"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 )
 
 var once sync.Once

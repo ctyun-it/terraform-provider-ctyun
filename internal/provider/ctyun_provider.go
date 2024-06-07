@@ -3,12 +3,6 @@ package provider
 import (
 	"context"
 	"errors"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-core"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctebs"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctiam"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctimage"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctvpc"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -23,6 +17,12 @@ import (
 	"slices"
 	"strings"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	dataSource2 "terraform-provider-ctyun/internal/datasource"
 	sdk_extend "terraform-provider-ctyun/internal/extend/sdk"
 	terraform_extend "terraform-provider-ctyun/internal/extend/terraform"
@@ -172,15 +172,18 @@ func (c *CtyunProvider) Configure(ctx context.Context, req provider.ConfigureReq
 			return
 		}
 	}
-	environment := ctyunsdk.Environment(env)
+
+	// 默认环境为prod
 	if env == "" {
-		// 默认环境为prod
 		env = ctyunsdk.EnvironmentProd
-	} else if !slices.Contains(ctyunsdk.Environments, environment) {
+	}
+
+	environment := ctyunsdk.Environment(env)
+	if !slices.Contains(ctyunsdk.Environments, environment) {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("env"),
 			"env配置错误",
-			"env配置错误",
+			"env配置错误，可选：prod、test",
 		)
 		return
 	}

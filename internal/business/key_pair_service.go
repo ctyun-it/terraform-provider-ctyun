@@ -3,8 +3,8 @@ package business
 import (
 	"context"
 	"errors"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 )
 
 type KeyPairService struct {

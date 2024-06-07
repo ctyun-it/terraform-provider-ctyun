@@ -3,8 +3,6 @@ package resource
 import (
 	"context"
 	"errors"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctimage"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -19,8 +17,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strconv"
 	"terraform-provider-ctyun/internal/business"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	defaults2 "terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "terraform-provider-ctyun/internal/extend/terraform/validator"
 	"terraform-provider-ctyun/internal/utils"
@@ -187,6 +188,19 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"system_disk_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "系统盘的id",
+			},
+			"user_data": schema.StringAttribute{
+				Optional:    true,
+				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符。注：非多可用区类型资源池暂不支持该参数",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(1, 16384),
+				},
+			},
+			"monitor_service": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，false：不开启，true：开启。若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持",
+				Default:     booldefault.StaticBool(true),
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
@@ -486,7 +500,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 				IsMaster: true,
 			},
 		},
-		SecGroupList: sgIds,
+		SecGroupList:   sgIds,
+		UserData:       plan.UserData.ValueString(),
+		MonitorService: plan.MonitorService.ValueBool(),
 	})
 	if err2 != nil {
 		return err2
@@ -1054,8 +1070,14 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	if err != nil {
 		return nil, err
 	}
-	if len(ecsVolumeResponse.Results) != 1 {
-		return nil, errors.New("查询系统盘信息发生错误")
+	var vs []ctecs.EcsVolumeListResultsResponse
+	for _, v := range ecsVolumeResponse.Results {
+		if v.DiskType == "系统盘" {
+			vs = append(vs, v)
+		}
+	}
+	if len(vs) != 1 {
+		return nil, errors.New("查询系统盘信息发生错误，查询到系统盘数量" + strconv.Itoa(len(vs)))
 	}
 	result := ecsVolumeResponse.Results[0]
 	diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
@@ -1065,6 +1087,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.SystemDiskType = types.StringValue(diskType.(string))
 	cfg.SystemDiskSize = types.Int64Value(int64(result.DiskSize))
 	cfg.SystemDiskId = types.StringValue(result.DiskId)
+
 	return &cfg, nil
 }
 
@@ -1186,6 +1209,8 @@ type CtyunEcsConfig struct {
 	Status                 types.String `tfsdk:"status"`
 	ExpireTime             types.String `tfsdk:"expire_time"`
 	SystemDiskId           types.String `tfsdk:"system_disk_id"`
+	UserData               types.String `tfsdk:"user_data"`
+	MonitorService         types.Bool   `tfsdk:"monitor_service"`
 	MasterOrderId          types.String `tfsdk:"master_order_id"`
 	ProjectId              types.String `tfsdk:"project_id"`
 	RegionId               types.String `tfsdk:"region_id"`

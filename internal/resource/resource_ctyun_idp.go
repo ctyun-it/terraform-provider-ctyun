@@ -2,7 +2,6 @@ package resource
 
 import (
 	"context"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctiam"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -14,6 +13,7 @@ import (
 	"strconv"
 	"terraform-provider-ctyun/internal/business"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 	terraform_extend "terraform-provider-ctyun/internal/extend/terraform"
 )
 

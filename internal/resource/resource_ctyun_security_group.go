@@ -2,7 +2,6 @@ package resource
 
 import (
 	"context"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctvpc"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -15,6 +14,7 @@ import (
 	"regexp"
 	"terraform-provider-ctyun/internal/business"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "terraform-provider-ctyun/internal/extend/terraform/defaults"
 )

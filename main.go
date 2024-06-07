@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	version = "1.0.2"
+	version = "1.0.3"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "www.ctyun.cn/ctyun/ctyun",
+		Address: "www.ctyun.cn/ctyun-it/ctyun",
 		Debug:   debug,
 	}
 

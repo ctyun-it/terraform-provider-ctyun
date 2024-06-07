@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-core"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctebs"
 	"github.com/google/uuid"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 )
 
 type EbsService struct {

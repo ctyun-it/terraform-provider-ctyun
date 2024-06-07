@@ -3,9 +3,9 @@ package business
 import (
 	"context"
 	"errors"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-core"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctecs"
 	"strconv"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"time"
 )
 

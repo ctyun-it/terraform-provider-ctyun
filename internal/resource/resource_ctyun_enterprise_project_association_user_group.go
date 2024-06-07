@@ -3,7 +3,6 @@ package resource
 import (
 	"context"
 	"errors"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctiam"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +15,7 @@ import (
 	"sync"
 	"terraform-provider-ctyun/internal/business"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 )
 
 func NewCtyunEnterpriseProjectAssociationUserGroup() resource.Resource {

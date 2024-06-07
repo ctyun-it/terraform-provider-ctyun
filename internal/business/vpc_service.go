@@ -3,9 +3,9 @@ package business
 import (
 	"context"
 	"fmt"
-	"github.com/ctyun-it/ctyun-sdk-go/ctyun-sdk-endpoint/ctvpc"
 	"github.com/google/uuid"
 	"terraform-provider-ctyun/internal/common"
+	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 )
 
 type VpcService struct {
