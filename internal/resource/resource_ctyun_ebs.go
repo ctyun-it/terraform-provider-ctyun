@@ -206,7 +206,7 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		masterOrderId = resp.MasterOrderId
 	} else {
 		// 判断返回信息是否需要轮询
-		if err2.ErrorCode() != common.OpenapiOrderInprogress {
+		if err2.ErrorCode() != common.EbsOrderInProgress {
 			response.Diagnostics.AddError(err2.Error(), err2.Error())
 			return
 		}

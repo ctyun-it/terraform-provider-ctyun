@@ -189,19 +189,20 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "系统盘的id",
 			},
-			"user_data": schema.StringAttribute{
-				Optional:    true,
-				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符。注：非多可用区类型资源池暂不支持该参数",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthBetween(1, 16384),
-				},
-			},
-			"monitor_service": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，false：不开启，true：开启。若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持",
-				Default:     booldefault.StaticBool(true),
-			},
+			// "user_data": schema.StringAttribute{
+			// 	Optional:    true,
+			// 	Computed:    true,
+			// 	Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符。注：非多可用区类型资源池暂不支持该参数",
+			// 	Validators: []validator.String{
+			// 		stringvalidator.UTF8LengthBetween(1, 16384),
+			// 	},
+			// },
+			// "monitor_service": schema.BoolAttribute{
+			// 	Optional:    true,
+			// 	Computed:    true,
+			// 	Description: "监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，false：不开启，true：开启。若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持",
+			// 	Default:     booldefault.StaticBool(true),
+			// },
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
@@ -500,9 +501,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 				IsMaster: true,
 			},
 		},
-		SecGroupList:   sgIds,
-		UserData:       plan.UserData.ValueString(),
-		MonitorService: plan.MonitorService.ValueBool(),
+		SecGroupList: sgIds,
+		// UserData:       plan.UserData.ValueString(),
+		// MonitorService: plan.MonitorService.ValueBool(),
 	})
 	if err2 != nil {
 		return err2
@@ -1209,10 +1210,10 @@ type CtyunEcsConfig struct {
 	Status                 types.String `tfsdk:"status"`
 	ExpireTime             types.String `tfsdk:"expire_time"`
 	SystemDiskId           types.String `tfsdk:"system_disk_id"`
-	UserData               types.String `tfsdk:"user_data"`
-	MonitorService         types.Bool   `tfsdk:"monitor_service"`
-	MasterOrderId          types.String `tfsdk:"master_order_id"`
-	ProjectId              types.String `tfsdk:"project_id"`
-	RegionId               types.String `tfsdk:"region_id"`
-	AzName                 types.String `tfsdk:"az_name"`
+	// UserData               types.String `tfsdk:"user_data"`
+	// MonitorService         types.Bool   `tfsdk:"monitor_service"`
+	MasterOrderId types.String `tfsdk:"master_order_id"`
+	ProjectId     types.String `tfsdk:"project_id"`
+	RegionId      types.String `tfsdk:"region_id"`
+	AzName        types.String `tfsdk:"az_name"`
 }
