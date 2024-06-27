@@ -549,9 +549,17 @@ func (c *ctyunEcs) updateInstanceInfo(ctx context.Context, state CtyunEcsConfig,
 }
 
 // checkInstanceStatus 校验云主机状态必须为目标状态
-func (c *ctyunEcs) checkInstanceStatus(ctx context.Context, id string, regionId, targetStatus string) bool {
+func (c *ctyunEcs) checkInstanceStatus(ctx context.Context, id string, regionId string, targetStatus ...string) bool {
 	currentStatus, err := c.getInstanceStatus(ctx, id, regionId)
-	return err == nil && currentStatus == targetStatus
+	if err != nil {
+		return false
+	}
+	for _, status := range targetStatus {
+		if status == currentStatus {
+			return true
+		}
+	}
+	return false
 }
 
 // changePayType 变更付费模式
@@ -559,9 +567,9 @@ func (c *ctyunEcs) changePayType(ctx context.Context, state CtyunEcsConfig, plan
 	if plan.CycleType.Equal(state.CycleType) {
 		return nil
 	}
-	// 变更付费模式前必须为关机状态
-	if !c.checkInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString(), business.EcsStatusStopped) {
-		return errors.New("变更云主机付费模式，请先将云主机关机")
+	// 变更付费模式前必须为开机或者关机状态
+	if !c.checkInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString(), business.EcsStatusStopped, business.EcsStatusRunning) {
+		return errors.New("变更云主机付费模式，保证云主机状态处于运行中或关机状态")
 	}
 
 	cycleType := plan.CycleType.ValueString()
