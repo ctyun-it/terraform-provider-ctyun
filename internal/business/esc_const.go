@@ -11,6 +11,8 @@ const (
 	EcsStatusStarting      = "starting"
 	EcsStatusStopped       = "stopped"
 	EcsStatusStopping      = "stopping"
+	EcsStatusShelving      = "shelving"
+	EcsStatusShelve        = "shelve"
 	EcsStatusError         = "error"
 	EcsStatusSnapshotting  = "snapshotting"
 	EcsStatusUnsubscribed  = "unsubscribed"

@@ -178,8 +178,15 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "默认加入安全组id",
 			},
 			"status": schema.StringAttribute{
+				Optional:    true,
 				Computed:    true,
-				Description: "云主机状态，取值范围：backingup: 备份中，creating: 创建中，expired: 已到期，freezing: 冻结中，rebuild: 重装，restarting: 重启中，running: 运行中，starting: 开机中，stopped: 已关机，stopping: 关机中，error: 错误，snapshotting: 快照创建中，unsubscribed: 包周期已退订，unsubscribing: 包周期退订中",
+				Description: "云主机状态，取值范围：backingup: 备份中，creating: 创建中，expired: 已到期，freezing: 冻结中，rebuild: 重装，restarting: 重启中，running: 运行中，starting: 开机中，stopped: 已关机，stopping: 关机中，error: 错误，snapshotting: 快照创建中，unsubscribed: 包周期已退订，unsubscribing: 包周期退订中，shelve：节省关机，shelving：节省关机中",
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						business.EcsStatusRunning,
+						business.EcsStatusStopped,
+						business.EcsStatusShelve),
+				},
 			},
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
@@ -265,6 +272,9 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 
 	// 创建机器后默认为启动状态，可以直接绑定keypair，注意如果绑定失败了，这里不能抛出错误，因为实际的云主机已经创建出来了
 	_ = c.bindKeyPair(ctx, plan)
+
+	// 创建机器后状态默认为启动状态，可根据用户要求的状态，去执行对应的操作，比如关机、节省关机
+	_ = c.handleInstance(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), plan.Status.ValueString(), plan.Status.ValueString())
 
 	// 查询信息
 	instance, err := c.getAndMergeEcs(ctx, plan)
@@ -366,6 +376,13 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 		return
 	}
 
+	// 更新状态
+	err2 = c.handleInstance(ctx, state.Id.ValueString(), state.RegionId.ValueString(), state.Status.ValueString(), plan.Status.ValueString())
+	if err2 != nil {
+		response.Diagnostics.AddError(err2.Error(), err2.Error())
+		return
+	}
+
 	// 反查信息
 	instance, err2 := c.getAndMergeEcs(ctx, state)
 	if err2 != nil {
@@ -385,7 +402,7 @@ func (c *ctyunEcs) Delete(ctx context.Context, request resource.DeleteRequest, r
 		return
 	}
 
-	// 先关机，因为销毁是默认用户意识到资料销毁的动作，所以直接关机是ok的
+	// 先关机或者节省关机，因为销毁是默认用户意识到资料销毁的动作，所以直接关机是ok的
 	err := c.closeInstance(ctx, state.Id.ValueString(), state.RegionId.ValueString())
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
@@ -648,10 +665,18 @@ func (c *ctyunEcs) onDemandToCycle(ctx context.Context, id, regionId, cycleType 
 }
 
 // handleInstance 操作机器
-func (c *ctyunEcs) handleInstance(ctx context.Context, id, regionId, targetStatus string) error {
+func (c *ctyunEcs) handleInstance(ctx context.Context, id, regionId, currentStatus string, targetStatus string) error {
 	switch targetStatus {
 	case business.EcsStatusStopped:
+		if currentStatus == business.EcsStatusShelve {
+			return errors.New("机器当前状态为节省关机，不可执行关机操作，请检查实例状态")
+		}
 		return c.closeInstance(ctx, id, regionId)
+	case business.EcsStatusShelve:
+		if currentStatus == business.EcsStatusStopped {
+			return errors.New("机器当前状态为关机，不可执行节省关机操作，请检查实例状态")
+		}
+		return c.shelveInstance(ctx, id, regionId)
 	case business.EcsStatusRunning:
 		return c.startInstance(ctx, id, regionId)
 	}
@@ -666,6 +691,10 @@ func (c *ctyunEcs) closeInstance(ctx context.Context, id, regionId string) error
 	}
 	// 已经是关机的状态了
 	if currentStatus == business.EcsStatusStopped {
+		return nil
+	}
+	// 已经是节省关机状态
+	if currentStatus == business.EcsStatusShelve {
 		return nil
 	}
 	if currentStatus != business.EcsStatusRunning {
@@ -726,7 +755,7 @@ func (c *ctyunEcs) startInstance(ctx context.Context, id, regionId string) error
 	if currentStatus == business.EcsStatusRunning {
 		return nil
 	}
-	if currentStatus != business.EcsStatusStopped {
+	if (currentStatus != business.EcsStatusStopped) && (currentStatus != business.EcsStatusShelve) {
 		return errors.New("当前机器状态异常，请稍后重试或在控制台进行操作")
 	}
 
@@ -770,6 +799,67 @@ func (c *ctyunEcs) startInstance(ctx context.Context, id, regionId string) error
 
 	if !executeSuccessFlag {
 		return errors.New("执行开启ecs动作时，查询ecs状态异常")
+	}
+	return nil
+}
+
+// shelveInstance 节省关机
+func (c *ctyunEcs) shelveInstance(ctx context.Context, id, regionId string) error {
+	currentStatus, err := c.getInstanceStatus(ctx, id, regionId)
+	if err != nil {
+		return err
+	}
+	// 已经是节省关机的状态了
+	if currentStatus == business.EcsStatusShelve {
+		return nil
+	}
+	// 已经是关机的状态了
+	if currentStatus == business.EcsStatusStopped {
+		return nil
+	}
+	if currentStatus != business.EcsStatusRunning {
+		return errors.New("当前机器状态异常，请稍后重试或在控制台进行操作")
+	}
+
+	executeSuccessFlag := false
+	// 节省关机的情况
+	_, err2 := c.meta.Apis.CtEcsApis.EcsShelveInstanceApi.Do(ctx, c.meta.Credential, &ctecs.EcsShelveInstanceRequest{
+		RegionID:   regionId,
+		InstanceID: id,
+	})
+	if err2 != nil {
+		// 已经是开机的情况，直接返回
+		if err2.ErrorCode() == common.EcsInstanceStatusNotRunning {
+			return nil
+		}
+		return err2
+	}
+
+	// 轮询节省关机状态
+	retryer, _ := business.NewRetryer(time.Second*5, 20)
+	retryer.Start(
+		func(currentTime int) bool {
+			status, err3 := c.getInstanceStatus(ctx, id, regionId)
+			if err3 != nil {
+				return false
+			}
+			switch status {
+			case business.EcsStatusShelving:
+				// 执行中
+				return true
+			case business.EcsStatusShelve:
+				// 执行成功
+				executeSuccessFlag = true
+				return false
+			default:
+				// 默认为执行失败
+				return false
+			}
+		},
+	)
+
+	if !executeSuccessFlag {
+		return errors.New("执行节省关机ecs动作时，查询ecs状态异常")
 	}
 	return nil
 }
@@ -1125,9 +1215,11 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	}
 
 	// 密钥对必须存在
-	err = c.keyPairService.MustExist(ctx, plan.KeyPairName.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
-	if err != nil {
-		return err
+	if plan.KeyPairName.ValueString() != "" {
+		err = c.keyPairService.MustExist(ctx, plan.KeyPairName.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+		if err != nil {
+			return err
+		}
 	}
 
 	// 云主机规格必须存在
