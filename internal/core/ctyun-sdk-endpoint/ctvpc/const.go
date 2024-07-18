@@ -5,7 +5,7 @@ import "terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 const (
 	EndpointNameCtvpc = "ctvpc"
 	UrlProdCtvpc      = "ctvpc-global.ctapi.ctyun.cn"
-	UrlTestCtvpc      = "ctvpc-global.ctapi-test.ctyun.cn"
+	UrlTestCtvpc      = "ctvpc-global.ctapi-test.ctyun.cn:21443"
 )
 
 var EndpointCtvpcProd = ctyunsdk.Endpoint{

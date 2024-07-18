@@ -82,8 +82,8 @@ func (this *EcsCreateInstanceApi) Do(ctx context.Context, credential ctyunsdk.Cr
 }
 
 type ecsCreateInstanceNetworkCardListRealRequest struct {
-	NicName  string `json:"nicName"`
-	FixedIP  string `json:"fixedIP"`
+	NicName  string `json:"nicName,omitempty"`
+	FixedIP  string `json:"fixedIP,omitempty"`
 	IsMaster bool   `json:"isMaster"`
 	SubnetID string `json:"subnetID"`
 }
@@ -95,23 +95,23 @@ type ecsCreateInstanceRealRequest struct {
 	InstanceName    string                                        `json:"instanceName"`
 	DisplayName     string                                        `json:"displayName"`
 	FlavorID        string                                        `json:"flavorID"`
-	ImageType       int                                           `json:"imageType"`
+	ImageType       *int                                          `json:"imageType"`
 	ImageID         string                                        `json:"imageID"`
 	BootDiskType    string                                        `json:"bootDiskType"`
-	BootDiskSize    int                                           `json:"bootDiskSize"`
+	BootDiskSize    *int                                          `json:"bootDiskSize"`
 	VpcID           string                                        `json:"vpcID"`
-	OnDemand        bool                                          `json:"onDemand"`
+	OnDemand        *bool                                         `json:"onDemand"`
 	NetworkCardList []ecsCreateInstanceNetworkCardListRealRequest `json:"networkCardList"`
 	ExtIP           string                                        `json:"extIP"`
 	ProjectID       string                                        `json:"projectID,omitempty"`
-	SecGroupList    []string                                      `json:"secGroupList"`
-	KeyPairId       string                                        `json:"keyPairId"`
-	UserPassword    string                                        `json:"userPassword"`
-	CycleCount      int                                           `json:"cycleCount"`
-	CycleType       string                                        `json:"cycleType"`
-	AutoRenewStatus int                                           `json:"autoRenewStatus"`
-	UserData        string                                        `json:"userData"`
-	MonitorService  bool                                          `json:"monitorService"`
+	SecGroupList    []string                                      `json:"secGroupList,omitempty"`
+	KeyPairId       string                                        `json:"keyPairId,omitempty"`
+	UserPassword    string                                        `json:"userPassword,omitempty"`
+	CycleCount      *int                                          `json:"cycleCount,omitempty"`
+	CycleType       string                                        `json:"cycleType,omitempty"`
+	AutoRenewStatus *int                                          `json:"autoRenewStatus,omitempty"`
+	UserData        string                                        `json:"userData,omitempty"`
+	MonitorService  *bool                                         `json:"monitorService,omitempty"`
 }
 
 type ecsCreateInstanceRealResponse struct {
@@ -128,23 +128,23 @@ type EcsCreateInstanceRequest struct {
 	InstanceName    string                                    // 云主机名称，不可以使用已存在的云主机名称
 	DisplayName     string                                    // 云主机显示名称
 	FlavorId        string                                    // 云主机规格ID
-	ImageType       int                                       // 镜像类型
+	ImageType       *int                                      // 镜像类型
 	ImageId         string                                    // 镜像ID
 	BootDiskType    string                                    // 系统盘类型，取值范围： SATA（普通IO）， SAS（高IO）， SSD（超高IO）， SSD-genric（通用型SSD）， FAST-SSD（极速型SSD），您可以查看磁盘类型及性能介绍来了解磁盘类型及其对应性能指标
-	BootDiskSize    int                                       // 系统盘大小单位为GiB，取值范围：[40, 32768]
+	BootDiskSize    *int                                      // 系统盘大小单位为GiB，取值范围：[40, 32768]
 	VpcId           string                                    // 虚拟私有云ID
-	OnDemand        bool                                      // 购买方式，取值范围： false（按周期）， true（按需）
+	OnDemand        *bool                                     // 购买方式，取值范围： false（按周期）， true（按需）
 	NetworkCardList []EcsCreateInstanceNetworkCardListRequest // 网卡信息列表
 	ExtIp           string                                    // 是否使用弹性公网IP，取值范围： 0（不使用）， 1（自动分配）， 2（使用已有）
 	ProjectId       string                                    // 企业项目id
 	SecGroupList    []string                                  // 安全组ID列表
 	KeyPairId       string                                    // 密钥对ID
 	UserPassword    string                                    // 用户密码
-	CycleCount      int                                       // 订购时长
+	CycleCount      *int                                      // 订购时长
 	CycleType       string                                    // 订购周期类型
-	AutoRenewStatus int                                       // 是否自动续订，取值范围： 0（不续费）， 1（自动续费）， 注：按月购买，自动续订周期为3个月；按年购买，自动续订周期为1年
+	AutoRenewStatus *int                                      // 是否自动续订，取值范围： 0（不续费）， 1（自动续费）， 注：按月购买，自动续订周期为3个月；按年购买，自动续订周期为1年
 	UserData        string                                    // 用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符
-	MonitorService  bool                                      // 监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，取值范围： false（不开启），true（开启）；注：若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持monitorService参数，
+	MonitorService  *bool                                     // 监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，取值范围： false（不开启），true（开启）；注：若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持monitorService参数，
 }
 
 type EcsCreateInstanceNetworkCardListRequest struct {
