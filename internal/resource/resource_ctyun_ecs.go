@@ -196,20 +196,20 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "系统盘的id",
 			},
-			// "user_data": schema.StringAttribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符。注：非多可用区类型资源池暂不支持该参数",
-			// 	Validators: []validator.String{
-			// 		stringvalidator.UTF8LengthBetween(1, 16384),
-			// 	},
-			// },
-			// "monitor_service": schema.BoolAttribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，false：不开启，true：开启。若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持",
-			// 	Default:     booldefault.StaticBool(true),
-			// },
+			"user_data": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符。注：非多可用区类型资源池暂不支持该参数",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(1, 16384),
+				},
+			},
+			"monitor_service": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，false：不开启，true：开启。若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持",
+				Default:     booldefault.StaticBool(true),
+			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
@@ -284,6 +284,11 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 	}
 	if instance == nil {
 		response.State.RemoveResource(ctx)
+	}
+
+	// 云主机监控需在创建云主机完成后，3-5分钟内才可安装成功，上报监控数据。在创建时，监控信息返回默认值：true
+	if plan.MonitorService.ValueBool() {
+		instance.MonitorService = types.BoolValue(true)
 	}
 
 	// 修复bug，因为创建的时候，后端会将实例自动加入到到某个特定的安全组中，如果直接返回会导致terraform报错，因此要把多余的安全组给过滤掉
@@ -491,6 +496,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	azName := plan.AzName.ValueString()
 	projectId := plan.ProjectId.ValueString()
 
+	image_type := imageVisibility.(int)
+	boot_disk_size := int(plan.SystemDiskSize.ValueInt64())
+	cycle_count := int(plan.CycleCount.ValueInt64())
 	// 创建ecs实例
 	resp, err2 := c.meta.Apis.CtEcsApis.EcsCreateInstanceApi.Do(ctx, c.meta.Credential, &ctecs.EcsCreateInstanceRequest{
 		RegionId:        regionId,
@@ -500,17 +508,17 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		InstanceName:    plan.Name.ValueString(),
 		DisplayName:     plan.Name.ValueString(),
 		FlavorId:        plan.FlavorId.ValueString(),
-		ImageType:       imageVisibility.(int),
+		ImageType:       &image_type,
 		ImageId:         plan.ImageId.ValueString(),
 		BootDiskType:    diskType.(string),
-		BootDiskSize:    int(plan.SystemDiskSize.ValueInt64()),
+		BootDiskSize:    &boot_disk_size,
 		VpcId:           plan.VpcId.ValueString(),
-		OnDemand:        onDemand,
+		OnDemand:        &onDemand,
 		ExtIp:           "0",
 		UserPassword:    plan.Password.ValueString(),
-		CycleCount:      int(plan.CycleCount.ValueInt64()),
+		CycleCount:      &cycle_count,
 		CycleType:       cycleType.(string),
-		AutoRenewStatus: autoRenewStatus,
+		AutoRenewStatus: &autoRenewStatus,
 		NetworkCardList: []ctecs.EcsCreateInstanceNetworkCardListRequest{
 			{
 				SubnetId: plan.SubnetId.ValueString(),
@@ -518,9 +526,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 				IsMaster: true,
 			},
 		},
-		SecGroupList: sgIds,
-		// UserData:       plan.UserData.ValueString(),
-		// MonitorService: plan.MonitorService.ValueBool(),
+		SecGroupList:   sgIds,
+		UserData:       plan.UserData.ValueString(),
+		MonitorService: plan.MonitorService.ValueBoolPointer(),
 	})
 	if err2 != nil {
 		return err2
@@ -1110,7 +1118,7 @@ func (c *ctyunEcs) updateSecurityGroup(ctx context.Context, state CtyunEcsConfig
 func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*CtyunEcsConfig, error) {
 	regionId := cfg.RegionId.ValueString()
 
-	resp, err := c.meta.Apis.CtEcsApis.EcsInstanceDetailsApi.Do(ctx, c.meta.Credential, &ctecs.EcsInstanceDetailsRequest{
+	instance_details_resp, err := c.meta.Apis.CtEcsApis.EcsInstanceDetailsApi.Do(ctx, c.meta.Credential, &ctecs.EcsInstanceDetailsRequest{
 		RegionId:   regionId,
 		InstanceId: cfg.Id.ValueString(),
 	})
@@ -1123,18 +1131,18 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	}
 
 	// 基础信息
-	cfg.Id = types.StringValue(resp.InstanceId)
-	cfg.Name = types.StringValue(resp.DisplayName)
-	cfg.FlavorId = types.StringValue(resp.Flavor.FlavorId)
-	cfg.ImageId = types.StringValue(resp.Image.ImageId)
-	cfg.VpcId = types.StringValue(resp.VpcId)
-	cfg.Status = types.StringValue(resp.InstanceStatus)
-	cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(resp.ExpiredTime))
-	cfg.KeyPairName = types.StringValue(resp.KeypairName)
+	cfg.Id = types.StringValue(instance_details_resp.InstanceId)
+	cfg.Name = types.StringValue(instance_details_resp.DisplayName)
+	cfg.FlavorId = types.StringValue(instance_details_resp.Flavor.FlavorId)
+	cfg.ImageId = types.StringValue(instance_details_resp.Image.ImageId)
+	cfg.VpcId = types.StringValue(instance_details_resp.VpcId)
+	cfg.Status = types.StringValue(instance_details_resp.InstanceStatus)
+	cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(instance_details_resp.ExpiredTime))
+	cfg.KeyPairName = types.StringValue(instance_details_resp.KeypairName)
 
 	// 填充安全组信息
 	sgs := []types.String{}
-	for _, sg := range resp.SecGroupList {
+	for _, sg := range instance_details_resp.SecGroupList {
 		// 如果存在默认的用户组，要判断一下返回的是否为默认的用户组，如果是默认的就把它排除掉
 		if !cfg.DefaultSecurityGroupId.IsNull() && !cfg.DefaultSecurityGroupId.IsUnknown() {
 			if sg.SecurityGroupId == cfg.DefaultSecurityGroupId.ValueString() {
@@ -1147,7 +1155,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.SecurityGroupIds = securityGroupIds
 
 	// 填充主网卡信息
-	for _, nc := range resp.NetworkCardList {
+	for _, nc := range instance_details_resp.NetworkCardList {
 		if nc.IsMaster {
 			cfg.SubnetId = types.StringValue(nc.SubnetId)
 			cfg.FixedIp = types.StringValue(nc.Ipv4Address)
@@ -1155,8 +1163,8 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	}
 
 	// 密钥对信息
-	if resp.KeypairName != "" {
-		cfg.KeyPairName = types.StringValue(resp.KeypairName)
+	if instance_details_resp.KeypairName != "" {
+		cfg.KeyPairName = types.StringValue(instance_details_resp.KeypairName)
 	}
 
 	// 查询系统盘，填补其信息
@@ -1186,6 +1194,50 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.SystemDiskType = types.StringValue(diskType.(string))
 	cfg.SystemDiskSize = types.Int64Value(int64(result.DiskSize))
 	cfg.SystemDiskId = types.StringValue(result.DiskId)
+
+	// 若用户未安装监控，且未传入自定义数据，填补其信息
+	if !cfg.MonitorService.ValueBool() && cfg.UserData.ValueString() == "" {
+		cfg.UserData = types.StringValue("")
+		cfg.MonitorService = types.BoolValue(false)
+	}
+	// 若用户未安装监控，且传入自定义数据，填补其信息
+	if !cfg.MonitorService.ValueBool() && cfg.UserData.ValueString() != "" {
+		userdara_resp, err := c.meta.Apis.CtEcsApis.EcsUserdataDetailsApi.Do(ctx, c.meta.Credential, &ctecs.EcsUserdataDetailsRequest{
+			RegionID:   regionId,
+			InstanceID: cfg.Id.ValueString(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		if userdara_resp.Userdata == "" {
+			return nil, errors.New("未查询到云主机的用户自定义数据")
+		}
+		cfg.UserData = types.StringValue(userdara_resp.Userdata)
+		cfg.MonitorService = types.BoolValue(false)
+	}
+	// 若用户安装监控，填补其信息
+	if cfg.MonitorService.ValueBool() {
+		userdara_monitorservice_resp, err := c.meta.Apis.CtEcsApis.EcsGetUserdataMonitorApi.Do(ctx, c.meta.Credential, &ctecs.EcsGetUserdataMonitorRequest{
+			RegionID:    regionId,
+			InstanceIDs: cfg.Id.ValueString(),
+		})
+		if err != nil {
+			return nil, err
+		}
+		var us []ctecs.EcsGetUserdataMonitorResultsResponse
+		for _, results := range userdara_monitorservice_resp.Results {
+			if results.InstanceID == cfg.Id.ValueString() {
+				us = append(us, results)
+			}
+		}
+		if len(us) != 1 {
+			return nil, errors.New("未查询到云主机的用户自定义数据和监控是否开启的信息")
+		}
+
+		var results = userdara_monitorservice_resp.Results[0]
+		cfg.UserData = types.StringValue(results.UserData)
+		cfg.MonitorService = types.BoolValue(results.MonitorService)
+	}
 
 	return &cfg, nil
 }
@@ -1226,6 +1278,11 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	err = c.ecsService.FlavorMustExist(ctx, plan.FlavorId.ValueString(), plan.RegionId.ValueString(), plan.AzName.ValueString())
 	if err != nil {
 		return err
+	}
+
+	// 云主机关机状态下不可安装监控
+	if ((plan.Status.ValueString() == business.EcsStatusStopped) || (plan.Status.ValueString() == business.EcsStatusShelve)) && plan.MonitorService.ValueBool() {
+		return errors.New("云主机处于关机状态不可安装监控，上报监控数据")
 	}
 
 	return nil
@@ -1310,10 +1367,10 @@ type CtyunEcsConfig struct {
 	Status                 types.String `tfsdk:"status"`
 	ExpireTime             types.String `tfsdk:"expire_time"`
 	SystemDiskId           types.String `tfsdk:"system_disk_id"`
-	// UserData               types.String `tfsdk:"user_data"`
-	// MonitorService         types.Bool   `tfsdk:"monitor_service"`
-	MasterOrderId types.String `tfsdk:"master_order_id"`
-	ProjectId     types.String `tfsdk:"project_id"`
-	RegionId      types.String `tfsdk:"region_id"`
-	AzName        types.String `tfsdk:"az_name"`
+	UserData               types.String `tfsdk:"user_data"`
+	MonitorService         types.Bool   `tfsdk:"monitor_service"`
+	MasterOrderId          types.String `tfsdk:"master_order_id"`
+	ProjectId              types.String `tfsdk:"project_id"`
+	RegionId               types.String `tfsdk:"region_id"`
+	AzName                 types.String `tfsdk:"az_name"`
 }

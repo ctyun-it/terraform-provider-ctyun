@@ -36,6 +36,8 @@ type Apis struct {
 	SecurityGroupRuleEgressCreateApi  *SecurityGroupRuleEgressCreateApi
 	SecurityGroupRuleIngressCreateApi *SecurityGroupRuleIngressCreateApi
 	EcsShelveInstanceApi              *EcsShelveInstanceApi
+	EcsGetUserdataMonitorApi          *EcsGetUserdataMonitorApi
+	EcsUserdataDetailsApi             *EcsUserdataDetailsApi
 }
 
 // NewApis 构建
@@ -74,5 +76,7 @@ func NewApis(client *ctyunsdk.CtyunClient) *Apis {
 		SecurityGroupRuleEgressCreateApi:  NewSecurityGroupRuleEgressCreateApi(client),
 		SecurityGroupRuleIngressCreateApi: NewSecurityGroupRuleIngressCreateApi(client),
 		EcsShelveInstanceApi:              NewEcsShelveInstanceApi(client),
+		EcsGetUserdataMonitorApi:          NewEcsGetUserdataMonitorApi(client),
+		EcsUserdataDetailsApi:             NewEcsUserdataDetailsApi(client),
 	}
 }
