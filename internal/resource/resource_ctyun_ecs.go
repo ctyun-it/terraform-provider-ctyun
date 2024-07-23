@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -54,12 +55,13 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "id",
 			},
-			"name": schema.StringAttribute{
+			"instance_name": schema.StringAttribute{
 				Required:    true,
-				Description: "云主机名称，不可以使用已存在的云主机名称，长度2-63，允许使用大小写字符和数字和-，不能以-开始和结尾以及连续出现，不能使用纯数字",
-				Validators: []validator.String{
-					validator2.EcsName(),
-				},
+				Description: "云主机名称，不可以使用已存在的云主机名称。不同操作系统下，云主机名称规则有差异。Windows：长度为2-15个字符，允许使用大小写字母、数字或连字符（-）。不能以连字符（-）开头或结尾，不能连续使用连字符（-），也不能仅使用数字；其他操作系统：长度为2-64字符，允许使用点（.）分隔字符成多段，每段允许使用大小写字母、数字或连字符（-），但不能连续使用点号（.）或连字符（-），不能以点号（.）或连字符（-）开头或结尾，也不能仅使用数字",
+			},
+			"display_name": schema.StringAttribute{
+				Required:    true,
+				Description: "云主机显示名称，长度为2-63字符",
 			},
 			"flavor_id": schema.StringAttribute{
 				Required:    true,
@@ -237,6 +239,18 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, false),
 			},
+			"is_destroy_instance": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否立即释放，false：不释放，true：释放。当包周期云主机退订之后有一定时间的保留期。可选择销毁该云主机，立即释放则没有保留期",
+				Default:     booldefault.StaticBool(false),
+			},
+			"pay_voucher_price": schema.Float64Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "代金券，满足以下规则：两位小数，不足两位自动补0，超过两位小数无效；不可为负数；注：字段为0时表示不使用代金券，默认不使用",
+				Default:     float64default.StaticFloat64(0.00),
+			},
 		},
 	}
 }
@@ -411,6 +425,19 @@ func (c *ctyunEcs) Delete(ctx context.Context, request resource.DeleteRequest, r
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+
+	// 销毁已退订的包周期云主机
+	if state.IsDestroyInstance.ValueBool() {
+		response.Diagnostics.AddWarning("释放已退订的包周期云主机", "已退订的包周期云主机具有保留期，确认释放后云主机直接销毁，请谨慎操作")
+		err := c.destroyInstance(ctx, state)
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+			return
+		}
+	} else {
+		response.Diagnostics.AddWarning("不释放已退订的包周期云主机", "已退订的包周期云主机具有保留期，确认不释放后云主机在保留期后才可释放,并且不可再次执行释放操作，请谨慎操作")
+	}
+
 }
 
 func (c *ctyunEcs) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -480,8 +507,8 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		AzName:          azName,
 		ProjectId:       projectId,
 		ClientToken:     uuid.NewString(),
-		InstanceName:    plan.Name.ValueString(),
-		DisplayName:     plan.Name.ValueString(),
+		InstanceName:    plan.InstanceName.ValueString(),
+		DisplayName:     plan.DisplayName.ValueString(),
 		FlavorId:        plan.FlavorId.ValueString(),
 		ImageType:       imageVisibility.(int),
 		ImageId:         plan.ImageId.ValueString(),
@@ -504,6 +531,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		SecGroupList: sgIds,
 		// UserData:       plan.UserData.ValueString(),
 		// MonitorService: plan.MonitorService.ValueBool(),
+		PayVoucherPrice: plan.PayVoucherPrice.ValueFloat64(),
 	})
 	if err2 != nil {
 		return err2
@@ -533,7 +561,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 
 // updateInstanceInfo 更新主机的部分信息
 func (c *ctyunEcs) updateInstanceInfo(ctx context.Context, state CtyunEcsConfig, plan CtyunEcsConfig) error {
-	if state.Name.Equal(plan.Name) {
+	if state.DisplayName.Equal(plan.DisplayName) {
 		return nil
 	}
 	_, err := c.meta.Apis.CtEcsApis.EcsBatchUpdateInstancesApi.Do(ctx, c.meta.Credential, &ctecs.EcsBatchUpdateInstancesRequest{
@@ -541,7 +569,7 @@ func (c *ctyunEcs) updateInstanceInfo(ctx context.Context, state CtyunEcsConfig,
 		UpdateInfo: []ctecs.EcsBatchUpdateInstancesUpdateInfoRequest{
 			{
 				InstanceId:  state.Id.ValueString(),
-				DisplayName: plan.Name.ValueString(),
+				DisplayName: plan.DisplayName.ValueString(),
 			},
 		},
 	})
@@ -1016,6 +1044,30 @@ func (c *ctyunEcs) updateSecurityGroup(ctx context.Context, state CtyunEcsConfig
 	return nil
 }
 
+// 销毁已退订的包周期云主机
+func (c *ctyunEcs) destroyInstance(ctx context.Context, state CtyunEcsConfig) error {
+	currentStatus, err := c.getInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString())
+	if err != nil {
+		return err
+	}
+	if currentStatus == business.EcsStatusUnsubscribed {
+		resp, destroy_err := c.meta.Apis.CtEcsApis.EcsDestroyInstanceApi.Do(ctx, c.meta.Credential, &ctecs.EcsDestroyInstanceRequest{
+			RegionID:    state.RegionId.ValueString(),
+			InstanceID:  state.Id.ValueString(),
+			ClientToken: uuid.NewString(),
+		})
+		if destroy_err != nil {
+			return destroy_err
+		}
+		helper := business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
+		err = helper.RefundLoop(ctx, c.meta.Credential, resp.MasterOrderID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // getAndMergeEcs 查询ecs
 func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*CtyunEcsConfig, error) {
 	regionId := cfg.RegionId.ValueString()
@@ -1034,7 +1086,8 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 
 	// 基础信息
 	cfg.Id = types.StringValue(resp.InstanceId)
-	cfg.Name = types.StringValue(resp.DisplayName)
+	cfg.InstanceName = types.StringValue(resp.InstanceName)
+	cfg.DisplayName = types.StringValue(resp.DisplayName)
 	cfg.FlavorId = types.StringValue(resp.Flavor.FlavorId)
 	cfg.ImageId = types.StringValue(resp.Image.ImageId)
 	cfg.VpcId = types.StringValue(resp.VpcId)
@@ -1200,7 +1253,8 @@ func (c *ctyunEcs) acquireAndSetIdIfOrderNotFinished(ctx context.Context, state 
 
 type CtyunEcsConfig struct {
 	Id                     types.String `tfsdk:"id"`
-	Name                   types.String `tfsdk:"name"`
+	InstanceName           types.String `tfsdk:"instance_name"`
+	DisplayName            types.String `tfsdk:"display_name"`
 	FlavorId               types.String `tfsdk:"flavor_id"`
 	ImageId                types.String `tfsdk:"image_id"`
 	SystemDiskType         types.String `tfsdk:"system_disk_type"`
@@ -1220,8 +1274,10 @@ type CtyunEcsConfig struct {
 	SystemDiskId           types.String `tfsdk:"system_disk_id"`
 	// UserData               types.String `tfsdk:"user_data"`
 	// MonitorService         types.Bool   `tfsdk:"monitor_service"`
-	MasterOrderId types.String `tfsdk:"master_order_id"`
-	ProjectId     types.String `tfsdk:"project_id"`
-	RegionId      types.String `tfsdk:"region_id"`
-	AzName        types.String `tfsdk:"az_name"`
+	MasterOrderId     types.String  `tfsdk:"master_order_id"`
+	ProjectId         types.String  `tfsdk:"project_id"`
+	RegionId          types.String  `tfsdk:"region_id"`
+	AzName            types.String  `tfsdk:"az_name"`
+	IsDestroyInstance types.Bool    `tfsdk:"is_destroy_instance"`
+	PayVoucherPrice   types.Float64 `tfsdk:"pay_voucher_price"`
 }

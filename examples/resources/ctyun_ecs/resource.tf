@@ -29,19 +29,20 @@ data "ctyun_ecs_flavors" "ecs_flavor_test1" {
 
 # 创建1c1g x86架构的通用型云主机，系统盘使用SATA，40g，计费方式为包周期1个月，到期自动续费
 resource "ctyun_ecs" "ecs_test1" {
-  name               = "ecs-test"
-  flavor_id          = data.ctyun_ecs_flavors.ecs_flavor_test1.flavors[0].id
-  image_id           = data.ctyun_images.image_test1.images[0].id
-  system_disk_type   = "sata"
-  system_disk_size   = 40
-  vpc_id             = "vpc-r7kv00qbz5"
-  password           = "P@ssW0rd_1"
-  cycle_type         = "month"
-  cycle_count        = 1
-  auto_renew         = true
-  subnet_id          = "subnet-f3ktwpsf07"
-  security_group_ids = [
-  ]
+  instance_name       = "ecs-test"
+  display_name        = "ecs-test"
+  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test1.flavors[0].id
+  image_id            = data.ctyun_images.image_test1.images[0].id
+  system_disk_type    = "sata"
+  system_disk_size    = 40
+  vpc_id              = "vpc-r7kv00qbz5"
+  password            = "P@ssW0rd_1"
+  cycle_type          = "month"
+  cycle_count         = 1
+  auto_renew          = true
+  subnet_id           = "subnet-f3ktwpsf07"
+  security_group_ids  = [""],
+  is_destroy_instance = false
 }
 
 #########################################################################################
@@ -67,7 +68,8 @@ data "ctyun_ecs_flavors" "ecs_flavor_test2" {
 
 # 创建2c4g x86架构的通用型云主机，系统盘使用SATA，50g，计费方式为按需
 resource "ctyun_ecs" "ecs_test2" {
-  name               = "ecs-test2"
+  instance_name      = "ecs-test2"
+  display_name       = "ecs-test2"
   flavor_id          = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].id
   image_id           = data.ctyun_images.image_test2.images[0].id
   system_disk_type   = "sata"

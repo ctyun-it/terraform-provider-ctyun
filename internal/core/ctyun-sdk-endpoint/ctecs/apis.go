@@ -35,6 +35,7 @@ type Apis struct {
 	EcsOrderQueryUuidApi              *EcsOrderQueryUuidApi
 	SecurityGroupRuleEgressCreateApi  *SecurityGroupRuleEgressCreateApi
 	SecurityGroupRuleIngressCreateApi *SecurityGroupRuleIngressCreateApi
+	EcsDestroyInstanceApi             *EcsDestroyInstanceApi
 }
 
 // NewApis 构建
@@ -72,5 +73,6 @@ func NewApis(client *ctyunsdk.CtyunClient) *Apis {
 		EcsOrderQueryUuidApi:              NewEcsOrderQueryUuid(client),
 		SecurityGroupRuleEgressCreateApi:  NewSecurityGroupRuleEgressCreateApi(client),
 		SecurityGroupRuleIngressCreateApi: NewSecurityGroupRuleIngressCreateApi(client),
+		EcsDestroyInstanceApi:             NewEcsDestroyInstanceApi(client),
 	}
 }
