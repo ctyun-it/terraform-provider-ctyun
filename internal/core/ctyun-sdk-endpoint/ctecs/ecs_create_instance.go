@@ -58,6 +58,7 @@ func (this *EcsCreateInstanceApi) Do(ctx context.Context, credential ctyunsdk.Cr
 		AutoRenewStatus: req.AutoRenewStatus,
 		UserData:        req.UserData,
 		MonitorService:  req.MonitorService,
+		PayVoucherPrice: req.PayVoucherPrice,
 	})
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (this *EcsCreateInstanceApi) Do(ctx context.Context, credential ctyunsdk.Cr
 type ecsCreateInstanceNetworkCardListRealRequest struct {
 	NicName  string `json:"nicName,omitempty"`
 	FixedIP  string `json:"fixedIP,omitempty"`
-	IsMaster bool   `json:"isMaster"`
+	IsMaster *bool  `json:"isMaster"`
 	SubnetID string `json:"subnetID"`
 }
 
@@ -112,6 +113,7 @@ type ecsCreateInstanceRealRequest struct {
 	AutoRenewStatus *int                                          `json:"autoRenewStatus,omitempty"`
 	UserData        string                                        `json:"userData,omitempty"`
 	MonitorService  *bool                                         `json:"monitorService,omitempty"`
+	PayVoucherPrice *float64                                      `json:"payVoucherPrice,omitempty"`
 }
 
 type ecsCreateInstanceRealResponse struct {
@@ -145,12 +147,13 @@ type EcsCreateInstanceRequest struct {
 	AutoRenewStatus *int                                      // 是否自动续订，取值范围： 0（不续费）， 1（自动续费）， 注：按月购买，自动续订周期为3个月；按年购买，自动续订周期为1年
 	UserData        string                                    // 用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符
 	MonitorService  *bool                                     // 监控参数，支持通过该参数指定云主机在创建后是否开启详细监控，取值范围： false（不开启），true（开启）；注：若指定该参数为true或不指定该参数，云主机内默认开启最新详细监控服务。若指定该参数为false，默认公共镜像不开启最新监控服务；私有镜像使用镜像中保留的监控服务。说明：仅部分资源池支持monitorService参数，
+	PayVoucherPrice *float64                                  // 代金券，满足以下规则：两位小数，不足两位自动补0，超过两位小数无效；不可为负数；注：字段为0时表示不使用代金券，默认不使用
 }
 
 type EcsCreateInstanceNetworkCardListRequest struct {
 	NicName  string // 长度2~32，支持拉丁字母、中文、数字、下划线、连字符，中文或英文字母开头，不能以http:或https:开头
 	FixedIp  string // 内网IPv4地址，注：不可使用已占用IP
-	IsMaster bool   // 是否主网卡，取值范围： true（表示主网卡）， false（表示扩展网卡） 注：只能含有一个主网卡
+	IsMaster *bool  // 是否主网卡，取值范围： true（表示主网卡）， false（表示扩展网卡） 注：只能含有一个主网卡
 	SubnetId string // 子网ID
 }
 

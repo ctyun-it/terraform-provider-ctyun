@@ -38,6 +38,7 @@ type Apis struct {
 	EcsShelveInstanceApi              *EcsShelveInstanceApi
 	EcsGetUserdataMonitorApi          *EcsGetUserdataMonitorApi
 	EcsUserdataDetailsApi             *EcsUserdataDetailsApi
+	EcsDestroyInstanceApi             *EcsDestroyInstanceApi
 }
 
 // NewApis 构建
@@ -78,5 +79,6 @@ func NewApis(client *ctyunsdk.CtyunClient) *Apis {
 		EcsShelveInstanceApi:              NewEcsShelveInstanceApi(client),
 		EcsGetUserdataMonitorApi:          NewEcsGetUserdataMonitorApi(client),
 		EcsUserdataDetailsApi:             NewEcsUserdataDetailsApi(client),
+		EcsDestroyInstanceApi:             NewEcsDestroyInstanceApi(client),
 	}
 }
