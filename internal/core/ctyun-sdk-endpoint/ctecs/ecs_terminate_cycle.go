@@ -2,9 +2,9 @@ package ctecs
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strings"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EcsTerminateCycleApi 包周期终止

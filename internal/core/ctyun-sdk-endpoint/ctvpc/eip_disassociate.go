@@ -2,8 +2,8 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EipDisassociateApi 解绑弹性 IP

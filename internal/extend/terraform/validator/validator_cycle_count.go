@@ -2,11 +2,11 @@ package validator
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strconv"
-	"terraform-provider-ctyun/internal/business"
 )
 
 type cycleCountRange struct {

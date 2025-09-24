@@ -41,7 +41,35 @@ func AlsoRequiresEqualInt64(expression path.Expression, objs ...attr.Value) vali
 	}
 }
 
+func AlsoRequiresEqualInt32(expression path.Expression, objs ...attr.Value) validator.Int32 {
+	return &validatorAlsoRequiresEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
+func AlsoRequiresEqualBool(expression path.Expression, objs ...attr.Value) validator.Bool {
+	return &validatorAlsoRequiresEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
 func AlsoRequiresEqualSet(expression path.Expression, objs ...attr.Value) validator.Set {
+	return &validatorAlsoRequiresEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
+func AlsoRequiresEqualObject(expression path.Expression, objs ...attr.Value) validator.Object {
+	return &validatorAlsoRequiresEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
+func AlsoRequiresEqualList(expression path.Expression, objs ...attr.Value) validator.List {
 	return &validatorAlsoRequiresEqual{
 		expression: expression,
 		objs:       objs,
@@ -118,7 +146,55 @@ func (v validatorAlsoRequiresEqual) ValidateInt64(ctx context.Context, req valid
 	resp.Diagnostics.Append(validateResp.Diagnostics...)
 }
 
+func (v validatorAlsoRequiresEqual) ValidateInt32(ctx context.Context, req validator.Int32Request, resp *validator.Int32Response) {
+	validateReq := alsoRequiresEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &alsoRequiresEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorAlsoRequiresEqual) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) {
+	validateReq := alsoRequiresEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &alsoRequiresEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
 func (v validatorAlsoRequiresEqual) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	validateReq := alsoRequiresEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &alsoRequiresEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorAlsoRequiresEqual) ValidateList(ctx context.Context, req validator.ListRequest, resp *validator.ListResponse) {
+	validateReq := alsoRequiresEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &alsoRequiresEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorAlsoRequiresEqual) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
 	validateReq := alsoRequiresEqualValidatorRequest{
 		Config:         req.Config,
 		ConfigValue:    req.ConfigValue,

@@ -1,0 +1,17 @@
+release-note:new-resource
+ctyun_nat_snat
+
+release-note:new-resource
+ctyun_nat_dnat
+
+release-note:new-resource
+ctyun_nat
+
+release-note:new-data-source
+ctyun_nats
+
+release-note:new-data-source
+ctyun_nat_snats
+
+release-note:new-data-source
+ctyun_nat_dnats

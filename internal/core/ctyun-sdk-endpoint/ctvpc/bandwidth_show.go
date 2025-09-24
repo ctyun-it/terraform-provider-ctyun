@@ -2,8 +2,8 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // BandwidthDescribeApi 查询共享带宽详情

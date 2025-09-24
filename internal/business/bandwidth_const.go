@@ -1,6 +1,6 @@
 package business
 
-import "terraform-provider-ctyun/internal/utils"
+import "github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 
 const (
 	BandwidthStatusActive   = "active"

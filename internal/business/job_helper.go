@@ -3,9 +3,9 @@ package business
 import (
 	"context"
 	"errors"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"time"
 )
 

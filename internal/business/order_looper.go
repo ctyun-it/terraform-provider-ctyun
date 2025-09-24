@@ -3,9 +3,9 @@ package business
 import (
 	"context"
 	"errors"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"strconv"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"time"
 )
 
@@ -20,10 +20,15 @@ func NewOrderLooper(api *ctecs.EcsOrderQueryUuidApi) *OrderLooper {
 }
 
 // OrderLoop 轮询操作
-func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credential, masterOrderId string) (*LoopOrderResponse, error) {
+func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credential, masterOrderId string, loopCount ...int) (*LoopOrderResponse, error) {
 	var resp *LoopOrderResponse
 	var respError error
-	retryer, _ := NewRetryer(time.Second*5, 60)
+	c := 60
+	if len(loopCount) > 0 {
+		c = loopCount[0]
+	}
+	var cnt int
+	retryer, _ := NewRetryer(time.Second*5, c)
 	result := retryer.Start(
 		func(currentTime int) bool {
 			detail, err := o.api.Do(ctx, credential, &ctecs.EcsOrderQueryUuidRequest{
@@ -44,6 +49,10 @@ func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credent
 				// 开通中状态
 				return true
 			case OrderStatusFinish:
+				if len(detail.InstanceIDList) == 0 && cnt < 3 {
+					cnt++
+					return true
+				}
 				// 开通完成状态
 				resp = &LoopOrderResponse{
 					Uuid:          detail.InstanceIDList,

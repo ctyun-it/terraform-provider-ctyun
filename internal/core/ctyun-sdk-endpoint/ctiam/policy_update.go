@@ -3,8 +3,8 @@ package ctiam
 import (
 	"context"
 	"encoding/json"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // PolicyUpdateApi 编辑自定义策略

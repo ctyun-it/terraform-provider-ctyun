@@ -2,8 +2,8 @@ package ctimage
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // ImageShareDeleteApi 取消共享私有镜像

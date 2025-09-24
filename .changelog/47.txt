@@ -1,0 +1,14 @@
+release-note:new-resource
+ctyun_mongodb_association_eip
+
+release-note:new-resource
+ctyun_mongodb_instance
+
+release-note:new-data-source
+ctyun_mongodb_instances
+
+release-note:new-data-source
+ctyun_mongodb_association_eips
+
+release-note:new-data-source
+ctyun_mongodb_specs

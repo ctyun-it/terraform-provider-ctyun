@@ -1,10 +1,12 @@
 package business
 
-import "terraform-provider-ctyun/internal/utils"
+import "github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 
 const (
-	SubnetTypeCommon = "common" // 普通子网
-	SubnetTypeCbm    = "cbm"    // 裸金属子网
+	SubnetTypeCommon    = "common" // 普通子网
+	SubnetTypeEbm       = "cbm"    // 裸金属子网
+	SubnetTypeCommonInt = 0
+	SubnetTypeEbmInt    = 1
 )
 
 const (
@@ -13,18 +15,18 @@ const (
 
 var SubnetTypes = []string{
 	SubnetTypeCommon,
-	SubnetTypeCbm,
+	SubnetTypeEbm,
 }
 
 var SubnetTypeMap = utils.Must(
 	[]any{
 		SubnetTypeCommon,
-		SubnetTypeCbm,
+		SubnetTypeEbm,
 	},
 	map[utils.Scene][]any{
 		SubnetTypeMapScene1: {
-			0,
-			1,
+			SubnetTypeCommonInt,
+			SubnetTypeEbmInt,
 		},
 	},
 )

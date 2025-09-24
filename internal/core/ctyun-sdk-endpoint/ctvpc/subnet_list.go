@@ -2,10 +2,10 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strconv"
 	"strings"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // SubnetListApi 查询子网

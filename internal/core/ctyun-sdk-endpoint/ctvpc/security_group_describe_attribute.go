@@ -2,8 +2,8 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // SecurityGroupDescribeAttributeApi 查询用户安全组详情
@@ -28,9 +28,10 @@ func (this *SecurityGroupDescribeAttributeApi) Do(ctx context.Context, credentia
 	builder.
 		AddParam("regionID", req.RegionId).
 		AddParam("securityGroupID", req.SecurityGroupId).
-		AddParam("projectID", req.ProjectId).
 		AddParam("direction", req.Direction)
-
+	if req.ProjectId != "" {
+		builder.AddParam("projectID", req.ProjectId)
+	}
 	response, err := this.client.RequestToEndpoint(ctx, EndpointNameCtvpc, builder)
 	if err != nil {
 		return nil, err

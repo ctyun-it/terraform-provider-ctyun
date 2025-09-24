@@ -2,8 +2,8 @@ package ctecs
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EcsFlavorListApi 查询一个或多个云主机规格资源

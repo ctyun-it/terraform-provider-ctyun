@@ -2,8 +2,8 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // BandwidthDisassociateEipApi 从共享带宽移出EIP

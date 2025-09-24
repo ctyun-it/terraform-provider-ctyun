@@ -2,8 +2,8 @@ package ctecs
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EcsLeaveSecurityGroupApi  绑定安全组

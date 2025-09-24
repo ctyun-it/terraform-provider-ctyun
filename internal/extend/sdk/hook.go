@@ -21,7 +21,7 @@ func (d LogHttpHook) BeforeRequest(ctx context.Context, request *http.Request) {
 		return
 	}
 	requestContent := string(dumpRequest)
-	tflog.Info(ctx, "实际请求内容：\n", map[string]interface{}{"request": requestContent})
+	tflog.Info(ctx, "实际请求内容：", map[string]interface{}{"request": requestContent})
 }
 
 func (d LogHttpHook) AfterResponse(ctx context.Context, response *http.Response) {
@@ -41,8 +41,8 @@ func (d LogHttpHook) AfterResponse(ctx context.Context, response *http.Response)
 type MetricHttpHook struct {
 }
 
-func (m MetricHttpHook) BeforeRequest(_ context.Context, _ *http.Request) {
-
+func (m MetricHttpHook) BeforeRequest(_ context.Context, request *http.Request) {
+	request.Header.Set("From-Terraform-Provider", "true")
 }
 
 func (m MetricHttpHook) AfterResponse(_ context.Context, _ *http.Response) {

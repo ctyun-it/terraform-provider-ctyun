@@ -1,0 +1,95 @@
+terraform {
+  required_providers {
+    ctyun = {
+      source = "ctyun-it/ctyun"
+    }
+  }
+}
+
+# 可参考index.md，在环境变量中配置ak、sk、资源池ID、可用区名称
+provider "ctyun" {
+  env = "prod"
+}
+
+resource "ctyun_vpc" "vpc_test" {
+  name        = "tf-vpc-tmp"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
+}
+
+resource "ctyun_subnet" "subnet_test" {
+  vpc_id = ctyun_vpc.vpc_test.id
+  name        = "tf-subnet-tmp"
+  cidr        = "192.168.1.0/24"
+  description = "terraform测试使用"
+  dns         = [
+    "114.114.114.114",
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+  enable_ipv6 = true
+}
+
+data "ctyun_images" "image_test" {
+  name       = "CtyunOS 23"
+  visibility = "public"
+  page_no = 1
+  page_size = 10
+}
+
+data "ctyun_ecs_flavors" "ecs_flavor_test" {
+  cpu    = 2
+  ram    = 4
+  arch   = "x86"
+  series = "S"
+  type   = "CPU_S7"
+}
+
+resource "ctyun_ecs" "ecs_test" {
+  instance_name       = "tf-ecs-tmp"
+  display_name        = "tf-ecs-tmp"
+  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  image_id            = data.ctyun_images.image_test.images[0].id
+  system_disk_type    = "sata"
+  system_disk_size    = 40
+  vpc_id = ctyun_vpc.vpc_test.id
+  password            = var.password
+  cycle_type          = "on_demand"
+  subnet_id = ctyun_subnet.subnet_test.id
+  is_destroy_instance = false
+}
+
+variable "password" {
+  type      = string
+  sensitive = true
+}
+
+resource "ctyun_vpce_service" "vpce_service_test" {
+  name  = "tf-vpce-server-tmp"
+  vpc_id = ctyun_vpc.vpc_test.id
+  subnet_id = ctyun_subnet.subnet_test.id
+  auto_connection = false
+  type = "interface"
+  instance_id = ctyun_ecs.ecs_test.id
+  instance_type = "vm"
+  rules = [{
+    protocol = "TCP"
+    endpoint_port = 999
+    server_port = 999
+  }]
+}
+
+resource "ctyun_vpce" "vpce_test" {
+  name  = "tf-vpce-tmp"
+  endpoint_service_id = ctyun_vpce_service.vpce_service_test.id
+  vpc_id = ctyun_vpc.vpc_test.id
+  subnet_id = ctyun_subnet.subnet_test.id
+  whitelist_flag = false
+}
+
+resource "ctyun_vpce_service_connection" "test" {
+  endpoint_service_id = ctyun_vpce_service.vpce_service_test.id
+  endpoint_id = ctyun_vpce.vpce_test.id
+  status = "up"
+}

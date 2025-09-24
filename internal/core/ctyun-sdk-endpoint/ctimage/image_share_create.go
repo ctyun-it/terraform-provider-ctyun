@@ -2,7 +2,7 @@ package ctimage
 
 import (
 	"context"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 
 	"net/http"
 )

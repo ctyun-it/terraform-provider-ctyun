@@ -1,0 +1,114 @@
+package sfs
+
+import (
+	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
+	"net/http"
+	"strconv"
+)
+
+// SfsSfsInfoSfsApi
+/* 资源池ID下，所有的文件系统详情查询。
+ */type SfsSfsInfoSfsApi struct {
+	template core.CtyunRequestTemplate
+	client   *core.CtyunClient
+}
+
+func NewSfsSfsInfoSfsApi(client *core.CtyunClient) *SfsSfsInfoSfsApi {
+	return &SfsSfsInfoSfsApi{
+		client: client,
+		template: core.CtyunRequestTemplate{
+			EndpointName: EndpointName,
+			Method:       http.MethodGet,
+			UrlPath:      "/v4/sfs/list-sfs",
+			ContentType:  "application/json",
+		},
+	}
+}
+
+func (a *SfsSfsInfoSfsApi) Do(ctx context.Context, credential core.Credential, req *SfsSfsInfoSfsRequest) (*SfsSfsInfoSfsResponse, error) {
+	builder := core.NewCtyunRequestBuilder(a.template)
+	builder.WithCredential(credential)
+	ctReq := builder.Build()
+	ctReq.AddParam("regionID", req.RegionID)
+	if req.ProjectID != "" {
+		ctReq.AddParam("projectID", req.ProjectID)
+	}
+	if req.PageSize != 0 {
+		ctReq.AddParam("pageSize", strconv.FormatInt(int64(req.PageSize), 10))
+	}
+	if req.PageNo != 0 {
+		ctReq.AddParam("pageNo", strconv.FormatInt(int64(req.PageNo), 10))
+	}
+	response, err := a.client.RequestToEndpoint(ctx, ctReq)
+	if err != nil {
+		return nil, err
+	}
+	var resp SfsSfsInfoSfsResponse
+	err = response.Parse(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+type SfsSfsInfoSfsRequest struct {
+	RegionID  string `json:"regionID,omitempty"`  /*  资源池 ID  */
+	ProjectID string `json:"projectID,omitempty"` /*  资源所属企业项目 ID，默认为全部企业项目  */
+	PageSize  int32  `json:"pageSize,omitempty"`  /*  每页包含的元素个数  */
+	PageNo    int32  `json:"pageNo,omitempty"`    /*  列表的分页页码  */
+}
+
+type SfsSfsInfoSfsResponse struct {
+	StatusCode  int32                           `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
+	Message     string                          `json:"message"`     /*  响应描述，一般为英文描述  */
+	Description string                          `json:"description"` /*  响应描述，一般为中文描述  */
+	ReturnObj   *SfsSfsInfoSfsReturnObjResponse `json:"returnObj"`   /*  参考表[returnObj]  */
+	ErrorCode   string                          `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码  */
+	Error       string                          `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+}
+
+type SfsVpceSharePathResponse struct {
+	VpcID              string `json:"vpcID"`              // vpc的ID
+	VpcName            string `json:"vpcName"`            // vpc名称
+	SharePath          string `json:"sharePath"`          // Linux主机共享路径
+	SharePathV6        string `json:"sharePathV6"`        // Linux主机IPv6共享路径
+	WindowsSharePath   string `json:"windowsSharePath"`   // Windows主机共享路径
+	WindowsSharePathV6 string `json:"windowsSharePathV6"` // Windows主机IPv6共享路径
+}
+
+type SfsSfsInfoSfsReturnObjListResponse struct {
+	SfsName            string                      `json:"sfsName"`            // 弹性文件命名
+	SfsUID             string                      `json:"sfsUID"`             // 弹性文件功能系统唯一 ID
+	SfsSize            int32                       `json:"sfsSize"`            // 大小（GB）
+	SfsType            string                      `json:"sfsType"`            // 类型，capacity/performance
+	SfsProtocol        string                      `json:"sfsProtocol"`        // 挂载协议。nfs/cifs
+	SfsStatus          string                      `json:"sfsStatus"`          // 弹性文件状态
+	UsedSize           int32                       `json:"usedSize"`           // 已用大小（MB）
+	CreateTime         int64                       `json:"createTime"`         // 创建时刻，epoch 时戳，精度毫秒
+	UpdateTime         int64                       `json:"updateTime"`         // 更新时刻，epoch 时戳，精度毫秒
+	ExpireTime         int64                       `json:"expireTime"`         // 过期时刻，epoch 时戳，精度毫秒
+	ProjectID          string                      `json:"projectID"`          // 资源所属企业项目 ID
+	IsEncrypt          bool                        `json:"isEncrypt"`          // 是否加密盘
+	KmsUUID            string                      `json:"kmsUUID"`            // 加密盘密钥 UUID
+	VpceSharePath      []*SfsVpceSharePathResponse `json:"vpceSharePath"`      // VPCE 共享路径信息
+	OnDemand           bool                        `json:"onDemand"`           // 是否按需订购
+	RegionID           string                      `json:"regionID"`           // 资源池 ID
+	AzName             string                      `json:"azName"`             // 多可用区下的可用区名字
+	SharePath          string                      `json:"sharePath"`          // Linux主机共享路径
+	SharePathV6        string                      `json:"sharePathV6"`        // Linux主机IPv6共享路径
+	WindowsSharePath   string                      `json:"windowsSharePath"`   // Windows主机共享路径
+	WindowsSharePathV6 string                      `json:"windowsSharePathV6"` // Windows主机IPv6共享路径
+	MountCount         int32                       `json:"mountCount"`         // 挂载点数量
+	CephID             string                      `json:"cephID"`             // ceph底层的id
+	PhySharePath       string                      `json:"phySharePath"`       // linux物理机共享路径
+}
+
+type SfsSfsInfoSfsReturnObjResponse struct {
+	TotalCount   int32                                 `json:"totalCount"`   /*  资源池下用户弹性文件总数  */
+	CurrentCount int32                                 `json:"currentCount"` /*  当前页码下查询回来的用户弹性文件数  */
+	Total        int32                                 `json:"total"`        /*  资源池下用户弹性文件总数  */
+	PageSize     int32                                 `json:"pageSize"`     /*  每页包含的元素个数。默认为1  */
+	PageNo       int32                                 `json:"pageNo"`       /*  当前页码。默认为10  */
+	List         []*SfsSfsInfoSfsReturnObjListResponse `json:"list"`
+}

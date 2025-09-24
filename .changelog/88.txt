@@ -1,0 +1,8 @@
+release-note:new-resource
+ctyun_mysql_white_list
+
+release-note:new-data-source
+ctyun_mysql_white_lists
+
+release-note:new-data-source
+ctyun_mysql_association_eips

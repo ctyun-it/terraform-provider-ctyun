@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	"github.com/google/uuid"
-	"terraform-provider-ctyun/internal/common"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 )
 
 type EbsService struct {
@@ -81,4 +81,13 @@ func (c *EbsService) getMasterOrderIdIfOrderInProgress(err ctyunsdk.CtyunRequest
 		return "", err
 	}
 	return resp.MasterOrderId, err
+}
+
+// GetEbsInfo 查询云盘信息
+func (c *EbsService) GetEbsInfo(ctx context.Context, diskId, regionId string) (resp *ctebs.EbsShowResponse, err error) {
+	resp, err = c.meta.Apis.CtEbsApis.EbsShowApi.Do(ctx, c.meta.Credential, &ctebs.EbsShowRequest{
+		RegionId: regionId,
+		DiskId:   diskId,
+	})
+	return
 }

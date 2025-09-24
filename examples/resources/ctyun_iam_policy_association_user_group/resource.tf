@@ -6,6 +6,11 @@ terraform {
   }
 }
 
+# 可参考index.md，在环境变量中配置ak、sk、资源池ID、可用区名称
+provider "ctyun" {
+  env = "prod"
+}
+
 resource "ctyun_iam_policy" "iam_policy_global_test" {
   name        = "terraform_policy_global2"
   description = "terraform测试全局策略2"

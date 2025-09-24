@@ -6,6 +6,11 @@ terraform {
   }
 }
 
+# 可参考index.md，在环境变量中配置ak、sk、资源池ID、可用区名称
+provider "ctyun" {
+  env = "prod"
+}
+
 # 创建一个按需，大小为5Mbit/s的带宽
 resource "ctyun_bandwidth" "bandwidth_test1" {
   name       = "bandwidth-test1"

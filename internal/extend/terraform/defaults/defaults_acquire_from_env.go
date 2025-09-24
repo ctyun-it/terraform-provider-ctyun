@@ -3,9 +3,9 @@ package defaults
 import (
 	"context"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/defaults"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"terraform-provider-ctyun/internal/common"
 )
 
 func AcquireFromGlobalString(ctyunMetadataExtraKey string, mustAcquire bool) defaults.String {

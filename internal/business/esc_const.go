@@ -18,6 +18,9 @@ const (
 	EcsStatusUnsubscribed  = "unsubscribed"
 	EcsStatusUnsubscribing = "unsubscribing"
 
+	EcsSnapshotStatusAvailable = "available"
+	EcsBackupRepoStatusActive  = "active"
+
 	EcsFlavorType_CPU                  = "CPU"
 	EcsFlavorType_CPU_C3               = "CPU_C3"
 	EcsFlavorType_CPU_C6               = "CPU_C6"
@@ -86,7 +89,21 @@ const (
 	EcsFlavorSeries_P   = "P"
 	EcsFlavorSeries_G   = "G"
 	EcsFlavorSeries_IP3 = "IP3"
+
+	EcsGroupAntiAffinityPolicy = "anti-affinity"
+	EcsGroupAffinityPolicy     = "affinity"
+	EcsGroupSoftAntiAffinity   = "soft-anti-affinity"
+	EcsGroupSoftAffinity       = "soft-affinity"
+	EcsGroupPowerAntiAffinity  = "power-anti-affinity"
 )
+
+var EcSGroupPolicyMap = map[string]int32{
+	EcsGroupAntiAffinityPolicy: 0,
+	EcsGroupAffinityPolicy:     1,
+	EcsGroupSoftAntiAffinity:   2,
+	EcsGroupSoftAffinity:       3,
+	EcsGroupPowerAntiAffinity:  4,
+}
 
 var EcsFlavorTypes = []string{
 	EcsFlavorType_CPU,

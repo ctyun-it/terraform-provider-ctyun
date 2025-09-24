@@ -2,8 +2,8 @@ package ctiam
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // PrivilegeGetApi 根据授权id查询授权信息

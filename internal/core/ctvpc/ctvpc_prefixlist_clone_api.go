@@ -1,0 +1,66 @@
+package ctvpc
+
+import (
+	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
+	"net/http"
+)
+
+// CtvpcPrefixlistCloneApi
+/* 克隆 prefixlist
+ */type CtvpcPrefixlistCloneApi struct {
+	template core.CtyunRequestTemplate
+	client   *core.CtyunClient
+}
+
+func NewCtvpcPrefixlistCloneApi(client *core.CtyunClient) *CtvpcPrefixlistCloneApi {
+	return &CtvpcPrefixlistCloneApi{
+		client: client,
+		template: core.CtyunRequestTemplate{
+			EndpointName: EndpointName,
+			Method:       http.MethodPost,
+			UrlPath:      "/v4/prefixlist/clone",
+			ContentType:  "application/json",
+		},
+	}
+}
+
+func (a *CtvpcPrefixlistCloneApi) Do(ctx context.Context, credential core.Credential, req *CtvpcPrefixlistCloneRequest) (*CtvpcPrefixlistCloneResponse, error) {
+	builder := core.NewCtyunRequestBuilder(a.template)
+	builder.WithCredential(credential)
+	ctReq := builder.Build()
+	_, err := ctReq.WriteJson(req, a.template.ContentType)
+	if err != nil {
+		return nil, err
+	}
+	response, err := a.client.RequestToEndpoint(ctx, ctReq)
+	if err != nil {
+		return nil, err
+	}
+	var resp CtvpcPrefixlistCloneResponse
+	err = response.Parse(&resp)
+	if err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+type CtvpcPrefixlistCloneRequest struct {
+	RegionID     string `json:"regionID,omitempty"`     /*  资源池ID  */
+	DestRegionID string `json:"destRegionID,omitempty"` /*  目的资源池ID  */
+	PrefixListID string `json:"prefixListID,omitempty"` /*  prefixlistID  */
+	Name         string `json:"name,omitempty"`         /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	Limit        int32  `json:"limit"`                  /*  前缀列表支持的最大条目容量，创建后将无法修改,限制1-200条，具体以账户配额为准  */
+}
+
+type CtvpcPrefixlistCloneResponse struct {
+	StatusCode  int32                                    `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
+	Message     *string                                  `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
+	Description *string                                  `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
+	ErrorCode   *string                                  `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	ReturnObj   []*CtvpcPrefixlistCloneReturnObjResponse `json:"returnObj"`             /*  接口业务数据  */
+}
+
+type CtvpcPrefixlistCloneReturnObjResponse struct {
+	PrefixListID *string `json:"prefixListID,omitempty"` /*  prefixlist id  */
+}
