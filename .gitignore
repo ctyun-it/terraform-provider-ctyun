@@ -9,10 +9,10 @@ bin/
 dist/
 modules-dev/
 /pkg/
-website/.vagrant
-website/.bundle
-website/build
-website/node_modules
+docs/.vagrant
+docs/.bundle
+docs/build
+docs/node_modules
 .vagrant/
 *.backup
 ./*.tfstate
@@ -27,7 +27,7 @@ website/node_modules
 *.iml
 /archive
 
-website/vendor
+docs/vendor
 
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
