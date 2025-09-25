@@ -40,7 +40,7 @@ func (c *ctyunSecurityGroupRule) Metadata(_ context.Context, request resource.Me
 
 func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026730/10225510**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225510`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

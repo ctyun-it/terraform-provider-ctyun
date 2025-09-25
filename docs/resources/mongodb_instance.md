@@ -1,9 +1,9 @@
 # ctyun_mongodb_instance (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

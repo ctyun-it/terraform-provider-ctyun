@@ -46,7 +46,7 @@ type CtyunEcsBackupPolicyBindRepoConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026751/10235038**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10235038`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

@@ -35,7 +35,7 @@ func (c *ctyunBandwidthAssociationEip) Metadata(_ context.Context, request resou
 
 func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

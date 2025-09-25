@@ -28,7 +28,7 @@ func (c *ctyunIamUserGroup) Metadata(_ context.Context, request resource.Metadat
 
 func (c *ctyunIamUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

@@ -54,7 +54,7 @@ func (c *CtyunMongodbAssociationEip) Configure(ctx context.Context, request reso
 
 func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10034467/10183412**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10183412`,
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,

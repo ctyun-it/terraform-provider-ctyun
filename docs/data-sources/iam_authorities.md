@@ -1,9 +1,9 @@
 # ctyun_iam_authorities (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10345725/10409363**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409363
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

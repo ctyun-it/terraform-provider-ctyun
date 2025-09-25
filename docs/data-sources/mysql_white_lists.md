@@ -1,9 +1,9 @@
 # ctyun_mysql_white_lists (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

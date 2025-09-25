@@ -1,9 +1,9 @@
 # ctyun_redis_association_eip (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

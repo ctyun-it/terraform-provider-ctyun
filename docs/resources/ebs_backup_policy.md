@@ -1,9 +1,9 @@
 # ctyun_ebs_backup_policy (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

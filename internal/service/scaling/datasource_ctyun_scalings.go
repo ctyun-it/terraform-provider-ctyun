@@ -42,7 +42,7 @@ func (c *CtyunScalings) Configure(ctx context.Context, request datasource.Config
 
 func (c *CtyunScalings) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027725**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

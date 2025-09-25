@@ -66,7 +66,7 @@ func (c *CtyunPostgresqlInstance) Metadata(ctx context.Context, request resource
 
 func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165`,
 		Attributes: map[string]schema.Attribute{
 			"cycle_type": schema.StringAttribute{
 				Required:    true,

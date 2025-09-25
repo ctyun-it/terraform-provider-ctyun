@@ -25,7 +25,7 @@ func (c *ctyunIamUserGroups) Metadata(_ context.Context, req datasource.Metadata
 
 func (c *ctyunIamUserGroups) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805`,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Optional:    true,

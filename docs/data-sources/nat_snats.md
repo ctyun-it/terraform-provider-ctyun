@@ -1,9 +1,9 @@
 # ctyun_nat_snats (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026759/10166268
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166268
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

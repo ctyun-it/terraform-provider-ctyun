@@ -43,7 +43,7 @@ func (c *ctyunElbHealthChecks) Metadata(ctx context.Context, request datasource.
 
 func (c *ctyunElbHealthChecks) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

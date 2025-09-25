@@ -1,9 +1,9 @@
 # ctyun_vpce_service_transit_ips (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

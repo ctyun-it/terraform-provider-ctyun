@@ -34,7 +34,7 @@ func (c *ctyunPolicy) Metadata(_ context.Context, request resource.MetadataReque
 
 func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

@@ -1,9 +1,9 @@
 # ctyun_ecs_flavors (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026730/10118193**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10118193**
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

@@ -1,9 +1,9 @@
 # ctyun_vpc_route_tables (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026755/10105078**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10105078
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

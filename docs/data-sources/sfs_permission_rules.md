@@ -3,7 +3,7 @@
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

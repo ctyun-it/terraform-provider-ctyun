@@ -70,7 +70,7 @@ type CtyunEbsBackupPolicyAdvRetention struct {
 
 func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

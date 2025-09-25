@@ -4,26 +4,24 @@
 {{ .Description | trimspace }}
 {{- end }}
 
-
-
-## 背景
-
-为了保证信息安全，最新的terraform-provider-ctyun暂未上架到Terraform的[官方镜像源仓库](https://registry.terraform.io/)；但后续会进行推送操作，并且持续更新版本维护；因此，现阶段联调使用我司提供离线的terraform-provider-ctyun进行使用。
-
-
-
 ## 依赖
 
-- terraform使用v1.10.5，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
-- terraform-provider-ctyun插件，linux请使用terraform-provider-ctyun，windows使用terraform-provider-ctyun.exe
-- 配置样例若干
-- 插件使用说明：
-  - linux：请使用linux_amd64或linux_arm64目录下的插件
-  - windows：请使用windows_amd64或windows_arm64目录下的插件
-  - Mac：请使用darwin_amd64或darwin_arm64目录下的插件
-  - 如需其他环境的编译支撑，请联系天翼云方对接人
-- 查看用户自己的ak、sk，[点击进入](https://www.ctyun.cn/console/user/setting)，在账号中心，安全设置，用户AccessKey中查看
+- terraform v1.10.5，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
+- 天翼云账号AK、SK，[点击进入](https://www.ctyun.cn/console/user/setting)，在账号中心，安全设置，用户AccessKey中查看
 
+## 建议配置
+
+-> 强烈建议您在系统环境变量中进行如下设置
+
+- TF_LOG=INFO，terraform的日志输出级别
+- TF_LOG_PATH=terraform的日志输出路径
+- TF_CLI_ARGS_apply=-parallelism=并发个数，terraform的最大启动实例个数，不配置默认为10
+- CTYUN_AK=您的AK，如果此值不在环境变量中配置，则读取provider中的ak
+- CTYUN_SK=您的SK，如果此值不在环境变量中配置，则读取provider中的sk
+- CTYUN_REGION_ID=对应的区域id，如果此值不在环境变量中配置，则读取provider中的region_id
+- CTYUN_AZ_NAME=对应的可用区id，如果此值不在环境变量中配置，则读取provider中的az_name
+- CTYUN_ENV=选用环境，如果此值不在环境变量中配置，则读取provider中的env
+- 优先级：`resource/datasource中的配置`高于`provider配置`高于`环境变量配置`。
 
 
 ## 本地安装指南
@@ -44,7 +42,7 @@ provider_installation {
 
 - 目录结构准备：`C:\Users\<用户>\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\<version>\<arch>`
 
-- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\1.1.0\windows_amd64`
+- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\1.1.1\windows_amd64`
 
 - 将可执行文件terraform-provider-ctyun粘贴到上述目录。
 
@@ -66,23 +64,23 @@ provider_installation {
 
 ```
 # Linux 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.0/linux_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/linux_amd64
 
 # MacOS 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.0/darwin_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64
 ```
 
 - 将可执行文件复制到目录中
 
 ```
 # Linux 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.0/linux_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/linux_amd64/
 
 # MacOS 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.0/darwin_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64/
 ```
 
-- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.0/darwin_amd64/terraform-provider-ctyun`
+- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64/terraform-provider-ctyun`
 
 
 ## 安装验证
@@ -120,19 +118,8 @@ provider "ctyun" {
 - `terraform refresh`：同步远程数据到本地state文件。
 
 
-## 最佳实践&建议配置
+## 最佳实践
 
-**强烈建议您在系统环境变量中配置下面设置**
-
-- TF_LOG=INFO，terraform的日志输出级别
-- TF_LOG_PATH=terraform的日志输出路径
-- TF_CLI_ARGS_apply=-parallelism=并发个数，terraform的最大启动实例个数，建议改小
-- CTYUN_AK=您的AK，如果此值不在环境变量中配置，则读取provider中的ak，**推荐**
-- CTYUN_SK=您的SK，如果此值不在环境变量中配置，则读取provider中的sk，**推荐**
-- CTYUN_REGION_ID=对应的区域id，如果此值不在环境变量中配置，则读取provider中的region_id，**推荐**
-- CTYUN_AZ_NAME=对应的可用区id，如果此值不在环境变量中配置，则读取provider中的az_name，**推荐**
-- CTYUN_ENV=选用环境，如果此值不在环境变量中配置，则读取provider中的env
-- 优先级：`resource/datasource中的配置`高于`provider配置`高于`环境变量`。
 - 在并发创建相同类型的资源时，名称需要加以区分，建议使用如下写法：
 
 ```
@@ -142,7 +129,6 @@ resource "ctyun_ecs" "ecs_test" {
   ...
 }
 ```
-
 
 - PaaS产品实例在terraform destroy时可以删除，但相关联的底层资源不能马上释放，所以删除子网和安全组时会报错。涉及CCSE、Redis、Kafka、RabbitMq、Mysql、PostgreSql、MogoDB。预计完善时间8月底。
 - 如果您想要将state文件保存到对象存储，可参考https://developer.hashicorp.com/terraform/language/v1.11.x/backend/s3，示例如下，endpoints中的s3是控制台页面上桶的终端节点：
@@ -168,7 +154,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.1.0"
+      version = "1.1.1"
     }
   }
 }
@@ -212,9 +198,6 @@ terraform {
 | 新加坡4     | 200000002670                     | 可用区1    | sg-SINP4-1A-public-ctcloud        |
 | 新加坡4     | 200000002670                     | 可用区2    | sg-SINP4-2A-public-ctcloud        |
 | 菲律宾1     | 200000002769                     | 可用区1    | ph-bdy1-1a-public-ctcloud         |
-
-
-
 
 
 {{ if .HasExample -}}

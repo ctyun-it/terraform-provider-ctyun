@@ -1,9 +1,9 @@
 # ctyun_vpce_services (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

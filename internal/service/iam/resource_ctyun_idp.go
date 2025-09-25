@@ -32,7 +32,7 @@ func (c *ctyunIdp) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunIdp) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Computed:    true,

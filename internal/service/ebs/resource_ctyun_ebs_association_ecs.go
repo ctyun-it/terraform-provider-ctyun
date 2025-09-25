@@ -34,7 +34,7 @@ func (c *ctyunEbsAssociation) Metadata(_ context.Context, request resource.Metad
 
 func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027696/10169293**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10169293`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

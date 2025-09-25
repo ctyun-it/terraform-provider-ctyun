@@ -1,9 +1,9 @@
 # ctyun_ebs_backup (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

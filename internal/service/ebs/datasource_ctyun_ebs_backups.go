@@ -71,7 +71,7 @@ type ctyunEbsBackupsConfig struct {
 
 func (c *ctyunEbsBackups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

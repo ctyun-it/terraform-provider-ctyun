@@ -1,9 +1,9 @@
 # ctyun_bandwidth_association_eip (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

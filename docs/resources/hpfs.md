@@ -1,9 +1,9 @@
 # ctyun_hpfs (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

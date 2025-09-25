@@ -1,9 +1,9 @@
 # ctyun_sfs_permission_rule (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

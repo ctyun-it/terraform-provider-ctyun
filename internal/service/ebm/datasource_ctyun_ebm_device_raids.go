@@ -51,7 +51,7 @@ type CtyunEbmDeviceRaidsConfig struct {
 
 func (c *ctyunEbmDeviceRaids) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027724/10166084**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10166084`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

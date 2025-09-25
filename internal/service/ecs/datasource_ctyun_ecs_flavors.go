@@ -27,7 +27,7 @@ func (c *ctyunEcsFlavors) Metadata(_ context.Context, req datasource.MetadataReq
 
 func (c *ctyunEcsFlavors) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026730/10118193**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10118193**`,
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
 				Optional:    true,

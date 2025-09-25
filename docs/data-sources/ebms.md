@@ -1,9 +1,9 @@
 # ctyun_ebms (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10027724/10040106**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040106
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

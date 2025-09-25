@@ -1,9 +1,9 @@
 # ctyun_ebm_device_types (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

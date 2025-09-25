@@ -68,7 +68,7 @@ func (c *ctyunSnatResource) Metadata(ctx context.Context, request resource.Metad
 
 func (c *ctyunSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026759/10166496`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166496`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

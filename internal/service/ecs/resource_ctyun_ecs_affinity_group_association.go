@@ -47,7 +47,7 @@ type CtyunEcsAffinityGroupAssociationConfig struct {
 
 func (c *ctyunEcsAffinityGroupAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026730/10597685**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597685**`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

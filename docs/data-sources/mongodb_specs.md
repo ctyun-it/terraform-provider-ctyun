@@ -1,9 +1,9 @@
 # ctyun_mongodb_specs (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10034467/10034488**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10034488
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

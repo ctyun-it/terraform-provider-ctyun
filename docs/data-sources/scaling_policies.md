@@ -1,9 +1,9 @@
 # ctyun_scaling_policies (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10027725/10241454**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241454
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

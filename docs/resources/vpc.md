@@ -1,9 +1,9 @@
 # ctyun_vpc (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026755**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026755
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {
