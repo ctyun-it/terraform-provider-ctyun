@@ -3,14 +3,14 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"terraform-provider-ctyun/internal/provider"
 )
 
 var (
-	version = "1.0.4"
+	version = "1.1.0"
 )
 
 func main() {
@@ -20,11 +20,11 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "www.ctyun.cn/ctyun-it/ctyun",
+		Address: "registry.terraform.io/ctyun-it/ctyun",
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.NewCtyunProvider(version), opts)
+	err := providerserver.Serve(context.Background(), service.NewCtyunProvider(version), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())

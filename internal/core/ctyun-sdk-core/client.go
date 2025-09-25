@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-retryablehttp"
 	"net/http"
 	"net/http/httputil"
+	"time"
 )
 
 type Environment string
@@ -71,7 +73,13 @@ func ClientConfigProd() *CtyunClientConfig {
 
 // ClientProd 生产环境客户端
 func ClientProd() *http.Client {
-	return &http.Client{}
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = 1                          // 最大重试次数
+	retryClient.RetryWaitMin = 1 * time.Second        // 最小重试间隔
+	retryClient.RetryWaitMax = 30 * time.Second       // 最大重试间隔
+	retryClient.HTTPClient.Timeout = 60 * time.Second // 整体超时时间
+	client := retryClient.StandardClient()
+	return client
 }
 
 // NewCtyunClient 新建环境

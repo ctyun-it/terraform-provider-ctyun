@@ -1,0 +1,8 @@
+release-note:new-data-source
+ctyun_rabbitmq_specs
+
+release-note:new-resource
+ctyun_rabbitmq_instance
+
+release-note:new-data-source
+ctyun_rabbitmq_instances

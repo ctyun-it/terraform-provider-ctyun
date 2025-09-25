@@ -2,8 +2,8 @@ package ctimage
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // ImageImportApi 创建私有镜像（镜像文件）

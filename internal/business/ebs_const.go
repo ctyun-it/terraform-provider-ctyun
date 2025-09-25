@@ -1,7 +1,7 @@
 package business
 
 import (
-	"terraform-provider-ctyun/internal/utils"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 )
 
 const (
@@ -14,6 +14,8 @@ const (
 	EbsDiskTypeSsd       = "ssd"
 	EbsDiskTypeSsdGenric = "ssd-genric"
 	EbsDiskTypeFastSsd   = "fast-ssd"
+
+	EbsSnapshotStatusAvailable = "available"
 )
 
 const (

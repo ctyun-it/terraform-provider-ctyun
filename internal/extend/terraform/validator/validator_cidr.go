@@ -2,6 +2,7 @@ package validator
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"net"
 )
@@ -38,8 +39,12 @@ func (v validatorCidr) ValidateString(_ context.Context, request validator.Strin
 		response.Diagnostics.AddError(CidrError, CidrError)
 		return
 	}
-	if ipnet == nil || value != ipnet.String() {
+	if ipnet == nil {
 		response.Diagnostics.AddError(CidrError, CidrError)
+		return
+	}
+	if value != ipnet.String() {
+		response.Diagnostics.AddError(CidrError, fmt.Sprintf("不支持 %s, 请使用 %s", value, ipnet.String()))
 		return
 	}
 }

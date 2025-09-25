@@ -1,0 +1,11 @@
+release-note:new-resource
+ctyun_mysql_association_eip
+
+release-note:new-resource
+ctyun_mysql_instance
+
+release-note:new-data-source
+ctyun_mysql_instances
+
+release-note:new-data-source
+ctyun_mysql_specs

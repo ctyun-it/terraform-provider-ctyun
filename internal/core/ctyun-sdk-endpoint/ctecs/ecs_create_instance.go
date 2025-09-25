@@ -2,8 +2,8 @@ package ctecs
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EcsCreateInstanceApi 创建一台按量付费或包年包月的云主机
@@ -51,7 +51,7 @@ func (this *EcsCreateInstanceApi) Do(ctx context.Context, credential ctyunsdk.Cr
 		ExtIP:           req.ExtIp,
 		ProjectID:       req.ProjectId,
 		SecGroupList:    req.SecGroupList,
-		KeyPairId:       req.KeyPairId,
+		KeyPairId:       req.KeyPairID,
 		UserPassword:    req.UserPassword,
 		CycleCount:      req.CycleCount,
 		CycleType:       req.CycleType,
@@ -106,7 +106,7 @@ type ecsCreateInstanceRealRequest struct {
 	ExtIP           string                                        `json:"extIP"`
 	ProjectID       string                                        `json:"projectID,omitempty"`
 	SecGroupList    []string                                      `json:"secGroupList,omitempty"`
-	KeyPairId       string                                        `json:"keyPairId,omitempty"`
+	KeyPairId       string                                        `json:"keyPairID,omitempty"`
 	UserPassword    string                                        `json:"userPassword,omitempty"`
 	CycleCount      *int                                          `json:"cycleCount,omitempty"`
 	CycleType       string                                        `json:"cycleType,omitempty"`
@@ -140,7 +140,7 @@ type EcsCreateInstanceRequest struct {
 	ExtIp           string                                    // 是否使用弹性公网IP，取值范围： 0（不使用）， 1（自动分配）， 2（使用已有）
 	ProjectId       string                                    // 企业项目id
 	SecGroupList    []string                                  // 安全组ID列表
-	KeyPairId       string                                    // 密钥对ID
+	KeyPairID       string                                    // 密钥对ID
 	UserPassword    string                                    // 用户密码
 	CycleCount      *int                                      // 订购时长
 	CycleType       string                                    // 订购周期类型

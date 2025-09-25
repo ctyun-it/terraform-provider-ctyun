@@ -1,0 +1,8 @@
+release-note:new-resource
+ctyun_ebm_interface
+
+release-note:new-resource
+ctyun_ebm_association_ebs
+
+release-note:new-data-source
+ctyun_ebs_volumes

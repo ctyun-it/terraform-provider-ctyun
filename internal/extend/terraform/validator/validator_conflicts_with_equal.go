@@ -27,7 +27,7 @@ type conflictsWithEqualValidatorResponse struct {
 	Diagnostics diag.Diagnostics
 }
 
-func ConflictsWithEqualStrings(expression path.Expression, objs ...attr.Value) validator.String {
+func ConflictsWithEqualString(expression path.Expression, objs ...attr.Value) validator.String {
 	return &validatorConflictsWithEqual{
 		expression: expression,
 		objs:       objs,
@@ -41,7 +41,28 @@ func ConflictsWithEqualInt64(expression path.Expression, objs ...attr.Value) val
 	}
 }
 
+func ConflictsWithEqualInt32(expression path.Expression, objs ...attr.Value) validator.Int32 {
+	return &validatorConflictsWithEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
 func ConflictsWithEqualBool(expression path.Expression, objs ...attr.Value) validator.Bool {
+	return &validatorConflictsWithEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
+func ConflictsWithEqualSet(expression path.Expression, objs ...attr.Value) validator.Set {
+	return &validatorConflictsWithEqual{
+		expression: expression,
+		objs:       objs,
+	}
+}
+
+func ConflictsWithEqualObject(expression path.Expression, objs ...attr.Value) validator.Object {
 	return &validatorConflictsWithEqual{
 		expression: expression,
 		objs:       objs,
@@ -118,7 +139,43 @@ func (v validatorConflictsWithEqual) ValidateInt64(ctx context.Context, req vali
 	resp.Diagnostics.Append(validateResp.Diagnostics...)
 }
 
+func (v validatorConflictsWithEqual) ValidateInt32(ctx context.Context, req validator.Int32Request, resp *validator.Int32Response) {
+	validateReq := conflictsWithEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &conflictsWithEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
 func (v validatorConflictsWithEqual) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) {
+	validateReq := conflictsWithEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &conflictsWithEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorConflictsWithEqual) ValidateSet(ctx context.Context, req validator.SetRequest, resp *validator.SetResponse) {
+	validateReq := conflictsWithEqualValidatorRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &conflictsWithEqualValidatorResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorConflictsWithEqual) ValidateObject(ctx context.Context, req validator.ObjectRequest, resp *validator.ObjectResponse) {
 	validateReq := conflictsWithEqualValidatorRequest{
 		Config:         req.Config,
 		ConfigValue:    req.ConfigValue,

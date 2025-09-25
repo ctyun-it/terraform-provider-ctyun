@@ -2,9 +2,9 @@ package ctiam
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strconv"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EnterpriseProjectStatusUpdateApi 启用停用企业项目

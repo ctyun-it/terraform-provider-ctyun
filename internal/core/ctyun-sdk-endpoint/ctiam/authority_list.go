@@ -2,9 +2,9 @@ package ctiam
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strconv"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // AuthorityListApi 根据云服务ID查询云服务权限点

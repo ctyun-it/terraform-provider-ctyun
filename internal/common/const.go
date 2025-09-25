@@ -13,4 +13,6 @@ const (
 	ExtraRegionId  = "regionId"
 	ExtraAzName    = "azName"
 	ExtraProjectId = "projectId"
+
+	ExtraNatGatewayID = "natGatewayId"
 )

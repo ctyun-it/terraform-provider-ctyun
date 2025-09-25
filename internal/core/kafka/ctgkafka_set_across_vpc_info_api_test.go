@@ -1,0 +1,37 @@
+package ctgkafka
+
+import (
+	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
+	"testing"
+)
+
+func TestCtgkafkaSetAcrossVpcInfoApi_Do(t *testing.T) {
+	// 初始化
+	client := core.DefaultClient()
+	credential := core.NewCredential("<YOUR_AK>", "<YOUR_SK>")
+	// credential := core.CredentialFromEnv()
+	apis := NewApis("<YOUR_ENDPOINT>", client)
+	api := apis.CtgkafkaSetAcrossVpcInfoApi
+
+	// 构造请求
+	request := &CtgkafkaSetAcrossVpcInfoRequest{
+		RegionId:   "bb9fdb42056f11eda1610242ac110002",
+		ProdInstId: "b9c707b2018c4a5b9ffa5b8c5c837ffc",
+		VpcInfoList: []*CtgkafkaSetAcrossVpcInfoVpcInfoListRequest{
+			{
+				ListenerIp:          "192.168.1.2",
+				AdvertiseListenerIp: "172.16.1.2",
+			},
+		},
+	}
+
+	// 发起调用
+	response, err := api.Do(context.Background(), *credential, request)
+	if err != nil {
+		t.Log("request error:", err)
+		t.Fail()
+		return
+	}
+	t.Logf("%+v\n", *response)
+}

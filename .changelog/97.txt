@@ -1,0 +1,17 @@
+release-note:new-resource
+ctyun_sfs
+
+release-note:new-resource
+ctyun_sfs_permission_group
+
+release-note:new-resource
+ctyun_sfs_permission_rule
+
+release-note:new-resource
+ctyun_sfs_permission_group_association
+
+release-note:new-data-source
+ctyun_sfs_permission_rules
+
+release-note:new-data-source
+ctyun_sfs_instances

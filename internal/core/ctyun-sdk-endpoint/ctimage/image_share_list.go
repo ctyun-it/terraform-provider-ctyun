@@ -2,9 +2,9 @@ package ctimage
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strconv"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // ImageShareListApi 查询私有镜像的共享列表

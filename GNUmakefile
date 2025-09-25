@@ -6,8 +6,8 @@ build:
 
 # 生成对应的文档
 generatedoc:
-	rm -rf generate-doc/*
-	tfplugindocs generate --rendered-website-dir generate-doc --examples-dir examples
+	rm -rf website/*
+	tfplugindocs generate --rendered-website-dir website --examples-dir examples
 
 # 跨平台编译
 build-all:

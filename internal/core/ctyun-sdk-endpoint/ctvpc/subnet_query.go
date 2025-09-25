@@ -2,8 +2,8 @@ package ctvpc
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"time"
 )
 
@@ -29,9 +29,10 @@ func (this *SubnetQueryApi) Do(ctx context.Context, credential ctyunsdk.Credenti
 		WithCredential(&credential).
 		AddParam("clientToken", req.ClientToken).
 		AddParam("regionID", req.RegionId).
-		AddParam("projectID", req.ProjectId).
 		AddParam("subnetID", req.SubnetId)
-
+	if req.ProjectId != "" {
+		builder.AddParam("projectID", req.ProjectId)
+	}
 	response, err := this.client.RequestToEndpoint(ctx, EndpointNameCtvpc, builder)
 	if err != nil {
 		return nil, err

@@ -1,7 +1,7 @@
 package ctecs
 
 import (
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // Apis api的接口

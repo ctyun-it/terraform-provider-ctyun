@@ -25,7 +25,7 @@ provider "ctyun" {
 # 下面例子为多provider配置，可以用于不同资源池的配置
 # 选用华北2、可用区2为可选资源池
 provider "ctyun" {
-  alias     = "huabei"
+  alias     = "huabei"                          # 别名
   region_id = "200000001852"
   az_name   = "cn-huabei2-tj-2a-public-ctcloud"
 }
@@ -41,26 +41,18 @@ provider "ctyun" {
 }
 
 # 不指定provider选用默认的provider
-resource "ctyun_security_group_rule" "security_group_rule_ingress_in_common" {
-  security_group_id = "sg-5we39vmesy"
-  direction         = "ingress"
-  action            = "accept"
-  priority          = 60
-  protocol          = "any"
-  ether_type        = "IPv4"
-  dest_cidr_ip      = "0.0.0.0/0"
-  description       = "80-90端口"
+resource "ctyun_vpc" "vpc_test" {
+  name        = "tf-vpc"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
 }
 
 # 通过指定provider方式，在华北2创建资源
-resource "ctyun_security_group_rule" "security_group_rule_ingress_in_huabei" {
-  provider          = ctyun.huabei
-  security_group_id = "sg-8ks24nnukg"
-  direction         = "ingress"
-  action            = "accept"
-  priority          = 60
-  protocol          = "any"
-  ether_type        = "IPv4"
-  dest_cidr_ip      = "0.0.0.0/0"
-  description       = "80-90端口"
+resource "ctyun_vpc" "vpc_test" {
+  provider    = ctyun.huabei
+  name        = "tf-vpc"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
 }

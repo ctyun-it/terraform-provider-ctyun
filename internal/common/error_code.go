@@ -1,5 +1,9 @@
 package common
 
+import (
+	"errors"
+)
+
 const (
 	OpenapiSecurityGroupRuleNotFound = "Openapi.SecurityGroupRule.NotFound"
 	OpenapiOrderInprogress           = "Openapi.Order.Inprogress"
@@ -14,7 +18,16 @@ const (
 	EbsOrderInProgress               = "ebs.order.inProgress"
 	OpenapiVpcNotFound               = "Openapi.Vpc.NotFound"
 	OpenapiSubnetNotFound            = "Openapi.Subnet.NotFound"
+	EcsAffinityGroupNotBound         = "Ecs.AffinityGroup.NotBound"
+	OpenapiRouterTableAccessFailed   = "Openapi.RouterTable.AccessFailed"
+	OpenapiVpceEndpointNotFound      = "Openapi.VpceEndpoint.NotFound"
+	CtiamNoPermission                = "CTIAM_0005"
+	CtiamNoPrivilege                 = "CTIAM_1044"
 
-	CtiamNoPermission = "CTIAM_0005"
-	CtiamNoPrivilege  = "CTIAM_1044"
+	ErrorStatusCode        = 900
+	NormalStatusCode       = 800
+	NormalStatusCodeString = "800"
 )
+
+var InvalidReturnObjError = errors.New("invalid return object")
+var InvalidReturnObjResultsError = errors.New("invalid result object results")

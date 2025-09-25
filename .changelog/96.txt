@@ -1,0 +1,8 @@
+release-note:new-resource
+ctyun_hpfs
+
+release-note:new-data-source
+ctyun_hpfs_instances
+
+release-note:new-data-source
+ctyun_hpfs_clusters

@@ -2,9 +2,9 @@ package ctiam
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strconv"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // IdpListApi 查看身份供应商详情

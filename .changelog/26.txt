@@ -1,0 +1,11 @@
+release-note:new-resource
+ctyun_ecs_affinity_group
+
+release-note:new-resource
+ctyun_ecs_affinity_group_association
+
+release-note:new-data-source
+ctyun_ecs_instances
+
+release-note:new-data-source
+ctyun_ecs_affinity_groups

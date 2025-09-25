@@ -1,6 +1,6 @@
 package ctecs
 
-import "terraform-provider-ctyun/internal/core/ctyun-sdk-core"
+import "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 
 const (
 	EndpointNameCtecs = "ctecs"

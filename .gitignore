@@ -4,6 +4,7 @@
 example.tf
 terraform.tfplan
 terraform.tfstate
+result
 bin/
 dist/
 modules-dev/

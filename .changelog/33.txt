@@ -1,0 +1,11 @@
+release-note:new-resource
+ctyun_redis_instance
+
+release-note:new-resource
+ctyun_redis_association_eip
+
+release-note:new-data-source
+ctyun_redis_instances
+
+release-note:new-data-source
+ctyun_redis_specs

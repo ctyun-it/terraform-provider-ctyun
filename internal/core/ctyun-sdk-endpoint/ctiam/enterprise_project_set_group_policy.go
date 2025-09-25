@@ -2,9 +2,9 @@ package ctiam
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 	"strings"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // EnterpriseProjectSetGroupPolicyApi 设置企业项目所属用户组及策略

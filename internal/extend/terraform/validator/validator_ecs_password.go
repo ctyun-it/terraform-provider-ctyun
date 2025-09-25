@@ -2,10 +2,10 @@ package validator
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"slices"
 	"strings"
-	"terraform-provider-ctyun/internal/utils"
 )
 
 type validatorEcsPassword struct {
@@ -39,6 +39,21 @@ func (v validatorEcsPassword) ValidateString(_ context.Context, request validato
 		response.Diagnostics.AddError(errMessage, errMessage)
 		return
 	}
+
+	for i := 0; i <= len(password)-3; i++ {
+		// 获取当前字符和后两个字符的ASCII值
+		c1 := int(password[i])
+		c2 := int(password[i+1])
+		c3 := int(password[i+2])
+
+		// 检查是否连续递增（如a(97)、b(98)、c(99)）
+		if c2 == c1+1 && c3 == c2+1 {
+			errMessage := "ecs密码不能包含3个及以上连续字符，如abc，123"
+			response.Diagnostics.AddError(errMessage, errMessage)
+			return
+		}
+	}
+
 	hasUpperLetter := false
 	hasLowerLetter := false
 	hasDigit := false

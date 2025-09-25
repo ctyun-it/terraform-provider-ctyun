@@ -2,8 +2,8 @@ package ctecs
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
-	"terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 // JobShowApi 通用任务状态查询
@@ -42,6 +42,7 @@ func (this *JobShowApi) Do(ctx context.Context, credential ctyunsdk.Credential, 
 		Fields:     response.Fields,
 		JobStatus:  response.JobStatus,
 		JobId:      response.JobID,
+		ID:         response.ID,
 	}, nil
 }
 
@@ -56,6 +57,7 @@ type jobShowRealResponse struct {
 	Fields     map[string]string `json:"fields"`
 	JobStatus  string            `json:"jobStatus"`
 	JobID      string            `json:"jobID"`
+	ID         string            `json:"ID"`
 }
 
 type JobShowResponse struct {
@@ -64,4 +66,5 @@ type JobShowResponse struct {
 	Fields     map[string]string
 	JobStatus  string
 	JobId      string
+	ID         string
 }

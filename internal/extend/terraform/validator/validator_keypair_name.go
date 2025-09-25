@@ -2,9 +2,9 @@ package validator
 
 import (
 	"context"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"strings"
-	"terraform-provider-ctyun/internal/utils"
 )
 
 type validatorKeypairName struct {

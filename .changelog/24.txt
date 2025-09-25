@@ -1,0 +1,11 @@
+release-note:bug
+resource/ctyun_ecs fix config
+
+release-note:new-data-source
+ctyun_ebms
+
+release-note:new-data-source
+ctyun_ebm_device_images
+
+release-note:new-data-source
+ctyun_ebm_device_raids
