@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.1.1 - September 25, 2025
+## 1.2.0 - September 25, 2025
 
 ### New Resources
 

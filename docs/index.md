@@ -38,7 +38,7 @@ provider_installation {
 
 - 目录结构准备：`C:\Users\<用户>\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\<version>\<arch>`
 
-- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\1.1.1\windows_amd64`
+- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\1.2.0\windows_amd64`
 
 - 将可执行文件terraform-provider-ctyun粘贴到上述目录。
 
@@ -60,23 +60,23 @@ provider_installation {
 
 ```
 # Linux 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/linux_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/linux_amd64
 
 # MacOS 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64
 ```
 
 - 将可执行文件复制到目录中
 
 ```
 # Linux 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/linux_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/linux_amd64/
 
 # MacOS 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64/
 ```
 
-- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.1.1/darwin_amd64/terraform-provider-ctyun`
+- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64/terraform-provider-ctyun`
 
 
 ## 安装验证
@@ -150,7 +150,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.1.1"
+      version = "1.2.0"
     }
   }
 }

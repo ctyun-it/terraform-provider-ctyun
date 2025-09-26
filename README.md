@@ -25,7 +25,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.1.1"
+      version = "1.2.0"
     }
   }
 }
