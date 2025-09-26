@@ -1,9 +1,9 @@
 # ctyun_scaling_group (Resource)
-**详细说明请见文档：：https://www.ctyun.cn/document/10027725**
+-> 详细说明请见文档：：https://www.ctyun.cn/document/10027725
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

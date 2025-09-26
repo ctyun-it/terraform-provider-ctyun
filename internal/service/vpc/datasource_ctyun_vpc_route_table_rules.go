@@ -52,7 +52,7 @@ type CtyunVpcRouteTableRulesConfig struct {
 
 func (c *ctyunVpcRouteTableRules) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -25,7 +25,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.0.1"
+      version = "1.2.0"
     }
   }
 }
@@ -51,7 +51,7 @@ provider "ctyun" {
 
 ## 文档参考
 
-详见工程中的[website](https://github.com/ctyun-it/terraform-provider-ctyun/tree/main/website)
+详见工程中的[docs](https://github.com/ctyun-it/terraform-provider-ctyun/tree/main/docs)
 
 
 ## 版权声明

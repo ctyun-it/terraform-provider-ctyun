@@ -1,9 +1,9 @@
 # ctyun_ebs_volumes (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10027696/10027930**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10027930
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

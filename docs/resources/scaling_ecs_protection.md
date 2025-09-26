@@ -1,9 +1,9 @@
 # ctyun_scaling_ecs_protection (Resource)
-**详细说明请见文档：//www.ctyun.cn/document/10027725/10216534**
+-> 详细说明请见文档：//www.ctyun.cn/document/10027725/10216534
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

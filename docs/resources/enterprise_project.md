@@ -1,9 +1,9 @@
 # ctyun_enterprise_project (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10345725/10358242**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10358242
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

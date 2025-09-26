@@ -1,9 +1,9 @@
 # ctyun_kafka_instance (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10029624/10030700**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10030700
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

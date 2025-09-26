@@ -51,7 +51,7 @@ type ctyunEbsSnapshotPoliciesConfig struct {
 
 func (c *ctyunEbsSnapshotPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027696/10118840**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118840`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

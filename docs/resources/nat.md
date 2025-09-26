@@ -1,9 +1,9 @@
 # ctyun_nat (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026759/10166493**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166493
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

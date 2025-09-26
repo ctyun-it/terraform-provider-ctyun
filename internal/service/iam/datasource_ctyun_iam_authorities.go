@@ -23,7 +23,7 @@ func (c *ctyunIamAuthorities) Metadata(_ context.Context, req datasource.Metadat
 
 func (c *ctyunIamAuthorities) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10409363**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409363`,
 		Attributes: map[string]schema.Attribute{
 			"service_id": schema.Int64Attribute{
 				Required:    true,

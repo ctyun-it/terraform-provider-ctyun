@@ -41,7 +41,7 @@ func (c *CtyunMysqlAssociationEips) Metadata(ctx context.Context, request dataso
 
 func (c *CtyunMysqlAssociationEips) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

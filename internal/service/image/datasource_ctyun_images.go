@@ -27,7 +27,7 @@ func (c *ctyunImages) Metadata(_ context.Context, req datasource.MetadataRequest
 
 func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027726**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
 		Attributes: map[string]schema.Attribute{
 			"visibility": schema.StringAttribute{
 				Required:    true,

@@ -1,9 +1,9 @@
 # ctyun_elb_certificate (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

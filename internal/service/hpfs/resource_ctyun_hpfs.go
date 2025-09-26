@@ -47,7 +47,7 @@ func NewCtyunHpfsInstance() resource.Resource {
 
 func (c *ctyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

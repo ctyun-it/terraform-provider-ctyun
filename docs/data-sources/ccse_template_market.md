@@ -1,9 +1,9 @@
 # ctyun_ccse_template_market (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

@@ -1,9 +1,9 @@
 # ctyun_zos_buckets (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

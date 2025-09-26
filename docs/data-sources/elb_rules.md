@@ -1,9 +1,9 @@
 # ctyun_elb_rules (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

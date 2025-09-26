@@ -1,9 +1,9 @@
 # ctyun_ebm_device_images (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10027724/10173844**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10173844
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

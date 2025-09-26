@@ -38,7 +38,7 @@ func (c *ctyunEbs) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027696**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696`,
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,

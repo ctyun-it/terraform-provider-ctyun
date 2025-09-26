@@ -1,9 +1,9 @@
 # ctyun_image (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10027726**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027726
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

@@ -1,9 +1,9 @@
 # ctyun_elb_loadbalancer (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

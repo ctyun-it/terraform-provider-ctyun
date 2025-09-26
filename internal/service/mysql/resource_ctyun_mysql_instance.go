@@ -67,7 +67,7 @@ func (c *CtyunMysqlInstance) Metadata(ctx context.Context, request resource.Meta
 
 func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365`,
 		Attributes: map[string]schema.Attribute{
 			"flavor_name": schema.StringAttribute{
 				Required:    true,

@@ -32,7 +32,7 @@ func (c *ctyunImageAssociationUser) Metadata(_ context.Context, request resource
 
 func (c *ctyunImageAssociationUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10027726**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
 		Attributes: map[string]schema.Attribute{
 			"image_id": schema.StringAttribute{
 				Required:    true,

@@ -1,9 +1,9 @@
 # ctyun_elb_listeners (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

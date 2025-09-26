@@ -1,9 +1,9 @@
 # ctyun_idp (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

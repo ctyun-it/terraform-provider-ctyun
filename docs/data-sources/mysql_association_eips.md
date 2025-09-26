@@ -1,9 +1,9 @@
 # ctyun_mysql_association_eips (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

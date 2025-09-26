@@ -38,7 +38,7 @@ func (c *ctyunEnterpriseProjectAssociationUserGroup) Metadata(_ context.Context,
 
 func (c *ctyunEnterpriseProjectAssociationUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：https://www.ctyun.cn/document/10345725/10356399**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10356399`,
 		Attributes: map[string]schema.Attribute{
 			"enterprise_project_id": schema.StringAttribute{
 				Required:    true,

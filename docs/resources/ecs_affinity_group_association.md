@@ -1,9 +1,9 @@
 # ctyun_ecs_affinity_group_association (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026730/10597685**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597685**
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

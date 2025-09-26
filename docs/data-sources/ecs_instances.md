@@ -1,9 +1,9 @@
 # ctyun_ecs_instances (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10026730**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026730**
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

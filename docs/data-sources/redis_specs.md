@@ -1,9 +1,9 @@
 # ctyun_redis_specs (Data Source)
-**详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

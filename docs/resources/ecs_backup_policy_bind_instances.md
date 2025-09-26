@@ -1,9 +1,9 @@
 # ctyun_ecs_backup_policy_bind_instances (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10026751/10033775**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033775**
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

@@ -90,7 +90,7 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：：https://www.ctyun.cn/document/10027725**`,
+		MarkdownDescription: `-> 详细说明请见文档：：https://www.ctyun.cn/document/10027725`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

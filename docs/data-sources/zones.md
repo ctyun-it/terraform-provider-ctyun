@@ -1,9 +1,9 @@
 # ctyun_zones (Data Source)
-**资源池可用区**
+**资源池可用区
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

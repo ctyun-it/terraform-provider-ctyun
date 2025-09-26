@@ -1,9 +1,9 @@
 # ctyun_iam_policy_association_user (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

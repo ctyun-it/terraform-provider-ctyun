@@ -1,9 +1,9 @@
 # ctyun_mysql_instance (Resource)
-**详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365
 
 
 
-## 样例
+## Example
 
 ```terraform
 terraform {

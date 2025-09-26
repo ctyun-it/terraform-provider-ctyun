@@ -45,7 +45,7 @@ func (c *ctyunScalingEcsProtection) Configure(_ context.Context, request resourc
 
 func (c *ctyunScalingEcsProtection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `**详细说明请见文档：//www.ctyun.cn/document/10027725/10216534**`,
+		MarkdownDescription: `-> 详细说明请见文档：//www.ctyun.cn/document/10027725/10216534`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
