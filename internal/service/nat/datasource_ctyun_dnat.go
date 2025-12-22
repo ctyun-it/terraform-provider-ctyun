@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"time"
 )
 
 var (
@@ -43,26 +44,22 @@ func (c *ctyunDNatDatasource) Schema(_ context.Context, _ datasource.SchemaReque
 			},
 			"nat_gateway_id": schema.StringAttribute{
 				Required:    true,
-				Description: "要查询的NAT网关的ID",
+				Description: "NAT网关ID",
 			},
 			"dnats": schema.ListNestedAttribute{
 				Computed:    true,
-				Description: "dnats列表",
+				Description: "dnat列表",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"description": schema.StringAttribute{
 							Computed:    true,
 							Description: "描述信息",
 						},
 						"id": schema.StringAttribute{
-							Computed:    true,
-							Description: "dnatID 值",
-						},
-						"dnat_id": schema.StringAttribute{
 							Computed:    true,
 							Description: "dnatID 值",
 						},
@@ -82,7 +79,7 @@ func (c *ctyunDNatDatasource) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 							Description: "外部访问端口",
 							Validators: []validator.Int64{
-								int64validator.Between(1, 1024),
+								int64validator.Between(1, 65535),
 							},
 						},
 						"internal_port": schema.Int64Attribute{
@@ -165,20 +162,15 @@ func (c *ctyunDNatDatasource) Read(ctx context.Context, request datasource.ReadR
 	var dnats []CtyunDNatModel
 	for _, dnat := range resp.ReturnObj {
 		dnatItem := CtyunDNatModel{
-			ID:           utils.SecStringValue(dnat.Id),
-			DNatID:       utils.SecStringValue(dnat.DNatID),
-			Description:  utils.SecStringValue(dnat.Description),
-			CreateTime:   utils.SecStringValue(dnat.CreationTime),
-			IpExpireTime: utils.SecStringValue(dnat.IpExpireTime),
-			ExternalIp:   utils.SecStringValue(dnat.ExternalIp),
-			InternalIP:   utils.SecStringValue(dnat.InternalIp),
-			//Protocol:                  utils.SecStringValue(dnat.Protocol),
+			ID:                        utils.SecStringValue(dnat.Id),
+			Description:               utils.SecStringValue(dnat.Description),
+			CreateTime:                types.StringValue(utils.ConvertToUTCZ(time.RFC3339, utils.SecString(dnat.CreationTime))),
+			IpExpireTime:              types.StringValue(utils.ConvertToUTCZ(time.RFC3339, utils.SecString(dnat.IpExpireTime))),
+			ExternalIp:                utils.SecStringValue(dnat.ExternalIp),
+			InternalIP:                utils.SecStringValue(dnat.InternalIp),
 			VirtualMachineId:          utils.SecStringValue(dnat.VirtualMachineID),
 			VirtualMachineName:        utils.SecStringValue(dnat.VirtualMachineName),
 			VirtualMachineDisplayName: utils.SecStringValue(dnat.VirtualMachineDisplayName),
-			//State:                     utils.SecStringValue(dnat.State),
-			//ExternalPort:              types.Int64Value(int64(dnat.ExternalPort)),
-			//InternalPort:              types.Int64Value(int64(dnat.InternalPort)),
 		}
 		protocol := utils.SecStringValue(dnat.Protocol)
 		if c.contains(business.DNatProtocols, protocol.ValueString()) {
@@ -251,7 +243,6 @@ type CtyunDNatModel struct {
 	CreateTime                types.String `tfsdk:"create_time"`                  //创建时间
 	Description               types.String `tfsdk:"description"`                  //描述信息
 	ID                        types.String `tfsdk:"id"`                           //dnatID 值
-	DNatID                    types.String `tfsdk:"dnat_id"`                      //dnatID 值
 	IpExpireTime              types.String `tfsdk:"ip_expire_time"`               //ip到期时间
 	ExtendID                  types.String `tfsdk:"extend_id"`                    //弹性 IP id
 	ExternalIp                types.String `tfsdk:"external_ip"`                  //弹性 IP 地址

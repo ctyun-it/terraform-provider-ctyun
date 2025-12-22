@@ -95,11 +95,11 @@ func (c *ctyunElbCertificates) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "状态: ACTIVE / INACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -194,16 +194,16 @@ type CtyunElbCertificatesConfig struct {
 }
 
 type CtyunElbCertificatesInfoModel struct {
-	RegionID    types.String `tfsdk:"region_id"`    //资源池ID
-	AzName      types.String `tfsdk:"az_name"`      //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`   //项目ID
-	ID          types.String `tfsdk:"id"`           //证书ID
-	Name        types.String `tfsdk:"name"`         //名称
-	Description types.String `tfsdk:"description"`  //描述
-	Type        types.String `tfsdk:"type"`         //证书类型: server / ca
-	PrivateKey  types.String `tfsdk:"private_key"`  //服务器证书私钥
-	Certificate types.String `tfsdk:"certificate"`  //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
-	Status      types.String `tfsdk:"status"`       //状态: ACTIVE / INACTIVE
-	CreatedTime types.String `tfsdk:"created_time"` //创建时间，为UTC格式
-	UpdatedTime types.String `tfsdk:"updated_time"` //更新时间，为UTC格式
+	RegionID    types.String `tfsdk:"region_id"`   //资源池ID
+	AzName      types.String `tfsdk:"az_name"`     //可用区名称
+	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
+	ID          types.String `tfsdk:"id"`          //证书ID
+	Name        types.String `tfsdk:"name"`        //名称
+	Description types.String `tfsdk:"description"` //描述
+	Type        types.String `tfsdk:"type"`        //证书类型: server / ca
+	PrivateKey  types.String `tfsdk:"private_key"` //服务器证书私钥
+	Certificate types.String `tfsdk:"certificate"` //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
+	Status      types.String `tfsdk:"status"`      //状态: ACTIVE / INACTIVE
+	CreatedTime types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	UpdatedTime types.String `tfsdk:"update_time"` //更新时间，为UTC格式
 }

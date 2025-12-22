@@ -54,7 +54,12 @@ type AmqpInstancesDiskExtendResponse struct {
 }
 
 type AmqpInstancesDiskExtendResponseReturnObj struct {
+	Data AmqpInstancesDiskExtendResponseReturnObjData `json:"data"`
 }
 
 type AmqpInstancesDiskExtendResponseReturnObjData struct {
+	Submitted  bool   `json:"submitted"`
+	NewOrderId string `json:"newOrderId"`
+	NewOrderNo string `json:"newOrderNo"`
+	//TotalPrice string `json:"totalPrice"`
 }

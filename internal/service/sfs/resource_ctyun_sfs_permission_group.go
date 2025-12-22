@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
 )
 
 type ctyunSfsPermissionGroup struct {
@@ -42,25 +43,41 @@ func NewCtyunSfsPermissionGroup() resource.Resource {
 	return &ctyunSfsPermissionGroup{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId]
 func (c *ctyunSfsPermissionGroup) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var cfg CtyunSfsPermissionGroupConfig
-	var ID, regionId string
-	err := terraform_extend.Split(request.ID, &ID, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunSfsPermissionGroupConfig
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
-
-	cfg.ID = types.StringValue(ID)
-	cfg.RegionID = types.StringValue(regionId)
-
-	err = c.getAndMergeSfsPermissionGroup(ctx, &cfg)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+	err = c.getAndMergeSfsPermissionGroup(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -90,10 +107,6 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 					),
 				},
 			},
-			//"network_type": schema.StringAttribute{
-			//	Required:    true,
-			//	Description: "权限组网络类型：private_network（专有网络）",
-			//},
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -104,7 +117,7 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "权限组Fuid",
+				Description: "权限组ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -117,7 +130,7 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 				Computed:    true,
 				Description: "权限组规则个数",
 			},
-			"permission_group_is_default": schema.BoolAttribute{
+			"is_default": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否为默认权限组",
 			},
@@ -392,12 +405,11 @@ func (c *ctyunSfsPermissionGroup) updateSfsPermissionGroup(ctx context.Context, 
 }
 
 type CtyunSfsPermissionGroupConfig struct {
-	RegionID types.String `tfsdk:"region_id"`
-	Name     types.String `tfsdk:"name"`
-	//NetworkType types.String `tfsdk:"network_type"`
+	RegionID                 types.String `tfsdk:"region_id"`
+	Name                     types.String `tfsdk:"name"`
 	Description              types.String `tfsdk:"description"`
 	ID                       types.String `tfsdk:"id"`
 	SfsCount                 types.Int32  `tfsdk:"sfs_count"`
 	PermissionRuleCount      types.Int32  `tfsdk:"permission_rule_count"`
-	PermissionGroupIsDefault types.Bool   `tfsdk:"permission_group_is_default"`
+	PermissionGroupIsDefault types.Bool   `tfsdk:"is_default"`
 }

@@ -66,4 +66,10 @@ type CtgkafkaSpecExtendResponse struct {
 }
 
 type CtgkafkaSpecExtendReturnObjResponse struct {
+	Data struct {
+		Submitted  bool    `json:"submitted"`
+		NewOrderId string  `json:"newOrderId"`
+		NewOrderNo string  `json:"newOrderNo"`
+		TotalPrice float64 `json:"totalPrice"`
+	} `json:"data"`
 }

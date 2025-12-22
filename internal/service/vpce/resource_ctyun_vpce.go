@@ -56,6 +56,8 @@ type CtyunVpceConfig struct {
 	WhitelistFlag     types.Bool   `tfsdk:"whitelist_flag"`
 	WhitelistCidr     types.Set    `tfsdk:"whitelist_cidr"`
 	Status            types.Int32  `tfsdk:"status"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -158,6 +160,17 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 					setvalidator.SizeAtMost(20),
 					setvalidator.ValueStringsAre(validator2.Cidr()),
 				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Description: "更新时间，为UTC格式",
+				Computed:    true,
 			},
 		},
 	}
@@ -277,20 +290,37 @@ func (c *ctyunVpce) Configure(_ context.Context, request resource.ConfigureReque
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [vpceID],[regionID]
 func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceConfig
 	var endpointID, regionID string
-	err = terraform_extend.Split(request.ID, &endpointID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		endpointID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &endpointID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if endpointID == "" {
+		err = fmt.Errorf("endpointID不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ID = types.StringValue(endpointID)
 	// 查询远端
@@ -384,6 +414,9 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	plan.Name = utils.SecStringValue(endpoint.Name)
 	plan.EndpointServiceID = utils.SecStringValue(endpoint.EndpointServiceID)
 	plan.Status = types.Int32Value(endpoint.Status)
+	plan.CreateTime = types.StringValue(utils.SecString(endpoint.CreatedTime))
+	plan.UpdateTime = types.StringValue(utils.SecString(endpoint.UpdatedTime))
+
 	Whitelist := utils.SecString(endpoint.Whitelist)
 	if len(Whitelist) > 0 {
 		t := strings.Split(Whitelist, ",")

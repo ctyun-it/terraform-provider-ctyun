@@ -52,7 +52,6 @@ type CtyunSubnetsModel struct {
 	DnsList           types.Set    `tfsdk:"dns_list"`
 	NtpList           types.Set    `tfsdk:"ntp_list"`
 	Type              types.Int32  `tfsdk:"type"`
-	UpdatedAt         types.String `tfsdk:"updated_at"`
 }
 
 type CtyunSubnetsConfig struct {
@@ -199,10 +198,6 @@ func (c *ctyunSubnets) Schema(_ context.Context, _ datasource.SchemaRequest, res
 							Computed:    true,
 							Description: "子网类型:当前仅支持：0（普通子网）,1（裸金属子网）",
 						},
-						"updated_at": schema.StringAttribute{
-							Computed:    true,
-							Description: "更新时间",
-						},
 					},
 				},
 			},
@@ -282,7 +277,6 @@ func (c *ctyunSubnets) Read(ctx context.Context, request datasource.ReadRequest,
 			Ipv6End:          utils.SecStringValue(s.Ipv6End),
 			Ipv6GatewayIP:    utils.SecStringValue(s.Ipv6GatewayIP),
 			Type:             types.Int32Value(s.RawType),
-			UpdatedAt:        utils.SecStringValue(s.UpdatedAt),
 		}
 		item.AvailabilityZones, _ = types.SetValueFrom(ctx, types.StringType, s.AvailabilityZones)
 		item.DnsList, _ = types.SetValueFrom(ctx, types.StringType, s.DnsList)

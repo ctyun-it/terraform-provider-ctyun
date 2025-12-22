@@ -16,7 +16,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunSfsPermissionGroupAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunSfsPermissionGroupAssociation{}
+	_ resource.ResourceWithImportState = &ctyunSfsPermissionGroupAssociation{}
 )
 
 type ctyunSfsPermissionGroupAssociation struct {
@@ -44,21 +51,44 @@ func NewCtyunSfsPermissionGroupAssociation() resource.Resource {
 	return &ctyunSfsPermissionGroupAssociation{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId]
 func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vpcID],[sfsUid],[regionId]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSfsPermissionGroupAssociationConfig
 	var vpcID, regionId, sfsUid string
-	err = terraform_extend.Split(request.ID, &vpcID, &sfsUid, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if vpcID == "" {
+		err = fmt.Errorf("vpcID不能为空")
 		return
 	}
+	if sfsUid == "" {
+		err = fmt.Errorf("sfsUid不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionId)
 	cfg.VpcID = types.StringValue(vpcID)
 	cfg.SfsUID = types.StringValue(sfsUid)
@@ -86,14 +116,14 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"permission_group_fuid": schema.StringAttribute{
+			"permission_group_id": schema.StringAttribute{
 				Required:    true,
 				Description: "权限组ID，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"sfs_uid": schema.StringAttribute{
+			"sfs_id": schema.StringAttribute{
 				Required:    true,
 				Description: "弹性文件系统唯一ID",
 				PlanModifiers: []planmodifier.String{
@@ -129,7 +159,7 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 				Computed:    true,
 				Description: "权限组描述",
 			},
-			"permission_group_is_default": schema.BoolAttribute{
+			"is_default": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否为默认权限组",
 			},
@@ -410,13 +440,13 @@ func (c *ctyunSfsPermissionGroupAssociation) bindLoop(ctx context.Context, confi
 
 type CtyunSfsPermissionGroupAssociationConfig struct {
 	RegionID                   types.String `tfsdk:"region_id"`
-	PermissionGroupFuid        types.String `tfsdk:"permission_group_fuid"`
-	SfsUID                     types.String `tfsdk:"sfs_uid"`
+	PermissionGroupFuid        types.String `tfsdk:"permission_group_id"`
+	SfsUID                     types.String `tfsdk:"sfs_id"`
 	VpcID                      types.String `tfsdk:"vpc_id"`
 	VpcName                    types.String `tfsdk:"vpc_name"`
 	VpcCidr                    types.String `tfsdk:"vpc_cidr"`
 	PermissionGroupName        types.String `tfsdk:"permission_group_name"`
 	PermissionGroupDescription types.String `tfsdk:"permission_group_description"`
-	PermissionGroupIsDefault   types.Bool   `tfsdk:"permission_group_is_default"`
+	PermissionGroupIsDefault   types.Bool   `tfsdk:"is_default"`
 	ID                         types.String `tfsdk:"id"`
 }

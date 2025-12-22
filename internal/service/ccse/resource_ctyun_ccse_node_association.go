@@ -304,20 +304,44 @@ func (c *ctyunCcseNodeAssociation) Configure(_ context.Context, request resource
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [name],[clusterID],[regionID]
 func (c *ctyunCcseNodeAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[clusterID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunCcseNodeAssociationConfig
 	var name, clusterID, regionID string
-	err = terraform_extend.Split(request.ID, &name, &clusterID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &name, &clusterID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &name, &clusterID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if name == "" {
+		err = fmt.Errorf("name不能为空")
 		return
 	}
+	if clusterID == "" {
+		err = fmt.Errorf("clusterID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ClusterID = types.StringValue(clusterID)
 	cfg.Name = types.StringValue(name)

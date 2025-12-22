@@ -1,8 +1,9 @@
 package business
 
 const (
-	ProdIDSI57   = 10001003 // 单实例 single5.7版本
-	ProdIDSI80   = 10001103 // 单实例 single8.0版本
+	ProdIDSI57 = 10001003 // 单实例 single5.7版本
+	ProdIDSI80 = 10001103 // 单实例 single8.0版本
+
 	ProdIDSIRO57 = 10001005 // 单实例 single 只读5.7版本
 	ProdIDSIRO80 = 10001105 // 单实例 single 只读8.0版本
 
@@ -93,6 +94,26 @@ const (
 	StorageTypeSSDGenric = "SSD-genric" //通用型SSD
 	StorageTypeFASTSSD   = "FAST-SSD"   //极速型SSD
 	BackupStorageTypeOS  = "OS"
+
+	MysqlSchemaPrivilegeRw       = "rw"
+	MysqlSchemaPrivilegeDML      = "dml"
+	MysqlSchemaPrivilegeDDL      = "ddl"
+	MysqlSchemaPrivilegeReadOnly = "read_only"
+
+	MysqlBackupTaskStatusSuccess   = 1
+	MysqlBackupTaskStatusWaitStart = 100
+	MysqlBackupTaskStatusSubmit    = 101
+	MysqlBackupTaskStatusCancel    = 102
+	MysqlBackupTaskStatusFailed    = -1
+
+	MysqlBackupRecoveryJobStatusTODO     = 10 // 待处理中
+	MysqlBackupRecoveryJobStatusPreCheck = 0  // 预检查中
+	MysqlBackupRecoveryJobStatusING      = 1  // 运行中
+
+	MysqlBackupRecoveryJobStatusSuccess = 2 // 成功
+	MysqlBackupRecoveryJobStatusFail    = 3 // 失败
+
+	MysqlNodeTypeReadNode = "readNode"
 )
 
 var ProdType = []string{
@@ -193,6 +214,12 @@ var MysqlBillMode = map[string]string{
 	OnDemandCycleType: MysqlBillModeOnDemand,
 }
 
+var MysqlBillModeRev = map[int32]string{
+	0: MonthCycleType,
+	2: YearCycleType,
+	4: OnDemandCycleType,
+}
+
 var MysqlProdIdDict = map[string]int64{
 	"Single57":       ProdIDSI57,   // 单实例 single5.7版本
 	"Single80":       ProdIDSI80,   // 单实例 single8.0版本
@@ -202,6 +229,11 @@ var MysqlProdIdDict = map[string]int64{
 	"MasterSlave80":  ProdIDMS80,   // 一主一备 master-slave 8.0版本
 	"Master2Slave57": ProdIDM2S57,  // 一主两备 master-2-slave 5.7版本
 	"Master2Slave80": ProdIDM2S80,  // 一主两备 master-2-slave 8.0版本
+}
+
+var MysqlReadNodeVersionProdIdDict = map[string]string{
+	"5.7": "ReadOnly57",
+	"8.0": "ReadOnly80",
 }
 
 var MysqlNodeNumDict = map[string]int32{
@@ -334,4 +366,33 @@ var StorageType = []string{
 	StorageTypeSAS,
 	StorageTypeSSDGenric,
 	StorageTypeFASTSSD,
+}
+
+var MysqlSchemaPrivileges = []string{
+	MysqlSchemaPrivilegeRw,
+	MysqlSchemaPrivilegeDDL,
+	MysqlSchemaPrivilegeDML,
+	MysqlSchemaPrivilegeReadOnly,
+}
+
+var PrivilegeMap = map[string]bool{"Y": true, "N": false}
+
+var MysqlBackupSettingConfigWeek = map[int32]int32{
+	1: 2,
+	2: 3,
+	3: 4,
+	4: 5,
+	5: 6,
+	6: 7,
+	7: 1,
+}
+
+var MysqlBackupSettingConfigWeekRev = map[int32]int32{
+	1: 7,
+	2: 1,
+	3: 2,
+	4: 3,
+	5: 4,
+	6: 5,
+	7: 6,
 }

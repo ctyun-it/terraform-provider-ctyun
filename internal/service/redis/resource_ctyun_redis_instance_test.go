@@ -99,7 +99,7 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 					updatedPassword, updatedEngineVersion, updatedMaintenanceTime, updatedProtectionStatus,
 				) + utils.LoadTestCase(
 					associationFile, and,
-					dependence.eipAddress,
+					dependence.eipID,
 					resourceName+".id",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -112,9 +112,36 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 			},
 			// 验证绑定关系导入
 			{
-				ResourceName:            associationName,
-				ImportState:             true,
-				ImportStateVerify:       true,
+				ResourceName:      associationName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[associationName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", associationName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["eip_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName:      associationName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[associationName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", associationName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["eip_id"],
+					), nil
+				},
 				ImportStateVerifyIgnore: []string{},
 			},
 			// 通过查询进行检查
@@ -131,7 +158,7 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 					updatedPassword, updatedEngineVersion, updatedMaintenanceTime, updatedProtectionStatus,
 				) + utils.LoadTestCase(
 					associationFile, and,
-					dependence.eipAddress,
+					dependence.eipID,
 					resourceName+".id",
 				) + utils.LoadTestCase(
 					datasourceFile, dnd,
@@ -204,6 +231,30 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 					"password",
 					"project_id",
 					"version",
+					"auto_renew",
+					"master_order_id",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"auto_renew_cycle_count",
+					"cycle_count",
+					"cycle_type",
+					"edition",
+					"host_type",
+					"password",
+					"project_id",
+					"version",
+					"auto_renew",
 					"master_order_id",
 				},
 			},
@@ -221,6 +272,158 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 				) + utils.LoadTestCase(
 					datasourceFile, dnd,
 					resourceName+".instance_name",
+				),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+func TestAccCtyunRedisInstanceUpdate(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_redis_instance." + rnd
+	resourceOnDemandFile := "resource_ctyun_redis_instance_on_demand.tf"
+	resourceMonthFile := "resource_ctyun_redis_instance_month.tf"
+	initName := "tf-redis-" + utils.GenerateRandomString()
+	initPassword := "P@ss" + utils.GenerateRandomString()
+	initEngineVersion := "6.0"
+	initMaintenanceTime := "00:00-02:00"
+	initProtectionStatus := "false"
+
+	var shardCount, copiesCount string
+	if dependence.redisEngineEdition == business.RedisEditionDirectClusterSingle ||
+		dependence.redisEngineEdition == business.RedisEditionDirectCluster ||
+		dependence.redisEngineEdition == business.RedisEditionClusterOriginalProxy {
+		shardCount = "shard_count = 3"
+	}
+	if dependence.redisEngineEdition == business.RedisEditionOriginalMultipleReadLvs ||
+		dependence.redisEngineEdition == business.RedisEditionStandardDual ||
+		dependence.redisEngineEdition == business.RedisEditionDirectCluster ||
+		dependence.redisEngineEdition == business.RedisEditionClusterOriginalProxy {
+		copiesCount = "copies_count = 2"
+	}
+	initBackupPolicyPeriod := "1,3,4"
+	initBackupTime := 5
+	initBackupRetentionDay := 7
+	updatedBackupPolicyPeriod := "3,4,6"
+	updatedBackupTime := 1
+	updatedBackupRetentionDay := 3
+	initSslEnabled := true
+	updatedSslEnabled := false
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				// 创建
+				Config: utils.LoadTestCase(
+					resourceOnDemandFile, rnd,
+					initName,
+					dependence.redisVersion,
+					dependence.redisEngineEdition,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					shardCount, copiesCount,
+					initPassword, initEngineVersion, initMaintenanceTime, initProtectionStatus,
+					initBackupPolicyPeriod, initBackupTime, initBackupRetentionDay,
+					initSslEnabled,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", initName),
+					resource.TestCheckResourceAttr(resourceName, "version", dependence.redisVersion),
+					resource.TestCheckResourceAttr(resourceName, "edition", dependence.redisEngineEdition),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", dependence.vpcID),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "password", initPassword),
+					resource.TestCheckResourceAttr(resourceName, "engine_version", initEngineVersion),
+					resource.TestCheckResourceAttr(resourceName, "maintenance_time", initMaintenanceTime),
+					resource.TestCheckResourceAttr(resourceName, "protection_status", initProtectionStatus),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			// 更新备份策略
+			{
+				Config: utils.LoadTestCase(
+					resourceOnDemandFile, rnd,
+					initName,
+					dependence.redisVersion,
+					dependence.redisEngineEdition,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					shardCount, copiesCount,
+					initPassword, initEngineVersion, initMaintenanceTime, initProtectionStatus,
+					updatedBackupPolicyPeriod, updatedBackupTime, updatedBackupRetentionDay,
+					updatedSslEnabled,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "password", initPassword),
+					resource.TestCheckResourceAttr(resourceName, "engine_version", initEngineVersion),
+					resource.TestCheckResourceAttr(resourceName, "maintenance_time", initMaintenanceTime),
+					resource.TestCheckResourceAttr(resourceName, "protection_status", initProtectionStatus),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			// 按需转包周期
+			{
+				Config: utils.LoadTestCase(
+					resourceMonthFile, rnd,
+					initName,
+					dependence.redisVersion,
+					dependence.redisEngineEdition,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					shardCount, copiesCount,
+					initPassword, initEngineVersion, initMaintenanceTime, initProtectionStatus,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			// 包周期转按需
+			{
+				Config: utils.LoadTestCase(
+					resourceOnDemandFile, rnd,
+					initName,
+					dependence.redisVersion,
+					dependence.redisEngineEdition,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					shardCount, copiesCount,
+					initPassword, initEngineVersion, initMaintenanceTime, initProtectionStatus,
+					updatedBackupPolicyPeriod, updatedBackupTime, updatedBackupRetentionDay,
+					initSslEnabled,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(
+					resourceOnDemandFile, rnd,
+					initName,
+					dependence.redisVersion,
+					dependence.redisEngineEdition,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					shardCount, copiesCount,
+					initPassword, initEngineVersion, initMaintenanceTime, initProtectionStatus,
+					updatedBackupPolicyPeriod, updatedBackupTime, updatedBackupRetentionDay,
+					initSslEnabled,
 				),
 				Destroy: true,
 			},

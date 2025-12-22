@@ -17,6 +17,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunBandwidthAssociationEip{}
+	_ resource.ResourceWithConfigure   = &ctyunBandwidthAssociationEip{}
+	_ resource.ResourceWithImportState = &ctyunBandwidthAssociationEip{}
 )
 
 type ctyunBandwidthAssociationEip struct {
@@ -177,16 +184,29 @@ func (c *ctyunBandwidthAssociationEip) Delete(ctx context.Context, request resou
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [bandwidthId],[eipId],[regionId]
 func (c *ctyunBandwidthAssociationEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bandwidthId],[eipId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunBandwidAssociationEipConfig
 	var bandwidthId, eipId, regionId string
-	err := terraform_extend.Split(request.ID, &bandwidthId, &eipId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &bandwidthId, &eipId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &bandwidthId, &eipId, &regionId)
+		if err != nil {
+			return
+		}
 	}
-
 	cfg.BandwidthId = types.StringValue(bandwidthId)
 	cfg.EipId = types.StringValue(eipId)
 	cfg.RegionId = types.StringValue(regionId)

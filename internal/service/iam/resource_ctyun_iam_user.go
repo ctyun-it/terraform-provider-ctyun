@@ -17,6 +17,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource                = &ctyunIamUser{}
+	_ resource.ResourceWithConfigure   = &ctyunIamUser{}
+	_ resource.ResourceWithImportState = &ctyunIamUser{}
+)
+
 func NewCtyunIamUser() resource.Resource {
 	return &ctyunIamUser{}
 }
@@ -44,14 +50,14 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "用户名，长度为4到32位",
+				Description: "用户名，长度为4到32位，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(4, 32),
 				},
 			},
 			"password": schema.StringAttribute{
 				Required:    true,
-				Description: "密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
+				Description: "密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，支持更新，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
 				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(8, 26),
@@ -59,21 +65,21 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			},
 			"phone": schema.StringAttribute{
 				Required:    true,
-				Description: "手机号",
+				Description: "手机号，支持更新",
 				Validators: []validator.String{
 					validator2.Phone(),
 				},
 			},
 			"email": schema.StringAttribute{
 				Required:    true,
-				Description: "登录邮箱",
+				Description: "登录邮箱，支持更新",
 				Validators: []validator.String{
 					validator2.Email(),
 				},
 			},
 			"user_group_ids": schema.SetAttribute{
 				Required:    true,
-				Description: "用户组id，用户加入的目标安全组id，创建用户时至少加入一个用户组",
+				Description: "用户组id，用户加入的目标用户组，创建用户时至少加入一个用户组，支持更新",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
@@ -83,7 +89,7 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "备注，长度最大为64",
+				Description: "备注，长度最大为64，支持更新",
 				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(64),
@@ -228,13 +234,19 @@ func (c *ctyunIamUser) Delete(ctx context.Context, request resource.DeleteReques
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [iamUserId]
 func (c *ctyunIamUser) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [iamUserId]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunIamUserConfig
 	var iamUserId string
-	err := terraform_extend.Split(request.ID, &iamUserId)
+	err = terraform_extend.Split(request.ID, &iamUserId)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -242,7 +254,6 @@ func (c *ctyunIamUser) ImportState(ctx context.Context, request resource.ImportS
 
 	instance, err := c.getAndMergeIamUser(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

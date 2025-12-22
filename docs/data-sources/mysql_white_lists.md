@@ -21,7 +21,7 @@ provider "ctyun" {
 
 
 data "ctyun_mysql_white_lists" "test" {
-  prod_inst_id = "xxxxxxxxxxxxxx"   # 数据库实例ID
+  prod_inst_id = "xxxxxxxxxxxxxx" # 数据库实例ID
 }
 ```
 
@@ -30,7 +30,7 @@ data "ctyun_mysql_white_lists" "test" {
 
 ### Required
 
-- `prod_inst_id` (String) Mysql实例id
+- `instance_id` (String) Mysql实例id
 
 ### Optional
 
@@ -47,9 +47,9 @@ data "ctyun_mysql_white_lists" "test" {
 Read-Only:
 
 - `access_machine_type` (String) 访问类型
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `group_name` (String) 白名单分组名
 - `group_white_list` (Set of String) 白名单IP列表
 - `group_white_list_count` (Number) 白名单分组组内数量
-- `prod_inst_id` (String) Mysql实例ID
-- `updated_time` (String) 更新时间
+- `instance_id` (String) Mysql实例ID
+- `update_time` (String) 更新时间，为UTC格式

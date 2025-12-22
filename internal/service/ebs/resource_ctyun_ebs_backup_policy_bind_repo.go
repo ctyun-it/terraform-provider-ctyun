@@ -21,6 +21,12 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunEbsBackupPolicyBindRepo{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsBackupPolicyBindRepo{}
+	_ resource.ResourceWithImportState = &ctyunEbsBackupPolicyBindRepo{}
+)
+
 /*
 云硬盘备份策略绑定存储库
 */
@@ -400,24 +406,47 @@ func (c *ctyunEbsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *Ct
 	return
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[regionID]
 func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsBackupPolicyBindRepoConfig
-	var repositoryID, policyID, regionID string
-	err = terraform_extend.Split(request.ID, &policyID, &repositoryID, &regionID)
-	if err != nil {
-		return
+
+	var repositoryID, policyID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &policyID, &repositoryID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &policyID, &repositoryID, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
+	if policyID == "" {
+		err = fmt.Errorf("policyID不能为空")
+		return
+	}
+	if repositoryID == "" {
+		err = fmt.Errorf("repositoryID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
 	cfg.RepositoryID = types.StringValue(repositoryID)
 	cfg.PolicyID = types.StringValue(policyID)
-	cfg.RegionID = types.StringValue(regionID)
+	cfg.RegionID = types.StringValue(regionId)
 
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)

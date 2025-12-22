@@ -32,7 +32,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_security_group" "sg_test" {
@@ -47,8 +46,8 @@ resource "ctyun_security_group" "sg_test" {
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
-  page_no = 1
-  page_size = 10
+  page_no    = 1
+  page_size  = 10
 }
 
 locals {
@@ -62,14 +61,14 @@ resource "ctyun_keypair" "scaling_test" {
 
 resource "ctyun_scaling_config" "config_test" {
   name            = "sc-for-policy"
-  image_id        =  local.image_id
+  image_id        = local.image_id
   flavor_name     = "s7.large.2"
-  use_floatings   = "diable"
+  use_floatings   = "disable"
   login_mode      = "key_pair"
   key_pair_id     = ctyun_keypair.scaling_test.id
   monitor_service = true
   az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
-  volumes         = [{"volume_type":"SATA", "volume_size": 40, "flag":"OS"}]
+  volumes         = [{ "volume_type" : "SATA", "volume_size" : 40, "flag" : "OS" }]
 }
 
 

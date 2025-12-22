@@ -52,6 +52,7 @@ type CtvpcCreatePrivateZoneRequest struct {
 	Name         string  `json:"name,omitempty"`         /*  域名以点号分隔成多个字符串, 单个字符串由字母、数字、连字符（-）组成，字母不区分大小写，连字符（-）不得出现在字符串的头部或者尾部, 单个字符串长度不超过63个字符, 总长度不超过 254  */
 	ProxyPattern *string `json:"proxyPattern,omitempty"` /*  zone：当前可用区不进行递归解析。 record：不完全劫持，进行递归解析代理, 大小写不敏感  */
 	TTL          int32   `json:"TTL"`                    /*  zone ttl, 单位秒。default is 300，大于等于300，小于等于2147483647  */
+	Description  *string `json:"description,omitempty"`  /*  zone描述，长度不超过256个字符  */
 }
 
 type CtvpcCreatePrivateZoneResponse struct {

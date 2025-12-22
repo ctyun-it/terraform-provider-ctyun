@@ -1,5 +1,5 @@
 # ctyun_ecs_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761
 
 
 
@@ -21,9 +21,9 @@ provider "ctyun" {
 
 resource "ctyun_ecs_backup" "test" {
   repository_id = "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
-  instance_id = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
-  name  = "test"
-  full_backup = false
+  instance_id   = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
+  name          = "test"
+  full_backup   = false
 }
 ```
 
@@ -45,7 +45,7 @@ resource "ctyun_ecs_backup" "test" {
 ### Read-Only
 
 - `backup_type` (String) 备份类型
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `disk_total_size` (Number) 云盘总容量大小，单位为GB
 - `id` (String) 云主机备份ID
 - `instance_backup_status` (String) 备份状态，取值范围：CREATING: 备份创建中, ACTIVE: 可用， RESTORING: 备份恢复中，DELETING: 删除中，EXPIRED：到期，ERROR：错误

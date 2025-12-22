@@ -84,10 +84,24 @@ func TestAccCtyunVpcRouteTableRule(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
+					ruleId := ds.Attributes["rule_id"]
+
 					regionID := ds.Attributes["region_id"]
 					tableID := ds.Attributes["route_table_id"]
-					return fmt.Sprintf("%s,%s,%s", id, tableID, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", ruleId, tableID, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+
+					tableID := ds.Attributes["route_table_id"]
+					ruleId := ds.Attributes["rule_id"]
+					return fmt.Sprintf("%s,%s", ruleId, tableID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

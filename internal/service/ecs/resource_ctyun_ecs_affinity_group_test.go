@@ -37,9 +37,8 @@ func TestAccCtyunAffinityGroup(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, initName, policy),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "affinity_group_name", initName),
-					resource.TestCheckResourceAttr(resourceName, "affinity_group_policy", policy),
-					resource.TestCheckResourceAttrSet(resourceName, "affinity_group_id"),
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttr(resourceName, "policy", policy),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -47,9 +46,8 @@ func TestAccCtyunAffinityGroup(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, policy),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "affinity_group_name", updatedName),
-					resource.TestCheckResourceAttr(resourceName, "affinity_group_policy", policy),
-					resource.TestCheckResourceAttrSet(resourceName, "affinity_group_id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "policy", policy),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
@@ -59,18 +57,37 @@ func TestAccCtyunAffinityGroup(t *testing.T) {
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "groups.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "groups.0.affinity_group_name", updatedName),
-					resource.TestCheckResourceAttr(datasourceName, "groups.0.affinity_group_policy", policy),
+					resource.TestCheckResourceAttr(datasourceName, "groups.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "groups.0.policy", policy),
 				),
 			},
 			{
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s",
+						rs.Primary.Attributes["id"],
+					), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

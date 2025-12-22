@@ -29,15 +29,15 @@ func (c *ctyunEcsInstances) Metadata(_ context.Context, request datasource.Metad
 }
 
 type CtyunEcsInstancesImage struct {
-	ImageID   types.String `tfsdk:"image_id"`
-	ImageName types.String `tfsdk:"image_name"`
+	ImageID   types.String `tfsdk:"id"`
+	ImageName types.String `tfsdk:"name"`
 }
 
 type CtyunEcsInstancesFlavor struct {
-	FlavorID     types.String `tfsdk:"flavor_id"`
-	FlavorName   types.String `tfsdk:"flavor_name"`
-	FlavorCPU    types.Int32  `tfsdk:"flavor_cpu"`
-	FlavorRAM    types.Int32  `tfsdk:"flavor_ram"`
+	FlavorID     types.String `tfsdk:"id"`
+	FlavorName   types.String `tfsdk:"name"`
+	FlavorCPU    types.Int32  `tfsdk:"cpu"`
+	FlavorRAM    types.Int32  `tfsdk:"ram"`
 	GpuType      types.String `tfsdk:"gpu_type"`
 	GpuCount     types.Int32  `tfsdk:"gpu_count"`
 	GpuVendor    types.String `tfsdk:"gpu_vendor"`
@@ -45,8 +45,8 @@ type CtyunEcsInstancesFlavor struct {
 }
 type CtyunEcsInstancesAffinityGroup struct {
 	Policy            types.String `tfsdk:"policy"`
-	AffinityGroupName types.String `tfsdk:"affinity_group_name"`
-	AffinityGroupID   types.String `tfsdk:"affinity_group_id"`
+	AffinityGroupName types.String `tfsdk:"name"`
+	AffinityGroupID   types.String `tfsdk:"id"`
 }
 
 type CtyunEcsInstancesAddress struct {
@@ -63,15 +63,15 @@ type CtyunEcsInstancesAddressList struct {
 }
 
 type CtyunEcsInstancesSecGroupList struct {
-	SecurityGroupName types.String `tfsdk:"security_group_name"`
-	SecurityGroupID   types.String `tfsdk:"security_group_id"`
+	SecurityGroupName types.String `tfsdk:"name"`
+	SecurityGroupID   types.String `tfsdk:"id"`
 }
 
 type CtyunEcsInstancesVipInfoList struct {
-	VipID          types.String `tfsdk:"vip_id"`
-	VipAddress     types.String `tfsdk:"vip_address"`
-	VipBindNicIP   types.String `tfsdk:"vip_bind_nic_ip"`
-	VipBindNicIPv6 types.String `tfsdk:"vip_bind_nic_ipv6"`
+	VipID          types.String `tfsdk:"id"`
+	VipAddress     types.String `tfsdk:"address"`
+	VipBindNicIP   types.String `tfsdk:"bind_nic_ip"`
+	VipBindNicIPv6 types.String `tfsdk:"bind_nic_ipv6"`
 	NicID          types.String `tfsdk:"nic_id"`
 }
 
@@ -83,11 +83,10 @@ type CtyunEcsInstancesNetworkInfo struct {
 type CtyunEcsInstancesModel struct {
 	AzName              types.String                    `tfsdk:"az_name"`
 	AzDisplayName       types.String                    `tfsdk:"az_display_name"`
-	ExpiredTime         types.String                    `tfsdk:"expired_time"`
-	CreatedTime         types.String                    `tfsdk:"created_time"`
+	ExpiredTime         types.String                    `tfsdk:"expire_time"`
+	CreatedTime         types.String                    `tfsdk:"create_time"`
 	ProjectID           types.String                    `tfsdk:"project_id"`
 	AttachedVolumes     []string                        `tfsdk:"attached_volumes"`
-	InstanceID          types.String                    `tfsdk:"instance_id"`
 	ID                  types.String                    `tfsdk:"id"`
 	DisplayName         types.String                    `tfsdk:"display_name"`
 	InstanceName        types.String                    `tfsdk:"instance_name"`
@@ -97,7 +96,7 @@ type CtyunEcsInstancesModel struct {
 	OnDemand            types.Bool                      `tfsdk:"on_demand"`
 	KeypairName         types.String                    `tfsdk:"keypair_name"`
 	Addresses           []CtyunEcsInstancesAddress      `tfsdk:"addresses"`
-	SecGroupList        []CtyunEcsInstancesSecGroupList `tfsdk:"sec_group_list"`
+	SecGroupList        []CtyunEcsInstancesSecGroupList `tfsdk:"security_group_list"`
 	VipInfoList         []CtyunEcsInstancesVipInfoList  `tfsdk:"vip_info_list"`
 	NetworkInfo         []CtyunEcsInstancesNetworkInfo  `tfsdk:"network_info"`
 	AffinityGroup       CtyunEcsInstancesAffinityGroup  `tfsdk:"affinity_group"`
@@ -120,7 +119,7 @@ type CtyunEcsInstancesConfig struct {
 
 func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -220,10 +219,6 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"id": schema.StringAttribute{
 							Computed:    true,
-							Description: "云主机ID，值与instance_id相同",
-						},
-						"instance_id": schema.StringAttribute{
-							Computed:    true,
 							Description: "云主机ID",
 						},
 						"display_name": schema.StringAttribute{
@@ -242,24 +237,24 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "云主机状态",
 						},
-						"expired_time": schema.StringAttribute{
+						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "到期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"sec_group_list": schema.ListNestedAttribute{
+						"security_group_list": schema.ListNestedAttribute{
 							Computed:    true,
 							Description: "安全组信息列表",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"security_group_name": schema.StringAttribute{
+									"name": schema.StringAttribute{
 										Computed:    true,
 										Description: "安全组名称",
 									},
-									"security_group_id": schema.StringAttribute{
+									"id": schema.StringAttribute{
 										Computed:    true,
 										Description: "安全组id",
 									},
@@ -271,19 +266,19 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "虚拟IP信息列表",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
-									"vip_id": schema.StringAttribute{
+									"id": schema.StringAttribute{
 										Computed:    true,
 										Description: "虚拟IP的ID",
 									},
-									"vip_address": schema.StringAttribute{
+									"address": schema.StringAttribute{
 										Computed:    true,
 										Description: "虚拟IP地址",
 									},
-									"vip_bind_nic_ip": schema.StringAttribute{
+									"bind_nic_ip": schema.StringAttribute{
 										Computed:    true,
 										Description: "虚拟IP绑定的网卡对应IPv4地址",
 									},
-									"vip_bind_nic_ipv6": schema.StringAttribute{
+									"bind_nic_ipv6": schema.StringAttribute{
 										Computed:    true,
 										Description: "虚拟IP绑定的网卡对应IPv6地址",
 									},
@@ -298,11 +293,11 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "云主机组信息",
 							Attributes: map[string]schema.Attribute{
-								"affinity_group_id": schema.StringAttribute{
+								"id": schema.StringAttribute{
 									Computed:    true,
 									Description: "云主机组名称ID",
 								},
-								"affinity_group_name": schema.StringAttribute{
+								"name": schema.StringAttribute{
 									Computed:    true,
 									Description: "云主机组名称",
 								},
@@ -316,11 +311,11 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "镜像信息",
 							Attributes: map[string]schema.Attribute{
-								"image_id": schema.StringAttribute{
+								"id": schema.StringAttribute{
 									Computed:    true,
 									Description: "镜像id",
 								},
-								"image_name": schema.StringAttribute{
+								"name": schema.StringAttribute{
 									Computed:    true,
 									Description: "镜像名称",
 								},
@@ -330,19 +325,19 @@ func (c *ctyunEcsInstances) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "云主机规格信息",
 							Attributes: map[string]schema.Attribute{
-								"flavor_id": schema.StringAttribute{
+								"id": schema.StringAttribute{
 									Computed:    true,
 									Description: "规格ID",
 								},
-								"flavor_name": schema.StringAttribute{
+								"name": schema.StringAttribute{
 									Computed:    true,
 									Description: "规格名称",
 								},
-								"flavor_cpu": schema.Int32Attribute{
+								"cpu": schema.Int32Attribute{
 									Computed:    true,
 									Description: "规格CPU",
 								},
-								"flavor_ram": schema.Int32Attribute{
+								"ram": schema.Int32Attribute{
 									Computed:    true,
 									Description: "规格RAM",
 								},
@@ -461,7 +456,6 @@ func (c *ctyunEcsInstances) Read(ctx context.Context, request datasource.ReadReq
 			CreatedTime:         types.StringValue(ecs.CreatedTime),
 			ProjectID:           types.StringValue(ecs.ProjectID),
 			AttachedVolumes:     ecs.AttachedVolume,
-			InstanceID:          types.StringValue(ecs.InstanceID),
 			ID:                  types.StringValue(ecs.InstanceID),
 			DisplayName:         types.StringValue(ecs.DisplayName),
 			InstanceName:        types.StringValue(ecs.InstanceName),

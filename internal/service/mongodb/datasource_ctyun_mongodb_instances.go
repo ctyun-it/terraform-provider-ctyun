@@ -55,7 +55,7 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 				Optional:    true,
 				Description: "版本号",
 			},
-			"prod_inst_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				Optional:    true,
 				Description: "实例名称",
 			},
@@ -73,7 +73,7 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 				Optional:    true,
 				Description: "标签id",
 			},
-			"mongodb_instances": schema.ListNestedAttribute{
+			"instances": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "mongodb实例列表",
 				NestedObject: schema.NestedAttributeObject{
@@ -148,8 +148,8 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 								int32validator.OneOf(0, 2, 4, 6, 10),
 							},
 						},
-						"expire_time": schema.Int64Attribute{
-							Description: "到期时间",
+						"expire_time": schema.StringAttribute{
+							Description: "到期时间，为UTC格式，按需时为空",
 							Computed:    true,
 						},
 						"prod_inst_id": schema.StringAttribute{
@@ -229,7 +229,7 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 							Description: "CPU内存规格",
 							Computed:    true,
 						},
-						"prod_inst_name": schema.StringAttribute{
+						"name": schema.StringAttribute{
 							Description: "实例名称",
 							Computed:    true,
 						},
@@ -254,8 +254,8 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 							Description: "实例是否已经被销毁",
 							Computed:    true,
 						},
-						"create_time": schema.Int64Attribute{
-							Description: "创建时间",
+						"create_time": schema.StringAttribute{
+							Description: "创建时间，为UTC格式",
 							Computed:    true,
 						},
 						"tenant_id": schema.Int64Attribute{
@@ -358,7 +358,7 @@ func (c *ctyunMongodbInstances) Read(ctx context.Context, request datasource.Rea
 		mongodbInst.Released = types.BoolValue(mongodbItem.Released)
 		mongodbInst.SecurityGroup = types.StringValue(mongodbItem.SecurityGroup)
 		mongodbInst.ProdType = types.Int32Value(mongodbItem.ProdType)
-		mongodbInst.ExpireTime = types.Int64Value(mongodbItem.ExpireTime)
+		mongodbInst.ExpireTime = types.StringValue(utils.FromUnixToUTC(mongodbItem.ExpireTime))
 		mongodbInst.ProdInstId = types.StringValue(mongodbItem.ProdInstId)
 		mongodbInst.ProjectName = types.StringValue(mongodbItem.ProjectName)
 		mongodbInst.ProjectId = types.StringValue(mongodbItem.ProjectId)
@@ -382,7 +382,7 @@ func (c *ctyunMongodbInstances) Read(ctx context.Context, request datasource.Rea
 		mongodbInst.UserId = types.Int64Value(mongodbItem.UserId)
 		mongodbInst.ProdBillTime = types.Int32Value(mongodbItem.ProdBillTime)
 		mongodbInst.Destroyed = types.BoolValue(mongodbItem.Destroyed)
-		mongodbInst.CreateTime = types.Int64Value(mongodbItem.CreateTime)
+		mongodbInst.CreateTime = types.StringValue(utils.FromUnixToUTC(mongodbItem.CreateTime))
 		mongodbInst.TenantId = types.Int64Value(mongodbItem.TenantId)
 		mongodbInst.OuterId = types.StringValue(mongodbItem.OuterId)
 		mongodbInst.TplCode = types.StringValue(mongodbItem.TplCode)
@@ -415,7 +415,7 @@ type CtyunMongodbInstanceModel struct {
 	Released                    types.Bool   `tfsdk:"released"`                       //实例是否已被释放
 	SecurityGroup               types.String `tfsdk:"security_group"`                 //安全组
 	ProdType                    types.Int32  `tfsdk:"prod_type"`                      //0:单机,2:副本集(三节点),4:副本集(五节点),6:副本集(七节点),10:分片集群
-	ExpireTime                  types.Int64  `tfsdk:"expire_time"`                    //到期时间
+	ExpireTime                  types.String `tfsdk:"expire_time"`                    //到期时间
 	ProdInstId                  types.String `tfsdk:"prod_inst_id"`                   //实例id
 	ProjectName                 types.String `tfsdk:"project_name"`                   //企业项目名称
 	ProjectId                   types.String `tfsdk:"project_id"`                     //企业项目id
@@ -433,13 +433,13 @@ type CtyunMongodbInstanceModel struct {
 	DiskType                    types.String `tfsdk:"disk_type"`                      //存储类型
 	ProdBillType                types.Int32  `tfsdk:"prod_bill_type"`                 //0:按月计费,1:按天计费,2:按年计费,3:按流量计费
 	MachineSpec                 types.String `tfsdk:"machine_spec"`                   //CPU内存规格
-	ProdInstName                types.String `tfsdk:"prod_inst_name"`                 //实例名称
+	ProdInstName                types.String `tfsdk:"name"`                           //实例名称
 	InnodbBufferPoolSize        types.String `tfsdk:"innodb_buffer_pool_size"`        //缓存池大小
 	UsedSpace                   types.String `tfsdk:"used_space"`                     //已使用空间
 	UserId                      types.Int64  `tfsdk:"user_id"`                        //用户id
 	ProdBillTime                types.Int32  `tfsdk:"prod_bill_time"`                 //购买时长
 	Destroyed                   types.Bool   `tfsdk:"destroyed"`                      //实例是否已经被销毁
-	CreateTime                  types.Int64  `tfsdk:"create_time"`                    //创建时间
+	CreateTime                  types.String `tfsdk:"create_time"`                    //创建时间
 	TenantId                    types.Int64  `tfsdk:"tenant_id"`                      //租户id
 	OuterId                     types.String `tfsdk:"outer_id"`                       //产品ID
 	TplCode                     types.String `tfsdk:"tpl_code"`                       //模板编码
@@ -447,12 +447,12 @@ type CtyunMongodbInstanceModel struct {
 }
 
 type CtyunMongodbInstancesConfig struct {
-	PageNo           types.Int32                 `tfsdk:"page_no"`        // 当前页，不传默认为1
-	PageSize         types.Int32                 `tfsdk:"page_size"`      // 页大小，不传默认为10
-	ResDbEngine      types.String                `tfsdk:"res_db_engine"`  // 版本号
-	ProdInstName     types.String                `tfsdk:"prod_inst_name"` // 实例名称
-	LabelIds         types.String                `tfsdk:"label_ids"`      // 标签id
-	RegionID         types.String                `tfsdk:"region_id"`      // 资源池id
-	ProjectID        types.String                `tfsdk:"project_id"`     // 项目id
-	MongodbInstances []CtyunMongodbInstanceModel `tfsdk:"mongodb_instances"`
+	PageNo           types.Int32                 `tfsdk:"page_no"`       // 当前页，不传默认为1
+	PageSize         types.Int32                 `tfsdk:"page_size"`     // 页大小，不传默认为10
+	ResDbEngine      types.String                `tfsdk:"res_db_engine"` // 版本号
+	ProdInstName     types.String                `tfsdk:"name"`          // 实例名称
+	LabelIds         types.String                `tfsdk:"label_ids"`     // 标签id
+	RegionID         types.String                `tfsdk:"region_id"`     // 资源池id
+	ProjectID        types.String                `tfsdk:"project_id"`    // 项目id
+	MongodbInstances []CtyunMongodbInstanceModel `tfsdk:"instances"`
 }

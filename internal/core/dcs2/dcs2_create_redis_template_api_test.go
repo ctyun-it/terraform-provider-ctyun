@@ -15,14 +15,19 @@ func TestDcs2CreateRedisTemplateApi_Do(t *testing.T) {
 	api := apis.Dcs2CreateRedisTemplateApi
 
 	// 构造请求
+	var sysTemplate bool = false
 	request := &Dcs2CreateRedisTemplateRequest{
-		RegionId:   "bb9fdb42056f11eda1610242ac110002",
-		ProdInstId: "a0784f6c27cf0139e79e055f89f03f1d",
+		RegionId: "bb9fdb42056f11eda1610242ac110002",
+		Template: &Dcs2CreateRedisTemplateTemplateRequest{
+			Name:        "CLASSIC-test-1",
+			Description: "自研系列参数模板",
+			CacheMode:   "CLASSIC",
+			SysTemplate: &sysTemplate,
+		},
 		Params: []*Dcs2CreateRedisTemplateParamsRequest{
 			{
-				ParamName:     "hash-max-ziplist-value",
-				OriginalValue: "60",
-				CurrentValue:  "66",
+				ParamName:    "hash-max-ziplist-value",
+				CurrentValue: "66",
 			},
 		},
 	}

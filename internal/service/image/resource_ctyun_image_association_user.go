@@ -2,9 +2,11 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -15,6 +17,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunImageAssociationUser{}
+	_ resource.ResourceWithConfigure   = &ctyunImageAssociationUser{}
+	_ resource.ResourceWithImportState = &ctyunImageAssociationUser{}
 )
 
 func NewCtyunImageAssociationUser() resource.Resource {
@@ -39,6 +48,9 @@ func (c *ctyunImageAssociationUser) Schema(_ context.Context, _ resource.SchemaR
 				Description: "要共享的私有镜像id",
 				Validators: []validator.String{
 					validator2.UUID(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"type": schema.StringAttribute{
@@ -223,6 +235,46 @@ func (c *ctyunImageAssociationUser) Configure(_ context.Context, request resourc
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.imageService = business.NewImageService(meta)
+}
+
+// ImportState 用于导入资源
+func (c *ctyunImageAssociationUser) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [imageId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunImageAssociationUserConfig
+	var imageId, regionId string
+	// 根据分隔符数量判断是否输入了regionId
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &imageId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &imageId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if imageId == "" {
+		err = fmt.Errorf("imageId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionId不能为空")
+		return
+	}
+
+	config.ImageId = types.StringValue(imageId)
+	config.RegionId = types.StringValue(regionId)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // check 校验

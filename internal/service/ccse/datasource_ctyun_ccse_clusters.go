@@ -108,11 +108,11 @@ func (c *ctyunCcseClusters) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"start_port": schema.Int32Attribute{
 							Computed:    true,
-							Description: "节点服务开始端口，范围30000-65535",
+							Description: "节点服务开始端口",
 						},
 						"end_port": schema.Int32Attribute{
 							Computed:    true,
-							Description: "节点服务终止端口，范围30000-65535",
+							Description: "节点服务终止端口",
 						},
 						"pod_cidr": schema.StringAttribute{
 							Computed:    true,

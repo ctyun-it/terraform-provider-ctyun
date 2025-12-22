@@ -46,7 +46,7 @@ Read-Only:
 
 - `az_strategy` (String) 扩容策略类型
 - `config_list` (Set of Number) 伸缩组配置ID列表
-- `create_date` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `delete_protection` (Boolean) 是否开启伸缩组保护
 - `expected_count` (Number) 期望云主机数
 - `group_id` (Number) 伸缩组ID
@@ -61,7 +61,7 @@ Read-Only:
 - `security_group_id_list` (Set of String) 多可用区资源池安全组ID列表
 - `status` (Number) 伸缩组状态
 - `subnet_id_list` (List of String) 子网ID列表
-- `update_date` (String) 更新时间
+- `update_date` (String) 更新时间，为UTC格式
 - `use_lb` (Number) 是否使用负载均衡
 - `vpc_cidr` (String) 虚拟私有云网段
 - `vpc_id` (String) 虚拟私有云ID

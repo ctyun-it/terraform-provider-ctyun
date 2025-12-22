@@ -1,5 +1,5 @@
 # ctyun_bandwidths (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026761
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030015
 
 
 
@@ -62,9 +62,9 @@ data "ctyun_bandwidths" "test" {
 Read-Only:
 
 - `bandwidth` (Number) 带宽峰值大小，单位Mb
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `eips` (Attributes List) (see [below for nested schema](#nestedatt--bandwidths--eips))
-- `expired_at` (String) 到期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 带宽ID
 - `name` (String) eip名称
 - `status` (String) 弹性ip状态，取值范围：active：有效，freezing：冻结中，expired：已过期

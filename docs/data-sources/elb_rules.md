@@ -19,7 +19,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_elb_rules" "test"{
+data "ctyun_elb_rules" "test" {
 }
 ```
 
@@ -34,19 +34,19 @@ data "ctyun_elb_rules" "test"{
 
 ### Read-Only
 
-- `elb_rules` (Attributes List) elb转发规则 (see [below for nested schema](#nestedatt--elb_rules))
+- `rules` (Attributes List) elb转发规则 (see [below for nested schema](#nestedatt--rules))
 
-<a id="nestedatt--elb_rules"></a>
-### Nested Schema for `elb_rules`
+<a id="nestedatt--rules"></a>
+### Nested Schema for `rules`
 
 Read-Only:
 
 - `action_redirect_listener_id` (String) 重定向监听器ID
-- `action_target_groups` (Attributes List) 后端服务组 (see [below for nested schema](#nestedatt--elb_rules--action_target_groups))
+- `action_target_groups` (Attributes List) 后端服务组 (see [below for nested schema](#nestedatt--rules--action_target_groups))
 - `action_type` (String) 默认规则动作类型
 - `az_name` (String) 可用区名称
-- `conditions` (Attributes List) 匹配规则数据 (see [below for nested schema](#nestedatt--elb_rules--conditions))
-- `created_time` (String) 创建时间，为UTC格式
+- `conditions` (Attributes List) 匹配规则数据 (see [below for nested schema](#nestedatt--rules--conditions))
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `id` (String) 转发规则ID
 - `listener_id` (String) 监听器ID
@@ -54,10 +54,10 @@ Read-Only:
 - `project_id` (String) 项目ID
 - `region_id` (String) 资源池ID
 - `status` (String) 状态: ACTIVE / DOWN
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 
-<a id="nestedatt--elb_rules--action_target_groups"></a>
-### Nested Schema for `elb_rules.action_target_groups`
+<a id="nestedatt--rules--action_target_groups"></a>
+### Nested Schema for `rules.action_target_groups`
 
 Read-Only:
 
@@ -65,8 +65,8 @@ Read-Only:
 - `weight` (Number) 权重
 
 
-<a id="nestedatt--elb_rules--conditions"></a>
-### Nested Schema for `elb_rules.conditions`
+<a id="nestedatt--rules--conditions"></a>
+### Nested Schema for `rules.conditions`
 
 Read-Only:
 

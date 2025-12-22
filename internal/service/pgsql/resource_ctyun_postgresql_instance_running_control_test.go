@@ -18,7 +18,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 
 	cycleType := "on_demand"
 	prodId := "Single1222"
-	storageType := "SATA"
+	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SATA"`
 	StorageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
@@ -31,9 +31,9 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	securityGroupID := dependence.securityGroupID
 	//azInfo := `availability_zone_info = [{"availability_zone_name":"cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count":1, "node_type":"master"}]`
 
-	flavorName := "s7.large.2"
-	appointVip := `appoint_vip="192.168.4.111"`
-	updatedFlavorName := "s7.large.4"
+	flavorName := "c7.xlarge.2"
+	appointVip := `vip="192.168.1.111"`
+	updatedFlavorName := "c7.xlarge.4"
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
 
@@ -57,7 +57,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
-					resource.TestCheckResourceAttr(resourceName, "appoint_vip", "192.168.4.111"),
+					resource.TestCheckResourceAttr(resourceName, "vip", "192.168.1.111"),
 				),
 			},
 			// 关机 + 主磁盘升配 + 备用磁盘升配 + sepc + prodid升配

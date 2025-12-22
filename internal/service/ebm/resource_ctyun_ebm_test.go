@@ -29,6 +29,8 @@ func TestAccCtyunEbm(t *testing.T) {
 	updatedPassword := "P@sstf-" + utils.GenerateRandomString()
 	updatedStatus := "stopped"
 
+	k, v := "key", "value"
+	uv := "uValue"
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
 			_, exists := s.RootModule().Resources[resourceName]
@@ -52,6 +54,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.dataRaid,
 					dependence.subnetID,
 					dependence.az2,
+					k, v,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_name", initName),
@@ -74,6 +77,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.dataRaid,
 					dependence.subnetID,
 					dependence.az2,
+					k, uv,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_name", updatedName),
@@ -95,6 +99,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.dataRaid,
 					dependence.subnetID,
 					dependence.az2,
+					k, uv,
 				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
@@ -109,9 +114,9 @@ func TestAccCtyunEbm(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					regionID := ds.Attributes["region_id"]
 					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s", id, regionID, azName), nil
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s,%s", id, azName, regionID), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -126,6 +131,33 @@ func TestAccCtyunEbm(t *testing.T) {
 					"cycle_type",
 					"image_uuid",
 					"cycle_count",
+					"bandwidth",
+				},
+			},
+			// 多种导入方式测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s", id, azName), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"auto_renew",
+					"subnet_id",
+					"data_volume_raid_uuid",
+					"system_volume_raid_uuid",
+					"master_order_id",
+					"password",
+					"project_id",
+					"user_data",
+					"cycle_type",
+					"image_uuid",
+					"cycle_count",
+					"bandwidth",
 				},
 			},
 			{
@@ -140,6 +172,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.dataRaid,
 					dependence.subnetID,
 					dependence.az2,
+					k, uv,
 				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
 			},
 			{
@@ -154,6 +187,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.dataRaid,
 					dependence.subnetID,
 					dependence.az2,
+					k, uv,
 				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
 				Destroy: true,
 			},

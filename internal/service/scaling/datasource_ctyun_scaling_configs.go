@@ -68,7 +68,7 @@ func (c *CtyunScalingConfigs) Schema(ctx context.Context, request datasource.Sch
 					int32validator.AtLeast(1),
 				},
 			},
-			"scaling_config_list": schema.ListNestedAttribute{
+			"configs": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -334,5 +334,5 @@ type CtyunScalingConfigsModel struct {
 	ID                types.Int64              `tfsdk:"id"`        // 伸缩配置ID
 	PageSize          types.Int32              `tfsdk:"page_size"` // 每页包含的元素个数范围(1-50)，默认值为10
 	PageNo            types.Int32              `tfsdk:"page_no"`   // 列表的分页页码，默认值为1
-	ScalingConfigList []CtyunScalingConfigInfo `tfsdk:"scaling_config_list"`
+	ScalingConfigList []CtyunScalingConfigInfo `tfsdk:"configs"`
 }

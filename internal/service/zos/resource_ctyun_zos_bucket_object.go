@@ -351,18 +351,41 @@ func (c *ctyunZosBucketObject) Configure(_ context.Context, request resource.Con
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [key],[bucket],[regionID]
 func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketObjectConfig
 	var key, bucket, regionID string
-	err = terraform_extend.Split(request.ID, &key, &bucket, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &key, &bucket)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &key, &bucket, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if key == "" {
+		err = fmt.Errorf("key不能为空")
+		return
+	}
+	if bucket == "" {
+		err = fmt.Errorf("bucket不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

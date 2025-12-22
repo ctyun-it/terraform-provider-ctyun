@@ -587,10 +587,51 @@ func TestAccCtyunScalingNoneExpectedCount(t *testing.T) {
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", id, regionId, projectId, vpcId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", id, vpcId, projectId, regionId), nil
 				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"add_instance_uuid_list", "remove_instance_uuid_list", "is_destroy", "expected_count"},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"add_instance_uuid_list",
+					"remove_instance_uuid_list",
+					"is_destroy",
+					"expected_count",
+					"project_id",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					projectId := ds.Attributes["project_id"]
+					return fmt.Sprintf("%s,%s,%s", id, vpcId, projectId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"add_instance_uuid_list",
+					"remove_instance_uuid_list",
+					"is_destroy",
+					"expected_count",
+					"project_id",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s,%s", id, vpcId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"add_instance_uuid_list",
+					"remove_instance_uuid_list",
+					"is_destroy",
+					"expected_count",
+					"project_id",
+				},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, securityGroupIDList, name, healthMode, subnetIDList, moveOutStrategy, vpcId, minCount, maxCount,

@@ -1,5 +1,5 @@
 # ctyun_ecs_backups (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761
 
 
 
@@ -53,10 +53,10 @@ output "ctyun_ecs_backups_test" {
 Read-Only:
 
 - `backup_type` (String) 备份类型，取值范围：FULL：全量备份，INCREMENT：增量备份
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `disk_count` (Number) 云硬盘数目
 - `disk_total_size` (Number) 云盘总容量大小，单位为GB
-- `finished_time` (String) 完成时间
+- `finish_time` (String) 完成时间
 - `instance_backup_description` (String) 云主机备份描述
 - `instance_backup_id` (String) 云主机备份ID
 - `instance_backup_status` (String) 云主机备份状态，取值范围：CREATING: 备份创建中, ACTIVE: 可用， RESTORING: 备份恢复中，DELETING: 删除中，EXPIRED：到期，ERROR：错误
@@ -68,5 +68,5 @@ Read-Only:
 - `repository_freeze` (Boolean) 存储库是否冻结
 - `repository_id` (String) 云主机备份存储库ID
 - `repository_name` (String) 云主机备份存储库名称
-- `restore_finished_time` (String) 备份恢复完成时间
+- `restore_finish_time` (String) 备份恢复完成时间
 - `used_size` (Number) 磁盘备份已使用大小

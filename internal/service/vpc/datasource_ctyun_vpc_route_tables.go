@@ -36,8 +36,8 @@ type CtyunVpcRouteTablesModel struct {
 	RouteTableID    types.String `tfsdk:"route_table_id"`
 	Freezing        types.Bool   `tfsdk:"freezing"`
 	RouteRulesCount types.Int32  `tfsdk:"route_rules_count"`
-	CreatedAt       types.String `tfsdk:"created_at"`
-	UpdatedAt       types.String `tfsdk:"updated_at"`
+	CreatedAt       types.String `tfsdk:"create_time"`
+	UpdatedAt       types.String `tfsdk:"update_time"`
 	Type            types.Int32  `tfsdk:"type"`
 	Origin          types.String `tfsdk:"origin"`
 }
@@ -119,13 +119,13 @@ func (c *ctyunVpcRouteTables) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 							Description: "路由表中的路由数",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_at": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"type": schema.Int64Attribute{
 							Computed:    true,

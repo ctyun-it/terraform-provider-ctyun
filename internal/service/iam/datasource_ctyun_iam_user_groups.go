@@ -45,7 +45,7 @@ func (c *ctyunIamUserGroups) Schema(_ context.Context, _ datasource.SchemaReques
 					int64validator.AtLeast(1),
 				},
 			},
-			"groups": schema.SetNestedAttribute{
+			"groups": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{

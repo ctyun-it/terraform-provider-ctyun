@@ -20,7 +20,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_vpc_route_table" "route" {
   vpc_id = ctyun_vpc.vpc_test.id
-  name = "route-t1f"
+  name   = "route-t1f"
 }
 
 data "ctyun_vpc_route_table_rules" "rtest" {

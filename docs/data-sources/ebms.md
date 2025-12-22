@@ -20,8 +20,8 @@ provider "ctyun" {
 }
 
 data "ctyun_ebms" "test" {
-  region_id            = "200000001852"
-  az_name              = "cn-huabei2-tj-3a-public-ctcloud"
+  region_id = "200000001852"
+  az_name   = "cn-huabei2-tj-3a-public-ctcloud"
   # az_name =             "cn-huabei2-tj1A-public-ctcloud"
 }
 
@@ -49,11 +49,11 @@ output "ctyun_ebms_test" {
 Read-Only:
 
 - `attached_volumes` (List of String) 关联的云硬盘ID
-- `create_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `data_volume_raid_uuid` (String) 数据盘raidid
 - `device_type` (String) 设备类型
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `expired` (Boolean) 是否到期
-- `expired_time` (String) 到期时间
 - `freezing` (Boolean) 是否冻结
 - `hostname` (String) 物理机主机名称(hostname)
 - `image_uuid` (String) 镜像ID
@@ -65,7 +65,7 @@ Read-Only:
 - `public_ipv6` (String) 公网IPv6地址
 - `status` (String) 物理机状态
 - `system_volume_raid_uuid` (String) 本地系统盘raidid
-- `updated_time` (String) 最后更新时间
+- `update_time` (String) 更新时间，为UTC格式
 - `vpc_id` (String) 主网卡网络ID
 
 <a id="nestedatt--instances--network_card_list"></a>

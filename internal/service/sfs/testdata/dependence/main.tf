@@ -36,10 +36,10 @@ resource "ctyun_subnet" "subnet_test1" {
 }
 
 resource "ctyun_sfs" "sfs_test" {
-  sfs_type     = "capacity"
-  sfs_protocol = "nfs"
+  type     = "capacity"
+  protocol = "nfs"
   name         = "sfs-for-group"
-  sfs_size     = 500
+  size     = 500
   cycle_type   = "on_demand"
   vpc_id       = ctyun_vpc.vpc_test.id
   subnet_id    = ctyun_subnet.subnet_test.id

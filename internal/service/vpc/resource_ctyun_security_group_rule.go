@@ -3,6 +3,7 @@ package vpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
@@ -23,6 +24,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunSecurityGroupRule{}
+	_ resource.ResourceWithConfigure   = &ctyunSecurityGroupRule{}
+	_ resource.ResourceWithImportState = &ctyunSecurityGroupRule{}
 )
 
 func NewCtyunSecurityGroupRule() resource.Resource {
@@ -388,16 +396,43 @@ func (c *ctyunSecurityGroupRule) Delete(ctx context.Context, request resource.De
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [securityGroupRuleId],[securityGroupId],[regionId]
 func (c *ctyunSecurityGroupRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunSecurityGroupRuleConfig
 	var securityGroupRuleId, securityGroupId, regionId string
-	err := terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
+	if securityGroupRuleId == "" {
+		err = fmt.Errorf("securityGroupRuleId不能为空")
+		return
+	}
+	if securityGroupId == "" {
+		err = fmt.Errorf(" securityGroupId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
 	cfg.Id = types.StringValue(securityGroupRuleId)
 	cfg.SecurityGroupId = types.StringValue(securityGroupId)
 	cfg.RegionId = types.StringValue(regionId)

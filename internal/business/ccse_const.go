@@ -5,6 +5,11 @@ const (
 	CcseClusterSeriesManaged  = "cce.managed"  // 托管版
 	CcseClusterSeriesIcce     = "cce.icce"     // 智算版
 
+	CcseClusterSeriesStandardInt = 0 // 专有版
+	CcseClusterSeriesManagedInt  = 2
+	CcseClusterSeriesIcceInt     = 4
+
+	CcseRunningBizState   = 1
 	CcseRefundedBizState  = 4
 	CcseRefundingBizState = 18
 

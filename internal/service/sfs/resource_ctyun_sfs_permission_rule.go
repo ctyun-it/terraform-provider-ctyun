@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 )
 
 type ctyunSfsPermissionGroupRule struct {
@@ -42,35 +43,58 @@ func NewCtyunSfsPermissionGroupRule() resource.Resource {
 	return &ctyunSfsPermissionGroupRule{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId]
 func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var cfg CtyunSfsPermissionGroupRuleConfig
-	var ID, regionId, permissionGroupFuid string
-	err := terraform_extend.Split(request.ID, &ID, &regionId, &permissionGroupFuid)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permissionGroupID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunSfsPermissionGroupRuleConfig
+	var ID, regionID, permissionGroupID string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &permissionGroupID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &permissionGroupID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
-
-	cfg.ID = types.StringValue(ID)
-	cfg.RegionID = types.StringValue(regionId)
-	cfg.PermissionGroupFuid = types.StringValue(permissionGroupFuid)
-
-	err = c.getAndMergeSfsPermissionGroupRule(ctx, &cfg)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	if permissionGroupID == "" {
+		err = fmt.Errorf("permissionGroupID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+	config.PermissionGroupFuid = types.StringValue(permissionGroupID)
+	err = c.getAndMergeSfsPermissionGroupRule(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunSfsPermissionGroupRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622`,
 		Attributes: map[string]schema.Attribute{
-			"permission_group_fuid": schema.StringAttribute{
+			"permission_group_id": schema.StringAttribute{
 				Required:    true,
-				Description: "权限组FUID标识",
+				Description: "权限组ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -104,14 +128,7 @@ func (c *ctyunSfsPermissionGroupRule) Schema(ctx context.Context, request resour
 					stringvalidator.OneOf([]string{"rw", "ro"}...),
 				},
 			},
-			//"user_permission": schema.StringAttribute{
-			//	Required:    true,
-			//	Description: "用户权限，可选值: 'no_root_squash', 'root_squash'",
-			//	Validators: []validator.String{
-			//		stringvalidator.OneOf([]string{"no_root_squash", "root_squash"}...),
-			//	},
-			//},
-			"permission_rule_priority": schema.Int32Attribute{
+			"priority": schema.Int32Attribute{
 				Required:    true,
 				Description: "规则优先级(数值越小优先级越高),有效范围为1-400。当同一个权限组内单个 IP 与网段中包含的 IP 的权限有冲突时，会生效优先级高的规则。注：优先级不可重复，支持更新",
 				Validators: []validator.Int32{
@@ -127,7 +144,7 @@ func (c *ctyunSfsPermissionGroupRule) Schema(ctx context.Context, request resour
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "更新时间。UTC时间",
+				Description: "更新时间，为UTC格式",
 			},
 		},
 	}
@@ -396,12 +413,11 @@ func (c *ctyunSfsPermissionGroupRule) getRuleList(ctx context.Context, config *C
 }
 
 type CtyunSfsPermissionGroupRuleConfig struct {
-	PermissionGroupFuid types.String `tfsdk:"permission_group_fuid"`
-	RegionID            types.String `tfsdk:"region_id"`
-	AuthAddr            types.String `tfsdk:"auth_addr"`
-	RwPermission        types.String `tfsdk:"rw_permission"`
-	//UserPermission         types.String `hcl:"user_permission"`
-	PermissionRulePriority types.Int32  `tfsdk:"permission_rule_priority"`
+	PermissionGroupFuid    types.String `tfsdk:"permission_group_id"`
+	RegionID               types.String `tfsdk:"region_id"`
+	AuthAddr               types.String `tfsdk:"auth_addr"`
+	RwPermission           types.String `tfsdk:"rw_permission"`
+	PermissionRulePriority types.Int32  `tfsdk:"priority"`
 	ID                     types.String `tfsdk:"id"`
 	UpdateTime             types.String `tfsdk:"update_time"`
 }

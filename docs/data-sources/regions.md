@@ -35,7 +35,7 @@ locals {
 # }
 
 output "ctyun_regions_test" {
-  value =local.multi_az_regions
+  value = local.multi_az_regions
 }
 ```
 

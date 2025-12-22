@@ -16,6 +16,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunEbsAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsAssociation{}
+	_ resource.ResourceWithImportState = &ctyunEbsAssociation{}
 )
 
 func NewCtyunEbsAssociation() resource.Resource {
@@ -53,7 +60,7 @@ func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载",
+				Description: "云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载；XSSD类型云硬盘支持绑定的云主机规格包括：s8,m8,c8,c8ne,m8ne,s8e,c8e,m8e,hc3,hm3",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -179,18 +186,37 @@ func (c *ctyunEbsAssociation) Delete(ctx context.Context, request resource.Delet
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [diskId],[ecsId],[regionId]
 func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [diskId],[ecsId],[regionId]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsAssociationConfig
 	var diskId, ecsId, regionId string
-	err = terraform_extend.Split(request.ID, &diskId, &ecsId, &regionId)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID,
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &diskId, &ecsId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &diskId, &ecsId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if diskId == "" {
+		err = fmt.Errorf("diskId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionId不能为空")
 		return
 	}
 

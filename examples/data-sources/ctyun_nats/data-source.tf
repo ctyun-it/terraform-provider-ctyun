@@ -15,7 +15,7 @@ data "ctyun_nats" "test" {
   nat_gateway_id = "natgw-asdsmh8scy"
 }
 
-output "ctyun_nat_test"{
+output "ctyun_nat_test" {
   value = data.ctyun_nats.test
 }
 

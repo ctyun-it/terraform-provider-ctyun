@@ -33,3 +33,11 @@ output "rabbitmq_cluster_spec_name" {
 output "rabbitmq_cluster_spec_name2" {
   value = local.cluster_spec_name2
 }
+
+output "instance_id" {
+  value = ctyun_rabbitmq_instance.test.id
+}
+
+output "exchange_name" {
+  value = ctyun_rabbitmq_exchange.test.name
+}

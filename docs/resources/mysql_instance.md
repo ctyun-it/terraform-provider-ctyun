@@ -46,83 +46,79 @@ resource "ctyun_security_group" "security_group_test" {
   }
 }
 
-data "ctyun_mysql_specs" "mysql_specs" {
-  instance_series = "S"
+variable "password" {
+  type      = string
+  sensitive = true
 }
-
 // mysql创建单节点
-resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = "c7.2xlarge.4"
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.security_group_test.id
-  name                  = "mysql_examples"
-  prod_id               = "Single57"
-  storage_type          = "SATA"
-  storage_space         = 100
+resource "ctyun_mysql_instance" "mysql_example1" {
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.security_group_test.id
+  name              = "mysql-test-single-1"
+  prod_id           = "Single57"
+  storage_type      = "SATA"
+  storage_space     = 100
+  password          = var.password
+  flavor_name       = "c7.large.2"
 }
 
 // mysql创建1主1备
-resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = "c7.2xlarge.4"
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.security_group_test.id
-  name                  = "mysql_examples"
-  prod_id               = "MasterSlave80"
-  storage_type          = "SATA"
-  storage_space         = 100
+resource "ctyun_mysql_instance" "mysql_example2" {
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.security_group_test.id
+  name              = "mysql-test-2"
+  prod_id           = "MasterSlave80"
+  storage_type      = "SATA"
+  storage_space     = 100
+  password          = var.password
+  flavor_name       = "c7.large.2"
 }
-// 升配磁盘空间
 
-resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = "c7.2xlarge.4"
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.security_group_test.id
-  name                  = "mysql_examples"
-  prod_id               = "Single57"
-  storage_type          = "SATA"
-  storage_space         = 120
-  availability_zone_info = [
-    { "availability_zone_name" : "cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count" : 1, "node_type" : "master" }
-  ]
+// 升配磁盘空间
+resource "ctyun_mysql_instance" "mysql_example3" {
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.security_group_test.id
+  name              = "mysql-test-single-1"
+  prod_id           = "Single57"
+  storage_type      = "SATA"
+  storage_space     = 120
+  password          = var.password
+  flavor_name       = "c7.large.2"
 }
+
 
 // 升配规格
-
-resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = "c7.2xlarge.4"
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.security_group_test.id
-  name                  = "mysql_examples"
-  prod_id               = "Single57"
-  storage_type          = "SATA"
-  storage_space         = 120
-  availability_zone_info = [
-    { "availability_zone_name" : "cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count" : 1, "node_type" : "master" }
-  ]
+resource "ctyun_mysql_instance" "mysql_example4" {
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.security_group_test.id
+  name              = "mysql-test-single-1"
+  prod_id           = "Single57"
+  storage_type      = "SATA"
+  storage_space     = 120
+  password          = var.password
+  flavor_name       = "c7.large.4"
 }
 
 // 升配节点 (如单节点->一主两备)
-resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = "c7.2xlarge.4"
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.security_group_test.id
-  name                  = "mysql_examples"
-  prod_id               = "Master2Slave57"
-  storage_type          = "SATA"
-  storage_space         = 120
-  availability_zone_info = [
-    { "availability_zone_name" : "cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count" : 2, "node_type" : "slave" } // 当升配时，availability_zone_info仅需要填写增量的节点信息
-  ]
+resource "ctyun_mysql_instance" "mysql_example5" {
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.security_group_test.id
+  name              = "mysql-test-single-1"
+  prod_id           = "Master2Slave57"
+  storage_type      = "SATA"
+  storage_space     = 120
+  password          = var.password
+  flavor_name       = "c7.large.4"
 }
 ```
 
@@ -133,7 +129,7 @@ resource "ctyun_mysql_instance" "mysql_test" {
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
 - `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新
-- `name` (String) 实例名称（长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符）
+- `name` (String) 实例名称，支持更新。要求：长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符
 - `prod_id` (String) 产品id，支持更新。取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。
 - `security_group_id` (String) 安全组Id
 - `storage_space` (Number) 存储空间(单位:G，范围100,32768)，支持更新
@@ -144,13 +140,13 @@ resource "ctyun_mysql_instance" "mysql_test" {
 ### Optional
 
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
-- `availability_zone_info` (Attributes List) 可用区信息，需要根据prod_id而定。创建阶段，需要指定master和slave的所在az。例：若一主一备，需要传参：[｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'master'｝,｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'slave'｝]；在更新阶段，仅需要填写扩容部分的AZ信息。例：将单节点扩容至1主2备，[{'availability_zone_name':'xxxx', 'availability_zone_count':2,node_type:'slave'}] (see [below for nested schema](#nestedatt--availability_zone_info))
+- `availability_zone_info` (Attributes List) 可用区信息，支持更新。需要根据prod_id而定。创建阶段，需要指定master和slave的所在az。例：若一主一备，需要传参：[｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'master'｝,｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'slave'｝]；在更新阶段，仅需要填写扩容部分的AZ信息。例：将单节点扩容至1主2备，[{'availability_zone_name':'xxxx', 'availability_zone_count':2,node_type:'slave'}] (see [below for nested schema](#nestedatt--availability_zone_info))
 - `backup_storage_space` (Number) 备份存储空间(单位:G，范围100,32768)，若storage_space和backup_storage_space都不为空，优先升配备份节点存储空间，支持更新
 - `backup_storage_type` (String) 备份空间磁盘存储类型：SSD=超高IO、SATA=普通IO、SAS=高IO
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
-- `password` (String, Sensitive) 实例密码，密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写
+- `password` (String, Sensitive) 实例密码，支持更新。密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `running_control` (String) 控制是否暂停，启用和重启实例，支持更新，取值范围：freeze, unfreeze, restart
 - `write_port` (Number) 写数据端口，支持更新
 
@@ -159,9 +155,9 @@ resource "ctyun_mysql_instance" "mysql_test" {
 - `audit_log_status` (Number) 日志审计开关
 - `eip` (String) 弹性ip
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
-- `id` (String) 实例Id，同inst_id
-- `inst_id` (String) 实例Id
+- `id` (String) 实例Id，同instance_id
 - `inst_release_protection_status` (Number) 实例释放保护开关 1:on,0:off
+- `instance_id` (String) 实例Id
 - `master_order_id` (String) 订单id
 - `mysql_port` (String) 数据库端口
 - `new_mysql_version` (String) mysql版本
@@ -179,6 +175,6 @@ resource "ctyun_mysql_instance" "mysql_test" {
 
 Required:
 
-- `availability_zone_count` (Number) 该AZ内存在的实例节点数量
-- `availability_zone_name` (String) 资源池可用区名称
-- `node_type` (String) 表示分布AZ的节点类型，master/slave
+- `availability_zone_count` (Number) 该AZ内存在的实例节点数量，支持更新。
+- `availability_zone_name` (String) 资源池可用区名称，支持更新。
+- `node_type` (String) 表示分布AZ的节点类型，master/slave，支持更新。

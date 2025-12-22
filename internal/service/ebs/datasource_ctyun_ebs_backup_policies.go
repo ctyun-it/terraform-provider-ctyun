@@ -55,7 +55,7 @@ type ctyunEbsBackupPoliciesConfig struct {
 	PolicyID       types.String                  `tfsdk:"id"`
 	PageNo         types.Int32                   `tfsdk:"page_no"`
 	PageSize       types.Int32                   `tfsdk:"page_size"`
-	BackupPolicies []ctyunEbsBackupPoliciesModel `tfsdk:"backup_policies"`
+	BackupPolicies []ctyunEbsBackupPoliciesModel `tfsdk:"policies"`
 }
 
 type repositoryListModel struct {
@@ -92,7 +92,7 @@ func (c *ctyunEbsBackupPolicies) Schema(_ context.Context, _ datasource.SchemaRe
 				Optional:    true,
 				Description: "每页记录数目，取值范围：[1~50]，默认值：10，单页最大记录不超过50",
 			},
-			"backup_policies": schema.ListNestedAttribute{
+			"policies": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{

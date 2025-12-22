@@ -2,7 +2,10 @@ package utils
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"gopkg.in/yaml.v3"
 	"strconv"
 	"strings"
 )
@@ -142,4 +145,46 @@ func StringToInt32Must(s string) int32 {
 func JsonString(obj interface{}) string {
 	b, _ := json.Marshal(obj)
 	return string(b)
+}
+
+func StringArrayToValueArray(array []string) []attr.Value {
+	var ret []attr.Value
+	for _, str := range array {
+		ret = append(ret, types.StringValue(str))
+	}
+	return ret
+}
+
+func ParseYamlValue(input string, key string) (value interface{}, err error) {
+	var parsed map[string]interface{}
+	decoder := yaml.NewDecoder(strings.NewReader(input))
+	err = decoder.Decode(&parsed)
+	if err != nil {
+		return
+	}
+	value, err = GetValue(key, parsed)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func GetValue(key string, m map[string]interface{}) (interface{}, error) {
+	if strings.Contains(key, ".") {
+		keys := strings.SplitN(key, ".", 2)
+		if _, ok := m[keys[0]]; !ok {
+			return nil, fmt.Errorf("必须存在key: %s", keys[0])
+		}
+		next, ok := m[keys[0]].(map[string]interface{})
+		if !ok {
+			return nil, fmt.Errorf("%s 没有下一层级", keys[0])
+		}
+		return GetValue(keys[1], next)
+	} else {
+		if _, ok := m[key]; !ok {
+			return nil, fmt.Errorf("必须存在key: %s", key)
+		}
+		return m[key], nil
+	}
 }

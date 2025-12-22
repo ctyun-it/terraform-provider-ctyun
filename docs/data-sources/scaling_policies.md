@@ -38,16 +38,16 @@ data "ctyun_scaling_policies" "scaling_policies_test" {
 
 ### Read-Only
 
-- `scaling_policies` (Attributes List) 弹性伸缩策略列表 (see [below for nested schema](#nestedatt--scaling_policies))
+- `policies` (Attributes List) 弹性伸缩策略列表 (see [below for nested schema](#nestedatt--policies))
 
-<a id="nestedatt--scaling_policies"></a>
-### Nested Schema for `scaling_policies`
+<a id="nestedatt--policies"></a>
+### Nested Schema for `policies`
 
 Read-Only:
 
 - `action` (String) 执行动作: increase-增加, decrease-减少, set-设置为
 - `cooldown` (Number) 冷却时间或预热时间 (秒)
-- `create_date` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `cycle` (String) 循环方式: monthly-按月循环, weekly-按周循环, daliy-按天循环
 - `day` (Set of Number) 执行日期
 - `effective_from` (String) 周期策略生效开始时间
@@ -57,7 +57,6 @@ Read-Only:
 - `name` (String) 伸缩策略名称
 - `operate_count` (Number) 调整值
 - `operate_unit` (String) 操作单位: count-个数, percent-百分比
-- `policy_type` (String) 策略类型: alert-告警, regular-定时, period-周期, target-目标追踪
 - `project_id` (String) 企业项目ID
 - `rule_id` (Number) 伸缩策略ID
 - `status` (String) 启用状态: enable-启用, disable-停用
@@ -77,4 +76,5 @@ Read-Only:
 - `trigger_statistics` (String) 聚合方法
 - `trigger_status` (Number) 告警规则状态: 0-启用, 1-停用
 - `trigger_threshold` (Number) 阈值
-- `update_date` (String) 更新时间
+- `type` (String) 策略类型: alert-告警, regular-定时, period-周期, target-目标追踪
+- `update_date` (String) 更新时间，为UTC格式

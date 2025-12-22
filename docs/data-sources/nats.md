@@ -23,7 +23,7 @@ data "ctyun_nats" "test" {
   nat_gateway_id = "natgw-asdsmh8scy"
 }
 
-output "ctyun_nat_test"{
+output "ctyun_nat_test" {
   value = data.ctyun_nats.test
 }
 ```
@@ -34,8 +34,7 @@ output "ctyun_nat_test"{
 ### Optional
 
 - `nat_gateway_id` (String) 要查询的NAT网关的ID
-- `page_no` (Number) 列表的页码，默认值为 1, 推荐使用该字段, pageNumber 后续会废弃
-- `page_number` (Number) 列表的页码，默认值为1
+- `page_no` (Number) 列表的页码，默认值为 1
 - `page_size` (Number) 分页查询时每页的行数，最大值为50，默认值为10。
 - `region_id` (String) 资源池id，如果不填这默认使用provider ctyun总region_id 或者环境变量
 
@@ -48,9 +47,9 @@ output "ctyun_nat_test"{
 
 Read-Only:
 
-- `creation_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) nat网关描述
-- `expire_time` (String) 过期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) nat 网关 id
 - `name` (String) nat 网关名字
 - `nat_gateway_id` (String) nat 网关 id,与上面的id重复

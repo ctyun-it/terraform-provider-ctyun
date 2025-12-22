@@ -40,11 +40,36 @@ func TestAccCtyunBandwidthAssociationEip(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.bandwidthID, dependence.eipID) +
 					utils.LoadTestCase(listDatasourceFile, dnd),
 			},
+
 			{
 
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					BandwidthId := ds.Attributes["bandwidth_id"]
+					regionId := ds.Attributes["region_id"]
+					EipId := ds.Attributes["eip_id"]
+					return fmt.Sprintf("%s,%s,%s", BandwidthId, EipId, regionId), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+				},
+			},
+
+			{
+
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					BandwidthId := ds.Attributes["bandwidth_id"]
+
+					EipId := ds.Attributes["eip_id"]
+					return fmt.Sprintf("%s,%s", BandwidthId, EipId), nil
+				},
 				ImportStateVerifyIgnore: []string{
 					"project_id",
 				},

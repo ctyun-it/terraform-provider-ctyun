@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -18,6 +19,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunVpc{}
+	_ resource.ResourceWithConfigure   = &ctyunVpc{}
+	_ resource.ResourceWithImportState = &ctyunVpc{}
 )
 
 func NewCtyunVpc() resource.Resource {
@@ -37,9 +45,11 @@ func (c *ctyunVpc) Schema(_ context.Context, _ resource.SchemaRequest, response 
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Computed:    true,
+				Description: "id",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -218,13 +228,41 @@ func (c *ctyunVpc) Delete(ctx context.Context, request resource.DeleteRequest, r
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [vpcId],[regionId],[projectId]
 func (c *ctyunVpc) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunVpcConfig
 	var vpcId, regionId, projectId string
-	err := terraform_extend.Split(request.ID, &vpcId, &regionId, &projectId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		vpcId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &vpcId, &projectId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &vpcId, &projectId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if vpcId == "" {
+		err = fmt.Errorf("vpcIdD不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 

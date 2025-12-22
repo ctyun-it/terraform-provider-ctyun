@@ -52,7 +52,19 @@ type AmqpInstancesUnsubscribeInstResponse struct {
 }
 
 type AmqpInstancesUnsubscribeInstResponseReturnObj struct {
+	Data AmqpInstancesUnsubscribeInstResponseReturnObjData `json:"data"`
 }
 
 type AmqpInstancesUnsubscribeInstResponseReturnObjData struct {
+	ErrorMessage               string `json:"errorMessage"`
+	BatchOrderPlacementResults []struct {
+		ErrorMessage      string `json:"errorMessage"`
+		Submitted         bool   `json:"submitted"`
+		OrderPlacedEvents []struct {
+			ErrorMessage string `json:"errorMessage"`
+			Submitted    bool   `json:"submitted"`
+			NewOrderId   string `json:"newOrderId"`
+			NewOrderNo   string `json:"newOrderNo"`
+		} `json:"orderPlacedEvents"`
+	} `json:"batchOrderPlacementResults"`
 }

@@ -8,11 +8,13 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -38,12 +40,47 @@ var (
 type CtyunPostgresqlInstance struct {
 	meta         *common.CtyunMetadata
 	ecsService   *business.EcsService
-	pgsqlService *business.MysqlService
+	pgsqlService *business.PgsqlService
+	orderLooper  *business.OrderLooper
 }
 
 func (c *CtyunPostgresqlInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunPostgresqlInstanceConfig
+	var ID, regionId, projectId string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionId)
+	config.ProjectID = types.StringValue(projectId)
+	err = c.getAndMergePgsqlInstance(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunPostgresqlInstance) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -53,7 +90,8 @@ func (c *CtyunPostgresqlInstance) Configure(ctx context.Context, request resourc
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.ecsService = business.NewEcsService(c.meta)
-	c.pgsqlService = business.NewMysqlService(c.meta)
+	c.pgsqlService = business.NewPgsqlService(c.meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func NewCtyunPostgresqlInstance() resource.Resource {
@@ -81,7 +119,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -117,9 +155,9 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"storage_type": schema.StringAttribute{
 				Required:    true,
-				Description: "主存储类型: SSD=超高IO, SATA=普通IO, SAS=高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD",
+				Description: "主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.StorageType...),
+					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSSDGenric, business.StorageTypeFASTSSD),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -166,18 +204,17 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"security_group_id": schema.StringAttribute{
 				Required:    true,
-				Description: "安全组Id",
+				Description: "安全组Id，支持多个安全组，用英文逗号分割(,)。支持更新，最少得有一个安全组",
 				Validators: []validator.String{
-					validator2.SecurityGroupValidate(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"appoint_vip": schema.StringAttribute{
+			"vip": schema.StringAttribute{
 				Optional:    true,
-				Description: "指定VIP",
+				Computed:    true,
+				Description: "VIP地址",
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
@@ -195,7 +232,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			"password": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
-				Description: "实例密码，8-32位由大写字母、小写字母、数字、特殊字符中的任意三种组成 特殊字符为!@#$%^&*()_+-=",
+				Description: "实例密码，支持更新。8-32位由大写字母、小写字母、数字、特殊字符中的任意三种组成 特殊字符为!@#$%^&*()_+-=",
 				Validators: []validator.String{
 					validator2.DBPassword(
 						8,
@@ -254,7 +291,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID。若环境变量为空，则默认为0",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -282,21 +319,21 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 					Attributes: map[string]schema.Attribute{
 						"availability_zone_name": schema.StringAttribute{
 							Required:    true,
-							Description: "资源池可用区名称，可以根据data.ctyun_zones查询",
+							Description: "资源池可用区名称，支持更新。可以根据data.ctyun_zones查询",
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
 							},
 						},
 						"availability_zone_count": schema.Int32Attribute{
 							Required:    true,
-							Description: "资源池可用区总数",
+							Description: "资源池可用区总数，支持更新。",
 							Validators: []validator.Int32{
 								int32validator.Between(1, 16),
 							},
 						},
 						"node_type": schema.StringAttribute{
 							Required:    true,
-							Description: "节点类型(master/slave)",
+							Description: "节点类型(master/slave)，支持更新。",
 							Validators: []validator.String{
 								stringvalidator.OneOf("master", "slave"),
 							},
@@ -360,6 +397,17 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 				Computed:    true,
 				Description: "订单id",
 			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Description: "到期时间，为UTC格式，按需时为空",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -378,12 +426,24 @@ func (c *CtyunPostgresqlInstance) Create(ctx context.Context, request resource.C
 	}
 
 	err = c.checkSpec(ctx, &plan)
+	if err != nil {
+		return
+	}
 	// 开始创建
 	err = c.CreatePgsqlInstance(ctx, &plan)
 	if err != nil {
 		return
 	}
 
+	// 通过order id 获取instance id
+	id, err := c.acquireAndSetIdIfOrderNotFinished(ctx, plan)
+	if err != nil {
+		return
+	}
+	plan.ID = types.StringValue(id)
+
+	// 继续处理多个安全组的情况
+	err = c.handleOtherMultipleSecurityGroups(ctx, &plan, &plan, "create")
 	// 创建后，获取pgsql详情
 	err = c.getAndMergePgsqlInstance(ctx, &plan)
 	if err != nil {
@@ -445,13 +505,11 @@ func (c *CtyunPostgresqlInstance) Update(ctx context.Context, request resource.U
 		return
 	}
 
-	if !plan.Password.Equal(state.Password) {
-		err = fmt.Errorf("数据库密码暂时不支持修改")
-		return
-	}
-
 	// flavor转换host_type, spec和OsType, CpuType
 	err = c.checkSpec(ctx, &plan)
+	if err != nil {
+		return
+	}
 	// 变配开始
 	err = c.updatePgsqlInstance(ctx, &state, &plan)
 	if err != nil {
@@ -507,7 +565,6 @@ func (c *CtyunPostgresqlInstance) Delete(ctx context.Context, request resource.D
 			return
 		}
 	}
-	time.Sleep(30 * time.Second)
 	err = c.destroy(ctx, state)
 	if err != nil {
 		return
@@ -526,18 +583,17 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 
 	// 构建创建参数
 	params := &pgsql.PgsqlCreateRequest{
-		RegionId:        config.RegionID.ValueString(),
-		BillMode:        business.MysqlBillMode[cycleType],
-		HostType:        config.hostType,
-		ProdVersion:     business.PgsqlProdVersionDict[config.ProdID.ValueString()],
-		ProdId:          business.PgsqlProdIDDict[config.ProdID.ValueString()],
-		VpcId:           config.VpcID.ValueString(),
-		SubnetId:        config.SubnetId.ValueString(),
-		SecurityGroupId: config.SecurityGroupId.ValueString(),
-		Name:            config.Name.ValueString(),
-		Period:          config.CycleCount.ValueInt32(),
-		Count:           1,
-		IsMGR:           &isMgr,
+		RegionId:    config.RegionID.ValueString(),
+		BillMode:    business.MysqlBillMode[cycleType],
+		HostType:    config.hostType,
+		ProdVersion: business.PgsqlProdVersionDict[config.ProdID.ValueString()],
+		ProdId:      business.PgsqlProdIDDict[config.ProdID.ValueString()],
+		VpcId:       config.VpcID.ValueString(),
+		SubnetId:    config.SubnetId.ValueString(),
+		Name:        config.Name.ValueString(),
+		Period:      config.CycleCount.ValueInt32(),
+		Count:       1,
+		IsMGR:       &isMgr,
 	}
 	// 处理密码，并对密码进行RSA加密
 	encodePassword := business.Encode(config.Password.ValueString())
@@ -556,13 +612,17 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 	}
 
 	header := &pgsql.PgsqlCreateRequestHeader{}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	if config.ProjectID.IsNull() || config.ProjectID.IsUnknown() || config.ProjectID.ValueString() == "" {
+		projectId := "0"
+		params.ProjectId = &projectId
+		header.ProjectId = &projectId
+	} else {
 		params.ProjectId = config.ProjectID.ValueStringPointer()
 		header.ProjectId = config.ProjectID.ValueStringPointer()
 	}
 
-	if config.AppointVip.ValueString() != "" {
-		params.AppointVip = config.AppointVip.ValueStringPointer()
+	if config.Vip.ValueString() != "" {
+		params.AppointVip = config.Vip.ValueStringPointer()
 	}
 	if config.osType != "" {
 		osTypeCode := business.MysqlOSTypeDict[config.osType]
@@ -573,15 +633,23 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 		params.CpuType = &cpuTypeCode
 	}
 
+	// 处理安全组，创建实例时，将第一个安全组作为默认安全组参数用于创建实例。其他的待创建实例成功后，再处理。
+	securityGroupIds := strings.Split(config.SecurityGroupId.ValueString(), ",")
+	if len(securityGroupIds) == 0 {
+		err = fmt.Errorf("安全组个数必须大于0")
+		return err
+	}
+	params.SecurityGroupId = securityGroupIds[0]
+
 	// 处理MysqlNodeInfoList
-	mysqlNodeInfoList := []pgsql.PgsqlCreateRequestMysqlNodeInfoList{}
-	mysqlNodeInfo := pgsql.PgsqlCreateRequestMysqlNodeInfoList{}
-	mysqlNodeInfo.InstSpec = business.PgsqlInstanceSeriesDict[config.instanceSeries]
-	mysqlNodeInfo.StorageType = config.StorageType.ValueString()
-	mysqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
-	mysqlNodeInfo.ProdPerformanceSpec = config.prodPerformanceSpec
-	mysqlNodeInfo.Disks = 1
-	mysqlNodeInfo.NodeType = business.PgsqlNodeTypeDict[config.ProdID.ValueString()]
+	var pgsqlNodeInfoList []pgsql.PgsqlCreateRequestNodeInfoList
+	pgsqlNodeInfo := pgsql.PgsqlCreateRequestNodeInfoList{}
+	pgsqlNodeInfo.InstSpec = business.PgsqlInstanceSeriesDict[config.instanceSeries]
+	pgsqlNodeInfo.StorageType = config.StorageType.ValueString()
+	pgsqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
+	pgsqlNodeInfo.ProdPerformanceSpec = config.prodPerformanceSpec
+	pgsqlNodeInfo.Disks = 1
+	pgsqlNodeInfo.NodeType = business.PgsqlNodeTypeDict[config.ProdID.ValueString()]
 
 	// 处理backupStorage
 	if !config.BackupStorageType.IsNull() && !config.BackupStorageType.IsUnknown() {
@@ -592,23 +660,23 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 		} else {
 			if config.BackupStorageSpace.ValueInt32() != 0 {
 				backupStorageSpace := fmt.Sprintf("%d", config.BackupStorageSpace.ValueInt32())
-				mysqlNodeInfo.BackupStorageSpace = &backupStorageSpace
-				mysqlNodeInfo.BackupStorageType = &backupStorageType
+				pgsqlNodeInfo.BackupStorageSpace = &backupStorageSpace
+				pgsqlNodeInfo.BackupStorageType = &backupStorageType
 			}
 		}
 	}
 
 	// 处理availabilityZoneInfo
-	azModelList := []pgsql.PgsqlCreateRequestAvailabilityZoneInfo{}
+	var azModelList []pgsql.PgsqlCreateRequestAvailabilityZoneInfo
 
 	err = c.generateAvailabilityZoneInfo(ctx, config, config, &azModelList, "create")
 	if err != nil {
 		return
 	}
 
-	mysqlNodeInfo.AvailabilityZoneInfo = azModelList
-	mysqlNodeInfoList = append(mysqlNodeInfoList, mysqlNodeInfo)
-	params.MysqlNodeInfoList = mysqlNodeInfoList
+	pgsqlNodeInfo.AvailabilityZoneInfo = azModelList
+	pgsqlNodeInfoList = append(pgsqlNodeInfoList, pgsqlNodeInfo)
+	params.MysqlNodeInfoList = pgsqlNodeInfoList
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -620,77 +688,37 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 		err = common.InvalidReturnObjError
 		return
 	}
-	config.MasterOrderID = utils.SecStringValue(resp.ReturnObj.Data.NewOrderId)
+	masterOrderID := utils.SecString(resp.ReturnObj.Data.NewOrderId)
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err != nil {
+		return err
+	}
+	config.MasterOrderID = types.StringValue(masterOrderID)
+
 	return
 }
 
 func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, config *CtyunPostgresqlInstanceConfig) (err error) {
 	// 通过查询list获取instId
 	// 若实例id为空，表示需要轮询列表查询inst id
-	if config.ID.IsNull() || config.ID.ValueString() == "" {
-		if config.Name.ValueStringPointer() == nil {
-			err = errors.New("实例名为空，有误！")
+	if config.ID.IsNull() || config.ID.IsUnknown() || config.ID.ValueString() == "" {
+		var id string
+		id, err = c.acquireAndSetIdIfOrderNotFinished(ctx, *config)
+		if err != nil {
 			return
 		}
-		listParams := &pgsql.PgsqlListRequest{
-			PageNum:      1,
-			PageSize:     100,
-			ProdInstName: config.Name.ValueStringPointer(),
-		}
-		listHeaders := &pgsql.PgsqlListRequestHeader{
-			RegionID: config.RegionID.ValueString(),
-		}
-		if config.ProjectID.ValueString() != "" {
-			listHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-		}
-		resp, err2 := c.meta.Apis.SdkCtPgsqlApis.PgsqlListApi.Do(ctx, c.meta.Credential, listParams, listHeaders)
-		if err2 != nil {
-			return err2
-		} else if resp.StatusCode != 800 {
-			err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-			return
-		}
-		if len(resp.ReturnObj.List) > 1 {
-			err = errors.New("实例名称重复，存在异常！")
-			return
-		} else if len(resp.ReturnObj.List) == 0 {
-			// 若列表为空，说明实例未创建成功，继续轮询查询
-			err = c.ListLoop(ctx, config, listParams, listHeaders)
-			if err != nil {
-				return
-			}
-		}
+		config.ID = types.StringValue(id)
+
 	}
 	if config.ID.ValueString() == "" {
 		err = errors.New("实例id为空")
 		return
 	}
-	if config.ID.ValueString() == "" {
-		err = errors.New("在查询实例详情时，实例id为空")
-	}
-	// 获取pgsql详情
-	detailParams := &pgsql.PgsqlDetailRequest{
-		ProdInstId: config.ID.ValueString(),
-	}
-	detailHeaders := &pgsql.PgsqlDetailRequestHeader{
-		RegionID: config.RegionID.ValueString(),
-	}
-	if config.ProjectID.ValueString() != "" {
-		detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	}
-	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
+	returnObj, err := c.pgsqlService.GetDetailByID(ctx, config.ID.ValueString(), config.ProjectID.ValueString(), config.RegionID.ValueString())
 	if err != nil {
-		return err
-	} else if resp.StatusCode != 800 {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
 		return
 	}
-
-	// 解析pgsql 详情
-	returnObj := resp.ReturnObj
+	config.Vip = types.StringValue(returnObj.Vip)
 	config.Alive = types.Int32Value(returnObj.Alive)
 	config.StorageSpace = types.Int32Value(returnObj.DiskSize)
 	config.StorageType = types.StringValue(returnObj.DiskType)
@@ -699,6 +727,9 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 	config.Name = types.StringValue(returnObj.ProdInstName)
 	config.ProdType = types.Int32Value(returnObj.ProdType)
 	prodId, err := strconv.ParseInt(returnObj.SpuCode, 10, 64)
+	if err != nil {
+		return
+	}
 	config.ProdID = types.StringValue(business.PgsqlProdIDRevDict[prodId])
 	config.ReadPort = types.Int32Value(returnObj.ReadPort)
 	config.WritePort = types.StringValue(returnObj.WritePort)
@@ -708,6 +739,10 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 	config.ProdOrderStatus = types.Int32Value(returnObj.ProdOrderStatus)
 	config.ProdRunningStatus = types.Int32Value(returnObj.ProdRunningStatus)
 	config.ToolType = types.Int32Value(returnObj.ToolType)
+	config.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(returnObj.CreateTime))
+	config.ExpireTime = types.StringValue(utils.FromBJTimeToUTCZ(returnObj.ExpireTime))
+	config.VpcID = types.StringValue(returnObj.VpcId)
+	config.SubnetId = types.StringValue(returnObj.SubnetId)
 	//config.BackupStorageType = types.StringValue(returnObj.BackupDiskType)
 	backupDiskSize := c.ParseStorageSize(&returnObj.BackupDiskSize)
 	diskSize, err := strconv.ParseInt(backupDiskSize, 10, 32)
@@ -715,6 +750,15 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 		return
 	}
 	config.BackupStorageSpace = types.Int32Value(int32(diskSize))
+	if config.AvailabilityZoneInfo.IsNull() || config.AvailabilityZoneInfo.IsUnknown() {
+		config.AvailabilityZoneInfo = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"availability_zone_name":  types.StringType,
+				"node_type":               types.StringType,
+				"availability_zone_count": types.Int32Type,
+			},
+		})
+	}
 	return
 }
 
@@ -738,17 +782,34 @@ func (c *CtyunPostgresqlInstance) updatePgsqlInstance(ctx context.Context, state
 		modifyNameHeaders := &pgsql.PgsqlUpdateInstanceNameRequestHeader{
 			RegionID: state.RegionID.ValueString(),
 		}
-		if state.ProjectID.ValueString() != "" {
+		if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
 			modifyNameHeaders.ProjectID = state.ProjectID.ValueStringPointer()
 		}
 		resp, err2 := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateInstanceNameApi.Do(ctx, c.meta.Credential, modifyNameParams, modifyNameHeaders)
 		if err2 != nil {
 			return err2
-		} else if resp.StatusCode != 800 {
+		} else if resp.StatusCode != common.NormalStatusCode {
 			err = fmt.Errorf("API return error. Message: %s", resp.Message)
 			return
 		}
 	}
+	// 更新root密码
+	if !plan.Password.IsNull() && !plan.Password.Equal(state.Password) {
+		err = c.updateRootPassword(ctx, state, plan)
+		if err != nil {
+			return
+		}
+		state.Password = plan.Password
+	}
+
+	// 更新安全组
+	if !plan.SecurityGroupId.Equal(state.SecurityGroupId) {
+		err = c.handleOtherMultipleSecurityGroups(ctx, state, plan, "update")
+		if err != nil {
+			return
+		}
+	}
+
 	// 扩容云数据库实例
 	// 磁盘扩容
 	err = c.upgradeStorage(ctx, state, plan)
@@ -798,7 +859,7 @@ func (c *CtyunPostgresqlInstance) updatePgsqlInstance(ctx context.Context, state
 		resp, err2 := c.meta.Apis.SdkCtPgsqlApis.PgsqlStopApi.Do(ctx, c.meta.Credential, stopParams, stopHeaders)
 		if err2 != nil {
 			return err2
-		} else if resp.StatusCode != 800 {
+		} else if resp.StatusCode != common.NormalStatusCode {
 			err = fmt.Errorf("API return error. Message: %s", resp.Message)
 			return
 		}
@@ -827,7 +888,7 @@ func (c *CtyunPostgresqlInstance) updatePgsqlInstance(ctx context.Context, state
 		resp, err2 := c.meta.Apis.SdkCtPgsqlApis.PgsqlRestartApi.Do(ctx, c.meta.Credential, restartParams, restartHeaders)
 		if err2 != nil {
 			return err2
-		} else if resp.StatusCode != 800 {
+		} else if resp.StatusCode != common.NormalStatusCode {
 			err = fmt.Errorf("API return error. Message: %s", resp.Message)
 			return
 		}
@@ -856,7 +917,7 @@ func (c *CtyunPostgresqlInstance) ListLoop(ctx context.Context, config *CtyunPos
 			if err2 != nil {
 				err = err2
 				return false
-			} else if resp.StatusCode != 800 {
+			} else if resp.StatusCode != common.NormalStatusCode {
 				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 				return false
 			}
@@ -901,7 +962,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 		return
 	}
 	// 因为pgsql console和openapi有一个同步误差时间，需要多轮询几轮，目前暂定4轮
-	syncCount := 4
+	syncCount := 2
 	result := retryer.Start(
 		func(currentTime int) bool {
 			detailParams := &pgsql.PgsqlDetailRequest{
@@ -921,7 +982,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 					return false
 				}
 				return true
-			} else if resp.StatusCode != 800 {
+			} else if resp.StatusCode != common.NormalStatusCode {
 				tolerateCount--
 				if tolerateCount < 0 {
 					err = fmt.Errorf("API return error. Message: %s", resp.Message)
@@ -992,7 +1053,7 @@ func (c *CtyunPostgresqlInstance) StartedOrderLoop(ctx context.Context, state *C
 					return false
 				}
 				return true
-			} else if resp.StatusCode != 800 {
+			} else if resp.StatusCode != common.NormalStatusCode {
 				tolerateCount--
 				if tolerateCount < 0 {
 					err = fmt.Errorf("API return error. Message: %s", resp.Message)
@@ -1035,7 +1096,7 @@ func (c *CtyunPostgresqlInstance) detail(ctx context.Context, state CtyunPostgre
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return nil, err
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -1063,6 +1124,9 @@ func (c *CtyunPostgresqlInstance) refund(ctx context.Context, state CtyunPostgre
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
+
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -1093,7 +1157,7 @@ func (c *CtyunPostgresqlInstance) refundLoop(ctx context.Context, state CtyunPos
 			if err2 != nil {
 				err = err2
 				return false
-			} else if resp.StatusCode != 800 {
+			} else if resp.StatusCode != common.NormalStatusCode {
 				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 				return false
 			}
@@ -1128,6 +1192,8 @@ func (c *CtyunPostgresqlInstance) destroy(ctx context.Context, state CtyunPostgr
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -1158,7 +1224,7 @@ func (c *CtyunPostgresqlInstance) destroyLoop(ctx context.Context, state CtyunPo
 			if err2 != nil {
 				err = err2
 				return false
-			} else if resp.StatusCode != 800 {
+			} else if resp.StatusCode != common.NormalStatusCode {
 				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 				return false
 			} else if resp.ReturnObj == nil {
@@ -1218,7 +1284,7 @@ func (c *CtyunPostgresqlInstance) startInstance(ctx context.Context, state *Ctyu
 	resp, err2 := c.meta.Apis.SdkCtPgsqlApis.PgsqlStartApi.Do(ctx, c.meta.Credential, startParams, startHeaders)
 	if err2 != nil {
 		return err2
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
@@ -1430,7 +1496,7 @@ func (c *CtyunPostgresqlInstance) getAzNodeNumMap(ctx context.Context, state *Ct
 		} else if resp == nil {
 			err = errors.New("查询pgsql节点 AZ信息时返回nil，请稍后再试！")
 			return
-		} else if resp.StatusCode != 800 {
+		} else if resp.StatusCode != common.NormalStatusCode {
 			err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 			return
 		} else if resp.ReturnObj == nil {
@@ -1520,6 +1586,17 @@ func (c *CtyunPostgresqlInstance) upgradeRequest(ctx context.Context, params *pg
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
+	// 拿到masterOrderId，轮询确认订单结束
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	if masterOrderID == "" {
+		err = fmt.Errorf("pgsql升配返回masterOrderId为空！")
+		return err
+	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err != nil {
+		return err
+	}
+
 	return
 }
 
@@ -1580,7 +1657,7 @@ func (c *CtyunPostgresqlInstance) getInstanceDetailInfo(ctx context.Context, sta
 	} else if resp == nil {
 		err = errors.New("查询pgsql实例返回为nil，请稍后重试")
 		return
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -1629,6 +1706,7 @@ func (c *CtyunPostgresqlInstance) upgradeSpec(ctx context.Context, state *CtyunP
 			return
 		}
 	}
+
 	// 轮询确认是否变配成功
 	// 更新后，轮询确认时候更新完成
 	err = c.UpgradeSpecLoop(ctx, state, plan, 60)
@@ -1661,14 +1739,22 @@ func (c *CtyunPostgresqlInstance) upgradeStorgeRequest(ctx context.Context, para
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
-
+	// 拿到masterOrderId，轮询确认订单结束
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	if masterOrderID == "" {
+		err = fmt.Errorf("pgsql升配磁盘，返回masterOrderId为空！")
+		return err
+	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err != nil {
+		return err
+	}
 	// 更新后，轮询确认时候更新完成
 	if *params.NodeType == "backup" {
 		err = c.UpgradeStorageLoop(ctx, state, plan, "backup", 60)
 	} else {
 		err = c.UpgradeStorageLoop(ctx, state, plan, "master", 60)
 	}
-
 	if err != nil {
 		return
 	}
@@ -1786,7 +1872,98 @@ func (c *CtyunPostgresqlInstance) UpgradeProdLoop(ctx context.Context, state *Ct
 		return errors.New("轮询已达最大次数，资源仍未升配成功！")
 	}
 	return
+}
 
+func (c *CtyunPostgresqlInstance) updateRootPassword(ctx context.Context, state *CtyunPostgresqlInstanceConfig, plan *CtyunPostgresqlInstanceConfig) error {
+	params := &pgsql.PgsqlResetRootPasswordRequest{
+		ProdInstId: state.ID.ValueString(),
+		Password:   plan.Password.ValueString(),
+	}
+	header := &pgsql.PgsqlResetRootPasswordRequestHeader{
+		ProjectID: state.ProjectID.ValueStringPointer(),
+		RegionID:  state.RegionID.ValueString(),
+	}
+
+	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlResetRootPasswordApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("修改postgresql(id=%s) root密码失败，接口返回nil，请联系研发确认问题原因！", state.ID.ValueString())
+		return err
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return err
+	}
+	return nil
+}
+
+func (c *CtyunPostgresqlInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Context, config CtyunPostgresqlInstanceConfig) (id string, err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
+	if err != nil {
+		return
+	}
+	result := retryer.Start(
+		func(currentTime int) bool {
+			id, err = c.pgsqlService.GetIDByOrder(ctx, config.MasterOrderID.ValueString(), config.ProjectID.ValueString())
+			if err != nil {
+				return false
+			}
+			if id != "" {
+				return false
+			}
+			return true
+		},
+	)
+	if result.ReturnReason == business.ReachMaxLoopTime {
+		return "", fmt.Errorf("实例 %s 创建超时", config.Name.ValueString())
+	}
+	return
+}
+
+func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.Context, state *CtyunPostgresqlInstanceConfig, plan *CtyunPostgresqlInstanceConfig, step string) error {
+	// 如果当前处于更新环节，且plan和state阶段的sg一致，直接返回
+	if step == "update" && state.SecurityGroupId.Equal(plan.SecurityGroupId) {
+		return nil
+	}
+	stateSecurityGroupIds := strings.Split(state.SecurityGroupId.ValueString(), ",")
+	planSecurityGroupIds := strings.Split(plan.SecurityGroupId.ValueString(), ",")
+	// 如果安全组个数=1，且当前处于创建环节，什么都不需要做，直接返回。如果是更新状态，需要判断plan阶段和state阶段的sg是否一致
+	if len(planSecurityGroupIds) == 1 && step == "create" {
+		return nil
+	}
+	// 如果安全组个数>1，且当前处于创建环节，则需要将plan阶段的sg全部加入到state中
+	if len(planSecurityGroupIds) > 1 && step == "create" {
+		for idx, securityGroupId := range planSecurityGroupIds {
+			if idx == 0 {
+				continue
+			}
+			err := c.pgsqlService.AddSecurityGroup(ctx, state.ID.ValueString(), state.ProjectID.ValueString(), securityGroupId)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	// 如果为更新阶段，则需要筛选出哪些需要增加，哪些需要移除
+	if step == "update" {
+		// 遍历plan阶段安全组，判断是否存在于state阶段的sg中，如果不存在，则需要添加安全组
+		for _, securityGroupId := range planSecurityGroupIds {
+			if !strings.Contains(state.SecurityGroupId.ValueString(), securityGroupId) {
+				err := c.pgsqlService.AddSecurityGroup(ctx, state.ID.ValueString(), state.ProjectID.ValueString(), securityGroupId)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		for _, securityGroupId := range stateSecurityGroupIds {
+			if !strings.Contains(plan.SecurityGroupId.ValueString(), securityGroupId) {
+				err := c.pgsqlService.RemoveSecurityGroup(ctx, state.ID.ValueString(), state.ProjectID.ValueString(), securityGroupId)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 type CtyunPostgresqlInstanceConfig struct {
@@ -1799,7 +1976,7 @@ type CtyunPostgresqlInstanceConfig struct {
 	VpcID                types.String `tfsdk:"vpc_id"`                 // 虚拟私有云Id，，回收站恢复到新实例场景非必传则取原实例配置
 	SubnetId             types.String `tfsdk:"subnet_id"`              // 子网Id，，回收站恢复到新实例场景非必传则取原实例配置
 	SecurityGroupId      types.String `tfsdk:"security_group_id"`      // 安全组，回收站恢复到新实例场景非必传则取原实例配置
-	AppointVip           types.String `tfsdk:"appoint_vip"`            // 指定vip
+	Vip                  types.String `tfsdk:"vip"`                    // 指定vip
 	Name                 types.String `tfsdk:"name"`                   // 集群名称(若开通只读实例，默认在主实例名称后面加"-read")
 	Password             types.String `tfsdk:"password"`               // 管理员密码（RSA公钥加密）
 	CycleCount           types.Int32  `tfsdk:"cycle_count"`            // 购买时长：单位月（范围：1-36）
@@ -1823,12 +2000,13 @@ type CtyunPostgresqlInstanceConfig struct {
 	ToolType             types.Int32  `tfsdk:"tool_type"`              // 备份工具类型，1：pg_baseback，2：pgbackrest，3：s3
 	RunningControl       types.String `tfsdk:"running_control"`        //
 	MasterOrderID        types.String `tfsdk:"master_order_id"`        // 订单id
-
-	prodPerformanceSpec string
-	instanceSeries      string
-	hostType            string
-	osType              string
-	cpuType             string
+	CreateTime           types.String `tfsdk:"create_time"`
+	ExpireTime           types.String `tfsdk:"expire_time"`
+	prodPerformanceSpec  string
+	instanceSeries       string
+	hostType             string
+	osType               string
+	cpuType              string
 }
 
 type AvailabilityZoneModel struct {

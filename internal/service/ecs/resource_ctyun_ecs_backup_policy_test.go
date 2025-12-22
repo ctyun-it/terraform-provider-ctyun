@@ -62,8 +62,8 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.name", updatedName),
 				),
 			},
 			// 4.绑定云主机
@@ -80,7 +80,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 					utils.LoadTestCase(bindInstancesFile, dnd, resourceName+".id", instanceId) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.resource_ids", instanceId),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.resource_ids", instanceId),
 				),
 			},
 			{
@@ -101,7 +101,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.resource_ids", ""),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.resource_ids", ""),
 				),
 			},
 			// 8.云主机备份策略绑定存储库
@@ -119,8 +119,8 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// 先检查列表不为空
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.0.repository_id", repositoryID),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.0.repository_id", repositoryID),
 				),
 			},
 			{
@@ -141,7 +141,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.#", "0"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.#", "0"),
 				),
 			},
 			{
@@ -158,7 +158,19 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 					"project_id",
 				},
 			},
-
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+				},
+			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),

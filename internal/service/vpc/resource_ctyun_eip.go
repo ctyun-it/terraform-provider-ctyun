@@ -24,6 +24,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
+	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEip{}
+	_ resource.ResourceWithConfigure   = &ctyunEip{}
+	_ resource.ResourceWithImportState = &ctyunEip{}
 )
 
 func NewCtyunEip() resource.Resource {
@@ -46,6 +54,8 @@ type CtyunEipConfig struct {
 	Address           types.String `tfsdk:"address"`
 	Status            types.String `tfsdk:"status"`
 	ExpireTime        types.String `tfsdk:"expire_time"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 	MasterOrderId     types.String `tfsdk:"master_order_id"`
 	ProjectId         types.String `tfsdk:"project_id"`
 	RegionId          types.String `tfsdk:"region_id"`
@@ -57,7 +67,7 @@ func (c *ctyunEip) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026753`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -140,7 +150,18 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "到期时间",
+				Description: "到期时间，为UTC格式，按需时为空",
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "更新时间，为UTC格式",
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
@@ -309,7 +330,11 @@ func (c *ctyunEip) Delete(ctx context.Context, request resource.DeleteRequest, r
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	time.Sleep(1 * time.Second)
+	if state.Id.ValueString() == "" {
+		response.State.RemoveResource(ctx)
+		return
+	}
 	resp, err := c.meta.Apis.CtVpcApis.EipDeleteApi.Do(ctx, c.meta.Credential, &ctvpc.EipDeleteRequest{
 		EipId:       state.Id.ValueString(),
 		RegionId:    state.RegionId.ValueString(),
@@ -327,14 +352,26 @@ func (c *ctyunEip) Delete(ctx context.Context, request resource.DeleteRequest, r
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [eipId],[regionId]
 func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunEipConfig
 	var eipId, regionId string
-	err := terraform_extend.Split(request.ID, &eipId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	// 根据分隔符数量判断是否输入了regionID,
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		eipId = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
 	cfg.Id = types.StringValue(eipId)
@@ -399,7 +436,9 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*Cty
 	cfg.BandwidthType = types.StringValue(bandwidthType)
 	cfg.Address = types.StringValue(resp.EipAddress)
 	cfg.Status = types.StringValue(statusResp.(string))
-	cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(resp.ExpiredAt))
+	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
+	cfg.CreateTime = types.StringValue(resp.CreatedAt)
+	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
 	return &cfg, nil
 }
 

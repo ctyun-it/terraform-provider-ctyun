@@ -40,7 +40,7 @@ func (v validatorMongodbClusterField) ValidateString(ctx context.Context, reques
 	pattern := `^eip-[a-z0-9]{10}$`
 	matched, _ := regexp.MatchString(pattern, value)
 	if !matched {
-		response.Diagnostics.AddError(IpError, IpError)
+		response.Diagnostics.AddError(MongodbClusterError, MongodbClusterError)
 		return
 	}
 }

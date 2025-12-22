@@ -36,9 +36,9 @@ type CtyunEbsVolumesModel struct {
 	Size            types.Int32                  `tfsdk:"size"`
 	Status          types.String                 `tfsdk:"status"`
 	IsEncrypt       types.Bool                   `tfsdk:"is_encrypt"`
-	CreateTime      types.Int64                  `tfsdk:"create_time"`
-	UpdateTime      types.Int64                  `tfsdk:"update_time"`
-	ExpireTime      types.Int64                  `tfsdk:"expire_time"`
+	CreateTime      types.String                 `tfsdk:"create_time"`
+	UpdateTime      types.String                 `tfsdk:"update_time"`
+	ExpireTime      types.String                 `tfsdk:"expire_time"`
 	IsSystemVolume  types.Bool                   `tfsdk:"is_system_volume"`
 	IsPackaged      types.Bool                   `tfsdk:"is_packaged"`
 	InstanceName    types.String                 `tfsdk:"instance_name"`
@@ -136,17 +136,17 @@ func (c *ctyunEbsVolumes) Schema(_ context.Context, _ datasource.SchemaRequest, 
 							Computed:    true,
 							Description: "参考云硬盘使用状态",
 						},
-						"create_time": schema.Int64Attribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时刻，epoch时戳，精度毫秒",
+							Description: "创建时间，为UTC格式",
 						},
-						"update_time": schema.Int64Attribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时刻，epoch时戳，精度毫秒",
+							Description: "更新时间，为UTC格式",
 						},
-						"expire_time": schema.Int64Attribute{
+						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "过期时刻，epoch时戳，精度毫秒",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 						"is_system_volume": schema.BoolAttribute{
 							Computed:    true,
@@ -271,7 +271,7 @@ func (c *ctyunEbsVolumes) Configure(_ context.Context, request datasource.Config
 func (c *ctyunEbsVolumes) getByID(ctx context.Context, config *CtyunEbsVolumesConfig) (err error) {
 	// 组装请求体
 	params := &ctebs2.EbsQueryEbsByIDRequest{
-		RegionID: config.RegionID.ValueStringPointer(),
+		RegionID: config.RegionID.ValueString(),
 		DiskID:   config.DiskID.ValueString(),
 	}
 
@@ -280,7 +280,7 @@ func (c *ctyunEbsVolumes) getByID(ctx context.Context, config *CtyunEbsVolumesCo
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -290,35 +290,38 @@ func (c *ctyunEbsVolumes) getByID(ctx context.Context, config *CtyunEbsVolumesCo
 	volumes := []CtyunEbsVolumesModel{}
 	disk := resp.ReturnObj
 	item := CtyunEbsVolumesModel{
-		ID:              utils.SecStringValue(disk.DiskID),
-		Name:            utils.SecStringValue(disk.DiskName),
-		Size:            types.Int32Value(disk.DiskSize),
-		Type:            utils.SecStringValue(disk.DiskType),
-		Mode:            utils.SecStringValue(disk.DiskMode),
-		Status:          utils.SecStringValue(disk.DiskStatus),
-		CreateTime:      types.Int64Value(disk.CreateTime),
-		UpdateTime:      types.Int64Value(disk.UpdateTime),
-		ExpireTime:      types.Int64Value(disk.ExpireTime),
+		ID:              utils.SecStringValue(&disk.DiskID),
+		Name:            utils.SecStringValue(&disk.DiskName),
+		Size:            types.Int32Value(int32(disk.DiskSize)),
+		Type:            utils.SecStringValue(&disk.DiskType),
+		Mode:            utils.SecStringValue(&disk.DiskMode),
+		Status:          utils.SecStringValue(&disk.DiskStatus),
+		CreateTime:      types.StringValue(utils.FromUnixToUTC(disk.CreateTime)),
+		UpdateTime:      types.StringValue(utils.FromUnixToUTC(disk.UpdateTime)),
+		ExpireTime:      types.StringValue(utils.FromUnixToUTC(disk.ExpireTime)),
 		IsSystemVolume:  utils.SecBoolValue(disk.IsSystemVolume),
 		IsPackaged:      utils.SecBoolValue(disk.IsPackaged),
-		InstanceName:    utils.SecStringValue(disk.InstanceName),
-		InstanceID:      utils.SecStringValue(disk.InstanceID),
-		InstanceStatus:  utils.SecStringValue(disk.InstanceStatus),
+		InstanceName:    utils.SecStringValue(&disk.InstanceName),
+		InstanceID:      utils.SecStringValue(&disk.InstanceID),
+		InstanceStatus:  utils.SecStringValue(&disk.InstanceStatus),
 		MultiAttach:     utils.SecBoolValue(disk.MultiAttach),
-		ProjectID:       utils.SecStringValue(disk.ProjectID),
+		ProjectID:       utils.SecStringValue(&disk.ProjectID),
 		IsEncrypt:       utils.SecBoolValue(disk.IsEncrypt),
-		KmsUUID:         utils.SecStringValue(disk.KmsUUID),
-		RegionID:        utils.SecStringValue(disk.RegionID),
-		AzName:          utils.SecStringValue(disk.AzName),
+		KmsUUID:         utils.SecStringValue(&disk.KmsUUID),
+		RegionID:        utils.SecStringValue(&disk.RegionID),
+		AzName:          utils.SecStringValue(&disk.AzName),
 		DiskFreeze:      utils.SecBoolValue(disk.DiskFreeze),
-		ProvisionedIops: types.Int32Value(disk.ProvisionedIops),
+		ProvisionedIops: types.Int32Value(int32(disk.ProvisionedIops)),
 		Attachments:     []CtyunEbsVolumesAttachments{},
 	}
 	for _, a := range disk.Attachments {
+		if a == nil {
+			continue
+		}
 		item.Attachments = append(item.Attachments, CtyunEbsVolumesAttachments{
-			InstanceID:   utils.SecStringValue(a.InstanceID),
-			AttachmentID: utils.SecStringValue(a.AttachmentID),
-			Device:       utils.SecStringValue(a.Device),
+			InstanceID:   utils.SecStringValue(&a.InstanceID),
+			AttachmentID: utils.SecStringValue(&a.AttachmentID),
+			Device:       utils.SecStringValue(&a.Device),
 		})
 	}
 	volumes = append(volumes, item)
@@ -354,9 +357,9 @@ func (c *ctyunEbsVolumes) getByName(ctx context.Context, config *CtyunEbsVolumes
 		Type:            utils.SecStringValue(disk.DiskType),
 		Mode:            utils.SecStringValue(disk.DiskMode),
 		Status:          utils.SecStringValue(disk.DiskStatus),
-		CreateTime:      types.Int64Value(disk.CreateTime),
-		UpdateTime:      types.Int64Value(disk.UpdateTime),
-		ExpireTime:      types.Int64Value(disk.ExpireTime),
+		CreateTime:      types.StringValue(utils.FromUnixToUTC(disk.CreateTime)),
+		UpdateTime:      types.StringValue(utils.FromUnixToUTC(disk.UpdateTime)),
+		ExpireTime:      types.StringValue(utils.FromUnixToUTC(disk.ExpireTime)),
 		IsSystemVolume:  utils.SecBoolValue(disk.IsSystemVolume),
 		IsPackaged:      utils.SecBoolValue(disk.IsPackaged),
 		InstanceName:    utils.SecStringValue(disk.InstanceName),
@@ -425,9 +428,9 @@ func (c *ctyunEbsVolumes) getByPage(ctx context.Context, config *CtyunEbsVolumes
 			Type:            utils.SecStringValue(disk.DiskType),
 			Mode:            utils.SecStringValue(disk.DiskMode),
 			Status:          utils.SecStringValue(disk.DiskStatus),
-			CreateTime:      types.Int64Value(disk.CreateTime),
-			UpdateTime:      types.Int64Value(disk.UpdateTime),
-			ExpireTime:      types.Int64Value(disk.ExpireTime),
+			CreateTime:      types.StringValue(utils.FromUnixToUTC(disk.CreateTime)),
+			UpdateTime:      types.StringValue(utils.FromUnixToUTC(disk.UpdateTime)),
+			ExpireTime:      types.StringValue(utils.FromUnixToUTC(disk.ExpireTime)),
 			IsSystemVolume:  utils.SecBoolValue(disk.IsSystemVolume),
 			IsPackaged:      utils.SecBoolValue(disk.IsPackaged),
 			InstanceName:    utils.SecStringValue(disk.InstanceName),

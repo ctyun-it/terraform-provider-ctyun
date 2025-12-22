@@ -46,9 +46,9 @@ data "ctyun_vpce_services" "test" {
 
 Required:
 
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `name` (String) 终端节点服务名称
-- `updated_at` (String) 更新时间
+- `update_time` (String) 更新时间，为UTC格式
 
 Read-Only:
 

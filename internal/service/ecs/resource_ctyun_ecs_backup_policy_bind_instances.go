@@ -21,6 +21,12 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunEcsBackupPolicyBindInstances{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsBackupPolicyBindInstances{}
+	_ resource.ResourceWithImportState = &ctyunEcsBackupPolicyBindInstances{}
+)
+
 /*
 云主机备份策略绑定云主机
 */
@@ -46,7 +52,7 @@ type CtyunEcsBackupPolicyBindInstancesConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindInstances) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033775**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033775`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -416,18 +422,37 @@ func (c *ctyunEcsBackupPolicyBindInstances) getAndMerge(ctx context.Context, pla
 	return
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyID],[instanceIDList],[regionID]
 func (c *ctyunEcsBackupPolicyBindInstances) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[instanceIDList],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsBackupPolicyBindInstancesConfig
 	var instanceIDList, policyID, regionID string
-	err = terraform_extend.Split(request.ID, &policyID, &instanceIDList, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &policyID, &instanceIDList)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &policyID, &instanceIDList, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if policyID == "" {
+		err = fmt.Errorf("policyID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 

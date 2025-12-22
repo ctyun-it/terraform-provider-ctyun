@@ -20,3 +20,13 @@ func CredentialFromEnv() *Credential {
 	sk := os.Getenv("CTYUN_SK")
 	return NewCredential(ak, sk)
 }
+
+// GetAccessKey 获取 Access Key
+func (c *Credential) GetAccessKey() string {
+	return c.ak
+}
+
+// GetSecretKey 获取 Secret Key
+func (c *Credential) GetSecretKey() string {
+	return c.sk
+}

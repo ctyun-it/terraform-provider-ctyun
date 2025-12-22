@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
@@ -35,8 +36,42 @@ func NewCtyunElbCertificate() resource.Resource {
 }
 
 func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunElbCertificateConfig
+	var ID, projectID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+	config.ProjectID = types.StringValue(projectID)
+	err = c.getAndMergeCertificate(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunElbCertificate) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -72,6 +107,7 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
+					validator2.AclName(),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -129,11 +165,11 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Computed:    true,
 				Description: "状态: ACTIVE / INACTIVE",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
@@ -416,6 +452,7 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	config.UpdatedTime = types.StringValue(returnObj.UpdatedTime)
 	config.Name = types.StringValue(returnObj.Name)
 	config.Description = types.StringValue(returnObj.Description)
+	config.Type = types.StringValue(returnObj.RawType)
 	return
 }
 
@@ -453,16 +490,16 @@ func (c *CtyunElbCertificate) updateElbCertificate(ctx context.Context, state *C
 }
 
 type CtyunElbCertificateConfig struct {
-	RegionID    types.String `tfsdk:"region_id"`    //资源池ID
-	Name        types.String `tfsdk:"name"`         //	唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
-	Description types.String `tfsdk:"description"`  //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128
-	Type        types.String `tfsdk:"type"`         //证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
-	PrivateKey  types.String `tfsdk:"private_key"`  //服务器证书私钥，服务器证书此字段必填
-	Certificate types.String `tfsdk:"certificate"`  //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
-	ID          types.String `tfsdk:"id"`           //证书ID
-	Status      types.String `tfsdk:"status"`       //状态: ACTIVE / INACTIVE
-	CreatedTime types.String `tfsdk:"created_time"` //创建时间，为UTC格式
-	UpdatedTime types.String `tfsdk:"updated_time"` //更新时间，为UTC格式
-	AzName      types.String `tfsdk:"az_name"`      //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`   //项目ID
+	RegionID    types.String `tfsdk:"region_id"`   //资源池ID
+	Name        types.String `tfsdk:"name"`        //	唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
+	Description types.String `tfsdk:"description"` //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128
+	Type        types.String `tfsdk:"type"`        //证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
+	PrivateKey  types.String `tfsdk:"private_key"` //服务器证书私钥，服务器证书此字段必填
+	Certificate types.String `tfsdk:"certificate"` //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
+	ID          types.String `tfsdk:"id"`          //证书ID
+	Status      types.String `tfsdk:"status"`      //状态: ACTIVE / INACTIVE
+	CreatedTime types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	UpdatedTime types.String `tfsdk:"update_time"` //更新时间，为UTC格式
+	AzName      types.String `tfsdk:"az_name"`     //可用区名称
+	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
 }

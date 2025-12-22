@@ -55,6 +55,8 @@ type CtyunVpceServiceConfig struct {
 	AutoConnection types.Bool   `tfsdk:"auto_connection"`
 	Rules          types.Set    `tfsdk:"rules"`
 	WhitelistEmail types.Set    `tfsdk:"whitelist_email"`
+	CreateTime     types.String `tfsdk:"create_time"`
+	UpdateTime     types.String `tfsdk:"update_time"`
 	whitelist      []string
 	rules          []CtyunVpceServiceRule
 }
@@ -169,6 +171,17 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 					setvalidator.SizeAtMost(10),
 				},
 			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Description: "更新时间，为UTC格式",
+				Computed:    true,
+			},
 			"rules": schema.SetNestedAttribute{
 				Optional: true,
 				Computed: true,
@@ -245,7 +258,6 @@ func (c *ctyunVpceService) Create(ctx context.Context, request resource.CreateRe
 	if err != nil {
 		return
 	}
-
 	// 反查信息
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
@@ -362,18 +374,34 @@ func (c *ctyunVpceService) Configure(_ context.Context, request resource.Configu
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [endpointServiceID],[regionID]
 func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointServiceID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceConfig
 	var endpointServiceID, regionID string
-	err = terraform_extend.Split(request.ID, &endpointServiceID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		endpointServiceID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &endpointServiceID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if endpointServiceID == "" {
+		err = fmt.Errorf("endpointServiceID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -472,7 +500,8 @@ func (c *ctyunVpceService) getAndMerge(ctx context.Context, plan *CtyunVpceServi
 	plan.Name = utils.SecStringValue(endpointService.Name)
 	plan.Type = utils.SecStringValue(endpointService.RawType)
 	plan.AutoConnection = utils.SecBoolValue(endpointService.AutoConnection)
-
+	plan.CreateTime = utils.SecStringValue(endpointService.CreatedAt)
+	plan.UpdateTime = utils.SecStringValue(endpointService.UpdatedAt)
 	if len(endpointService.Backends) != 0 {
 		backend := endpointService.Backends[0]
 		plan.InstanceType = utils.SecStringValue(backend.InstanceType)

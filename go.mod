@@ -9,6 +9,8 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 )
 
+require github.com/Taoja/sm4 v0.0.0-20210702124949-ed65c23ff019
+
 replace github.com/aws/aws-sdk-go v1.38.63 => ./internal/core/zos-sdk/aws-sdk-go-1.38.63
 
 replace github.com/jmespath/go-jmespath v0.4.0 => ./internal/core/zos-sdk/go-jmespath-0.4.0

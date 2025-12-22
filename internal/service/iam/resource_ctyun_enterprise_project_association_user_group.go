@@ -21,6 +21,11 @@ import (
 	"sync"
 )
 
+var (
+	_ resource.Resource              = &ctyunEnterpriseProjectAssociationUserGroup{}
+	_ resource.ResourceWithConfigure = &ctyunEnterpriseProjectAssociationUserGroup{}
+)
+
 func NewCtyunEnterpriseProjectAssociationUserGroup() resource.Resource {
 	return &ctyunEnterpriseProjectAssociationUserGroup{}
 }
@@ -56,11 +61,14 @@ func (c *ctyunEnterpriseProjectAssociationUserGroup) Schema(_ context.Context, _
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"policy_ids": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "策略id列表",
+				Description: "策略id列表，支持更新",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),

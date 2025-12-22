@@ -89,7 +89,24 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					projectId := ds.Attributes["project_id"]
+					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"az_name",
+					"cycle_type",
+					"master_order_id",
+					"project_id",
+				},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"az_name",

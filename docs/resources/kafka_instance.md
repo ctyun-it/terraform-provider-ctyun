@@ -20,18 +20,18 @@ provider "ctyun" {
 }
 
 resource "ctyun_kafka_instance" "tbidgqvfbs" {
-  instance_name = "tf-kafka-34ywerkb"
-  engine_version = "3.6"
-  spec_name = "kafka.4u8g.cluster"
-  node_num = 5
-  zone_list = ["cn-huadong1-jsnj1A-public-ctcloud"]
-  disk_type = "SSD"
-  disk_size = 300
-  vpc_id = "vpc-ewivt5nhiz"
-  subnet_id = "subnet-vhyywu7mfe"
+  instance_name     = "tf-kafka-34ywerkb"
+  engine_version    = "3.6"
+  spec_name         = "kafka.4u8g.cluster"
+  node_num          = 5
+  zone_list         = ["cn-huadong1-jsnj1A-public-ctcloud"]
+  disk_type         = "SSD"
+  disk_size         = 300
+  vpc_id            = "vpc-ewivt5nhiz"
+  subnet_id         = "subnet-vhyywu7mfe"
   security_group_id = "sg-ed9i3c98t2"
-  cycle_type = "on_demand"
-  retention_hours = 55
+  cycle_type        = "on_demand"
+  retention_hours   = 55
 }
 ```
 
@@ -40,7 +40,7 @@ resource "ctyun_kafka_instance" "tbidgqvfbs" {
 
 ### Required
 
-- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
+- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填，支持更新
 - `disk_size` (Number) 单个节点的磁盘存储空间，单位为GB，存储空间取值范围100GB ~ 10000，并且为100的倍数。实例总存储空间为diskSize * nodeNum，支持更新，不支持缩容
 - `disk_type` (String) 磁盘类型，建议使用ctyun_kafka_specs查看，通常支持SAS、SSD、FAST-SSD
 - `instance_name` (String) 实例名称，长度4~40个字符，大小写字母开头，只能包含大小写字母、数字及分隔符(-)，大小写字母或数字结尾，实例名称不可重复，支持更新
@@ -55,19 +55,24 @@ resource "ctyun_kafka_instance" "tbidgqvfbs" {
 
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写
 - `auto_renew_cycle_count` (Number) 自动续订时长，当且仅当auto_renew为true时填写。支持自动续订范围：1-6月
-- `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36
+- `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新
 - `enable_ipv6` (Boolean) 是否启用IPv6，默认为false
 - `engine_version` (String) 实例引擎版本，支持2.8和3.6，默认3.6
 - `http_port` (Number) HTTP接入点端口，范围在8000到9100之间，默认为8082
 - `plain_port` (Number) 公共接入点(PLAINTEXT)端口，范围在8000到9100之间，默认为8090
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
-- `retention_hours` (Number) 实例消息保留时长，单位小时。默认为72小时，可选1~10000小时，支持更新
+- `restart` (Boolean) 是否重启，默认为false
+- `retention_hours` (Number) 实例消息保留时长，单位小时。默认为72小时，可选1~10000小时，重启后生效，支持更新
 - `sasl_port` (Number) 安全接入点(SASL_PLAINTEXT)端口，范围在8000到9100之间，默认为8092
 - `ssl_port` (Number) SSL接入点(SASL_SSL)端口，范围在8000到9100之间，默认为8098。
 
 ### Read-Only
 
+- `actual_cycle_type` (String) 服务端当前实际计费类型（可能与 cycle_type 不一致，如包周期未到期时）。
+- `create_time` (String) 创建时间，UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) ID
+- `last_restart_time` (String) 上一次重启时间，UTC格式
 - `master_order_id` (String) 主订单号
 - `name` (String) 名称

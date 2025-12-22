@@ -43,10 +43,10 @@ output "ctyun_ebs_backup_policies_test" {
 
 ### Read-Only
 
-- `backup_policies` (Attributes List) (see [below for nested schema](#nestedatt--backup_policies))
+- `policies` (Attributes List) (see [below for nested schema](#nestedatt--policies))
 
-<a id="nestedatt--backup_policies"></a>
-### Nested Schema for `backup_policies`
+<a id="nestedatt--policies"></a>
+### Nested Schema for `policies`
 
 Read-Only:
 
@@ -60,7 +60,7 @@ Read-Only:
 - `project_id` (String) 企业项目ID
 - `region_id` (String) 资源池ID
 - `remain_first_of_cur_month` (Boolean) 是否保留每个月第一个备份，在retentionType为num时可设置，默认false
-- `repository_list` (Attributes List) 策略已绑定的云硬盘备份库列表 (see [below for nested schema](#nestedatt--backup_policies--repository_list))
+- `repository_list` (Attributes List) 策略已绑定的云硬盘备份库列表 (see [below for nested schema](#nestedatt--policies--repository_list))
 - `resource_count` (Number) 策略已绑定的云硬盘数量
 - `resource_ids` (String) 策略已绑定的云硬盘ID，以逗号分隔
 - `retention_day` (Number) 只有retentionType为date时返回保留天数值
@@ -69,8 +69,8 @@ Read-Only:
 - `status` (Number) 是否启用策略，取值范围：0：停用，1：启用
 - `time` (String) 备份整点时间，取值范围：0-23，如果一天内多个时间节点备份，以逗号隔开
 
-<a id="nestedatt--backup_policies--repository_list"></a>
-### Nested Schema for `backup_policies.repository_list`
+<a id="nestedatt--policies--repository_list"></a>
+### Nested Schema for `policies.repository_list`
 
 Read-Only:
 

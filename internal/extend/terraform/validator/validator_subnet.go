@@ -22,6 +22,10 @@ func (v validatorSubnet) ValidateString(ctx context.Context, request validator.S
 	if value == "" {
 		return
 	}
+	// 匹配uuid，说明是3.0资源池
+	if uuidRegex.MatchString(request.ConfigValue.ValueString()) {
+		return
+	}
 	pattern := `^subnet-[a-z0-9]{10}$`
 	matched, _ := regexp.MatchString(pattern, value)
 	if !matched {

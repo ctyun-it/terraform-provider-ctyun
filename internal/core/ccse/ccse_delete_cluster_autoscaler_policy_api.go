@@ -55,6 +55,6 @@ type CcseDeleteClusterAutoscalerPolicyRequest struct {
 type CcseDeleteClusterAutoscalerPolicyResponse struct {
 	StatusCode int32  `json:"statusCode,omitempty"` /*  响应状态码  */
 	Message    string `json:"message,omitempty"`    /*  响应信息  */
-	ReturnObj  string `json:"returnObj,omitempty"`  /*  返回结果  */
+	ReturnObj  bool   `json:"returnObj,omitempty"`  /*  返回结果  */
 	Error      string `json:"error,omitempty"`      /*  错误码，参见错误码说明  */
 }

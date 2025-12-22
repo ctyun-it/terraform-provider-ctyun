@@ -1,7 +1,9 @@
 package common
 
 import (
+	amqp2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cda"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/crs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
@@ -9,6 +11,9 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebsbackup"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	sdkCtelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	ctiam2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctiam"
+	sdkCtImage "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctimage"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctnat"
 	ctvpc2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
@@ -22,9 +27,12 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctzos"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
 	ctgkafka "github.com/ctyun-it/terraform-provider-ctyun/internal/core/kafka"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/oceanfs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
 	"sync"
 )
@@ -66,10 +74,13 @@ func (c CtyunMetadata) GetExtraIfEmpty(target, extraKey string) string {
 }
 
 type Apis struct {
+	SdkCtImageApis  *sdkCtImage.Apis
+	SdkCtNatApis    *ctnat.Apis
 	CtEbsApis       *ctebs.Apis
 	CtEbsBackupApis *ctebsbackup.Apis
 	CtEcsApis       *ctecs.Apis
 	CtIamApis       *ctiam.Apis
+	SdkCtIamApis    *ctiam2.Apis
 	CtImageApis     *ctimage.Apis
 	CtVpcApis       *ctvpc.Apis
 	CtEbmApis       *ctebm.Apis
@@ -84,9 +95,14 @@ type Apis struct {
 	SdkCtPgsqlApis  *pgsql.Apis
 	SdkKafkaApis    *ctgkafka.Apis
 	SdkMongodbApis  *mongodb.Apis
-	SdkAmqpApis     *amqp.Apis
+	AmqpApis        *amqp.Apis
+	SdkAmqpApis     *amqp2.Apis
 	SdkCrsApis      *crs.Apis
 	SdkHpfsApis     *hpfs.Apis
 	SdkScalingApis  *scaling.Apis
 	SdkSfsApi       *sfs.Apis
+	SdkEcApis       *ec.Apis
+	SdkCdaApis      *cda.Apis
+	SdkSdwanApis    *sdwan.Apis
+	SdkOceanfsApis  *oceanfs.Apis
 }

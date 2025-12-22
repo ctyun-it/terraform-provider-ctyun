@@ -71,6 +71,29 @@ func TestAccCtyunCcsePlugin(t *testing.T) {
 				ResourceName:      resourceName,
 				ImportState:       true,
 				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					chartName := ds.Attributes["chart_name"]
+					clusterId := ds.Attributes["cluster_id"]
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s,%s", chartName, clusterId, regionID), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"values_json",
+					"values_yaml",
+				},
+			},
+
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					chartName := ds.Attributes["chart_name"]
+					clusterId := ds.Attributes["cluster_id"]
+					return fmt.Sprintf("%s,%s", chartName, clusterId), nil
+				},
 				ImportStateVerifyIgnore: []string{
 					"values_json",
 					"values_yaml",

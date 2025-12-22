@@ -83,3 +83,69 @@ func TestAccCtyunElbAcl(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCtyunElbImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_elb_acl." + rnd
+	resourceFile := "resource_ctyun_elb_acl.tf"
+
+	name := "acl_" + utils.GenerateRandomString()
+	sourceIps := `"127.0.0.1/32","192.168.0.0/16"`
+
+	updatedName := "acl_new_" + utils.GenerateRandomString()
+	updatedSourceIps2 := `"192.168.0.0/16","192.168.10.0"`
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1.1 Create验证
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, name, sourceIps),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "source_ips.#", "2"),
+				),
+			},
+			// import state 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
+			// import state 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
+			// destroy
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, updatedName, updatedSourceIps2),
+				Destroy: true,
+			},
+		},
+	})
+}

@@ -21,3 +21,15 @@ output "mysql_id" {
 output "az_name" {
   value = local.az_name
 }
+
+output "template_id" {
+  value = tostring(data.ctyun_mysql_param_templates.template.param_templates[0].id)
+}
+
+output "task_id" {
+  value = data.ctyun_mysql_backups.backup_test.backups.0.records.0.task_id
+}
+
+output "backup_timestamp" {
+  value = data.ctyun_mysql_recoverable_time_points.time_point_test.backup_time_points.0.end_time
+}

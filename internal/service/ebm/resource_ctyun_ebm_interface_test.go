@@ -48,17 +48,38 @@ func TestAccCtyunEbmInterface(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			// 多种导入方式测试
 			{
-
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionID := ds.Attributes["region_id"]
-					instanceID := ds.Attributes["instance_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", instanceID, id, regionID, azName), nil
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["interface_id"],
+						rs.Primary.Attributes["az_name"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["interface_id"],
+						rs.Primary.Attributes["az_name"],
+					), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

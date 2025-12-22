@@ -84,10 +84,13 @@ func (c CtyunRequest) buildRequest(endPoint string) (*http.Request, CtyunRequest
 	u.RawQuery = c.params.Encode()
 
 	// 构造请求头
-	tim := time.Now()
-	eopDate := tim.Format("20060102T150405Z")
+	tim := time.Now().UTC()
+	// 将时间转换为东八区时间（北京时间）
+	location, _ := time.LoadLocation("Asia/Shanghai")
+	localTime := tim.In(location)
+	eopDate := localTime.Format("20060102T150405Z")
 	id := uuid.NewString()
-	sign := GetSign(u.RawQuery, c.body, tim, id, c.credential)
+	sign := GetSign(u.RawQuery, c.body, eopDate, id, c.credential)
 	headers := c.headers.Clone()
 	headers.Add("ctyun-eop-request-id", id)
 	headers.Add("Eop-Authorization", sign)
@@ -106,14 +109,13 @@ func (c CtyunRequest) buildRequest(endPoint string) (*http.Request, CtyunRequest
 }
 
 // GetSign 加签
-func GetSign(query string, body []byte, tim time.Time, uuid string, credential Credential) string {
+func GetSign(query string, body []byte, date string, uuid string, credential Credential) string {
 	hash := sha256.New()
 	hash.Write(body)
 	sum := hash.Sum(nil)
 	calculateContentHash := hex.EncodeToString(sum)
-	date := tim.Format("20060102T150405Z")
 	sigture := fmt.Sprintf("ctyun-eop-request-id:%s\neop-date:%s\n\n%s\n%s", uuid, date, query, calculateContentHash)
-	singerDd := tim.Format("20060102")
+	singerDd := date[0:8]
 	kAk := hmacSHA256(credential.ak, string(hmacSHA256(date, credential.sk)))
 	kdate := hmacSHA256(singerDd, string(kAk))
 	signaSha256 := hmacSHA256(sigture, string(kdate))

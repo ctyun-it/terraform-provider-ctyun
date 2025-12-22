@@ -32,14 +32,14 @@ func (c *ctyunZosBuckets) Metadata(_ context.Context, request datasource.Metadat
 }
 
 type CtyunZosBucketsModel struct {
-	Bucket       types.String `tfsdk:"bucket"`
-	RegionName   types.String `tfsdk:"region_name"`
-	ProjectID    types.String `tfsdk:"project_id"`
-	StorageType  types.String `tfsdk:"storage_type"`
-	IsEncrypted  types.Bool   `tfsdk:"is_encrypted"`
-	CmkUUID      types.String `tfsdk:"cmk_uuid"`
-	AzPolicy     types.String `tfsdk:"az_policy"`
-	CreationDate types.String `tfsdk:"creation_date"`
+	Bucket      types.String `tfsdk:"bucket"`
+	RegionName  types.String `tfsdk:"region_name"`
+	ProjectID   types.String `tfsdk:"project_id"`
+	StorageType types.String `tfsdk:"storage_type"`
+	IsEncrypted types.Bool   `tfsdk:"is_encrypted"`
+	CmkUUID     types.String `tfsdk:"cmk_uuid"`
+	AzPolicy    types.String `tfsdk:"az_policy"`
+	CreateTime  types.String `tfsdk:"create_time"`
 }
 
 type CtyunZosBucketsConfig struct {
@@ -122,7 +122,7 @@ func (c *ctyunZosBuckets) Schema(_ context.Context, _ datasource.SchemaRequest, 
 							Computed:    true,
 							Description: "加密ID，若isEncrypted为false，此值为空字符串",
 						},
-						"creation_date": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建日期，为ISO8601格式",
 						},
@@ -179,13 +179,13 @@ func (c *ctyunZosBuckets) getBucket(ctx context.Context, config *CtyunZosBuckets
 		return
 	}
 	item := CtyunZosBucketsModel{
-		Bucket:       types.StringValue(b.Bucket),
-		ProjectID:    types.StringValue(b.ProjectID),
-		StorageType:  types.StringValue(b.StorageType),
-		IsEncrypted:  types.BoolValue(true),
-		CmkUUID:      utils.SecStringValue(b.CmkUUID),
-		AzPolicy:     types.StringValue(b.AZPolicy),
-		CreationDate: types.StringValue(b.Ctime),
+		Bucket:      types.StringValue(b.Bucket),
+		ProjectID:   types.StringValue(b.ProjectID),
+		StorageType: types.StringValue(b.StorageType),
+		IsEncrypted: types.BoolValue(true),
+		CmkUUID:     utils.SecStringValue(b.CmkUUID),
+		AzPolicy:    types.StringValue(b.AZPolicy),
+		CreateTime:  types.StringValue(utils.ConvertToUTCZ(utils.Layout4, b.Ctime)),
 	}
 	if b.CmkUUID == nil {
 		item.IsEncrypted = types.BoolValue(false)
@@ -229,14 +229,14 @@ func (c *ctyunZosBuckets) listBuckets(ctx context.Context, config *CtyunZosBucke
 	config.CurrentCount = types.Int64Value(resp.ReturnObj.CurrentCount)
 	for _, b := range resp.ReturnObj.BucketList {
 		item := CtyunZosBucketsModel{
-			Bucket:       types.StringValue(b.Bucket),
-			RegionName:   types.StringValue(b.RegionName),
-			ProjectID:    types.StringValue(b.ProjectID),
-			StorageType:  types.StringValue(b.StorageType),
-			IsEncrypted:  utils.SecBoolValue(b.IsEncrypted),
-			CmkUUID:      types.StringValue(b.CmkUUID),
-			AzPolicy:     types.StringValue(b.AZPolicy),
-			CreationDate: types.StringValue(b.CreationDate),
+			Bucket:      types.StringValue(b.Bucket),
+			RegionName:  types.StringValue(b.RegionName),
+			ProjectID:   types.StringValue(b.ProjectID),
+			StorageType: types.StringValue(b.StorageType),
+			IsEncrypted: utils.SecBoolValue(b.IsEncrypted),
+			CmkUUID:     types.StringValue(b.CmkUUID),
+			AzPolicy:    types.StringValue(b.AZPolicy),
+			CreateTime:  types.StringValue(b.CreationDate),
 		}
 		config.Buckets = append(config.Buckets, item)
 	}

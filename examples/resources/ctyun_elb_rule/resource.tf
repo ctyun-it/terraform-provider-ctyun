@@ -27,7 +27,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
@@ -50,9 +49,12 @@ resource "ctyun_elb_target_group" "test2" {
 resource "ctyun_elb_rule" "rule_test" {
   listener_id = ctyun_elb_loadbalancer.listener_test.id
   conditions = [
-    { "type" : "server_name", "condition_server_name" : "terraform-test.com" }
+    {
+      "condition_type" : "server_name",
+      "condition_server_name" : "terraform-test.com"
+    }
   ]
   action_type          = "forward"
-  action_target_groups = [{target_group_id=ctyun_elb_target_group.test2.id}]
+  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test2.id }]
 }
 

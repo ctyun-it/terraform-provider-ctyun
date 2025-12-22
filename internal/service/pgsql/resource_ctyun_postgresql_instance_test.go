@@ -10,6 +10,136 @@ import (
 	"time"
 )
 
+func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+	resourceFile := "resource_ctyun_postgresql_instance_test.tf"
+	resourceName := "ctyun_postgresql_instance." + rnd
+	cycleType := "on_demand"
+	prodId := "Single1222"
+	flavorName := "c7.xlarge.2"
+	storageType := "SSD"
+	storageSpace := 100
+	name := "pgsql-" + utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
+	caseCensitive := true
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+	securityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID2)
+	updatedSecurityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID3)
+	backupStorageType := "OS"
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建pgsql
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
+					storageSpace, name, password, caseCensitive, vpcID, subnetID, securityGroupID, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// import state验证1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					projectId := ds.Attributes["project_id"]
+					if id == "" || regionId == "" {
+						return "", fmt.Errorf("id or region_id is required")
+					}
+					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "cycle_count", "master_order_id", "case_sensitive", "is_mgr"},
+			},
+			// import state验证2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "cycle_count", "master_order_id", "case_sensitive", "is_mgr"},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
+					storageSpace, name, password, caseCensitive, vpcID, subnetID, updatedSecurityGroupID, backupStorageType),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+func TestAccCtyunPgsqlInstanceProjectId(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+	resourceFile := "resource_ctyun_postgresql_instance_test.tf"
+	resourceName := "ctyun_postgresql_instance." + rnd
+	cycleType := "on_demand"
+	prodId := "Single1222"
+	flavorName := "c7.xlarge.2"
+	storageType := "SSD"
+	storageSpace := 100
+	name := "pgsql-" + utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
+	updatedPassword := "Kyk123==" + utils.GenerateRandomString()
+	caseCensitive := true
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+	securityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID2)
+	updatedSecurityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID3)
+	backupStorageType := "OS"
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建pgsql
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
+					storageSpace, name, password, caseCensitive, vpcID, subnetID, securityGroupID, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// 测试密码修改
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
+					storageSpace, name, updatedPassword, caseCensitive, vpcID, subnetID, updatedSecurityGroupID, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
+					storageSpace, name, password, caseCensitive, vpcID, subnetID, updatedSecurityGroupID, backupStorageType),
+				Destroy: true,
+			},
+		},
+	})
+}
+
 func TestAccCtyunPgsqlInstance(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
@@ -22,15 +152,15 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 
 	cycleType := "on_demand"
 	prodId := "Single1222"
-	storageType := "SATA"
+	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SATA"`
 	StorageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
 	//password := "VqOcfgJ6Nf2houSe5C9sxgM4ycExVK+F0bBZwBGdiy8DCVXoSyck0lPxw9XMRgHur2lQYenOJ5K/FxZ30qlwbKG3NfgNoPq+AXDeSDdycGTqa1TzLdGnYwAeC/hEa8pyUKS9LdlW7nnM1nGUvGCXkGdzJP8lbHCwonzazEnF3RI="
-	password := "Kyk123="+utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
 	caseCensitive := true
-	flavorName := "s7.large.2"
-	updatedFlavorName := "s7.large.4"
+	flavorName := "c7.xlarge.2"
+	updatedFlavorName := "c7.xlarge.4"
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -145,10 +275,10 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, updatedFlavorName, updatedProdID, storageType, updatedStorageSpace, updatedName, password, caseCensitive,
 					vpcID, subnetID, securityGroupID, updatedAzInfo, "", ``, "", backupStorageType, "") +
-					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("prod_inst_id=%s.id", resourceName)),
+					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("instance_id=%s.id", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "pgsql_instances.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "pgsql_instances.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.name", updatedName),
 					resource.ComposeAggregateTestCheckFunc(
 						func(s *terraform.State) error {
 							time.Sleep(30 * time.Second)
@@ -169,7 +299,6 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 
 // 不传az Info 测试
 func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
-	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_postgresql_instance." + rnd
 
@@ -178,11 +307,11 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	cycleType := "on_demand"
 	flavorName := "c7.large.2"
 	prodId := "Single1417"
-	storageType := "SAS"
+	storageType := "SSD"
 	backupStorageType := `backup_storage_type = "SATA"`
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123="+utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -274,10 +403,10 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 	flavorName := "c7.large.2"
 	prodId := "Master2Slave1512"
 	storageType := "SSD"
-	backupStorageType := `backup_storage_type="SSD"`
+	backupStorageType := `backup_storage_type="SAS"`
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123="+utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -309,7 +438,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", storageSpace)),
-					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SAS"),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_space", "100")),
 			},
 			// 升配主备磁盘，spec
@@ -324,7 +453,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", updatedStorageSpace)),
-					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SAS"),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_space", "200"),
 					resource.ComposeAggregateTestCheckFunc(
 						func(s *terraform.State) error {

@@ -58,18 +58,14 @@ type CtvpcShowPrivateZoneResponse struct {
 }
 
 type CtvpcShowPrivateZoneReturnObjResponse struct {
-	ZoneID          *string                                                 `json:"zoneID,omitempty"`       /*  名称  */
-	Name            *string                                                 `json:"name,omitempty"`         /*  zone名称  */
-	Description     *string                                                 `json:"description,omitempty"`  /*  描述  */
-	ProxyPattern    *string                                                 `json:"proxyPattern,omitempty"` /*  zone, record  */
-	TTL             int32                                                   `json:"TTL"`                    /*  zone ttl, default is 300  */
-	VpcAssociations []*CtvpcShowPrivateZoneReturnObjVpcAssociationsResponse `json:"vpcAssociations"`        /*  vpc关联信息数组  */
-	CreatedAt       *string                                                 `json:"createdAt,omitempty"`    /*  创建时间  */
-	UpdatedAt       *string                                                 `json:"updatedAt,omitempty"`    /*  更新时间  */
-}
-
-type CtvpcShowPrivateZoneReturnObjVpcAssociationsResponse struct {
-	VpcAssociation *CtvpcShowPrivateZoneReturnObjVpcAssociationsVpcAssociationResponse `json:"vpcAssociation"` /*  vpc关联信息对象  */
+	ZoneID          *string                                                               `json:"zoneID,omitempty"`       /*  名称  */
+	Name            *string                                                               `json:"name,omitempty"`         /*  zone名称  */
+	Description     *string                                                               `json:"description,omitempty"`  /*  描述  */
+	ProxyPattern    *string                                                               `json:"proxyPattern,omitempty"` /*  zone, record  */
+	TTL             int32                                                                 `json:"TTL"`                    /*  zone ttl, default is 300  */
+	VpcAssociations []*CtvpcShowPrivateZoneReturnObjVpcAssociationsVpcAssociationResponse `json:"vpcAssociations"`        /*  vpc关联信息数组  */
+	CreatedAt       *string                                                               `json:"createdAt,omitempty"`    /*  创建时间  */
+	UpdatedAt       *string                                                               `json:"updatedAt,omitempty"`    /*  更新时间  */
 }
 
 type CtvpcShowPrivateZoneReturnObjVpcAssociationsVpcAssociationResponse struct {

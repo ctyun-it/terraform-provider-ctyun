@@ -31,7 +31,7 @@ provider "ctyun" {
 
 # 指定版本时，可以查模板Values
 data "ctyun_ccse_template_market" "test" {
-  tpl_name = "elasticsearch"
+  tpl_name    = "elasticsearch"
   tpl_version = "7.10.2"
   values_type = "YAML"
 }

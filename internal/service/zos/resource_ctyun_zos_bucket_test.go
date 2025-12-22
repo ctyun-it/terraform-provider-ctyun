@@ -95,6 +95,21 @@ func TestAccCtyunZosBucket(t *testing.T) {
 				},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+					"acl",
+					"retention_mode",
+				},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, bucket, acl, azPolicy, storageType) +
 					utils.LoadTestCase(datasourceFile, dnd),
 				Destroy: true,

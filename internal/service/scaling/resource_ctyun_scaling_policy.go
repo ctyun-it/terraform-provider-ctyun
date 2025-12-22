@@ -11,6 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -24,6 +25,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strconv"
 	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunScalingPolicy{}
+	_ resource.ResourceWithConfigure   = &ctyunScalingPolicy{}
+	_ resource.ResourceWithImportState = &ctyunScalingPolicy{}
 )
 
 type ctyunScalingPolicy struct {
@@ -54,36 +61,62 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[groupId],[policyType],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
-	var cfg CtyunScalingPolicyConfig
-	var ID, regionId, groupId, policyType string
-	err = terraform_extend.Split(request.ID, &ID, &regionId, &groupId, &policyType)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	var config CtyunScalingPolicyConfig
+	var ID, groupId, policyType, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType, &regionId)
+		if err != nil {
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ID, 10, 64)
-
 	if err != nil {
+		err = fmt.Errorf("ID必须是有效数字")
 		return
 	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	if groupId == "" {
+		err = fmt.Errorf("groupId不能为空")
+		return
+	}
+	if policyType == "" {
+		err = fmt.Errorf("policyType不能为空")
+		return
+	}
+
 	groupID, err := strconv.ParseInt(groupId, 10, 64)
 	if err != nil {
 		return
 	}
-	cfg.ID = types.Int64Value(id)
-	cfg.RegionID = types.StringValue(regionId)
-	cfg.GroupID = types.Int64Value(groupID)
-	cfg.PolicyType = types.StringValue(policyType)
-	err = c.getAndMergeScalingPolicy(ctx, &cfg)
+	config.ID = types.Int64Value(id)
+	config.RegionID = types.StringValue(regionId)
+	config.GroupID = types.Int64Value(groupID)
+	config.PolicyType = types.StringValue(policyType)
+	err = c.getAndMergeScalingPolicy(ctx, &config)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -98,12 +131,18 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			"group_id": schema.Int64Attribute{
 				Required:    true,
 				Description: "伸缩组ID",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.Int64{
+					int64validator.AtLeast(1),
 				},
 			},
 			"name": schema.StringAttribute{

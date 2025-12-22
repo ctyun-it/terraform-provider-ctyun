@@ -83,4 +83,5 @@ type CtvpcListVpcPeerConnectionReturnObjResponse struct {
 	Name           *string `json:"name,omitempty"`           /*  对等连接名称  */
 	InstanceID     *string `json:"instanceID,omitempty"`     /*  对等连接 ID  */
 	Status         *string `json:"status,omitempty"`         /*  对等连接状态：agree(同意建立对等连接) / pending(待同意建立对等链接)  */
+	CreationTime   *string `json:"creationTime"`
 }

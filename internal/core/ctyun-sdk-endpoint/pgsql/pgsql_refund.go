@@ -64,6 +64,10 @@ type PgsqlRefundResponse struct {
 }
 
 type PgsqlRefundResponseReturnObj struct {
+	Data *PgsqlRefundResponseReturnObjData `json:"data"`
+}
+
+type PgsqlRefundResponseReturnObjData struct {
 	ErrorMessage string  `json:"errorMessage"` // 错误内容
 	Submitted    bool    `json:"submitted"`    // 是否成功
 	NewOrderId   string  `json:"newOrderId"`   // 订单ID

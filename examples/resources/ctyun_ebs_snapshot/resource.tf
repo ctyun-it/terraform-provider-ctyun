@@ -19,8 +19,8 @@ resource "ctyun_ebs" "ebs_test" {
   cycle_type = "on_demand"
 }
 
-resource "ctyun_ecs_snapshot" "test" {
-  name = "tf-test-group"
-  disk_id = ctyun_ebs.ebs_test.id
+resource "ctyun_ebs_snapshot" "test" {
+  name             = "tf-test-group"
+  disk_id          = ctyun_ebs.ebs_test.id
   retention_policy = "forever"
 }

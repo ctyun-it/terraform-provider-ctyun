@@ -22,6 +22,10 @@ func (v validatorSecurityGroup) ValidateString(ctx context.Context, request vali
 	if value == "" {
 		return
 	}
+	// 匹配uuid，说明是3.0资源池
+	if uuidRegex.MatchString(request.ConfigValue.ValueString()) {
+		return
+	}
 	pattern := `^sg-[a-z0-9]{10}$`
 	matched, _ := regexp.MatchString(pattern, value)
 	if !matched {

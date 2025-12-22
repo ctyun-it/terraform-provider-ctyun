@@ -38,20 +38,20 @@ func (c *CtyunSfsPermissionRules) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunSfsPermissionRules) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		Description: "天翼云SFS（文件存储）权限组规则管理，支持权限组规则创建、更新和删除。具体文档可参考：https://www.ctyun.cn/document/10027350/10192622",
+		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622",
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "",
 			},
-			"permission_group_fuid": schema.StringAttribute{
+			"permission_group_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "权限组Fuid，permission_group_fuid和permission_rule_fuid至少存在一个",
+				Description: "权限组id，permission_group_id和id至少存在一个",
 			},
-			"permission_rule_fuid": schema.StringAttribute{
+			"id": schema.StringAttribute{
 				Optional:    true,
-				Description: "权限组规则Fuid，permissionGroupFuid和permissionRuleFuid至少存在一个",
+				Description: "权限组规则id，permission_group_id和id至少存在一个",
 			},
 			"page_size": schema.Int32Attribute{
 				Optional:    true,
@@ -61,18 +61,18 @@ func (c *CtyunSfsPermissionRules) Schema(ctx context.Context, request datasource
 				Optional:    true,
 				Description: "页码，取值范围：正整数（≥1），注：默认值为1",
 			},
-			"permission_rules": schema.ListNestedAttribute{
+			"rules": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "权限组规则列表",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"permission_rule_fuid": schema.StringAttribute{
+						"id": schema.StringAttribute{
 							Computed:    true,
 							Description: "权限组规则ID",
 						},
 						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间。UTC时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"user_id": schema.StringAttribute{
 							Computed:    true,
@@ -80,15 +80,7 @@ func (c *CtyunSfsPermissionRules) Schema(ctx context.Context, request datasource
 						},
 						"permission_group_id": schema.StringAttribute{
 							Computed:    true,
-							Description: "权限组底层ID",
-						},
-						"permission_group_fuid": schema.StringAttribute{
-							Computed:    true,
-							Description: "权限组Fuid",
-						},
-						"permission_rule_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "权限组规则底层ID",
+							Description: "权限组ID",
 						},
 						"auth_addr": schema.StringAttribute{
 							Computed:    true,
@@ -102,11 +94,11 @@ func (c *CtyunSfsPermissionRules) Schema(ctx context.Context, request datasource
 							Computed:    true,
 							Description: "用户权限",
 						},
-						"permission_rule_priority": schema.Int32Attribute{
+						"priority": schema.Int32Attribute{
 							Computed:    true,
 							Description: "优先级",
 						},
-						"permission_rule_is_default": schema.BoolAttribute{
+						"is_default": schema.BoolAttribute{
 							Computed:    true,
 							Description: "是否为默认规则",
 						},
@@ -148,7 +140,7 @@ func (c *CtyunSfsPermissionRules) Read(ctx context.Context, request datasource.R
 		params.PermissionRuleFuid = config.PermissionRuleFuid.ValueString()
 	}
 	if params.PermissionGroupFuid == "" && params.PermissionRuleFuid == "" {
-		err = fmt.Errorf("permission_group_fuid和permission_rule_fuid至少有一个不为空")
+		err = fmt.Errorf("permission_group_id和permission_rule_fuid至少有一个不为空")
 		return
 	}
 	resp, err := c.meta.Apis.SdkSfsApi.SfsSfsListPermissionRuleSfsApi.Do(ctx, c.meta.SdkCredential, params)
@@ -172,9 +164,7 @@ func (c *CtyunSfsPermissionRules) Read(ctx context.Context, request datasource.R
 		rule.PermissionRuleFuid = types.StringValue(ruleItem.PermissionRuleFuid)
 		rule.UpdateTime = types.StringValue(ruleItem.UpdateTime)
 		rule.UserID = types.StringValue(ruleItem.UserID)
-		rule.PermissionGroupID = types.StringValue(ruleItem.PermissionGroupID)
 		rule.PermissionGroupFuid = types.StringValue(ruleItem.PermissionGroupFuid)
-		rule.PermissionRuleID = types.StringValue(ruleItem.PermissionRuleID)
 		rule.AuthAddr = types.StringValue(ruleItem.AuthAddr)
 		rule.RwPermission = types.StringValue(ruleItem.RwPermission)
 		rule.UserPermission = types.StringValue(ruleItem.UserPermission)
@@ -190,24 +180,22 @@ func (c *CtyunSfsPermissionRules) Read(ctx context.Context, request datasource.R
 }
 
 type PermissionRuleModel struct {
-	PermissionRuleFuid      types.String `tfsdk:"permission_rule_fuid"`
+	PermissionRuleFuid      types.String `tfsdk:"id"`
 	UpdateTime              types.String `tfsdk:"update_time"`
 	UserID                  types.String `tfsdk:"user_id"`
-	PermissionGroupID       types.String `tfsdk:"permission_group_id"`
-	PermissionGroupFuid     types.String `tfsdk:"permission_group_fuid"`
-	PermissionRuleID        types.String `tfsdk:"permission_rule_id"`
+	PermissionGroupFuid     types.String `tfsdk:"permission_group_id"`
 	AuthAddr                types.String `tfsdk:"auth_addr"`
 	RwPermission            types.String `tfsdk:"rw_permission"`
 	UserPermission          types.String `tfsdk:"user_permission"`
-	PermissionRulePriority  types.Int32  `tfsdk:"permission_rule_priority"`
-	PermissionRuleIsDefault types.Bool   `tfsdk:"permission_rule_is_default"`
+	PermissionRulePriority  types.Int32  `tfsdk:"priority"`
+	PermissionRuleIsDefault types.Bool   `tfsdk:"is_default"`
 }
 
 type CtyunSfsPermissionRulesConfig struct {
 	RegionID            types.String          `tfsdk:"region_id"`
-	PermissionGroupFuid types.String          `tfsdk:"permission_group_fuid"`
-	PermissionRuleFuid  types.String          `tfsdk:"permission_rule_fuid"`
+	PermissionGroupFuid types.String          `tfsdk:"permission_group_id"`
+	PermissionRuleFuid  types.String          `tfsdk:"id"`
 	PageSize            types.Int32           `tfsdk:"page_size"`
 	PageNo              types.Int32           `tfsdk:"page_no"`
-	PermissionRules     []PermissionRuleModel `tfsdk:"permission_rules"`
+	PermissionRules     []PermissionRuleModel `tfsdk:"rules"`
 }

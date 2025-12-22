@@ -20,8 +20,8 @@ provider "ctyun" {
 }
 
 data "ctyun_ebm_device_types" "test" {
-  region_id            = "200000001852"
-  az_name              = "cn-huabei2-tj-3a-public-ctcloud"
+  region_id = "200000001852"
+  az_name   = "cn-huabei2-tj-3a-public-ctcloud"
 }
 
 output "ctyun_ebm_device_types_test" {
@@ -59,7 +59,6 @@ Read-Only:
 - `cpu_model` (String) cpu型号
 - `cpu_sockets` (Number) 物理cpu数量
 - `cpu_thread_amount` (Number) 单个cpu核超线程数量
-- `create_time` (String) 创建时间
 - `data_volume_amount` (Number) 数据盘数量
 - `data_volume_description` (String) 数据盘描述
 - `data_volume_interface` (String) 数据盘接口；包含SAS、SATA、NVMe
@@ -97,4 +96,3 @@ Read-Only:
 - `system_volume_interface` (String) 系统盘接口类型；包含SAS、SATA、NVMe
 - `system_volume_size` (Number) 系统盘单盘大小(GB)
 - `system_volume_type` (String) 系统盘介质类型； 包含SSD、HDD
-- `update_time` (String) 最后更新时间

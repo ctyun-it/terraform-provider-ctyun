@@ -163,11 +163,11 @@ func (c *ctyunElbListeners) Schema(ctx context.Context, request datasource.Schem
 							Computed:    true,
 							Description: "监听器状态: DOWN / ACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -296,6 +296,6 @@ type CtyunElbListenersDetailModel struct {
 	AccessControlType   types.String       `tfsdk:"access_control_type"`
 	ForwardedForEnabled types.Bool         `tfsdk:"forwarded_for_enabled"`
 	Status              types.String       `tfsdk:"status"`
-	CreatedTime         types.String       `tfsdk:"created_time"`
-	UpdatedTime         types.String       `tfsdk:"updated_time"`
+	CreatedTime         types.String       `tfsdk:"create_time"`
+	UpdatedTime         types.String       `tfsdk:"update_time"`
 }

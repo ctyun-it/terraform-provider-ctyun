@@ -59,32 +59,32 @@ func (c *CtyunSfsInstances) Schema(ctx context.Context, request datasource.Schem
 				Optional:    true,
 				Description: "列表的分页页码，默认为1",
 			},
-			"sfs_list": schema.ListNestedAttribute{
+			"instances": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "弹性文件存储列表",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"sfs_name": schema.StringAttribute{
+						"name": schema.StringAttribute{
 							Computed:    true,
 							Description: "弹性文件系统名称",
 						},
-						"sfs_uid": schema.StringAttribute{
+						"id": schema.StringAttribute{
 							Computed:    true,
 							Description: "弹性文件系统唯一ID",
 						},
-						"sfs_size": schema.Int32Attribute{
+						"size": schema.Int32Attribute{
 							Computed:    true,
 							Description: "文件系统大小（GB）",
 						},
-						"sfs_type": schema.StringAttribute{
+						"type": schema.StringAttribute{
 							Computed:    true,
 							Description: "文件系统类型，capacity(标准型)或performance(性能型)",
 						},
-						"sfs_protocol": schema.StringAttribute{
+						"protocol": schema.StringAttribute{
 							Computed:    true,
 							Description: "挂载协议，nfs或cifs",
 						},
-						"sfs_status": schema.StringAttribute{
+						"status": schema.StringAttribute{
 							Computed:    true,
 							Description: "文件系统状态，creating/available/unusable/expired/fail",
 						},
@@ -92,17 +92,17 @@ func (c *CtyunSfsInstances) Schema(ctx context.Context, request datasource.Schem
 							Computed:    true,
 							Description: "已使用大小（MB）",
 						},
-						"create_time": schema.Int64Attribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间，Unix时间戳（毫秒）",
+							Description: "创建时间，为UTC格式",
 						},
-						"update_time": schema.Int64Attribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间，Unix时间戳（毫秒）",
+							Description: "更新时间，为UTC格式",
 						},
-						"expire_time": schema.Int64Attribute{
+						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "过期时间，Unix时间戳（毫秒）",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 						"project_id": schema.StringAttribute{
 							Computed:    true,
@@ -257,9 +257,9 @@ func (c *CtyunSfsInstances) Read(ctx context.Context, request datasource.ReadReq
 		sfsInfo.SfsProtocol = types.StringValue(sfsItem.SfsProtocol)
 		sfsInfo.SfsStatus = types.StringValue(sfsItem.SfsStatus)
 		sfsInfo.UsedSize = types.Int32Value(sfsItem.UsedSize)
-		sfsInfo.CreateTime = types.Int64Value(sfsItem.CreateTime)
-		sfsInfo.UpdateTime = types.Int64Value(sfsItem.UpdateTime)
-		sfsInfo.ExpireTime = types.Int64Value(sfsItem.ExpireTime)
+		sfsInfo.CreateTime = types.StringValue(utils.FromUnixToUTC(sfsItem.CreateTime))
+		sfsInfo.UpdateTime = types.StringValue(utils.FromUnixToUTC(sfsItem.UpdateTime))
+		sfsInfo.ExpireTime = types.StringValue(utils.FromUnixToUTC(sfsItem.ExpireTime))
 		sfsInfo.ProjectID = types.StringValue(sfsItem.ProjectID)
 		sfsInfo.IsEncrypt = types.BoolValue(sfsItem.IsEncrypt)
 		sfsInfo.KmsUUID = types.StringValue(sfsItem.KmsUUID)
@@ -301,16 +301,16 @@ func (c *CtyunSfsInstances) Read(ctx context.Context, request datasource.ReadReq
 }
 
 type CtyunSfsInfoModel struct {
-	SfsName            types.String `tfsdk:"sfs_name"`
-	SfsUID             types.String `tfsdk:"sfs_uid"`
-	SfsSize            types.Int32  `tfsdk:"sfs_size"`
-	SfsType            types.String `tfsdk:"sfs_type"`
-	SfsProtocol        types.String `tfsdk:"sfs_protocol"`
-	SfsStatus          types.String `tfsdk:"sfs_status"`
+	SfsName            types.String `tfsdk:"name"`
+	SfsUID             types.String `tfsdk:"id"`
+	SfsSize            types.Int32  `tfsdk:"size"`
+	SfsType            types.String `tfsdk:"type"`
+	SfsProtocol        types.String `tfsdk:"protocol"`
+	SfsStatus          types.String `tfsdk:"status"`
 	UsedSize           types.Int32  `tfsdk:"used_size"`
-	CreateTime         types.Int64  `tfsdk:"create_time"`
-	UpdateTime         types.Int64  `tfsdk:"update_time"`
-	ExpireTime         types.Int64  `tfsdk:"expire_time"`
+	CreateTime         types.String `tfsdk:"create_time"`
+	UpdateTime         types.String `tfsdk:"update_time"`
+	ExpireTime         types.String `tfsdk:"expire_time"`
 	ProjectID          types.String `tfsdk:"project_id"`
 	IsEncrypt          types.Bool   `tfsdk:"is_encrypt"`
 	KmsUUID            types.String `tfsdk:"kms_uuid"`
@@ -341,5 +341,5 @@ type CtyunSfsInstancesConfig struct {
 	ProjectID types.String        `tfsdk:"project_id"`
 	PageSize  types.Int32         `tfsdk:"page_size"`
 	PageNo    types.Int32         `tfsdk:"page_no"`
-	SfsList   []CtyunSfsInfoModel `tfsdk:"sfs_list"`
+	SfsList   []CtyunSfsInfoModel `tfsdk:"instances"`
 }

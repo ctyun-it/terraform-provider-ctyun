@@ -30,8 +30,8 @@ resource "ctyun_iam_user_group" "user_group_test" {
 
 ### Required
 
-- `description` (String) 用户组描述，长度最大为64
-- `name` (String) 用户组名称，长度1-32位
+- `description` (String) 用户组描述，长度最大为64，支持更新
+- `name` (String) 用户组名称，长度1-32位，支持更新
 
 ### Read-Only
 

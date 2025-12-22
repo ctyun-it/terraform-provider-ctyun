@@ -116,7 +116,7 @@ func TestAccCtyunScalingPolicyAlert(t *testing.T) {
 					updatedTriggerMetricName, updatedTriggerStatistics, updatedTriggerComparisonOperator, updatedTriggerThreshold, updatedTriggerPeriod, updatedTriggerEvaluationCount, "disable") +
 					utils.LoadTestCase(datasourceFile, dnd, groupID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "scaling_policies.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "policies.#"),
 				),
 			},
 			//  资源导入测试
@@ -131,7 +131,19 @@ func TestAccCtyunScalingPolicyAlert(t *testing.T) {
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", id, regionId, groupId, policyType), nil
+					return fmt.Sprintf("%s,%s,%s,%s", id, groupId, policyType, regionId), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"is_execute", "target_disable_scale_in"},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					groupId := ds.Attributes["group_id"]
+					return fmt.Sprintf("%s,%s,%s", id, groupId, policyType), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"is_execute", "target_disable_scale_in"},
@@ -145,7 +157,7 @@ func TestAccCtyunScalingPolicyAlert(t *testing.T) {
 }
 
 func TestAccCtyunScalingPolicyRegular(t *testing.T) {
-	
+
 	// 生成随机名称避免冲突
 	rnd := utils.GenerateRandomString()
 	dnd := utils.GenerateRandomString()
@@ -227,7 +239,7 @@ func TestAccCtyunScalingPolicyRegular(t *testing.T) {
 					groupID, updatedName, policyType, updatedOperateUnit, updatedOperateCount, updatedAction, updatedExecutionTime, "disable") +
 					utils.LoadTestCase(datasourceFile, dnd, groupID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "scaling_policies.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "policies.#"),
 				),
 			},
 			{
@@ -339,7 +351,7 @@ func TestAccCtyunScalingPolicyPeriod(t *testing.T) {
 					groupID, updatedName, policyType, updatedOperateUnit, updatedOperateCount, updatedAction, updatedCycle, updatedDay, updatedEffectiveFrom, updatedEffectiveTill, updatedExecutionTime, "disable",
 				) + utils.LoadTestCase(datasourceFile, dnd, groupID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "scaling_policies.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "policies.#"),
 				),
 			},
 			// 销毁资源（通过空配置）
@@ -557,7 +569,7 @@ func TestAccCtyunScalingPolicyTarget(t *testing.T) {
 					updatedScaleOutEvaluationCount, updatedScaleInEvaluationCount, updatedOperateRange, updatedDisableScaleIn, "disable",
 				) + utils.LoadTestCase(datasourceFile, dnd, groupID),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "scaling_policies.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "policies.#"),
 					//resource.TestCheckResourceAttr(datasourceName, "scaling_policies.#", "1"),
 					//resource.TestCheckResourceAttr(datasourceName, "scaling_policies.0.name", updatedName),
 					//resource.TestCheckResourceAttr(datasourceName, "scaling_policies.0.policy_type", policyType),

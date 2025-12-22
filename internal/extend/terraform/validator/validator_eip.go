@@ -22,10 +22,14 @@ func (v validatorEip) ValidateString(ctx context.Context, request validator.Stri
 	if value == "" {
 		return
 	}
+	// 匹配uuid，说明是3.0资源池
+	if uuidRegex.MatchString(request.ConfigValue.ValueString()) {
+		return
+	}
 	pattern := `^eip-[a-z0-9]{10}$`
 	matched, _ := regexp.MatchString(pattern, value)
 	if !matched {
-		response.Diagnostics.AddError(IpError, IpError)
+		response.Diagnostics.AddError(EipError, EipError)
 		return
 	}
 }

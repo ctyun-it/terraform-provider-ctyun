@@ -56,9 +56,9 @@ Read-Only:
 
 - `attachments` (Attributes List) 挂载信息。如果是共享挂载云硬盘，有多项，无挂载时不返回该字段 (see [below for nested schema](#nestedatt--volumes--attachments))
 - `az_name` (String) 多可用区下的可用区名字，非多可用区不返回该字段
-- `create_time` (Number) 创建时刻，epoch时戳，精度毫秒
+- `create_time` (String) 创建时间，为UTC格式
 - `disk_freeze` (Boolean) 是否冻结
-- `expire_time` (Number) 过期时刻，epoch时戳，精度毫秒
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 磁盘ID
 - `instance_id` (String) 绑定云主机resourceUUID，有挂载时才返回
 - `instance_name` (String) 绑定的云主机名，有挂载时才返回
@@ -75,7 +75,7 @@ Read-Only:
 - `size` (Number) 磁盘大小（GB）
 - `status` (String) 参考云硬盘使用状态
 - `type` (String) 磁盘规格类型SATA/SAS/SSD-genric/SSD/FAST-SSD/XSSD-XSSD-1/XSSD-2
-- `update_time` (Number) 更新时刻，epoch时戳，精度毫秒
+- `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--volumes--attachments"></a>
 ### Nested Schema for `volumes.attachments`

@@ -86,7 +86,7 @@ type CtvpcPrefixlistQueryReturnObjPrefixListResponse struct {
 	PrefixListID    *string                                                           `json:"prefixListID,omitempty"` /*  prefixlist id  */
 	Name            *string                                                           `json:"name,omitempty"`         /*  prefixlist 名称  */
 	Limit           int32                                                             `json:"limit"`                  /*  前缀列表支持的最大条目容量  */
-	AddressType     *string                                                           `json:"addressType,omitempty"`  /*  地址类型，4：ipv4，6：ipv6  */
+	AddressType     int32                                                             `json:"addressType,omitempty"`  /*  地址类型，4：ipv4，6：ipv6  */
 	Description     *string                                                           `json:"description,omitempty"`  /*  描述  */
 	CreatedAt       *string                                                           `json:"createdAt,omitempty"`    /*  创建时间  */
 	UpdatedAt       *string                                                           `json:"updatedAt,omitempty"`    /*  更新时间  */

@@ -1,5 +1,5 @@
 # ctyun_ecs_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026730
 
 
 
@@ -55,16 +55,15 @@ Read-Only:
 - `attached_volumes` (List of String) 关联的云硬盘ID
 - `az_display_name` (String) 可用区展示名称
 - `az_name` (String) 可用区名称
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `delegate_name` (String) 委托名称，注：委托绑定目前仅支持多可用区类型资源池，非可用区资源池为空字符串
 - `deletion_protection` (Boolean) 是否开启实例删除保护
 - `display_name` (String) 云主机显示名称
-- `expired_time` (String) 到期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `flavor` (Attributes) 云主机规格信息 (see [below for nested schema](#nestedatt--instances--flavor))
-- `id` (String) 云主机ID，值与instance_id相同
+- `id` (String) 云主机ID
 - `image` (Attributes) 镜像信息 (see [below for nested schema](#nestedatt--instances--image))
 - `instance_description` (String) 云主机描述信息
-- `instance_id` (String) 云主机ID
 - `instance_name` (String) 云主机名称
 - `instance_status` (String) 云主机状态
 - `keypair_name` (String) 密钥对名称
@@ -72,7 +71,7 @@ Read-Only:
 - `on_demand` (Boolean) 付费方式，取值范围：<br/>true（按量付费）;<br/>false（包周期）
 - `os_type` (Number) 操作系统类型，取值范围：<br/>1（linux），<br/>2（windows），<br/>3（redhat），<br/>4（ubuntu），<br/>5（centos），<br/>6（oracle）
 - `project_id` (String) 企业项目ID
-- `sec_group_list` (Attributes List) 安全组信息列表 (see [below for nested schema](#nestedatt--instances--sec_group_list))
+- `security_group_list` (Attributes List) 安全组信息列表 (see [below for nested schema](#nestedatt--instances--security_group_list))
 - `vip_info_list` (Attributes List) 虚拟IP信息列表 (see [below for nested schema](#nestedatt--instances--vip_info_list))
 
 <a id="nestedatt--instances--addresses"></a>
@@ -101,8 +100,8 @@ Read-Only:
 
 Read-Only:
 
-- `affinity_group_id` (String) 云主机组名称ID
-- `affinity_group_name` (String) 云主机组名称
+- `id` (String) 云主机组名称ID
+- `name` (String) 云主机组名称
 - `policy` (String) 云主机组策略类型，取值范围：<br />anti-affinity（强制反亲和性），<br />affinity（强制亲和性），<br />soft-anti-affinity（反亲和性），<br />soft-affinity（亲和性)，<br />power-anti-affinity（电力反亲和性)
 
 
@@ -111,13 +110,13 @@ Read-Only:
 
 Read-Only:
 
-- `flavor_cpu` (Number) 规格CPU
-- `flavor_id` (String) 规格ID
-- `flavor_name` (String) 规格名称
-- `flavor_ram` (Number) 规格RAM
+- `cpu` (Number) 规格CPU
 - `gpu_count` (Number) GPU数量
 - `gpu_type` (String) GPU类型
 - `gpu_vendor` (String) GPU名称
+- `id` (String) 规格ID
+- `name` (String) 规格名称
+- `ram` (Number) 规格RAM
 - `video_mem_size` (Number) 显存大小
 
 
@@ -126,8 +125,8 @@ Read-Only:
 
 Read-Only:
 
-- `image_id` (String) 镜像id
-- `image_name` (String) 镜像名称
+- `id` (String) 镜像id
+- `name` (String) 镜像名称
 
 
 <a id="nestedatt--instances--network_info"></a>
@@ -139,13 +138,13 @@ Read-Only:
 - `subnet_id` (String) 子网ID
 
 
-<a id="nestedatt--instances--sec_group_list"></a>
-### Nested Schema for `instances.sec_group_list`
+<a id="nestedatt--instances--security_group_list"></a>
+### Nested Schema for `instances.security_group_list`
 
 Read-Only:
 
-- `security_group_id` (String) 安全组id
-- `security_group_name` (String) 安全组名称
+- `id` (String) 安全组id
+- `name` (String) 安全组名称
 
 
 <a id="nestedatt--instances--vip_info_list"></a>
@@ -153,8 +152,8 @@ Read-Only:
 
 Read-Only:
 
+- `address` (String) 虚拟IP地址
+- `bind_nic_ip` (String) 虚拟IP绑定的网卡对应IPv4地址
+- `bind_nic_ipv6` (String) 虚拟IP绑定的网卡对应IPv6地址
+- `id` (String) 虚拟IP的ID
 - `nic_id` (String) 网卡ID
-- `vip_address` (String) 虚拟IP地址
-- `vip_bind_nic_ip` (String) 虚拟IP绑定的网卡对应IPv4地址
-- `vip_bind_nic_ipv6` (String) 虚拟IP绑定的网卡对应IPv6地址
-- `vip_id` (String) 虚拟IP的ID

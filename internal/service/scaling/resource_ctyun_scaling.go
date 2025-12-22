@@ -29,6 +29,12 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunScaling{}
+	_ resource.ResourceWithConfigure   = &ctyunScaling{}
+	_ resource.ResourceWithImportState = &ctyunScaling{}
+)
+
 type ctyunScaling struct {
 	meta          *common.CtyunMetadata
 	regionService *business.RegionService
@@ -52,45 +58,76 @@ func NewCtyunScaling() resource.Resource {
 	return &ctyunScaling{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId],[projectId]
 func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[vpcId],[projectId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
-	var cfg CtyunScalingConfig
-	var ID, regionId, projectId, vpcId string
-	err = terraform_extend.Split(request.ID, &ID, &regionId, &projectId, &vpcId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	var config CtyunScalingConfig
+	var ID, vpcId, projectId, regionId string
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &ID, &vpcId)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId, &regionId)
+		if err != nil {
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
+		err = fmt.Errorf("ID必须是有效数字")
 		return
 	}
-	cfg.ID = types.Int64Value(id)
-	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
-	cfg.VpcID = types.StringValue(vpcId)
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	if vpcId == "" {
+		err = fmt.Errorf("vpcId不能为空")
+		return
+	}
 
-	cfg.AddInstanceUUIDList = types.SetNull(types.StringType)
-	cfg.RemoveInstanceUUIDList = types.SetNull(types.StringType)
+	config.ID = types.Int64Value(id)
+	config.RegionID = types.StringValue(regionId)
+	config.VpcID = types.StringValue(vpcId)
+	if projectId != "" {
+		config.ProjectID = types.StringValue(projectId)
+	}
 
-	err = c.getAndMergeScaling(ctx, &cfg)
+	config.AddInstanceUUIDList = types.SetNull(types.StringType)
+	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
+
+	err = c.getAndMergeScaling(ctx, &config)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：：https://www.ctyun.cn/document/10027725`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -100,6 +137,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -108,12 +148,18 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					validator2.Project(),
+				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 			},
 			"security_group_id_list": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "安全组ID列表。支持更新",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			//"recovery_mode": schema.Int64Attribute{
 			//	Required:    true,
@@ -211,19 +257,31 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 					Attributes: map[string]schema.Attribute{
 						"port": schema.Int32Attribute{
 							Required:    true,
-							Description: "端口号，当status=disable时支持更新",
+							Description: "端口号，当status=disable时支持更新，取值范围：1~65535",
+							Validators: []validator.Int32{
+								int32validator.Between(1, 65535),
+							},
 						},
 						"lb_id": schema.StringAttribute{
 							Required:    true,
 							Description: "负载均衡ID，当status=disable时支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 						"weight": schema.Int32Attribute{
 							Required:    true,
 							Description: "权重，当status=disable时支持更新",
+							Validators: []validator.Int32{
+								int32validator.Between(0, 256),
+							},
 						},
 						"host_group_id": schema.StringAttribute{
 							Required:    true,
 							Description: "后端主机组ID，当status=disable时支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 					},
 				},
@@ -277,11 +335,17 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "需要手动添加的云主机uuid列表。伸缩组内云主机清单可以根据data.ctyun_scaling_ecs_list获取。支持更新。",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			"remove_instance_uuid_list": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "需要删除手动/自动加入伸缩组的云主机uuid列表。伸缩组内云主机清单可以根据data.ctyun_scaling_ecs_list获取。支持更新。",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			//"protect_status": schema.StringAttribute{
 			//	Optional:    true,

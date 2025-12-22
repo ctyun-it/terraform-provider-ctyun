@@ -17,7 +17,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEcsSnapshot{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsSnapshot{}
+	_ resource.ResourceWithImportState = &ctyunEcsSnapshot{}
 )
 
 func NewCtyunEcsSnapshot() resource.Resource {
@@ -35,7 +42,7 @@ func (c *ctyunEcsSnapshot) Metadata(_ context.Context, request resource.Metadata
 
 func (c *ctyunEcsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -405,15 +412,32 @@ func (c *ctyunEcsSnapshot) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsSnapshotConfig
 	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		id = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &id, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if id == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.RegionId = types.StringValue(regionID)
 	cfg.Id = types.StringValue(id)
 	// 查询远端

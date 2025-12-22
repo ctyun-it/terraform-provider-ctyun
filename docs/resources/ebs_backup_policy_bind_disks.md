@@ -1,5 +1,5 @@
 # ctyun_ebs_backup_policy_bind_disks (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037452**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037452
 
 
 
@@ -20,7 +20,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_ebs_backup_policy_bind_disks" "test" {
-  id = "a4b793881bbd42edaa6a0002900e5819"
+  policy_id    = "a4b793881bbd42edaa6a0002900e5819"
   disk_id_list = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
 }
 ```

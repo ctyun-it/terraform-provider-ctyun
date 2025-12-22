@@ -43,18 +43,40 @@ func (c *ctyunSnatResource) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
 	var config CtyunSnatConfig
-	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+	var ID, regionID, natGateWayID string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &natGateWayID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	if natGateWayID == "" {
+		err = fmt.Errorf("natGateWayID不能为空")
+	}
+	config.ID = types.StringValue(ID)
+	config.SNatID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.SNatID = types.StringValue(id)
+	config.NatGatewayID = types.StringValue(natGateWayID)
 	err = c.getAndMergeSnat(ctx, &config)
 	if err != nil {
 		return
@@ -142,7 +164,7 @@ func (c *ctyunSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "创建时间",
+				Description: "创建时间，为UTC格式",
 			},
 			"eips": schema.ListNestedAttribute{
 				Computed:    true,
@@ -336,6 +358,7 @@ func (c *ctyunSnatResource) getAndMergeSnat(ctx context.Context, config *CtyunSn
 	config.SNatID = utils.SecStringValue(snat.SNatID)
 	config.Description = utils.SecStringValue(snat.Description)
 	config.SourceCIDR = utils.SecStringValue(snat.SubnetCidr)
+	config.NatGatewayID = utils.SecStringValue(snat.NatGatewayID)
 
 	if c.inRange(business.SNatSubnetTypes, snat.SubnetType) {
 		config.SubnetType = types.Int32Value(snat.SubnetType)

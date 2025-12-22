@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_mysql_white_list" "test" {
-  prod_inst_id = "e5ad1c553e394bc891c5bf8fc58be191"
-  group_name = "eip_white"
+  instance_id      = "e5ad1c553e394bc891c5bf8fc58be191"
+  group_name       = "eip_white"
   group_white_list = ["192.168.1.1", "30.8.7.*"]
 }

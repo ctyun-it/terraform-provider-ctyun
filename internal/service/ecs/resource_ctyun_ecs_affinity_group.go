@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
 )
 
 var (
@@ -37,11 +38,12 @@ func (c *ctyunEcsAffinityGroup) Metadata(_ context.Context, request resource.Met
 }
 
 type CtyunEcsAffinityGroupConfig struct {
-	ID                  types.String `tfsdk:"id"`
-	AffinityGroupID     types.String `tfsdk:"affinity_group_id"`
-	RegionID            types.String `tfsdk:"region_id"`
-	AffinityGroupName   types.String `tfsdk:"affinity_group_name"`
-	AffinityGroupPolicy types.String `tfsdk:"affinity_group_policy"`
+	ID         types.String `tfsdk:"id"`
+	RegionID   types.String `tfsdk:"region_id"`
+	Name       types.String `tfsdk:"name"`
+	Policy     types.String `tfsdk:"policy"`
+	CreateTime types.String `tfsdk:"create_time"`
+	UpdateTime types.String `tfsdk:"update_time"`
 }
 
 func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -49,14 +51,16 @@ func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597693`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "云主机组ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Description: "资源池ID，如果不填则默认使用provider中的region_id或环境变量中的CTYUN_REGION_ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -65,11 +69,7 @@ func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaReque
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-			"affinity_group_id": schema.StringAttribute{
-				Computed:    true,
-				Description: "云主机组ID",
-			},
-			"affinity_group_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "云主机组名称，满足以下规则：长度在1-64个字符，只能由中文、英文字母、数字、下划线_、中划线-、点.组成 支持更新",
 				Validators: []validator.String{
@@ -77,7 +77,7 @@ func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaReque
 					stringvalidator.RegexMatches(regexp.MustCompile(`^[\p{Han}a-zA-Z0-9_.-]+$`), "不满足云主机组名称要求"),
 				},
 			},
-			"affinity_group_policy": schema.StringAttribute{
+			"policy": schema.StringAttribute{
 				Required:    true,
 				Description: "云主机组策略类型，取值范围：<br />anti-affinity（强制反亲和性），<br />affinity（强制亲和性），<br />soft-anti-affinity（反亲和性），<br />soft-affinity（亲和性)，<br />power-anti-affinity（电力反亲和性)",
 				Validators: []validator.String{
@@ -86,6 +86,17 @@ func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaReque
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "更新时间，为UTC格式",
 			},
 		},
 	}
@@ -108,7 +119,7 @@ func (c *ctyunEcsAffinityGroup) Create(ctx context.Context, request resource.Cre
 	if err != nil {
 		return
 	}
-	plan.AffinityGroupID = types.StringValue(groupID)
+	plan.ID = types.StringValue(groupID)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 	// 反查信息
 	err = c.getAndMerge(ctx, &plan)
@@ -198,37 +209,58 @@ func (c *ctyunEcsAffinityGroup) Configure(_ context.Context, request resource.Co
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [groupID],[regionID]
 func (c *ctyunEcsAffinityGroup) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var cfg CtyunEcsAffinityGroupConfig
-	var groupID, regionID string
-	err = terraform_extend.Split(request.ID, &groupID, &regionID)
-	if err != nil {
-		return
-	}
-	cfg.RegionID = types.StringValue(regionID)
-	cfg.AffinityGroupID = types.StringValue(groupID)
-	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
-	if err != nil {
-		return
-	}
+	var config CtyunEcsAffinityGroupConfig
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		ID = request.ID
+	} else {
 
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	config.RegionID = types.StringValue(regionId)
+	config.ID = types.StringValue(ID)
+	// 查询远端
+	err = c.getAndMerge(ctx, &config)
+
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionId)
+
+	// 调用Read方法获取最新状态
+	err = c.getAndMerge(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // create 创建云主机组
 func (c *ctyunEcsAffinityGroup) create(ctx context.Context, plan CtyunEcsAffinityGroupConfig) (groupID string, err error) {
 	params := &ctecs2.CtecsCreateAffinityGroupV41Request{
 		RegionID:          plan.RegionID.ValueString(),
-		AffinityGroupName: plan.AffinityGroupName.ValueString(),
-		PolicyType:        business.EcSGroupPolicyMap[plan.AffinityGroupPolicy.ValueString()],
+		AffinityGroupName: plan.Name.ValueString(),
+		PolicyType:        business.EcSGroupPolicyMap[plan.Policy.ValueString()],
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsCreateAffinityGroupV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -248,7 +280,7 @@ func (c *ctyunEcsAffinityGroup) create(ctx context.Context, plan CtyunEcsAffinit
 func (c *ctyunEcsAffinityGroup) getAndMerge(ctx context.Context, plan *CtyunEcsAffinityGroupConfig) (err error) {
 	params := &ctecs2.CtecsListAffinityGroupV41Request{
 		RegionID:        plan.RegionID.ValueString(),
-		AffinityGroupID: plan.AffinityGroupID.ValueString(),
+		AffinityGroupID: plan.ID.ValueString(),
 	}
 	// 调用API
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsListAffinityGroupV41Api.Do(ctx, c.meta.SdkCredential, params)
@@ -265,21 +297,22 @@ func (c *ctyunEcsAffinityGroup) getAndMerge(ctx context.Context, plan *CtyunEcsA
 		err = common.InvalidReturnObjResultsError
 		return
 	}
-	plan.AffinityGroupName = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupName)
-	plan.AffinityGroupPolicy = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupPolicy.PolicyTypeName)
-	plan.ID = plan.AffinityGroupID
+	plan.Name = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupName)
+	plan.Policy = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupPolicy.PolicyTypeName)
+	plan.CreateTime = types.StringValue(resp.ReturnObj.Results[0].CreatedTime)
+	plan.UpdateTime = types.StringValue(resp.ReturnObj.Results[0].UpdatedTime)
 	return
 }
 
 // updateName 修改主机组名称
 func (c *ctyunEcsAffinityGroup) updateName(ctx context.Context, plan, state CtyunEcsAffinityGroupConfig) (err error) {
-	if plan.AffinityGroupName.Equal(state.AffinityGroupName) {
+	if plan.Name.Equal(state.Name) {
 		return
 	}
 	params := &ctecs2.CtecsUpdateAffinityGroupRequest{
 		RegionID:          state.RegionID.ValueString(),
-		AffinityGroupID:   state.AffinityGroupID.ValueString(),
-		AffinityGroupName: plan.AffinityGroupName.ValueString(),
+		AffinityGroupID:   state.ID.ValueString(),
+		AffinityGroupName: plan.Name.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsUpdateAffinityGroupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -295,7 +328,7 @@ func (c *ctyunEcsAffinityGroup) updateName(ctx context.Context, plan, state Ctyu
 func (c *ctyunEcsAffinityGroup) delete(ctx context.Context, plan CtyunEcsAffinityGroupConfig) (err error) {
 	params := &ctecs2.CtecsDeleteAffinityGroupRequest{
 		RegionID:        plan.RegionID.ValueString(),
-		AffinityGroupID: plan.AffinityGroupID.ValueString(),
+		AffinityGroupID: plan.ID.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDeleteAffinityGroupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

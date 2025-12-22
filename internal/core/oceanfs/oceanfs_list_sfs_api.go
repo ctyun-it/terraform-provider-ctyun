@@ -59,10 +59,53 @@ type OceanfsListSfsRequest struct {
 	PageNo    int32  `json:"pageNo,omitempty"`    /*  列表的分页页码  */
 }
 
+type OceanfsListSfsReturnObjResponse struct {
+	List         []*OceanfsListSfsReturnObjItemResponse `json:"list"`
+	TotalCount   int32                                  `json:"totalCount"`
+	CurrentCount int32                                  `json:"currentCount"`
+	Total        int32                                  `json:"total"`
+	PageSize     int32                                  `json:"pageSize"`
+	PageNo       int32                                  `json:"pageNo"`
+}
+type OceanfsListSfsReturnObjItemPhySharePathResponse struct {
+	VpcID              string `json:"vpcId"`
+	VpcName            string `json:"vpcName"`
+	SharePath          string `json:"sharePath"`
+	SharePathV6        string `json:"sharePathV6"`
+	WindowsSharePath   string `json:"windowsSharePath"`
+	WindowsSharePathV6 string `json:"windowsSharePathV6"`
+}
+
+type OceanfsListSfsReturnObjItemResponse struct {
+	SfsName            string                                            `json:"sfsName"`
+	SfsUID             string                                            `json:"sfsUid"`
+	SfsSize            int32                                             `json:"sfsSize"`
+	SfsType            string                                            `json:"sfsType"`
+	SfsProtocol        string                                            `json:"sfsProtocol"`
+	SfsStatus          string                                            `json:"sfsStatus"`
+	UsedSize           int32                                             `json:"usedSize"`
+	CreateTime         int64                                             `json:"createTime"`
+	UpdateTime         int64                                             `json:"updateTime"`
+	ExpireTime         int64                                             `json:"expireTime"`
+	ProjectID          string                                            `json:"projectId"`
+	OnDemand           bool                                              `json:"onDemand"`
+	RegionID           string                                            `json:"regionId"`
+	AzName             string                                            `json:"azName"`
+	SharePath          string                                            `json:"sharePath"`
+	SharePathV6        string                                            `json:"sharePathV6"`
+	WindowsSharePath   string                                            `json:"windowsSharePath"`
+	WindowsSharePathV6 string                                            `json:"windowsSharePathV6"`
+	MountCount         int32                                             `json:"mountCount"`
+	CephID             string                                            `json:"cephId"`
+	UsedSizeCharge     bool                                              `json:"usedSizeCharge"`
+	VpceSharePath      []OceanfsListSfsReturnObjItemPhySharePathResponse `json:"vpceSharePath"`
+}
+
 type OceanfsListSfsResponse struct {
-	StatusCode  int32  `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
-	Message     string `json:"message"`     /*  响应描述，一般为英文描述  */
-	Description string `json:"description"` /*  响应描述，一般为中文描述  */
-	ErrorCode   string `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码  */
-	Error       string `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	StatusCode  int32                            `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
+	Message     string                           `json:"message"`     /*  响应描述，一般为英文描述  */
+	Description string                           `json:"description"` /*  响应描述，一般为中文描述  */
+	ErrorCode   string                           `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码  */
+	Error       string                           `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	ReturnObj   *OceanfsListSfsReturnObjResponse `json:"returnObj"`
 }

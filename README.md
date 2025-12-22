@@ -3,7 +3,7 @@
 ## 依赖项
 
 - 开发依赖项
-  - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.10.5
+  - [Terraform](https://developer.hashicorp.com/terraform/downloads) >= 1.5.7
   - [Go](https://golang.org/doc/install) >= 1.23
 
 
@@ -18,6 +18,16 @@ go build .
 
 
 
+## 单元测试
+
+```
+cd terraform-provider-ctyun
+go test -v ./internal/service/ec/resource_ctyun_ec_sdwan_instance_test.go
+```
+
+注意：运行测试需要配置相关的环境变量和依赖资源。
+
+
 ## Terraform配置项
 
 ```
@@ -25,7 +35,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.2.0"
+      version = "2.0.0"
     }
   }
 }

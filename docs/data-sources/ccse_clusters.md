@@ -50,12 +50,12 @@ Read-Only:
 - `cluster_version` (String) 集群版本，支持1.23.3 ，1.25.6 ，1.27.8，1.29.3
 - `container_runtime` (String) 容器运行时,可选containerd、docker
 - `deploy_mode` (String) 部署模式，单可用区为single，多可用区为multi
-- `end_port` (Number) 节点服务终止端口，范围30000-65535
+- `end_port` (Number) 节点服务终止端口
 - `id` (String) 集群ID
 - `kube_proxy` (String) kubeProxy类型：iptables或ipvs。您可查看<a href="https://www.ctyun.cn/document/10083472/10915725">iptables与IPVS如何选择</a>
 - `network_plugin` (String) 网络插件
 - `pod_cidr` (String) pod网络cidr
-- `start_port` (Number) 节点服务开始端口，范围30000-65535
+- `start_port` (Number) 节点服务开始端口
 - `subnet_id` (String) 子网ID
 - `timezone` (String) 时区，例如Asia/Shanghai (UTC+08:00)
 - `vpc_id` (String) 虚拟私有云ID

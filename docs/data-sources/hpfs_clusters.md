@@ -20,8 +20,7 @@ provider "ctyun" {
 }
 
 data "ctyun_hpfs_clusters" "test" {
-  sfs_type = "hpfs_perf"
-  az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+  type = "hpfs_perf"
 }
 ```
 
@@ -35,22 +34,22 @@ data "ctyun_hpfs_clusters" "test" {
 - `page_no` (Number) 列表的分页页码，默认值为1
 - `page_size` (Number) 每页包含的元素个数范围(1-50)，默认值为10
 - `region_id` (String) 资源池id
-- `sfs_type` (String) 类型，hpfs_perf(HPC性能型)
+- `type` (String) 类型，hpfs_perf(HPC性能型)
 
 ### Read-Only
 
-- `hpfs_clusters` (Attributes List) hpfs集群列表 (see [below for nested schema](#nestedatt--hpfs_clusters))
+- `clusters` (Attributes List) hpfs集群列表 (see [below for nested schema](#nestedatt--clusters))
 
-<a id="nestedatt--hpfs_clusters"></a>
-### Nested Schema for `hpfs_clusters`
+<a id="nestedatt--clusters"></a>
+### Nested Schema for `clusters`
 
 Read-Only:
 
 - `az_name` (String) 多可用区下的可用区名字
 - `baselines` (Set of String) 集群支持的性能基线列表（仅当资源池支持性能基线时返回）
-- `cluster_name` (String) 集群名称
 - `ebm_device_types` (Set of String) 集群支持的裸金属设备规格列表
+- `name` (String) 集群名称
 - `network_type` (String) 集群的网络类型（tcp/o2ib）
+- `protocol` (Set of String) 集群支持的协议列表
 - `remaining_status` (Boolean) 该集群是否可以售卖
-- `sfs_protocol` (Set of String) 集群支持的协议列表
-- `sfs_type` (String) 集群的存储类型
+- `type` (String) 集群的存储类型

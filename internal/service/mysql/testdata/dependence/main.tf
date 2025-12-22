@@ -73,7 +73,6 @@ locals {
   real_security_group_id = local.data_security_group_id == "" ? try(ctyun_security_group.security_group_test[0].id, "") : local.data_security_group_id
 }
 
-
 resource "ctyun_eip" "eip_test" {
   name                = "tf-eip-for-mysql"
   bandwidth           = 1
@@ -85,8 +84,6 @@ data "ctyun_zones" "test" {
 
 }
 
-
-
 locals {
   mysql_name = "tf-mysql-${local.random_string}"
   az_name    = data.ctyun_zones.test.zones[0]
@@ -96,19 +93,45 @@ data "ctyun_mysql_specs" "mysql_specs"{
   instance_series = "S"
 }
 
+data "ctyun_mysql_backups" "backup_test" {
+  depends_on = [ctyun_mysql_backup.backup_test]
+  instance_id   = ctyun_mysql_instance.mysql_test.id
+  page_no   = 1
+  page_size = 10
+}
+
 resource "ctyun_mysql_instance" "mysql_test" {
   cycle_type            = "on_demand"
   vpc_id                = local.real_vpc_id
-  flavor_name         = "c7.large.2"
+  flavor_name           = "c7.large.2"
   prod_id               = "Single57"
   subnet_id             = local.real_subnet_id
   security_group_id     = local.real_security_group_id
   name                  = local.mysql_name
   storage_type          = "SATA"
   storage_space         = 100
-  availability_zone_info = [
-    { "availability_zone_name" : local.az_name, "availability_zone_count" : 1, "node_type" : "master" }
-  ]
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+resource "ctyun_mysql_backup" "backup_test" {
+  instance_id     = ctyun_mysql_instance.mysql_test.id
+  project_id  = "0"
+  description = "terraform单元测试"
+  task_type   = "full"
+  depends_on = [ctyun_mysql_database.db3]
+}
+
+data "ctyun_mysql_recoverable_time_points" "time_point_test" {
+  depends_on = [ctyun_mysql_backup.backup_test]
+  instance_id    = ctyun_mysql_instance.mysql_test.id
+  project_id = "0"
+}
+
+data "ctyun_mysql_param_templates" "template"{
+  engine = "5.7"
+  name = "parameterSet57"
 }
 
 locals {
@@ -124,4 +147,22 @@ locals {
     ),
     0, 5  # 截取前10个字符
   )
+}
+
+resource "ctyun_mysql_database" "db1" {
+  instance_id      = ctyun_mysql_instance.mysql_test.id
+  name         = "test_db1"
+  charset_name = "utf8mb4"
+}
+resource "ctyun_mysql_database" "db2" {
+  instance_id      = ctyun_mysql_instance.mysql_test.id
+  name         = "test_db2"
+  charset_name = "utf8mb4"
+  depends_on = [ctyun_mysql_database.db1]
+}
+resource "ctyun_mysql_database" "db3" {
+  instance_id  = ctyun_mysql_instance.mysql_test.id
+  name         = "test_db3"
+  charset_name = "utf8mb4"
+  depends_on = [ctyun_mysql_database.db2]
 }

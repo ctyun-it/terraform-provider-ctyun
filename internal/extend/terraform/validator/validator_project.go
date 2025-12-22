@@ -9,7 +9,7 @@ import (
 var ProjectRegex = regexp.MustCompile("^(|0|[a-z0-9]{32})$")
 
 const (
-	ProjectError = "不满足 允许 \"\",\"0\"和长度为32位的数字+小写"
+	ProjectError = "企业项目ID只允许 \"\",\"0\"和长度为32位的数字+小写"
 )
 
 type validatorProject struct {

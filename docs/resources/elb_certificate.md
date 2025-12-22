@@ -46,7 +46,7 @@ resource "ctyun_elb_certificate" "certificate_test" {
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 证书ID
 - `status` (String) 状态: ACTIVE / INACTIVE
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式

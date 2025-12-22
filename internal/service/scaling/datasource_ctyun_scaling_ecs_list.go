@@ -90,9 +90,9 @@ func (c *CtyunScalingEcsList) Schema(ctx context.Context, request datasource.Sch
 							Computed:    true,
 							Description: "企业项目ID",
 						},
-						"create_date": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"id": schema.Int64Attribute{
 							Computed:    true,
@@ -220,7 +220,7 @@ type CtyunScalingEcsListModel struct {
 	GroupID       types.Int64  `tfsdk:"group_id"`       // 伸缩组ID
 	AzName        types.String `tfsdk:"az_name"`        // 实例所在的可用区
 	ProjectID     types.String `tfsdk:"project_id"`     // 企业项目ID
-	CreateDate    types.String `tfsdk:"create_date"`    // 创建时间
+	CreateDate    types.String `tfsdk:"create_time"`    // 创建时间
 	ID            types.Int64  `tfsdk:"id"`             // 实例ID
 	Status        types.String `tfsdk:"status"`         // 伸缩活动状态
 	InstanceName  types.String `tfsdk:"instance_name"`  // 云主机名称

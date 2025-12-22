@@ -200,3 +200,72 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCtyunElbTargetGroupImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_elb_target_group." + rnd
+	resourceFile := "resource_ctyun_elb_target_group.tf"
+
+	name := "target_groups_" + utils.GenerateRandomString()
+	algorithm := "wrr"
+
+	//closedTfSessionStickyMode := fmt.Sprintf(`session_sticky_mode="%s"`, "CLOSE")
+	// 代码合并需要整改
+	vpcId := dependence.vpcID
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1. 基础功能测试
+			// 1.1 create验证
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, name, vpcId, algorithm, "", "", "", "", "", "", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcId),
+					resource.TestCheckResourceAttr(resourceName, "algorithm", algorithm),
+				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
+			// 3.4 Destroy
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, name, vpcId, algorithm, "", "", "", "", "", "", ""),
+				Destroy: true,
+			},
+		},
+	})
+}

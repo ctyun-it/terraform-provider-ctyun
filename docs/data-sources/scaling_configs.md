@@ -34,10 +34,10 @@ data "ctyun_scaling_configs" "scaling_configs_test" {
 
 ### Read-Only
 
-- `scaling_config_list` (Attributes List) 伸缩配置列表 (see [below for nested schema](#nestedatt--scaling_config_list))
+- `configs` (Attributes List) 伸缩配置列表 (see [below for nested schema](#nestedatt--configs))
 
-<a id="nestedatt--scaling_config_list"></a>
-### Nested Schema for `scaling_config_list`
+<a id="nestedatt--configs"></a>
+### Nested Schema for `configs`
 
 Read-Only:
 
@@ -56,14 +56,14 @@ Read-Only:
 - `os_type` (String) 镜像系统类型: Linux/Windows
 - `password` (String, Sensitive) 密码
 - `region_id` (String) 资源池ID
-- `tags` (Attributes List) 标签集 (see [below for nested schema](#nestedatt--scaling_config_list--tags))
+- `tags` (Attributes List) 标签集 (see [below for nested schema](#nestedatt--configs--tags))
 - `use_floatings` (String) 是否使用弹性IP
 - `username` (String) 用户名
 - `visibility` (String) 镜像类型: public-公有镜像, private-私有镜像
-- `volumes` (Attributes List) 磁盘类型和大小列表 (see [below for nested schema](#nestedatt--scaling_config_list--volumes))
+- `volumes` (Attributes List) 磁盘类型和大小列表 (see [below for nested schema](#nestedatt--configs--volumes))
 
-<a id="nestedatt--scaling_config_list--tags"></a>
-### Nested Schema for `scaling_config_list.tags`
+<a id="nestedatt--configs--tags"></a>
+### Nested Schema for `configs.tags`
 
 Read-Only:
 
@@ -71,8 +71,8 @@ Read-Only:
 - `value` (String) 标签值
 
 
-<a id="nestedatt--scaling_config_list--volumes"></a>
-### Nested Schema for `scaling_config_list.volumes`
+<a id="nestedatt--configs--volumes"></a>
+### Nested Schema for `configs.volumes`
 
 Read-Only:
 

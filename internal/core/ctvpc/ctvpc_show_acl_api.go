@@ -53,23 +53,24 @@ type CtvpcShowAclRequest struct {
 }
 
 type CtvpcShowAclResponse struct {
-	StatusCode  int32                            `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
-	Message     *string                          `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
-	Description *string                          `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
-	ErrorCode   *string                          `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
-	ReturnObj   []*CtvpcShowAclReturnObjResponse `json:"returnObj"`             /*  接口业务数据  */
-	Error       *string                          `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	StatusCode  int32                          `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
+	Message     *string                        `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
+	Description *string                        `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
+	ErrorCode   *string                        `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	ReturnObj   *CtvpcShowAclReturnObjResponse `json:"returnObj"`             /*  接口业务数据  */
+	Error       *string                        `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
 type CtvpcShowAclReturnObjResponse struct {
-	AclID       *string   `json:"aclID,omitempty"`       /*  id  */
-	Name        *string   `json:"name,omitempty"`        /*  名称  */
-	Description *string   `json:"description,omitempty"` /*  描述  */
-	VpcID       *string   `json:"vpcID,omitempty"`       /*  VPC  */
-	Enabled     *string   `json:"enabled,omitempty"`     /*  disable,enable  */
-	InPolicyID  []*string `json:"inPolicyID"`            /*  入规则id数组  */
-	OutPolicyID []*string `json:"outPolicyID"`           /*  出规则id数组  */
-	CreatedAt   *string   `json:"createdAt,omitempty"`   /*  创建时间  */
-	UpdatedAt   *string   `json:"updatedAt,omitempty"`   /*  更新时间  */
-	SubnetIDs   []*string `json:"subnetIDs"`             /*  acl 绑定的子网 id  */
+	AclID           *string   `json:"aclID,omitempty"`       /*  id  */
+	Name            *string   `json:"name,omitempty"`        /*  名称  */
+	Description     *string   `json:"description,omitempty"` /*  描述  */
+	VpcID           *string   `json:"vpcID,omitempty"`       /*  VPC  */
+	Enabled         *string   `json:"enabled,omitempty"`     /*  disable,enable  */
+	InPolicyID      []*string `json:"inPolicyID"`            /*  入规则id数组  */
+	OutPolicyID     []*string `json:"outPolicyID"`           /*  出规则id数组  */
+	CreatedAt       *string   `json:"createdAt,omitempty"`   /*  创建时间  */
+	UpdatedAt       *string   `json:"updatedAt,omitempty"`   /*  更新时间  */
+	SubnetIDs       []*string `json:"subnetIDs"`             /*  acl 绑定的子网 id  */
+	ApplyToPublicLb *bool     `json:"applyToPublicLb"`       /* 是否应用到公网负载均衡器 */
 }

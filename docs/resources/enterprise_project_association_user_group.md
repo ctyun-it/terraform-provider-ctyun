@@ -39,4 +39,4 @@ resource "ctyun_enterprise_project_association_user_group" "enterprise_project_a
 
 ### Optional
 
-- `policy_ids` (Set of String) 策略id列表
+- `policy_ids` (Set of String) 策略id列表，支持更新

@@ -13,6 +13,9 @@ output "vpc_id" {
 output "nat_id" {
   value = ctyun_nat.nat_test.id
 }
+output "private_nat_id" {
+  value = ctyun_private_nat.nat_test.id
+}
 
 output "subnet_id1" {
   value = ctyun_subnet.subnet_test1.id
@@ -24,4 +27,14 @@ output "subnet_id2" {
 
 output "ecs_id" {
   value = ctyun_ecs.ecs_test.id
+}
+
+output "private_nat_ip1" {
+  value = ctyun_private_nat_transit_ip.ip1.address
+}
+output "private_nat_ip2" {
+  value = ctyun_private_nat_transit_ip.ip1.address
+}
+output "port_id" {
+  value = ctyun_port.port.id
 }

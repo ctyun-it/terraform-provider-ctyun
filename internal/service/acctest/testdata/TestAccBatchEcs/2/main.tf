@@ -15,7 +15,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
   enable_ipv6 = true
   lifecycle {

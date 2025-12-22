@@ -16,15 +16,8 @@ func TestAccCtyunMongodbAssociationEip(t *testing.T) {
 	resourceName := "ctyun_mongodb_association_eip." + rnd
 	resourceFile := "resource_ctyun_mongodb_association_eip.tf"
 
-	datasourceName := "data.ctyun_mongodb_association_eips." + dnd
-	datasourceFile := "datasource_ctyun_mysql_association_eips.tf"
 	eipId := dependence.eipID
-	//eipId := "eip-140rfs2and"
-	//eipAddress := "150.223.193.123"
 	instId := dependence.mongodbID
-	hostIp := dependence.hostIP
-	//instId := "c1ef217509294dc6a4d6b6ec24a46586"
-	//hostIp := "192.168.128.3"
 
 	instanceType := "1"
 
@@ -42,30 +35,79 @@ func TestAccCtyunMongodbAssociationEip(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 绑定IP验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, eipId, instId, hostIp),
+				Config: utils.LoadTestCase(resourceFile, rnd, eipId, instId),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "eip_id", eipId),
-					resource.TestCheckResourceAttr(resourceName, "inst_id", instId),
-				),
-			},
-			//datasource验证
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, eipId, instId, hostIp) +
-					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`eip_id="%s"`, eipId)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "eips.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "eips.0.bind_status", "1"),
+					resource.TestCheckResourceAttr(resourceName, "instance_id", instId),
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, eipId, instId, hostIp) +
+				Config: utils.LoadTestCase(resourceFile, rnd, eipId, instId) +
 					utils.LoadTestCase(specDatasourceFile, dnd, instanceType),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(specDatasourceName, "specs.#"),
 				),
 			},
+			//import验证
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, eipId, instId, hostIp),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["eip_id"],
+						rs.Primary.Attributes["project_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id", "project_id",
+				},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["eip_id"],
+						rs.Primary.Attributes["project_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id", "project_id",
+				},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["eip_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id", "project_id", "region_id",
+				},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, eipId, instId),
 				Destroy: true,
 			},
 		},

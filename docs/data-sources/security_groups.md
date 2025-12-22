@@ -1,5 +1,5 @@
 # ctyun_security_groups (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028520
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
 
 
 
@@ -28,15 +28,15 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_security_group" "security_group_test" {
-  region_id = "200000001852"
-  vpc_id = ctyun_vpc.vpc_test.id
+  region_id   = "200000001852"
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "terraform-minchiang"
   description = "terraform测试使用"
 }
 
 
 data "ctyun_security_groups" "test" {
-  region_id = "200000001852"
+  region_id         = "200000001852"
   security_group_id = ctyun_security_group.security_group_test.id
   # page_no = 1
   # page_size = 1
@@ -71,7 +71,7 @@ output "ctyun_test" {
 
 Read-Only:
 
-- `creation_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 安全组描述信息。
 - `name` (String) 安全组名称
 - `origin` (String) 表示是否是默认安全组
@@ -87,7 +87,7 @@ Read-Only:
 Read-Only:
 
 - `action` (String) 拒绝策略:允许-accept拒绝-drop
-- `create_time` (String) 创建时间，UTC时间。
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 安全组规则描述信息。
 - `dest_cidr_ip` (String) 远端地址:0.0.0.0/0
 - `direction` (String) 出方向-egress、入方向-ingress

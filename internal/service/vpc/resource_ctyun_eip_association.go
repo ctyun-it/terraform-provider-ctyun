@@ -18,6 +18,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEipAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunEipAssociation{}
+	_ resource.ResourceWithImportState = &ctyunEipAssociation{}
 )
 
 func NewCtyunEipAssociation() resource.Resource {
@@ -28,6 +36,7 @@ type ctyunEipAssociation struct {
 	meta       *common.CtyunMetadata
 	eipService *business.EipService
 	ecsService *business.EcsService
+	ebmService *business.EbmService
 }
 
 func (c *ctyunEipAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -45,7 +54,7 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"eip_id": schema.StringAttribute{
 				Required:    true,
-				Description: "弹性ip的id",
+				Description: "弹性IP的ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -56,7 +65,7 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 			"association_type": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "绑定的实例类型：ECS云主机：vm，目前仅支持云主机vm，后续会补充更多可选项",
+				Description: "绑定的实例类型：云主机：vm，物理机：bm",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.EipAssociationTypes...),
 				},
@@ -67,12 +76,12 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "绑定对象的实例id",
+				Description: "绑定对象的实例ID，绑定对象支持云主机和物理机",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					validator2.UUID(),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -120,7 +129,7 @@ func (c *ctyunEipAssociation) Create(ctx context.Context, request resource.Creat
 	// 校验目标绑定对象存在
 	switch plan.AssociationType.ValueString() {
 	case business.EipAssociationTypeVm:
-		err := c.ecsService.MustExist(ctx, plan.InstanceId.ValueString(), plan.RegionId.ValueString())
+		err = c.ecsService.MustExist(ctx, plan.InstanceId.ValueString(), plan.RegionId.ValueString())
 		if err != nil {
 			response.Diagnostics.AddError(err.Error(), err.Error())
 			return
@@ -147,7 +156,7 @@ func (c *ctyunEipAssociation) Create(ctx context.Context, request resource.Creat
 		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
 	}
-
+	time.Sleep(10 * time.Second)
 	plan.RegionId = types.StringValue(regionId)
 	plan.ProjectId = types.StringValue(projectId)
 	instance, ctyunRequestError := c.getAndMergeEipAssociation(ctx, plan)
@@ -203,14 +212,26 @@ func (c *ctyunEipAssociation) Delete(ctx context.Context, request resource.Delet
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [eipId],[regionId]
 func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunEipAssociationConfig
 	var eipId, regionId string
-	err := terraform_extend.Split(request.ID, &eipId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	// 根据分隔符数量判断是否输入了regionID,
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		eipId = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
 	cfg.EipId = types.StringValue(eipId)
@@ -232,6 +253,7 @@ func (c *ctyunEipAssociation) Configure(_ context.Context, request resource.Conf
 	c.meta = meta
 	c.eipService = business.NewEipService(meta)
 	c.ecsService = business.NewEcsService(meta)
+	c.ebmService = business.NewEbmService(meta)
 }
 
 // getAndMergeEipAssociation 查询eip绑定关系

@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 data "ctyun_zos_buckets" "test" {
-  page_no = 1
+  page_no   = 1
   page_size = 10
 }
 

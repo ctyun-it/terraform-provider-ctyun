@@ -9,6 +9,82 @@ import (
 	"testing"
 )
 
+func TestAccCtyunMysqlInstanceUpdatePassword(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+	resourceFile := "resource_ctyun_mysql_instance_password.tf"
+	resourceName := "ctyun_mysql_instance." + rnd
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mysql-" + utils.GenerateRandomString()
+	password := "Kyk111*" + utils.GenerateRandomString()
+	prodID := "Single57"
+	flavorName := "c7.xlarge.2"
+	storageType := "SATA"
+	storageSpace := 100
+	updatePassword := "Kyk111**" + utils.GenerateRandomString()
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, flavorName, prodID, storageType, storageSpace),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// 更新密码
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, updatePassword, flavorName, prodID, storageType, storageSpace),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// import state验证1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					if id == "" || regionId == "" {
+						return "", fmt.Errorf("id or region_id is required")
+					}
+					return fmt.Sprintf("%s,,%s", id, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "cycle_count", "master_order_id", "project_id"},
+			},
+			// import state验证2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "master_order_id", "project_id"},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, flavorName, prodID, storageType, storageSpace),
+				Destroy: true,
+			},
+		}})
+}
+
 func TestAccCtyunMysqlInstance(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
@@ -26,7 +102,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 	name := "tf-mysql-" + utils.GenerateRandomString()
 	password := "Kyk111*" + utils.GenerateRandomString()
 	prodID := "Single57"
-	flavorName := "s7.xlarge.2"
+	flavorName := "c7.xlarge.2"
 
 	storageType := "SATA"
 	storageSpace := 100
@@ -38,7 +114,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 	// 磁盘、规格升配
 	updatedStorageSpace := 120
 	updatedBackupStorageSpace := `backup_storage_space=150`
-	updatedFlavorName := "s7.xlarge.4"
+	updatedFlavorName := "c7.xlarge.4"
 	// 单机到一主一备
 	updatedProdID := "MasterSlave57"
 	resource.Test(t, resource.TestCase{
@@ -56,7 +132,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, prodID, "", storageType, storageSpace, availabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -70,7 +146,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, updatedName, password, "", "", flavorName, prodID, updatedWritePort, storageType, storageSpace, availabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -86,7 +162,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, updatedName, password, "", "", updatedFlavorName, prodID, updatedWritePort, storageType, updatedStorageSpace, availabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", "120"),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 				),
@@ -95,7 +171,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, updatedName, password, "", "", updatedFlavorName, prodID, updatedWritePort, storageType, updatedStorageSpace, availabilityZoneInfo, "", updatedBackupStorageSpace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_space", "150"),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 				),
@@ -104,16 +180,16 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, updatedName, password, "", "", updatedFlavorName, updatedProdID, updatedWritePort, storageType, updatedStorageSpace, updatedDiskAvailabilityZoneInfo, "", updatedBackupStorageSpace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave57"),
 				),
 			},
 			// datasource验证
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, updatedName, password, "", "", updatedFlavorName, updatedProdID, updatedWritePort, storageType, updatedStorageSpace, updatedDiskAvailabilityZoneInfo, "", updatedBackupStorageSpace) +
-					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("prod_inst_name=%s.name", resourceName)),
+					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("name=%s.name", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "mysql_instances.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
 				),
 			},
 			//销毁
@@ -138,7 +214,7 @@ func TestAccCtyunMysqlInstanceMonth(t *testing.T) {
 	cycleCount := "cycle_count=1"
 	autoRenewStatus := `auto_renew=false`
 
-	flavorName := "s7.xlarge.2"
+	flavorName := "c7.xlarge.2"
 
 	storageType := "SATA"
 	storageSpace := 100
@@ -165,7 +241,7 @@ func TestAccCtyunMysqlInstanceMonth(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, cycleCount, autoRenewStatus, flavorName, updatedProdID, "", storageType, storageSpace, backupOneAvailabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave57"),
 				),
 			},
@@ -173,7 +249,7 @@ func TestAccCtyunMysqlInstanceMonth(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, cycleCount, autoRenewStatus, flavorName, updatedDoubleProId, "", storageType, storageSpace, updatedDiskAvailabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},

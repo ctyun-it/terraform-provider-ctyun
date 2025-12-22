@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestAccCtyunKeyPair(t *testing.T) {
+func TestAccCtyunKeyPairImport(t *testing.T) {
 	rnd := utils.GenerateRandomString()
 
 	resourceName := "ctyun_keypair." + rnd
@@ -54,7 +54,72 @@ func TestAccCtyunKeyPair(t *testing.T) {
 				},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					name := ds.Attributes["name"]
+					return fmt.Sprintf("%s", name), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+				},
+			},
+			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, keyName, publicKey),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+func TestAccCtyunKeyPairCreate(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_keypair." + rnd
+
+	resourceFile := "resource_ctyun_keypair_create.tf"
+
+	keyName := "tf-keypair-" + rnd
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, keyName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", keyName),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "public_key"),
+					resource.TestCheckResourceAttrSet(resourceName, "private_key"),
+				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					name := ds.Attributes["name"]
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", name, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+					"private_key",
+				},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, keyName),
 				Destroy: true,
 			},
 		},

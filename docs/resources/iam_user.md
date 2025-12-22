@@ -35,11 +35,11 @@ variable "phone" {
 }
 
 resource "ctyun_iam_user" "iam_user_test" {
-  email          = var.email
-  phone          = var.phone
-  name           = "Mddi3"
-  password       = var.password
-  description    = "测试创建账号111"
+  email       = var.email
+  phone       = var.phone
+  name        = "Mddi3"
+  password    = var.password
+  description = "测试创建账号111"
   user_group_ids = [
     "6edf8a6a9b09442295206feef0d39132"
   ]
@@ -51,15 +51,15 @@ resource "ctyun_iam_user" "iam_user_test" {
 
 ### Required
 
-- `email` (String) 登录邮箱
-- `name` (String) 用户名，长度为4到32位
-- `password` (String, Sensitive) 密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]
-- `phone` (String) 手机号
-- `user_group_ids` (Set of String) 用户组id，用户加入的目标安全组id，创建用户时至少加入一个用户组
+- `email` (String) 登录邮箱，支持更新
+- `name` (String) 用户名，长度为4到32位，支持更新
+- `password` (String, Sensitive) 密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，支持更新，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]
+- `phone` (String) 手机号，支持更新
+- `user_group_ids` (Set of String) 用户组id，用户加入的目标用户组，创建用户时至少加入一个用户组，支持更新
 
 ### Optional
 
-- `description` (String) 备注，长度最大为64
+- `description` (String) 备注，长度最大为64，支持更新
 
 ### Read-Only
 

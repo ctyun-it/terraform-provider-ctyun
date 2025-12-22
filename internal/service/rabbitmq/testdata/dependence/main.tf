@@ -82,3 +82,42 @@ locals {
   cluster_spec_name = local.cluster_sku[0].res_item.res_items[0].spec[0].spec_name
   cluster_spec_name2 = local.cluster_sku[0].res_item.res_items[0].spec[1].spec_name
 }
+
+data "ctyun_zones" "test" {
+
+}
+
+resource "ctyun_rabbitmq_instance" "test" {
+  instance_name = "tf-rabbitmq-${local.random_string}"
+  spec_name = local.cluster_spec_name
+  node_num = 3
+  zone_list = data.ctyun_zones.test.zones
+  disk_type = local.cluster_disk_type
+  disk_size = 300
+  vpc_id = local.real_vpc_id
+  subnet_id = local.real_subnet_id
+  security_group_id = local.real_security_group_id
+  cycle_type = "on_demand"
+}
+
+resource "ctyun_rabbitmq_exchange" "test" {
+  instance_id = ctyun_rabbitmq_instance.test.id
+  vhost = "/"
+  name = "tf-exchange"
+  type = "direct"
+}
+
+locals {
+  # 生成当前时间戳的哈希值
+  hash = sha256(timestamp())
+
+  # 从哈希结果中截取字符（转为小写并移除特殊字符）
+  random_string = substr(
+    replace(
+      lower(local.hash),
+      "/[^a-z0-9]/",
+      ""  # 移除所有非字母数字的字符
+    ),
+    0, 10  # 截取前16个字符
+  )
+}

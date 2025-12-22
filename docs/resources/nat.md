@@ -7,39 +7,39 @@
 
 ```terraform
 terraform {
-	required_providers {
-		ctyun = {
-			source = "ctyun-it/ctyun"
-		}
-	}
+  required_providers {
+    ctyun = {
+      source = "ctyun-it/ctyun"
+    }
+  }
 }
 
 provider "ctyun" {
-	env = "prod"
+  env = "prod"
 }
 
 resource "ctyun_vpc" "vpc_test" {
-	name        = "tf-vpc-for-nat"
-	cidr        = "192.168.0.0/16"
-	description = "terraform测试使用"
-	enable_ipv6 = true
+  name        = "tf-vpc-for-nat"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
 }
 
-resource "ctyun_nat" "nat_test"{
-	vpc_id = ctyun_vpc.vpc_test.id
-	spec = 1
-	name = "tf-nat"
-	description = "terraform测试使用"
-	cycle_type = "on_demand"
+resource "ctyun_nat" "nat_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  spec        = 1
+  name        = "tf-nat"
+  description = "terraform测试使用"
+  cycle_type  = "on_demand"
 }
 
 resource "ctyun_nat" "nat_cycle_test" {
-	vpc_id = ctyun_vpc.vpc_test.id
-	spec = 1
-	name = "tf-nat-cycle"
-	description = "terraform测试使用"
-	cycle_type = "month"
-	cycle_count = 1
+  vpc_id      = ctyun_vpc.vpc_test.id
+  spec        = 1
+  name        = "tf-nat-cycle"
+  description = "terraform测试使用"
+  cycle_type  = "month"
+  cycle_count = 1
 }
 ```
 
@@ -64,8 +64,8 @@ resource "ctyun_nat" "nat_cycle_test" {
 
 ### Read-Only
 
-- `creation_time` (String) NAT网关的创建时间
-- `expired_time` (String) NAT网关实例的过期时间
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) ID，值与nat_gateway_id相同
 - `master_order_id` (String) 订单id
 - `nat_gateway_id` (String) 网关id

@@ -51,7 +51,7 @@ Read-Only:
 - `az_name` (String) 实例所在的可用区
 - `config_id` (Number) 伸缩配置ID
 - `config_name` (String) 伸缩配置名称
-- `create_date` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `execution_mode` (String) 执行方式，取值范围：1：自动执行策略，2：手动执行策略，3：手动移入实例，4：手动移出实例，5：新建伸缩组满足最小数，6：修改伸缩组满足最大最小限制，7：健康检查移入，8：健康检查移出
 - `group_id` (Number) 伸缩组ID
 - `health_status` (String) 健康检查状态，取值范围：1：正常，2：异常，3：初始化

@@ -49,7 +49,7 @@ func (c *ctyunSNats) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 			},
 			"nat_gateway_id": schema.StringAttribute{
 				Required:    true,
-				Description: "AT网关ID，选填",
+				Description: "NAT网关ID",
 			},
 			"snat_id": schema.StringAttribute{
 				Optional:    true,
@@ -59,7 +59,7 @@ func (c *ctyunSNats) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 				Optional:    true,
 				Description: "子网id，选填",
 			},
-			"page_number": schema.Int64Attribute{
+			"page_no": schema.Int64Attribute{
 				Optional:    true,
 				Description: "列表的页码，默认值为1",
 				Validators: []validator.Int64{
@@ -75,10 +75,11 @@ func (c *ctyunSNats) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 				},
 			},
 			"snats": schema.ListNestedAttribute{
-				Computed: true,
+				Computed:    true,
+				Description: "snat列表",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"snat_id": schema.StringAttribute{
+						"id": schema.StringAttribute{
 							Computed:    true,
 							Description: "snat id",
 						},
@@ -94,9 +95,9 @@ func (c *ctyunSNats) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 							Computed:    true,
 							Description: "子网类型：1-有vpcID的子网，0-自定义",
 						},
-						"creation_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"eips": schema.ListNestedAttribute{
 							Computed:    true,
@@ -230,17 +231,17 @@ type CtyunSNatsConfig struct {
 	NatGateWayID types.String      `tfsdk:"nat_gateway_id"` //要查询的NAT网关的ID。
 	SNatID       types.String      `tfsdk:"snat_id"`        // snat id
 	SubNetID     types.String      `tfsdk:"subnet_id"`      // 子网id
-	PageNumber   types.Int64       `tfsdk:"page_number"`    //	列表的页码，默认值为1。
+	PageNumber   types.Int64       `tfsdk:"page_no"`        //	列表的页码，默认值为1。
 	PageSize     types.Int64       `tfsdk:"page_size"`      //分页查询时每页的行数，最大值为50，默认值为10。
 	Snats        []CtyunSNatsModel `tfsdk:"snats"`
 }
 
 type CtyunSNatsModel struct {
-	SNatID       types.String         `tfsdk:"snat_id"`        //snat id
+	SNatID       types.String         `tfsdk:"id"`             //snat id
 	Description  types.String         `tfsdk:"description"`    //描述信息
 	SubNetCidr   types.String         `tfsdk:"subnet_cidr"`    //要查询的NAT网关所属VPC子网的cidr
 	SubNetType   types.Int32          `tfsdk:"subnet_type"`    //子网类型：1-有vpcID的子网，0-自定义
-	CreationTime types.String         `tfsdk:"creation_time"`  //创建时间
+	CreationTime types.String         `tfsdk:"create_time"`    //创建时间
 	Eips         []CtyunSNatsEipModel `tfsdk:"eips"`           //绑定的 eip 信息
 	SubnetID     types.String         `tfsdk:"subnet_id"`      //子网 ID
 	NatGatewayID types.String         `tfsdk:"nat_gateway_id"` //ctvpc 网关 ID

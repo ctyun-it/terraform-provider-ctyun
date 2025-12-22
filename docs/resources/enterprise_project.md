@@ -30,11 +30,11 @@ resource "ctyun_enterprise_project" "enterprise_project_test" {
 
 ### Required
 
-- `name` (String) 企业项目名称，长度为1-32
+- `name` (String) 企业项目名称，长度为1-32，支持更新
 
 ### Optional
 
-- `description` (String) 企业项目描述，长度最大为64
+- `description` (String) 企业项目描述，长度最大为64，支持更新
 
 ### Read-Only
 

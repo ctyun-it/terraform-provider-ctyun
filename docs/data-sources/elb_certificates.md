@@ -44,7 +44,7 @@ Read-Only:
 
 - `az_name` (String) 可用区名称
 - `certificate` (String) type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `id` (String) 证书ID
 - `name` (String) 名称
@@ -53,4 +53,4 @@ Read-Only:
 - `region_id` (String) 资源池ID
 - `status` (String) 状态: ACTIVE / INACTIVE
 - `type` (String) 证书类型: server/ca
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式

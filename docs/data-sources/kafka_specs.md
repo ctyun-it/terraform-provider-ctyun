@@ -20,7 +20,7 @@ provider "ctyun" {
 }
 
 data "ctyun_kafka_specs" "test" {
-  
+
 }
 
 output "t" {

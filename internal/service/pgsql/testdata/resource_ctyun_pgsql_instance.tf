@@ -15,7 +15,7 @@ resource "ctyun_postgresql_instance" "%[1]s" {
   %[15]s // running_control = start, stop, restart
   %[16]s // cycle_count
   %[17]s // backup_storage_type
-  %[18]s // appoint_vip
+  %[18]s // vip
 }
 
 

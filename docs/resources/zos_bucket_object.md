@@ -20,12 +20,12 @@ provider "ctyun" {
 }
 
 resource "ctyun_zos_bucket" "foo" {
-  bucket = "acc.te21fdsfdasfdsdwqedwed23e-asd.1"
+  bucket = "acc-test"
 }
 
 resource "ctyun_zos_bucket_object" "test" {
-  bucket = ctyun_zos_bucket.foo.bucket
-  key = "aex.txt"
+  bucket  = ctyun_zos_bucket.foo.bucket
+  key     = "aex.txt"
   content = "abcdw"
 }
 ```

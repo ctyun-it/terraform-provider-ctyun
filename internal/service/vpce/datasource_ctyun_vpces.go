@@ -41,8 +41,8 @@ type CtyunVpcesModel struct {
 	SubnetIP          types.String `tfsdk:"subnet_ip"`
 	WhitelistCidr     types.Set    `tfsdk:"whitelist_cidr"`
 	Status            types.Int32  `tfsdk:"status"`
-	CreatedTime       types.String `tfsdk:"created_time"`
-	UpdatedTime       types.String `tfsdk:"updated_time"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpcesConfig struct {
@@ -134,13 +134,13 @@ func (c *ctyunVpces) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 							Required:    true,
 							Description: "endpoint状态,1表示已链接，2表示未链接",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Required:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Required:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -208,8 +208,8 @@ func (c *ctyunVpces) Read(ctx context.Context, request datasource.ReadRequest, r
 			VpcID:             utils.SecStringValue(e.VpcID),
 			Name:              utils.SecStringValue(e.Name),
 			Status:            types.Int32Value(e.Status),
-			CreatedTime:       utils.SecStringValue(e.CreatedTime),
-			UpdatedTime:       utils.SecStringValue(e.UpdatedTime),
+			CreateTime:        utils.SecStringValue(e.CreatedTime),
+			UpdateTime:        utils.SecStringValue(e.UpdatedTime),
 		}
 		if e.EndpointObj != nil {
 			item.SubnetID = utils.SecStringValue(e.EndpointObj.SubnetID)

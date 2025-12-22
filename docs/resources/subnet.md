@@ -24,10 +24,9 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test"
   cidr        = "10.0.0.0/8"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
@@ -39,7 +38,7 @@ resource "ctyun_subnet" "subnet_test" {
 ### Required
 
 - `cidr` (String) 网段，取值范围：10.0.0.0/8~10.255.255.0/24或者172.16.0.0/12~172.31.255.0/24或者192.168.0.0/16~192.168.255.0/24。约束：必须是cidr格式，例如:192.168.0.0/16
-- `dns` (Set of String) 子网dns列表, 最多同时支持4个dns地址，支持更新
+- `dns` (Set of String) 子网dns列表, 最多同时支持2个dns地址，支持更新
 - `name` (String) 子网名称，支持字母、中文、数字，下划线以及-，中文/英文字母开头，长度 2-32，支持更新
 - `vpc_id` (String) 虚拟私有云ID
 

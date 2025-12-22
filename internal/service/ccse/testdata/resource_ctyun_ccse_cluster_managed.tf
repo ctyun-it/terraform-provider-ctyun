@@ -6,24 +6,27 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     subnet_id  = "%[5]s"
     cluster_domain = "www.ctyun.com"
     network_plugin = "cubecni"
-    pod_subnet_id_list = ["%[5]s"]
-    start_port = 30000
-    end_port   = 65535
+    pod_subnet_id_list = ["%[6]s"]
+    start_port = 30001
+    end_port   = 32767
     elb_prod_code = "standardI"
-    cycle_type  = "on_demand"
+    cycle_type  = "month"
+    cycle_count = 1
+    auto_renew = true
     container_runtime = "containerd"
     timezone    = "Asia/Shanghai"
     cluster_version = "1.29.3"
     deploy_type   = "single"
     kube_proxy    = "iptables"
-    series_type = "managedbase"
+    series_type = "%[8]s"
+    node_scale = %[9]d
   }
 
   slave_host = {
     instance_type = "ecs"
     mirror_id     = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
     mirror_type   = 1
-    item_def_name = "%[6]s"
+    item_def_name = "%[7]s"
 
     az_infos = [
       {

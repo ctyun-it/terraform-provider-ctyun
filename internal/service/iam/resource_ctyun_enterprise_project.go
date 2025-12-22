@@ -16,6 +16,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource                = &ctyunEnterpriseProject{}
+	_ resource.ResourceWithConfigure   = &ctyunEnterpriseProject{}
+	_ resource.ResourceWithImportState = &ctyunEnterpriseProject{}
+)
+
 func NewCtyunEnterpriseProject() resource.Resource {
 	return &ctyunEnterpriseProject{}
 }
@@ -39,7 +45,7 @@ func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "企业项目名称，长度为1-32",
+				Description: "企业项目名称，长度为1-32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 32),
 				},
@@ -56,7 +62,7 @@ func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequ
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "企业项目描述，长度最大为64",
+				Description: "企业项目描述，长度最大为64，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(64),
 				},
@@ -179,13 +185,19 @@ func (c *ctyunEnterpriseProject) Delete(ctx context.Context, request resource.De
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [enterpriseProjectId]
 func (c *ctyunEnterpriseProject) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [enterpriseProjectId]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunEnterpriseProjectConfig
 	var enterpriseProjectId string
-	err := terraform_extend.Split(request.ID, &enterpriseProjectId)
+	err = terraform_extend.Split(request.ID, &enterpriseProjectId)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -193,7 +205,6 @@ func (c *ctyunEnterpriseProject) ImportState(ctx context.Context, request resour
 
 	instance, err := c.getAndMergeEnterpriseProject(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -232,11 +243,16 @@ func (c *ctyunEnterpriseProject) getAndMergeEnterpriseProject(ctx context.Contex
 
 // changeStatus 改变状态
 func (c *ctyunEnterpriseProject) changeStatus(ctx context.Context, projectId string, statusTo string) error {
-	//status, err := business.EnterpriseProjectStatusMap.FromOriginalScene(statusTo, business.EnterpriseProjectSceneRequest)
-	//if err != nil {
-	//	return err
-	//}
+	// 停用
 	_, err := c.meta.Apis.CtIamApis.EnterpriseProjectStatusUpdateApi.Do(ctx, c.meta.Credential, &ctiam.EnterpriseProjectStatusUpdateRequest{
+		ProjectId: projectId,
+		Status:    2,
+	})
+	if err != nil {
+		return err
+	}
+	// 删除
+	_, err = c.meta.Apis.CtIamApis.EnterpriseProjectStatusUpdateApi.Do(ctx, c.meta.Credential, &ctiam.EnterpriseProjectStatusUpdateRequest{
 		ProjectId: projectId,
 		Status:    3,
 	})

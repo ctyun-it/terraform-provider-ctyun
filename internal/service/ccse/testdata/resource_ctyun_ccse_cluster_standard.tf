@@ -7,9 +7,8 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     cluster_domain = "www.ctyun.com"
     network_plugin = "calico"
     pod_cidr = "172.26.0.0/16"
-    pod_subnet_id_list = ["%[5]s"]
-    start_port = 30000
-    end_port   = 65535
+    start_port = %[7]d
+    end_port   = %[8]d
     elb_prod_code = "standardI"
     cycle_type  = "on_demand"
     container_runtime = "containerd"
@@ -28,6 +27,7 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     nginx_ingress_network = "external"
     ip_vlan = true
     network_policy= true
+    %[9]s
   }
 
   master_host = {

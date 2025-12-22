@@ -20,10 +20,10 @@ provider "ctyun" {
 }
 
 resource "ctyun_hpfs" "test" {
-  sfs_protocol = "hpfs"
+  protocol   = "hpfs"
   cycle_type = "on_demand"
-  sfs_name = "hpfs-test"
-  sfs_size = 512
+  name       = "hpfs-test"
+  size       = 512
 }
 ```
 
@@ -33,8 +33,8 @@ resource "ctyun_hpfs" "test" {
 ### Required
 
 - `name` (String) 并行文件名，仅允许英文字母数字及-，开头必须为字母，结尾不允许为-，且长度为2-255字符，支持更新
-- `sfs_protocol` (String) 协议类型，可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
-- `sfs_size` (Number) 文件大小（GB），范围: 500-32768。支持更新
+- `protocol` (String) 协议类型，可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
+- `size` (Number) 文件大小（GB），范围: 512-32768。支持更新
 
 ### Optional
 
@@ -50,8 +50,12 @@ resource "ctyun_hpfs" "test" {
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
 - `dataflow_list` (Set of String) HPFS文件系统下的数据流动策略ID列表
 - `id` (String) 资源 ID
 - `master_order_id` (String) 订单ID
-- `sfs_status` (String) 并行文件状态
+- `secret_key` (String) 挂载密钥
+- `share_path` (String) 挂载路径
+- `status` (String) 并行文件状态
+- `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 已用大小（MB）

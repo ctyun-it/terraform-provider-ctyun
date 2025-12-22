@@ -1,0 +1,14 @@
+release-note:new-resource
+ctyun_iam_user_ak
+
+release-note:new-data-source
+ctyun_iam_user_aks
+
+release-note:new-data-source
+ctyun_iam_users
+
+release-note:new-data-source
+ctyun_iam_policies
+
+release-note:enhancement
+resource\ctyun_eip_association support ebm

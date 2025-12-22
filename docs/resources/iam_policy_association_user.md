@@ -23,8 +23,8 @@ resource "ctyun_iam_policy" "iam_policy_global_test" {
   name        = "terraform_policy_global"
   description = "terraform测试全局策略"
   range       = "global"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"
@@ -44,8 +44,8 @@ resource "ctyun_iam_policy" "iam_policy_region_test" {
   name        = "terraform_policy_region"
   description = "terraform测试资源池策略"
   range       = "region"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"

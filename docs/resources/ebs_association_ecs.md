@@ -30,7 +30,7 @@ resource "ctyun_ebs_association_ecs" "ebs_association_ecs_test" {
 ### Required
 
 - `ebs_id` (String) 磁盘id
-- `instance_id` (String) 云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载
+- `instance_id` (String) 云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载；XSSD类型云硬盘支持绑定的云主机规格包括：s8,m8,c8,c8ne,m8ne,s8e,c8e,m8e,hc3,hm3
 
 ### Optional
 

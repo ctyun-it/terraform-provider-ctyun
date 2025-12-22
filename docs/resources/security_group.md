@@ -42,4 +42,5 @@ resource "ctyun_security_group" "security_group_test" {
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) id

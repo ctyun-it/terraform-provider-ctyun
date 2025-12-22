@@ -39,15 +39,15 @@ resource "ctyun_image" "image_test" {
 ### Required
 
 - `file_source` (String) 镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象
-- `name` (String) 镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾
+- `name` (String) 镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新
 - `os_distro` (String) 操作系统的发行版名称。注意：对于Windows系操作系统，应确保参数值是windows，否则视作Linux系操作系统；对于Linux系操作系统，参数值的取值应根据系统实际情况，建议参照cloud-init的配置文件（/etc/cloud/cloud.cfg）中system_info.distro的取值或以下取值：anolis、centos、ctyunos、debian、fedora、kylin、openEuler、ubuntu、UnionTech、windows
 - `os_version` (String) 操作系统版本。注意：参数值的取值应根据系统实际情况，建议参考（以下列出osDistro所列取值对应的osVersion参考取值）：anolis：7.9、centos：7.8、ctyunos：2.0.1、debian：9.0.0、fedora：36、kylin：V10_sp1、openEuler：20.03、ubuntu：18.04、UnionTech：V20_1050u1e、windows：2008
 
 ### Optional
 
 - `architecture` (String) 镜像系统架构，aarch64：AArch64架构，仅支持UEFI启动方式、x86_64：x86_64架构，支持BIOS和UEFI启动方式，注意：所指定的镜像系统架构应受所指定的资源池支持
-- `boot_mode` (String) 启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS）
-- `description` (String) 镜像描述信息。注意：长度为1~128个字符。
+- `boot_mode` (String) 启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS），支持更新
+- `description` (String) 镜像描述信息。注意：长度为1~128个字符。支持更新
 - `disk_size` (Number) 磁盘容量，单位为GB，取值范围：最小5（默认值），最大1024。注意：磁盘容量不能小于镜像文件的大小；若小于镜像文件的大小，则实际的磁盘容量将使用镜像文件的大小
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID

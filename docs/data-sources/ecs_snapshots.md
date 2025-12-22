@@ -1,5 +1,5 @@
 # ctyun_ecs_snapshots (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345
 
 
 

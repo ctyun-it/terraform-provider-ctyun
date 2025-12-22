@@ -6,10 +6,110 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"os"
 	"strconv"
 	"testing"
 	"time"
 )
+
+// 集群版，传azList，更新mongos 和shard spec
+func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_mongodb_instance." + rnd
+	resourceFile := "resource_ctyun_mongodb_instance_single_read_only.tf"
+	// 创建参数
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	flavorName := "c7.xlarge.2"
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mongodb-single-" + utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
+	prodId := "Cluster34"
+	readPort := 12345
+	storageType := "SAS"
+	storageSpace := 100
+	backupStorageType := "OS"
+	//azName := dependence.azName
+	//azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"mongos"},
+	//			{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"},
+	//			{"availability_zone_name":"%s","availability_zone_count":3,"node_type":"config"}]`, azName, azName, azName)
+
+	//更新参数
+
+	readOnlyCount := 2
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, readOnlyCount),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					//resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(readPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(storageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+				),
+			},
+			// import state验证1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					projectId := ds.Attributes["project_id"]
+					if id == "" || regionId == "" {
+						return "", fmt.Errorf("id or region_id is required")
+					}
+					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "cycle_type", "subnet_id",
+					"cycle_count", "master_order_id", "prod_id", "is_upgrade_back_up", "storage_type", "shard_num",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count"},
+			},
+			// import state验证2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control", "cycle_type", "subnet_id",
+					"cycle_count", "master_order_id", "prod_id", "is_upgrade_back_up", "storage_type", "shard_num",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count"},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, readOnlyCount),
+				Destroy: true,
+			},
+		},
+	})
+}
 
 // 单机、按需、有az、备份盘
 func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
@@ -26,11 +126,12 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
 	password := "Kyk123=" + utils.GenerateRandomString()
+	passwordUpdate := "Kyk125=" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SAS"
@@ -41,7 +142,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 130
@@ -94,18 +195,107 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
+			// 更新mongodb root 账号的密码
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, passwordUpdate, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					//resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+				),
+			},
 			// datasource验证
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo) +
 					utils.LoadTestCase(datasourceFile, dnd, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "mongodb_instances.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "instances.#"),
 				),
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo),
+				Destroy: true,
+			},
+		},
+	})
+}
+func TestAccCtyunMongodbInstanceSingleOnDemand_Updatepassword(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_mongodb_instance." + rnd
+	//datasourceName := "data.ctyun_mongodb_instances." + dnd
+
+	resourceFile := "resource_ctyun_mongodb_instance_single_on_demand.tf"
+	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
+	// 创建参数
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	err := os.Setenv("TF_VAR_password", "Kyk123="+utils.GenerateRandomString())
+	if err != nil {
+		return
+	}
+	flavorName := "c7.xlarge.2"
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mongodb-single-" + utils.GenerateRandomString()
+	password := "Kyk123=" + utils.GenerateRandomString()
+	passwordUpdate := "Kyk125=" + utils.GenerateRandomString()
+	prodId := "Single34"
+	readPort := 12345
+	storageType := "SAS"
+	storageSpace := 120
+	backupStorageType := "SATA"
+	azName := dependence.azName
+	azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"master"}, {"availability_zone_name":"%s","availability_zone_count":1,"node_type":"backup"}]`, azName, azName)
+
+	//更新参数
+
+	//backupStorageType := "SATA"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
+			},
+			// 更新mongodb root 账号的密码
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, passwordUpdate, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "password", passwordUpdate),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, passwordUpdate, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
 				Destroy: true,
 			},
 		},
@@ -126,7 +316,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 	cycleType := "month"
 	cycleCount := 1
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -141,7 +331,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -216,7 +406,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -231,7 +421,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	updatedProdId := "Replica5R34"
 
@@ -330,7 +520,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -347,7 +537,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -425,7 +615,7 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -525,7 +715,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -543,7 +733,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	mongosNum := 2
 
 	//更新参数
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.2"
 
 	updatedMongosSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"mongos"}]`, azName)
 	updatedShardSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"}]`, azName)
@@ -647,7 +837,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -764,7 +954,7 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -862,7 +1052,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -876,7 +1066,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
@@ -959,7 +1149,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -973,7 +1163,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := "c7.xlarge.4"
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
@@ -1068,7 +1258,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()

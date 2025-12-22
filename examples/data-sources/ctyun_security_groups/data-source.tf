@@ -20,15 +20,15 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_security_group" "security_group_test" {
-  region_id = "200000001852"
-  vpc_id = ctyun_vpc.vpc_test.id
+  region_id   = "200000001852"
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "terraform-minchiang"
   description = "terraform测试使用"
 }
 
 
 data "ctyun_security_groups" "test" {
-  region_id = "200000001852"
+  region_id         = "200000001852"
   security_group_id = ctyun_security_group.security_group_test.id
   # page_no = 1
   # page_size = 1

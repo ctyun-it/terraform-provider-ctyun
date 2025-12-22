@@ -60,12 +60,12 @@ type CtgkafkaSaslUserCreateV3Request struct {
 }
 
 type CtgkafkaSaslUserCreateV3Response struct {
-	StatusCode string                                     `json:"statusCode,omitempty"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
-	Message    string                                     `json:"message,omitempty"`    /*  提示信息。  */
-	ReturnObj  *CtgkafkaSaslUserCreateV3ReturnObjResponse `json:"returnObj"`            /*  返回对象。  */
-	Error      string                                     `json:"error,omitempty"`      /*  错误码，描述错误信息。  */
+	StatusCode string                                     `json:"statusCode"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
+	Message    string                                     `json:"message"`    /*  提示信息。  */
+	ReturnObj  *CtgkafkaSaslUserCreateV3ReturnObjResponse `json:"returnObj"`  /*  返回对象。  */
+	Error      string                                     `json:"error"`      /*  错误码，描述错误信息。  */
 }
 
 type CtgkafkaSaslUserCreateV3ReturnObjResponse struct {
-	Data string `json:"data,omitempty"` /*  返回创建描述。  */
+	Data string `json:"data"` /*  返回创建描述。  */
 }

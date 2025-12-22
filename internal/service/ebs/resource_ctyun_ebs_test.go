@@ -23,10 +23,10 @@ func TestAccCtyunEbs(t *testing.T) {
 	associationFile := "resource_ctyun_ebs_association_ecs.tf"
 
 	associationResourceName := "ctyun_ebs_association_ecs." + and
-	initName := "init-ebs"
+	initName := "init-ebs-" + rnd
 	initSize := 60
 
-	updatedName := "updated-ebs"
+	updatedName := "updated-ebs-" + rnd
 	updatedSize := 100
 
 	resource.Test(t, resource.TestCase{
@@ -45,7 +45,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					initName,
+					"sata",
 					initSize,
+					"",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
@@ -59,7 +61,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					associationFile, and,
 					dependence.ecsID,
@@ -78,7 +82,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					associationFile, and,
 					dependence.ecsID,
@@ -114,7 +120,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					associationFile, and,
 					dependence.ecsID,
@@ -150,7 +158,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					associationFile, and,
 					dependence.ecsID,
@@ -182,17 +192,102 @@ func TestAccCtyunEbs(t *testing.T) {
 				),
 			},
 			{
-				ResourceName:            associationResourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
+				ResourceName:      associationResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[associationResourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", associationResourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["ebs_id"],
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
+				},
 			},
+			{
+				ResourceName:      associationResourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[associationResourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", associationResourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["ebs_id"],
+						rs.Primary.Attributes["instance_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
+				},
+			},
+			// 添加多种导入方式测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["project_id"],
+						rs.Primary.Attributes["az_name"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"master_order_id"},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s",
+						rs.Primary.Attributes["id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id", "az_name", "master_order_id"},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["project_id"],
+						rs.Primary.Attributes["az_name"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"master_order_id"},
+			},
+
 			// 解绑
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					datasourceFile, dnd,
 					"",
@@ -203,7 +298,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					datasourceFile, dnd,
 					"",
@@ -234,7 +331,9 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
+					"sata",
 					updatedSize,
+					"",
 				) + utils.LoadTestCase(
 					datasourceFile, dnd,
 					"",
@@ -250,7 +349,7 @@ func TestAccCtyunEbsMonth(t *testing.T) {
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_ebs." + rnd
 	resourceFile := "resource_ctyun_ebs_month.tf"
-	initName := "init-ebs"
+	initName := "init-ebs-" + rnd
 	initSize := 60
 
 	resource.Test(t, resource.TestCase{
@@ -266,7 +365,7 @@ func TestAccCtyunEbsMonth(t *testing.T) {
 
 			// 创建
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, initName, initSize),
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, initSize, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttr(resourceName, "size", strconv.Itoa(initSize)),
@@ -276,6 +375,74 @@ func TestAccCtyunEbsMonth(t *testing.T) {
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, initName, initSize),
+				Destroy: true,
+			},
+		},
+	},
+	)
+}
+
+func TestAccCtyunEbsExtra(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_ebs." + rnd
+	resourceFile := "resource_ctyun_ebs.tf"
+	initName := "init-ebs-extra-" + rnd
+	initSize := 60
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+
+			// 创建
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					initName,
+					"xssd-0",
+					initSize,
+					"provisioned_iops = 1\n  delete_snap_with_ebs = true\n  multi_attach = true",
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttr(resourceName, "size", strconv.Itoa(initSize)),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					resource.TestCheckResourceAttr(resourceName, "provisioned_iops", "1"),
+					resource.TestCheckResourceAttr(resourceName, "delete_snap_with_ebs", "true"),
+					resource.TestCheckResourceAttr(resourceName, "multi_attach", "true"),
+				),
+			},
+			// 更新属性，同时绑定ecs
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					initName,
+					"xssd-0",
+					initSize,
+					"provisioned_iops = 2\n  delete_snap_with_ebs = false\n  multi_attach = true",
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "provisioned_iops", "2"),
+					resource.TestCheckResourceAttr(resourceName, "delete_snap_with_ebs", "false"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					initName,
+					"xssd-0",
+					initSize,
+					"provisioned_iops = 2\n  delete_snap_with_ebs = false\n  multi_attach = true",
+				),
 				Destroy: true,
 			},
 		},

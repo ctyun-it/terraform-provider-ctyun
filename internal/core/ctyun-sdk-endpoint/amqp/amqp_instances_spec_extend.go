@@ -54,7 +54,12 @@ type AmqpInstancesSpecExtendResponse struct {
 }
 
 type AmqpInstancesSpecExtendResponseReturnObj struct {
+	Data AmqpInstancesSpecExtendResponseReturnObjData `json:"data"`
 }
 
 type AmqpInstancesSpecExtendResponseReturnObjData struct {
+	Submitted  bool   `json:"submitted"`
+	NewOrderId string `json:"newOrderId"`
+	NewOrderNo string `json:"newOrderNo"`
+	//TotalPrice string `json:"totalPrice"`
 }

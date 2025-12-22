@@ -2,6 +2,7 @@ package kafka_test
 
 import (
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"os"
@@ -25,12 +26,12 @@ func TestAccCtyunKafkaInstanceCluster(t *testing.T) {
 	engineVersion := "3.6"
 	zone := os.Getenv("CTYUN_AZ_NAME")
 
-	initName := "tf-kafka-init-" + utils.GenerateRandomString()
+	initName := "tf-kafka-initc-" + utils.GenerateRandomString()
 	initNodeNum := 3
 	initDiskSize := 100
 	initRetentionHours := 80
 
-	updatedName := "tf-kafka-updated-" + utils.GenerateRandomString()
+	updatedName := "tf-kafka-updatedc-" + utils.GenerateRandomString()
 	updatedNodeNum := 5
 	updatedDiskSize := 200
 	updatedRetentionHours := 60
@@ -167,6 +168,33 @@ func TestAccCtyunKafkaInstanceCluster(t *testing.T) {
 					"http_port",
 					"ssl_port",
 					"sasl_port",
+					"restart",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"auto_renew_cycle_count",
+					"auto_renew",
+					"cycle_count",
+					"cycle_type",
+					"project_id",
+					"security_group_id",
+					"master_order_id",
+					"zone_list",
+					"plain_port",
+					"http_port",
+					"ssl_port",
+					"sasl_port",
+					"restart",
 				},
 			},
 			{
@@ -197,12 +225,13 @@ func TestAccCtyunKafkaInstanceSingle(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_kafka_instance." + rnd
-	resourceFile := "resource_ctyun_kafka_instance_on_demand.tf"
+	resourceFile := "resource_ctyun_kafka_instance_single.tf"
+	cycleResourceFile := "resource_ctyun_kafka_instance_single_month.tf"
 
 	engineVersion := "3.6"
 	zone := os.Getenv("CTYUN_AZ_NAME")
 
-	initName := "tf-kafka-init-" + utils.GenerateRandomString()
+	initName := "tf-kafka-inits-" + utils.GenerateRandomString()
 	initNodeNum := 1
 	initDiskSize := 100
 	initRetentionHours := 80
@@ -245,11 +274,47 @@ func TestAccCtyunKafkaInstanceSingle(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
 					resource.TestCheckResourceAttr(resourceName, "retention_hours", strconv.Itoa(initRetentionHours)),
+					resource.TestCheckResourceAttr(resourceName, "actual_cycle_type", business.OrderCycleTypeOnDemand),
+					resource.TestCheckResourceAttr(resourceName, "cycle_type", business.OrderCycleTypeOnDemand),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
 				),
 			},
-			// 更新属性
+			// 更新属性，同时按需转包周期，并重启
+			{
+				Config: utils.LoadTestCase(
+					cycleResourceFile, rnd,
+					initName,
+					engineVersion,
+					dependence.kafkaSingleSpecName2,
+					initNodeNum,
+					zone,
+					dependence.kafkaSingleDiskType,
+					initDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.securityGroupID,
+					initRetentionHours,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", initName),
+					resource.TestCheckResourceAttr(resourceName, "engine_version", engineVersion),
+					resource.TestCheckResourceAttr(resourceName, "spec_name", dependence.kafkaSingleSpecName2),
+					resource.TestCheckResourceAttr(resourceName, "node_num", strconv.Itoa(initNodeNum)),
+					resource.TestCheckTypeSetElemAttr(resourceName, "zone_list.*", zone),
+					resource.TestCheckResourceAttr(resourceName, "disk_type", dependence.kafkaClusterDiskType),
+					resource.TestCheckResourceAttr(resourceName, "disk_size", strconv.Itoa(initDiskSize)),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", dependence.vpcID),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "retention_hours", strconv.Itoa(initRetentionHours)),
+					resource.TestCheckResourceAttr(resourceName, "actual_cycle_type", business.OrderCycleTypeMonth),
+					resource.TestCheckResourceAttr(resourceName, "cycle_type", business.OrderCycleTypeMonth),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			// 包周期到期转按需
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
@@ -277,6 +342,8 @@ func TestAccCtyunKafkaInstanceSingle(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
 					resource.TestCheckResourceAttr(resourceName, "retention_hours", strconv.Itoa(initRetentionHours)),
+					resource.TestCheckResourceAttr(resourceName, "actual_cycle_type", business.OrderCycleTypeMonth),
+					resource.TestCheckResourceAttr(resourceName, "cycle_type", business.OrderCycleTypeOnDemand),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
 				),

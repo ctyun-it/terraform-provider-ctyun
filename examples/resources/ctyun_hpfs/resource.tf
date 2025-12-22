@@ -12,9 +12,9 @@ provider "ctyun" {
 }
 
 resource "ctyun_hpfs" "test" {
-  sfs_protocol = "hpfs"
+  protocol   = "hpfs"
   cycle_type = "on_demand"
-  sfs_name = "hpfs-test"
-  sfs_size = 512
+  name       = "hpfs-test"
+  size       = 512
 }
 

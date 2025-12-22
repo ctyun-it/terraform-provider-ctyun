@@ -21,6 +21,12 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunEbsSnapshotPolicyAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsSnapshotPolicyAssociation{}
+	_ resource.ResourceWithImportState = &ctyunEbsSnapshotPolicyAssociation{}
+)
+
 /*
 将快照策略和云硬盘绑定
 */
@@ -46,7 +52,7 @@ type CtyunEbsSnapshotPolicyAssociationConfig struct {
 
 func (c *ctyunEbsSnapshotPolicyAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856**`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -372,7 +378,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context,
 
 		// 组装请求体
 		params := &ctebs2.EbsQueryEbsByIDRequest{
-			RegionID: plan.RegionID.ValueStringPointer(),
+			RegionID: plan.RegionID.ValueString(),
 			DiskID:   diskId,
 		}
 
@@ -381,7 +387,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context,
 		if err != nil {
 			return "", err
 		} else if resp.StatusCode == common.ErrorStatusCode {
-			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 			return "", err
 		} else if resp.ReturnObj == nil {
 			err = common.InvalidReturnObjError
@@ -390,8 +396,8 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context,
 
 		// 安全处理SnapshotPolicyID
 		var currentPolicyID string
-		if resp.ReturnObj.SnapshotPolicyID != nil {
-			currentPolicyID = *resp.ReturnObj.SnapshotPolicyID
+		if resp.ReturnObj.SnapshotPolicyID != "" {
+			currentPolicyID = resp.ReturnObj.SnapshotPolicyID
 		}
 		// 如果resp.ReturnObj.SnapshotPolicyID是nil，currentPolicyID保持为空字符串
 
@@ -423,24 +429,47 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getAndMerge(ctx context.Context, pla
 	return
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyID],[diskIDList],[regionID]
 func (c *ctyunEbsSnapshotPolicyAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[diskIDList],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotPolicyAssociationConfig
-	var diskIDList, policyID, regionID string
-	err = terraform_extend.Split(request.ID, &policyID, &diskIDList, &regionID)
-	if err != nil {
-		return
+
+	var diskIDList, policyID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &policyID, &diskIDList)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &policyID, &diskIDList, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
+	if policyID == "" {
+		err = fmt.Errorf("policyID不能为空")
+		return
+	}
+	if diskIDList == "" {
+		err = fmt.Errorf("diskIDList不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
 	cfg.DiskIDList = types.StringValue(diskIDList)
 	cfg.SnapshotPolicyID = types.StringValue(policyID)
-	cfg.RegionID = types.StringValue(regionID)
+	cfg.RegionID = types.StringValue(regionId)
 
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)

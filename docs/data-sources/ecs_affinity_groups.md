@@ -33,7 +33,7 @@ output "ctyun_ecs_affinity_groups_test" {
 
 ### Optional
 
-- `affinity_group_id` (String) 云主机组ID
+- `id` (String) 云主机组ID
 - `page_no` (Number) 页码，取值范围：正整数（≥1），注：默认值为1
 - `page_size` (Number) 每页记录数目，取值范围：[1,50]，注：默认值为10
 - `region_id` (String) 资源池id，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
@@ -47,8 +47,8 @@ output "ctyun_ecs_affinity_groups_test" {
 
 Read-Only:
 
-- `affinity_group_id` (String) 云主机组ID
-- `affinity_group_name` (String) 云主机组名称
-- `affinity_group_policy` (String) 云主机组策略
-- `created_time` (String) 创建时间
-- `updated_time` (String) 更新时间
+- `create_time` (String) 创建时间，为UTC格式
+- `id` (String) 云主机组ID
+- `name` (String) 云主机组名称
+- `policy` (String) 云主机组策略
+- `update_time` (String) 更新时间，为UTC格式

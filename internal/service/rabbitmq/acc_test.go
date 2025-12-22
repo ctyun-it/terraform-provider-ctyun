@@ -13,6 +13,8 @@ type Dependence struct {
 	vpcID                    string
 	subnetID                 string
 	securityGroupID          string
+	instanceID               string
+	exchangeName             string
 	rabbitmqSingleDiskType   string
 	rabbitmqSingleSpecName   string
 	rabbitmqSingleSpecName2  string
@@ -39,6 +41,8 @@ func TestMain(m *testing.M) {
 		vpcID:                    outputs["vpc_id"].Value,
 		subnetID:                 outputs["subnet_id"].Value,
 		securityGroupID:          outputs["security_group_id"].Value,
+		instanceID:               outputs["instance_id"].Value,
+		exchangeName:             outputs["exchange_name"].Value,
 		rabbitmqClusterDiskType:  outputs["rabbitmq_cluster_disk_type"].Value,
 		rabbitmqClusterSpecName:  outputs["rabbitmq_cluster_spec_name"].Value,
 		rabbitmqClusterSpecName2: outputs["rabbitmq_cluster_spec_name2"].Value,

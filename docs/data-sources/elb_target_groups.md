@@ -46,7 +46,7 @@ Read-Only:
 - `algorithm` (String) 调度算法
 - `az_name` (String) 可用区名称
 - `cookie_expire` (Number) cookie过期时间
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `health_check_id` (String) 健康检查ID
 - `id` (String) 后端服务组ID
@@ -57,5 +57,5 @@ Read-Only:
 - `session_sticky_mode` (String) 会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）
 - `source_ip_timeout` (Number) 源IP会话保持超时时间
 - `status` (String) 状态: DOWN / ACTIVE
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 - `vpc_id` (String) vpc ID

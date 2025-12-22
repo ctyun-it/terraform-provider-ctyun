@@ -15,8 +15,8 @@ resource "ctyun_iam_policy" "iam_policy_test" {
   name        = "terraform_policy_test1"
   description = "terraform测试新建策略"
   range       = "region"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"

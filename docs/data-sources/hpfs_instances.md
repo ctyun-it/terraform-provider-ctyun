@@ -20,9 +20,9 @@ provider "ctyun" {
 }
 
 data "ctyun_hpfs_instances" "test" {
-  sfs_status = "available"
-  sfs_protocol = "hpfs"
-  az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+  status   = "available"
+  protocol = "hpfs"
+  az_name  = "cn-huadong1-jsnj1A-public-ctcloud"
 }
 ```
 
@@ -35,35 +35,35 @@ data "ctyun_hpfs_instances" "test" {
 - `page_no` (Number) 列表的分页页码，默认值为1
 - `page_size` (Number) 每页包含的元素个数范围(1-50)，默认值为10
 - `project_id` (String) 资源所属企业项目 ID，默认为 0
+- `protocol` (String) 挂载协议。2 种，nfs/hpfs ，不传为查询全部
 - `region_id` (String) 资源池id
-- `sfs_protocol` (String) 挂载协议。2 种，nfs/hpfs ，不传为查询全部
-- `sfs_status` (String) 并行文件状态。creating/available/unusable，不传为查询全部
+- `status` (String) 并行文件状态。creating/available/unusable，不传为查询全部
 
 ### Read-Only
 
-- `hpfs_instances` (Attributes List) hpfs列表 (see [below for nested schema](#nestedatt--hpfs_instances))
+- `instances` (Attributes List) hpfs列表 (see [below for nested schema](#nestedatt--instances))
 
-<a id="nestedatt--hpfs_instances"></a>
-### Nested Schema for `hpfs_instances`
+<a id="nestedatt--instances"></a>
+### Nested Schema for `instances`
 
 Read-Only:
 
 - `az_name` (String) 多可用区下的可用区名字
 - `baseline` (String) 性能基线（MB/s/TB）
 - `cluster_name` (String) 集群名称
-- `create_time` (Number) 创建时刻，epoch 时戳，精度毫秒
+- `create_time` (String) 创建时间，为UTC格式
 - `dataflow_count` (Number) HPFS文件系统下的数据流动策略数量
 - `dataflow_list` (Set of String) HPFS文件系统下的数据流动策略ID列表
-- `hpfs_share_path` (String) HPFS文件系统共享路径(Linux)
+- `id` (String) 并行文件唯一 ID
 - `name` (String) 并行文件命名
 - `on_demand` (Boolean) 是否按需订购
 - `project_id` (String) 资源所属企业项目 ID
+- `protocol` (String) 挂载协议，nfs/hpfs
 - `region_id` (String) 资源池 ID
 - `secret_key` (String) HPC型挂载需要的密钥
-- `sfs_id` (String) 并行文件唯一 ID
-- `sfs_protocol` (String) 挂载协议，nfs/hpfs
-- `sfs_size` (Number) 大小（GB）
-- `sfs_status` (String) 并行文件状态
-- `sfs_type` (String) 类型，hpfs_perf(HPC性能型)
-- `update_time` (Number) 更新时刻，epoch 时戳，精度毫秒
+- `share_path` (String) HPFS文件系统共享路径(Linux)
+- `size` (Number) 大小（GB）
+- `status` (String) 并行文件状态
+- `type` (String) 类型，hpfs_perf(HPC性能型)
+- `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 已用大小（MB）

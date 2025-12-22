@@ -23,7 +23,7 @@ data "ctyun_elb_loadbalancers" "test" {
 
 }
 
-output "ctyun_elb_loadbalancers_test"{
+output "ctyun_elb_loadbalancers_test" {
   value = data.ctyun_elb_loadbalancers.test
 }
 ```
@@ -50,7 +50,7 @@ Read-Only:
 
 - `admin_status` (String) 管理状态: DOWN / ACTIVE
 - `az_name` (String) 可用区名称
-- `created_time` (String) created_time
+- `create_time` (String) create_time
 - `delete_protection` (Boolean) 删除保护。开启，不开启
 - `description` (String) 描述
 - `eip_info` (Attributes List) (see [below for nested schema](#nestedatt--elbs--eip_info))
@@ -65,7 +65,7 @@ Read-Only:
 - `sla_name` (String) 规格名称
 - `status` (String) 负载均衡状态: DOWN / ACTIVE
 - `subnet_id` (String) 子网ID
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 - `vpc_id` (String) VPC ID
 
 <a id="nestedatt--elbs--eip_info"></a>

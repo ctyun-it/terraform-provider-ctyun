@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"time"
 )
 
 var (
@@ -91,11 +93,11 @@ func (c *ctyunRabbitmqInstances) Schema(_ context.Context, _ datasource.SchemaRe
 						},
 						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "过期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"instance_name": schema.StringAttribute{
 							Computed:    true,
@@ -162,7 +164,7 @@ func (c *ctyunRabbitmqInstances) getByID(ctx context.Context, config *CtyunRabbi
 		ProdInstId: config.InstanceID.ValueString(),
 	}
 	// 调用API
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesQueryDetailApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesQueryDetailApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -180,14 +182,15 @@ func (c *ctyunRabbitmqInstances) getByID(ctx context.Context, config *CtyunRabbi
 		BillMode:     types.StringValue(map[string]string{"1": "包年包月", "2": "按需计费"}[r.BillMode]),
 		Prod:         types.StringValue(r.Prod),
 		EngineType:   types.StringValue(r.EngineType),
-		ExpireTime:   types.StringValue(r.ExpireTime),
-		CreateTime:   types.StringValue(r.CreateTime),
 		InstanceName: types.StringValue(r.ClusterName),
 		Status:       types.Int32Value(r.Status),
 		StatusDesc: types.StringValue(map[int32]string{
 			1: "运行中", 3: "已注销", 4: "已退订", 5: "变更中", 6: "创建中",
 		}[r.Status]),
 	}
+	cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, r.CreateTime), utils.ConvertToUTCZ(time.RFC3339, r.ExpireTime)
+	item.CreateTime = types.StringValue(cTime)
+	item.ExpireTime = types.StringValue(eTime)
 	config.Instances = append(config.Instances, item)
 	return
 
@@ -208,7 +211,7 @@ func (c *ctyunRabbitmqInstances) getByPage(ctx context.Context, config *CtyunRab
 		params.PageSize = config.PageSize.ValueInt32()
 	}
 	// 调用API
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesQueryApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesQueryApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -226,14 +229,15 @@ func (c *ctyunRabbitmqInstances) getByPage(ctx context.Context, config *CtyunRab
 			BillMode:     types.StringValue(map[string]string{"1": "包年包月", "2": "按需计费"}[r.BillMode]),
 			Prod:         types.StringValue(r.Prod),
 			EngineType:   types.StringValue(r.EngineType),
-			ExpireTime:   types.StringValue(r.ExpireTime),
-			CreateTime:   types.StringValue(r.CreateTime),
 			InstanceName: types.StringValue(r.ClusterName),
 			Status:       types.Int32Value(r.Status),
 			StatusDesc: types.StringValue(map[int32]string{
 				1: "运行中", 3: "已注销", 4: "已退订", 5: "变更中", 6: "创建中",
 			}[r.Status]),
 		}
+		cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, r.CreateTime), utils.ConvertToUTCZ(time.RFC3339, r.ExpireTime)
+		item.CreateTime = types.StringValue(cTime)
+		item.ExpireTime = types.StringValue(eTime)
 		config.Instances = append(config.Instances, item)
 	}
 	return

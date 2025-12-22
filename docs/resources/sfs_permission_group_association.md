@@ -28,7 +28,7 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
-  name = "permission-group_example"
+  name        = "permission-group-example"
   description = "创建sfs规则组"
 }
 
@@ -48,25 +48,25 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
+
 resource "ctyun_sfs" "sfs_test" {
-  sfs_type     = "performance"
-  sfs_protocol = "nfs"
-  name         = "sfs-example"
-  sfs_size     = 500
-  cycle_type   = "on_demand"
-  az_name      = "cn-huadong1-jsnj1A-public-ctcloud"
-  vpc_id       = ctyun_vpc.vpc_test.id
-  subnet_id    = ctyun_subnet.subnet_test.id
+  type       = "performance"
+  protocol   = "nfs"
+  name       = "sfs-example"
+  size       = 500
+  cycle_type = "on_demand"
+  az_name    = "cn-huadong1-jsnj1A-public-ctcloud"
+  vpc_id     = ctyun_vpc.vpc_test.id
+  subnet_id  = ctyun_subnet.subnet_test.id
 }
 
 
 resource "ctyun_sfs_permission_group_association" "sfs_permission_group_association_test" {
-  permission_group_fuid = ctyun_sfs_permission_group.sfs_permission_group_test.id
-  sfs_uid               = ctyun_sfs.sfs_test.id
-  vpc_id                = ctyun_vpc.vpc_test1.id
+  permission_group_id = ctyun_sfs_permission_group.sfs_permission_group_test.id
+  sfs_id              = ctyun_sfs.sfs_test.id
+  vpc_id              = ctyun_vpc.vpc_test1.id
 }
 ```
 
@@ -75,8 +75,8 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 
 ### Required
 
-- `permission_group_fuid` (String) 权限组ID，支持更新
-- `sfs_uid` (String) 弹性文件系统唯一ID
+- `permission_group_id` (String) 权限组ID，支持更新
+- `sfs_id` (String) 弹性文件系统唯一ID
 - `vpc_id` (String) vpcID
 
 ### Optional
@@ -86,8 +86,8 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 ### Read-Only
 
 - `id` (String) ID
+- `is_default` (Boolean) 是否为默认权限组
 - `permission_group_description` (String) 权限组描述
-- `permission_group_is_default` (Boolean) 是否为默认权限组
 - `permission_group_name` (String) 权限组名称
 - `vpc_cidr` (String) vpc cidr
 - `vpc_name` (String) vpc名称

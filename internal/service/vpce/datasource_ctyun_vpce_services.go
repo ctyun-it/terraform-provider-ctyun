@@ -46,8 +46,8 @@ type CtyunVpceServicesModel struct {
 	Rules          []CtyunVpceServicesRule `tfsdk:"rules"`
 	InstanceType   types.String            `tfsdk:"instance_type"`
 	InstanceID     types.String            `tfsdk:"instance_id"`
-	CreatedAt      types.String            `tfsdk:"created_at"`
-	UpdatedAt      types.String            `tfsdk:"updated_at"`
+	CreateTime     types.String            `tfsdk:"create_time"`
+	UpdateTime     types.String            `tfsdk:"update_time"`
 }
 
 type CtyunVpceServicesConfig struct {
@@ -155,13 +155,13 @@ func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "服务后端实例id,当type为interface时，必填",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Required:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_at": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Required:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -228,8 +228,8 @@ func (c *ctyunVpceServices) Read(ctx context.Context, request datasource.ReadReq
 			Type:           utils.SecStringValue(e.RawType),
 			VpcID:          utils.SecStringValue(e.VpcID),
 			Name:           utils.SecStringValue(e.Name),
-			CreatedAt:      utils.SecStringValue(e.CreatedAt),
-			UpdatedAt:      utils.SecStringValue(e.UpdatedAt),
+			CreateTime:     utils.SecStringValue(e.CreatedAt),
+			UpdateTime:     utils.SecStringValue(e.UpdatedAt),
 		}
 		if len(e.Backends) > 0 {
 			item.InstanceType = utils.SecStringValue(e.Backends[0].InstanceType)

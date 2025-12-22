@@ -35,40 +35,40 @@ data "ctyun_sfs_instances" "sfs_test" {
 
 ### Read-Only
 
-- `sfs_list` (Attributes List) 弹性文件存储列表 (see [below for nested schema](#nestedatt--sfs_list))
+- `instances` (Attributes List) 弹性文件存储列表 (see [below for nested schema](#nestedatt--instances))
 
-<a id="nestedatt--sfs_list"></a>
-### Nested Schema for `sfs_list`
+<a id="nestedatt--instances"></a>
+### Nested Schema for `instances`
 
 Read-Only:
 
 - `az_name` (String) 多可用区下的可用区名称
 - `ceph_id` (String) Ceph底层ID
-- `create_time` (Number) 创建时间，Unix时间戳（毫秒）
-- `expire_time` (Number) 过期时间，Unix时间戳（毫秒）
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
+- `id` (String) 弹性文件系统唯一ID
 - `is_encrypt` (Boolean) 是否为加密盘
 - `kms_uuid` (String) 加密盘密钥UUID
 - `mount_count` (Number) 挂载点数量
+- `name` (String) 弹性文件系统名称
 - `on_demand` (Boolean) 是否按需订购
 - `phy_share_path` (String) Linux物理机共享路径，仅适用于v3.0资源池
 - `project_id` (String) 资源所属企业项目ID
+- `protocol` (String) 挂载协议，nfs或cifs
 - `region_id` (String) 资源池ID
-- `sfs_name` (String) 弹性文件系统名称
-- `sfs_protocol` (String) 挂载协议，nfs或cifs
-- `sfs_size` (Number) 文件系统大小（GB）
-- `sfs_status` (String) 文件系统状态，creating/available/unusable/expired/fail
-- `sfs_type` (String) 文件系统类型，capacity(标准型)或performance(性能型)
-- `sfs_uid` (String) 弹性文件系统唯一ID
 - `share_path` (String) Linux主机共享路径
 - `share_path_v6` (String) Linux主机IPv6共享路径
-- `update_time` (Number) 更新时间，Unix时间戳（毫秒）
+- `size` (Number) 文件系统大小（GB）
+- `status` (String) 文件系统状态，creating/available/unusable/expired/fail
+- `type` (String) 文件系统类型，capacity(标准型)或performance(性能型)
+- `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 已使用大小（MB）
-- `vpce_share_path` (Attributes List) VPCE共享路径信息，仅适用于v4.0资源池 (see [below for nested schema](#nestedatt--sfs_list--vpce_share_path))
+- `vpce_share_path` (Attributes List) VPCE共享路径信息，仅适用于v4.0资源池 (see [below for nested schema](#nestedatt--instances--vpce_share_path))
 - `windows_share_path` (String) Windows主机共享路径
 - `windows_share_path_v6` (String) Windows主机IPv6共享路径
 
-<a id="nestedatt--sfs_list--vpce_share_path"></a>
-### Nested Schema for `sfs_list.vpce_share_path`
+<a id="nestedatt--instances--vpce_share_path"></a>
+### Nested Schema for `instances.vpce_share_path`
 
 Read-Only:
 

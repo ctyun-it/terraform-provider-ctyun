@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -46,7 +47,7 @@ func (c *CtyunPgsqlAssociationEip) Schema(ctx context.Context, request resource.
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,
-				Description: "弹性id",
+				Description: "弹性IP的ID",
 				Validators: []validator.String{
 					validator2.EipValidate(),
 				},
@@ -54,11 +55,7 @@ func (c *CtyunPgsqlAssociationEip) Schema(ctx context.Context, request resource.
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"eip": schema.StringAttribute{
-				Computed:    true,
-				Description: "弹性ip地址",
-			},
-			"inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Required:    true,
 				Description: "实例id",
 				PlanModifiers: []planmodifier.String{
@@ -83,7 +80,7 @@ func (c *CtyunPgsqlAssociationEip) Schema(ctx context.Context, request resource.
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -97,6 +94,13 @@ func (c *CtyunPgsqlAssociationEip) Schema(ctx context.Context, request resource.
 				Description: " 弹性ip状态 0->unbind，1->bind,2->binding",
 				Validators: []validator.Int32{
 					int32validator.Between(0, 2),
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -124,6 +128,9 @@ func (c *CtyunPgsqlAssociationEip) Create(ctx context.Context, request resource.
 	if err != nil {
 		return
 	}
+	// 定义ID，instanceID + EIP id
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.InstID.ValueString(), plan.EipID.ValueString()))
+
 	err = c.getAndMergeBindEip(ctx, &plan)
 	if err != nil {
 		return
@@ -178,9 +185,16 @@ func (c *CtyunPgsqlAssociationEip) Delete(ctx context.Context, request resource.
 	if response.Diagnostics.HasError() {
 		return
 	}
+
+	eip, err := c.eipService.GetEipAddressByEipID(ctx, state.EipID.ValueString(), state.RegionID.ValueString())
+	if err != nil {
+		return
+	}
+	state.eipAddress = *eip.EipAddress
+
 	unbindParams := &pgsql.PgsqlUnBindEipRequest{
 		EipID:  state.EipID.ValueString(),
-		Eip:    state.Eip.ValueString(),
+		Eip:    state.eipAddress,
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &pgsql.PgsqlUnBindEipRequestHeader{}
@@ -213,6 +227,60 @@ func (c *CtyunPgsqlAssociationEip) Configure(ctx context.Context, request resour
 	c.eipService = business.NewEipService(c.meta)
 }
 func (c *CtyunPgsqlAssociationEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eipID],[projectID],[regionID]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunPgsqlAssociationEipConfig
+	var eipID, regionID, projectID, instanceID string
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if instanceID == "" {
+		err = fmt.Errorf("instanceID不能为空")
+		return
+	}
+	if eipID == "" {
+		err = fmt.Errorf("eipID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.InstID = types.StringValue(instanceID)
+	config.EipID = types.StringValue(eipID)
+	config.RegionID = types.StringValue(regionID)
+	if projectID != "" {
+		config.ProjectID = types.StringValue(projectID)
+	}
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
+	err = c.getAndMergeBindEip(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &config)...)
 }
 
 func (c *CtyunPgsqlAssociationEip) PgsqlBindEip(ctx context.Context, config *CtyunPgsqlAssociationEipConfig) (err error) {
@@ -220,7 +288,7 @@ func (c *CtyunPgsqlAssociationEip) PgsqlBindEip(ctx context.Context, config *Cty
 	if err != nil {
 		return
 	}
-	config.Eip = types.StringValue(*eip.EipAddress)
+	config.eipAddress = *eip.EipAddress
 	params := &pgsql.PgsqlBindEipRequest{
 		EipID:  config.EipID.ValueString(),
 		Eip:    *eip.EipAddress,
@@ -318,10 +386,11 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 }
 
 type CtyunPgsqlAssociationEipConfig struct {
-	EipID     types.String `tfsdk:"eip_id"`     //弹性id
-	Eip       types.String `tfsdk:"eip"`        //弹性ip
-	InstID    types.String `tfsdk:"inst_id"`    //实例id
-	ProjectID types.String `tfsdk:"project_id"` //项目id
-	RegionID  types.String `tfsdk:"region_id"`  //区域Id
-	EipStatus types.Int32  `tfsdk:"eip_status"` //弹性ip状态 0->unbind，1->bind
+	EipID      types.String `tfsdk:"eip_id"`      //弹性id
+	InstID     types.String `tfsdk:"instance_id"` //实例id
+	ProjectID  types.String `tfsdk:"project_id"`  //项目id
+	RegionID   types.String `tfsdk:"region_id"`   //区域Id
+	EipStatus  types.Int32  `tfsdk:"eip_status"`  //弹性ip状态 0->unbind，1->bind
+	ID         types.String `tfsdk:"id"`
+	eipAddress string
 }

@@ -12,9 +12,9 @@ provider "ctyun" {
 }
 
 resource "ctyun_eip" "eip_test1" {
-  name        = "tf-eip-test1"
-  bandwidth   = 2
-  cycle_type = "on_demand"
+  name                = "tf-eip-test1"
+  bandwidth           = 2
+  cycle_type          = "on_demand"
   demand_billing_type = "upflowc"
 }
 

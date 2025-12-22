@@ -250,18 +250,40 @@ func (c *ctyunVpcRouteTableRule) Configure(_ context.Context, request resource.C
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [ruleID],[routeTableID],[regionID]
 func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ruleID],[routeTableID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpcRouteTableRuleConfig
 	var ruleID, routeTableID, regionID string
-	err = terraform_extend.Split(request.ID, &ruleID, &routeTableID, &regionID)
-	if err != nil {
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if ruleID == "" {
+		err = fmt.Errorf("ruleID不能为空")
+		return
+	}
+	if routeTableID == "" {
+		err = fmt.Errorf("routeTableID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

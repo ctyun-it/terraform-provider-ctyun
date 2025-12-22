@@ -32,12 +32,12 @@ resource "ctyun_eip_association" "eip_association_test2" {
 
 ### Required
 
-- `eip_id` (String) 弹性ip的id
-- `instance_id` (String) 绑定对象的实例id
+- `eip_id` (String) 弹性IP的ID
+- `instance_id` (String) 绑定对象的实例ID，绑定对象支持云主机和物理机
 
 ### Optional
 
-- `association_type` (String) 绑定的实例类型：ECS云主机：vm，目前仅支持云主机vm，后续会补充更多可选项
+- `association_type` (String) 绑定的实例类型：云主机：vm，物理机：bm
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 

@@ -44,6 +44,8 @@ type CtyunVpceServiceTransitIPConfig struct {
 	RegionID          types.String `tfsdk:"region_id"`
 	SubnetID          types.String `tfsdk:"subnet_id"`
 	TransitIP         types.String `tfsdk:"transit_ip"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -97,6 +99,17 @@ func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaR
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Description: "更新时间，为UTC格式",
+				Computed:    true,
 			},
 		},
 	}
@@ -186,18 +199,42 @@ func (c *ctyunVpceServiceTransitIP) Configure(_ context.Context, request resourc
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [ip],[endpointServiceID],[regionID]
 func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[endpointServiceID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceTransitIPConfig
 	var ip, endpointServiceID, regionID string
-	err = terraform_extend.Split(request.ID, &ip, &endpointServiceID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了 regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID)
+
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if ip == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if endpointServiceID == "" {
+		err = fmt.Errorf("endpointServiceID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -260,6 +297,8 @@ func (c *ctyunVpceServiceTransitIP) getAndMerge(ctx context.Context, plan *Ctyun
 		if utils.SecStringValue(ip.TransitIP) == plan.ID {
 			plan.SubnetID = utils.SecStringValue(ip.SubnetID)
 			plan.TransitIP = utils.SecStringValue(ip.TransitIP)
+			plan.CreateTime = utils.SecStringValue(ip.CreatedAt)
+			plan.UpdateTime = utils.SecStringValue(ip.UpdatedAt)
 			exist = true
 		}
 	}

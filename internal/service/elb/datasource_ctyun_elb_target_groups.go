@@ -115,11 +115,11 @@ func (c *CtyunElbTargetGroups) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "状态: DOWN / ACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -240,6 +240,6 @@ type CtyunTargetGroupModel struct {
 	RewriteCookieName types.String `tfsdk:"rewrite_cookie_name"` //cookie重写名称
 	SourceIpTimeout   types.Int32  `tfsdk:"source_ip_timeout"`   //源IP会话保持超时时间
 	Status            types.String `tfsdk:"status"`              //状态: DOWN / ACTIVE
-	CreatedTime       types.String `tfsdk:"created_time"`        //创建时间，为UTC格式
-	UpdatedTime       types.String `tfsdk:"updated_time"`        //更新时间，为UTC格式
+	CreatedTime       types.String `tfsdk:"create_time"`         //创建时间，为UTC格式
+	UpdatedTime       types.String `tfsdk:"update_time"`         //更新时间，为UTC格式
 }

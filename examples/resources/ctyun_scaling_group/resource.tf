@@ -31,7 +31,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_security_group" "sg_test" {
@@ -58,14 +57,14 @@ resource "ctyun_elb_health_check" "test" {
 }
 
 resource "ctyun_elb_target_group" "target_group_test" {
-  name      = "tf_target_group"
-  vpc_id    = ctyun_vpc.vpc_test.id
-  algorithm = "wrr"
-  health_check_id = ctyun_elb_health_check.test.id
+  name                = "tf_target_group"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  algorithm           = "wrr"
+  health_check_id     = ctyun_elb_health_check.test.id
   session_sticky_mode = "SOURCE_IP"
-  source_ip_timeout = 30
-  proxy_protocol = 1
-  protocol = "TCP"
+  source_ip_timeout   = 30
+  proxy_protocol      = 1
+  protocol            = "TCP"
 }
 
 resource "ctyun_elb_listener" "elb_listener_test" {
@@ -74,7 +73,7 @@ resource "ctyun_elb_listener" "elb_listener_test" {
   protocol            = "TCP"
   protocol_port       = 12345
   default_action_type = "forward"
-  target_groups = [{ target_group_id = ctyun_elb_target_group.target_group_test.id }]
+  target_groups       = [{ target_group_id = ctyun_elb_target_group.target_group_test.id }]
   listener_cps        = 1
   establish_timeout   = 100
 }
@@ -83,8 +82,8 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
-  page_no = 1
-  page_size = 10
+  page_no    = 1
+  page_size  = 10
 }
 
 locals {
@@ -96,16 +95,26 @@ resource "ctyun_keypair" "scaling_test" {
   public_key = var.key_pair
 }
 
+
+data "ctyun_zones" "test" {
+
+}
+
+locals {
+  az_name = data.ctyun_zones.test.zones[0]
+}
+
+
 resource "ctyun_scaling_config" "config_test" {
   name            = "sc-for-policy"
-  image_id        =  local.image_id
+  image_id        = local.image_id
   flavor_name     = "s7.large.2"
-  use_floatings   = "diable"
+  use_floatings   = "disable"
   login_mode      = "key_pair"
   key_pair_id     = ctyun_keypair.scaling_test.id
   monitor_service = true
-  az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
-  volumes         = [{"volume_type":"SATA", "volume_size": 40, "flag":"OS"}]
+  az_names        = [local.az_name]
+  volumes         = [{ "volume_type" : "SATA", "volume_size" : 40, "flag" : "OS" }]
 }
 
 resource "ctyun_scaling_group" "scaling_group_test" {
@@ -120,7 +129,7 @@ resource "ctyun_scaling_group" "scaling_group_test" {
   expected_count         = 1
   health_period          = 300
   use_lb                 = 1
-  lb_list                = [ctyun_elb_loadbalancer.elb_test.id]
+  lb_list                = [{ "port" : 12306, "lb_id" : ctyun_elb_loadbalancer.elb_test.id, "weight" : 1, "host_group_id" : ctyun_elb_target_group.target_group_test.id }]
   config_list            = [ctyun_scaling_config.config_test.id]
   az_strategy            = "priority_distribution"
 }

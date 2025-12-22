@@ -75,16 +75,16 @@ type SfsPermissionRuleListReturnObjResponse struct {
 }
 
 type SfsPermissionRuleListReturnObjListResponse struct {
-	Fuid                  string `json:"fuid"`                  /*  规则的 ID  */
-	Fuser_last_updated    string `json:"fuser_last_updated"`    /*  更新时间。utc 时间  */
-	User_id               string `json:"user_id"`               /*  租户 ID  */
-	Region_id             string `json:"region_id"`             /*  资源池 ID。中间层用的  */
-	Permission_group_id   string `json:"permission_group_id"`   /*  权限组底层 id。yacos用的id  */
-	Permission_group_fuid string `json:"permission_group_fuid"` /*  权限组 fuid。权限组查询接口中的fuid  */
-	Rule_id               string `json:"rule_id"`               /*  权限组规则底层 id  */
-	Rule_auth_address     string `json:"rule_auth_address"`     /*  授权地址，可用于区分子网及具体虚机等  */
-	Rule_rw_permission    string `json:"rule_rw_permission"`    /*  读写权限控制  */
-	Rule_user_permission  string `json:"rule_user_permission"`  /*  nfs 访问用户映射  */
-	Rule_priority_id      int32  `json:"rule_priority_id"`      /*  优先级  */
-	Rule_is_default       *bool  `json:"rule_is_default"`       /*  优先级  */
+	Fuid                 string `json:"fuid"`                 /*  规则的 ID  */
+	Fuser_last_updated   string `json:"fuser_last_updated"`   /*  更新时间。utc 时间  */
+	User_id              string `json:"user_id"`              /*  租户 ID  */
+	Region_id            string `json:"region_id"`            /*  资源池 ID。中间层用的  */
+	Permission_group_id  string `json:"permission_group_id"`  /*  权限组底层 id。yacos用的id  */
+	permission_group_id  string `json:"permission_group_id"`  /*  权限组 fuid。权限组查询接口中的fuid  */
+	Rule_id              string `json:"rule_id"`              /*  权限组规则底层 id  */
+	Rule_auth_address    string `json:"rule_auth_address"`    /*  授权地址，可用于区分子网及具体虚机等  */
+	Rule_rw_permission   string `json:"rule_rw_permission"`   /*  读写权限控制  */
+	Rule_user_permission string `json:"rule_user_permission"` /*  nfs 访问用户映射  */
+	Rule_priority_id     int32  `json:"rule_priority_id"`     /*  优先级  */
+	Rule_is_default      *bool  `json:"rule_is_default"`      /*  优先级  */
 }

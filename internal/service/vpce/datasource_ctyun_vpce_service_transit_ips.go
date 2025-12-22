@@ -31,10 +31,11 @@ func (c *ctyunVpceServiceTransitIPs) Metadata(_ context.Context, request datasou
 }
 
 type CtyunVpceServiceTransitIPsModel struct {
-	ID        types.String `tfsdk:"id"`
-	SubnetID  types.String `tfsdk:"subnet_id"`
-	TransitIP types.String `tfsdk:"transit_ip"`
-	CreatedAt types.String `tfsdk:"created_at"`
+	ID         types.String `tfsdk:"id"`
+	SubnetID   types.String `tfsdk:"subnet_id"`
+	TransitIP  types.String `tfsdk:"transit_ip"`
+	CreateTime types.String `tfsdk:"create_time"`
+	UpdateTime types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpceServiceTransitIPsConfig struct {
@@ -101,9 +102,13 @@ func (c *ctyunVpceServiceTransitIPs) Schema(_ context.Context, _ datasource.Sche
 							Computed:    true,
 							Description: "中转地址",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
+						},
+						"update_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -162,10 +167,11 @@ func (c *ctyunVpceServiceTransitIPs) Read(ctx context.Context, request datasourc
 	config.CurrentCount = types.Int32Value(resp.ReturnObj.CurrentCount)
 	for _, e := range resp.ReturnObj.TransitIPs {
 		item := CtyunVpceServiceTransitIPsModel{
-			ID:        utils.SecStringValue(e.TransitIP),
-			SubnetID:  utils.SecStringValue(e.SubnetID),
-			TransitIP: utils.SecStringValue(e.TransitIP),
-			CreatedAt: utils.SecStringValue(e.CreatedAt),
+			ID:         utils.SecStringValue(e.TransitIP),
+			SubnetID:   utils.SecStringValue(e.SubnetID),
+			TransitIP:  utils.SecStringValue(e.TransitIP),
+			CreateTime: utils.SecStringValue(e.CreatedAt),
+			UpdateTime: utils.SecStringValue(e.UpdatedAt),
 		}
 		config.IPs = append(config.IPs, item)
 	}

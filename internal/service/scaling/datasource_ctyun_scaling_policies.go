@@ -66,7 +66,7 @@ func (c *CtyunScalingPolicies) Schema(ctx context.Context, request datasource.Sc
 					int32validator.Between(1, 100),
 				},
 			},
-			"scaling_policies": schema.ListNestedAttribute{
+			"policies": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -78,7 +78,7 @@ func (c *CtyunScalingPolicies) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "伸缩策略名称",
 						},
-						"policy_type": schema.StringAttribute{
+						"type": schema.StringAttribute{
 							Computed:    true,
 							Description: "策略类型: alert-告警, regular-定时, period-周期, target-目标追踪",
 						},
@@ -131,13 +131,13 @@ func (c *CtyunScalingPolicies) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "企业项目ID",
 						},
-						"create_date": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"update_date": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"trigger_id": schema.StringAttribute{
 							Computed:    true,
@@ -337,7 +337,7 @@ func (c *CtyunScalingPolicies) Read(ctx context.Context, request datasource.Read
 type CtyunScalingPolicyList struct {
 	RuleID                        types.Int64  `tfsdk:"rule_id"`                           // 伸缩策略ID
 	Name                          types.String `tfsdk:"name"`                              // 伸缩策略名称
-	PolicyType                    types.String `tfsdk:"policy_type"`                       // 策略类型: 1-告警, 2-定时, 3-周期, 4-目标追踪
+	PolicyType                    types.String `tfsdk:"type"`                              // 策略类型: 1-告警, 2-定时, 3-周期, 4-目标追踪
 	Status                        types.String `tfsdk:"status"`                            // 启用状态: 1-启用, 2-停用
 	Action                        types.String `tfsdk:"action"`                            // 执行动作: 1-增加, 2-减少, 3-设置为
 	OperateCount                  types.Int32  `tfsdk:"operate_count"`                     // 调整值
@@ -350,7 +350,7 @@ type CtyunScalingPolicyList struct {
 	Day                           types.Set    `tfsdk:"day"`                               // 执行日期 (列表)
 	GroupID                       types.Int32  `tfsdk:"group_id"`                          // 伸缩组ID
 	ProjectID                     types.String `tfsdk:"project_id"`                        // 企业项目ID
-	CreateDate                    types.String `tfsdk:"create_date"`                       // 创建时间
+	CreateDate                    types.String `tfsdk:"create_time"`                       // 创建时间
 	UpdateDate                    types.String `tfsdk:"update_date"`                       // 更新时间
 	TriggerID                     types.String `tfsdk:"trigger_id"`                        // 告警规则ID
 	TriggerName                   types.String `tfsdk:"trigger_name"`                      // 告警规则名称
@@ -371,9 +371,9 @@ type CtyunScalingPolicyList struct {
 }
 
 type CtyunScalingPoliciesConfig struct {
-	RegionID        types.String             `tfsdk:"region_id"`        // 资源池ID
-	GroupID         types.Int64              `tfsdk:"group_id"`         // 伸缩组ID
-	PageNo          types.Int32              `tfsdk:"page_no"`          // 页码
-	PageSize        types.Int32              `tfsdk:"page_size"`        // 分页查询时设置的每页行数，取值范围:[1~100]，默认值为10
-	ScalingPolicies []CtyunScalingPolicyList `tfsdk:"scaling_policies"` // 弹性伸缩策略列表
+	RegionID        types.String             `tfsdk:"region_id"` // 资源池ID
+	GroupID         types.Int64              `tfsdk:"group_id"`  // 伸缩组ID
+	PageNo          types.Int32              `tfsdk:"page_no"`   // 页码
+	PageSize        types.Int32              `tfsdk:"page_size"` // 分页查询时设置的每页行数，取值范围:[1~100]，默认值为10
+	ScalingPolicies []CtyunScalingPolicyList `tfsdk:"policies"`  // 弹性伸缩策略列表
 }

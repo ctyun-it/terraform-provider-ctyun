@@ -1,5 +1,5 @@
 # ctyun_sfs_permission_rules (Data Source)
-天翼云SFS（文件存储）权限组规则管理，支持权限组规则创建、更新和删除。具体文档可参考：https://www.ctyun.cn/document/10027350/10192622
+-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
 
 
 
@@ -20,12 +20,12 @@ provider "ctyun" {
 }
 
 resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
-  name = "permission-group_example"
+  name        = "permission-group-example"
   description = "创建sfs规则组"
 }
 
 data "ctyun_sfs_permission_rules" "test" {
-  permission_group_fuid = ctyun_sfs_permission_group.sfs_permission_group_test.id
+  permission_group_id = ctyun_sfs_permission_group.sfs_permission_group_test.id
 }
 ```
 
@@ -34,29 +34,27 @@ data "ctyun_sfs_permission_rules" "test" {
 
 ### Optional
 
+- `id` (String) 权限组规则id，permission_group_id和id至少存在一个
 - `page_no` (Number) 页码，取值范围：正整数（≥1），注：默认值为1
 - `page_size` (Number) 每页记录数目，取值范围：[1, 50]，注：默认值为10
-- `permission_group_fuid` (String) 权限组Fuid，permission_group_fuid和permission_rule_fuid至少存在一个
-- `permission_rule_fuid` (String) 权限组规则Fuid，permissionGroupFuid和permissionRuleFuid至少存在一个
+- `permission_group_id` (String) 权限组id，permission_group_id和id至少存在一个
 - `region_id` (String)
 
 ### Read-Only
 
-- `permission_rules` (Attributes List) 权限组规则列表 (see [below for nested schema](#nestedatt--permission_rules))
+- `rules` (Attributes List) 权限组规则列表 (see [below for nested schema](#nestedatt--rules))
 
-<a id="nestedatt--permission_rules"></a>
-### Nested Schema for `permission_rules`
+<a id="nestedatt--rules"></a>
+### Nested Schema for `rules`
 
 Read-Only:
 
 - `auth_addr` (String) 授权地址，可用于区分子网及具体虚机等
-- `permission_group_fuid` (String) 权限组Fuid
-- `permission_group_id` (String) 权限组底层ID
-- `permission_rule_fuid` (String) 权限组规则ID
-- `permission_rule_id` (String) 权限组规则底层ID
-- `permission_rule_is_default` (Boolean) 是否为默认规则
-- `permission_rule_priority` (Number) 优先级
+- `id` (String) 权限组规则ID
+- `is_default` (Boolean) 是否为默认规则
+- `permission_group_id` (String) 权限组ID
+- `priority` (Number) 优先级
 - `rw_permission` (String) 读写权限控制
-- `update_time` (String) 更新时间。UTC时间
+- `update_time` (String) 更新时间，为UTC格式
 - `user_id` (String) 租户ID
 - `user_permission` (String) 用户权限

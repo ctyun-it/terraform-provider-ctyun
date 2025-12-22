@@ -38,7 +38,8 @@ type CtyunVpceServiceReverseRulesModel struct {
 	TargetIP    types.String `tfsdk:"target_ip"`
 	TargetPort  types.Int32  `tfsdk:"target_port"`
 	Protocol    types.String `tfsdk:"protocol"`
-	CreatedAt   types.String `tfsdk:"created_at"`
+	CreateTime  types.String `tfsdk:"create_time"`
+	UpdateTime  types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpceServiceReverseRulesConfig struct {
@@ -121,9 +122,13 @@ func (c *ctyunVpceServiceReverseRules) Schema(_ context.Context, _ datasource.Sc
 							Computed:    true,
 							Description: "协议，TCP:TCP协议,UDP:UDP协议",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
+							Description: "创建时间，为UTC格式",
 							Computed:    true,
-							Description: "创建时间",
+						},
+						"update_time": schema.StringAttribute{
+							Description: "更新时间，为UTC格式",
+							Computed:    true,
 						},
 					},
 				},
@@ -189,7 +194,8 @@ func (c *ctyunVpceServiceReverseRules) Read(ctx context.Context, request datasou
 			TargetPort:  types.Int32Value(rule.TargetPort),
 			TransitPort: types.Int32Value(rule.TransitPort),
 			Protocol:    utils.SecStringValue(rule.Protocol),
-			CreatedAt:   utils.SecStringValue(rule.CreatedAt),
+			CreateTime:  utils.SecStringValue(rule.CreatedAt),
+			UpdateTime:  utils.SecStringValue(rule.UpdatedAt),
 		}
 		config.Rules = append(config.Rules, item)
 	}

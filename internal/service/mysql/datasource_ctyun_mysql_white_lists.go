@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -24,7 +25,7 @@ func (c *CtyunMysqlWhiteLists) Schema(ctx context.Context, request datasource.Sc
 	response.Schema = schema.Schema{
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794`,
 		Attributes: map[string]schema.Attribute{
-			"prod_inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Required:    true,
 				Description: "Mysql实例id",
 			},
@@ -51,17 +52,17 @@ func (c *CtyunMysqlWhiteLists) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "白名单分组组内数量",
 						},
-						"prod_inst_id": schema.StringAttribute{
+						"instance_id": schema.StringAttribute{
 							Computed:    true,
 							Description: "Mysql实例ID",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"group_white_list": schema.SetAttribute{
 							Computed:    true,
@@ -127,8 +128,8 @@ func (c *CtyunMysqlWhiteLists) Read(ctx context.Context, request datasource.Read
 		whiteListInfo.GroupName = types.StringValue(whiteInfo.GroupName)
 		whiteListInfo.GroupWhiteListCount = types.Int32Value(whiteInfo.GroupWhiteListCount)
 		whiteListInfo.ProdInstID = types.StringValue(whiteInfo.OuterProdInstID)
-		whiteListInfo.CreatedTime = types.StringValue(fmt.Sprintf("%d", whiteInfo.CreateTime))
-		whiteListInfo.UpdatedTime = types.StringValue(fmt.Sprintf("%d", whiteInfo.UpdateTime))
+		whiteListInfo.CreatedTime = types.StringValue(utils.FromUnixToUTC(whiteInfo.CreateTime))
+		whiteListInfo.UpdatedTime = types.StringValue(utils.FromUnixToUTC(whiteInfo.UpdateTime))
 		whiteListInfo.AccessMachineType = types.StringValue(whiteInfo.AccessMachineType)
 		groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, whiteInfo.WhiteList)
 		if diags.HasError() {
@@ -162,15 +163,15 @@ func (c *CtyunMysqlWhiteLists) Metadata(ctx context.Context, request datasource.
 type CtyunMysqlAccessWhiteListModel struct {
 	GroupName           types.String `tfsdk:"group_name"`
 	GroupWhiteListCount types.Int32  `tfsdk:"group_white_list_count"`
-	ProdInstID          types.String `tfsdk:"prod_inst_id"`
-	CreatedTime         types.String `tfsdk:"created_time"`
-	UpdatedTime         types.String `tfsdk:"updated_time"`
+	ProdInstID          types.String `tfsdk:"instance_id"`
+	CreatedTime         types.String `tfsdk:"create_time"`
+	UpdatedTime         types.String `tfsdk:"update_time"`
 	GroupWhiteList      types.Set    `tfsdk:"group_white_list"`
 	AccessMachineType   types.String `tfsdk:"access_machine_type"`
 }
 
 type CtyunMysqlAccessWhiteListsConfig struct {
-	ProdInstID types.String                     `tfsdk:"prod_inst_id"`
+	ProdInstID types.String                     `tfsdk:"instance_id"`
 	ProjectID  types.String                     `tfsdk:"project_id"`
 	RegionID   types.String                     `tfsdk:"region_id"`
 	WhiteLists []CtyunMysqlAccessWhiteListModel `tfsdk:"white_lists"`

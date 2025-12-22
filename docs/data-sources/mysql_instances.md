@@ -20,7 +20,7 @@ provider "ctyun" {
 }
 
 data "ctyun_mysql_instances" "test" {
-  
+
 }
 ```
 
@@ -29,9 +29,9 @@ data "ctyun_mysql_instances" "test" {
 
 ### Optional
 
-- `page_now` (Number) 当前页
+- `name` (String) 实例名称
+- `page_no` (Number) 当前页
 - `page_size` (Number) 单页记录条数
-- `prod_inst_name` (String) 实例名称
 - `project_id` (String) 项目ID
 - `region_id` (String) 资源池ID
 - `res_db_engine` (String) 数据库引擎 枚举5.7, 8.0
@@ -40,7 +40,7 @@ data "ctyun_mysql_instances" "test" {
 
 ### Read-Only
 
-- `mysql_instances` (Attributes List) mysql实例列表 (see [below for nested schema](#nestedatt--mysql_instances))
+- `instances` (Attributes List) mysql实例列表 (see [below for nested schema](#nestedatt--instances))
 
 <a id="nestedatt--tag_vo_list"></a>
 ### Nested Schema for `tag_vo_list`
@@ -52,8 +52,8 @@ Optional:
 - `value` (String) 标签value
 
 
-<a id="nestedatt--mysql_instances"></a>
-### Nested Schema for `mysql_instances`
+<a id="nestedatt--instances"></a>
+### Nested Schema for `instances`
 
 Read-Only:
 
@@ -61,15 +61,16 @@ Read-Only:
 - `audit_log_status` (Number) 日志审计开关
 - `backup_disk_used_rated` (Number) 备份空间使用率
 - `can_operate` (Number) 是否可升级
-- `create_time` (Number) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `db_mysql_version` (String) mysql版本
 - `disk_size` (Number) 存储空间大小 单位G
 - `disk_type` (String) 存储类型：1.SATA 2.SAS 3.SSD 4.LVM
-- `expire_time` (Number) 到期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `inst_release_protection_status` (Number) 实例释放保护开关 1:on,0:off
 - `is_mgr` (Number) 1：mgr实例 0：非mgr实例
 - `last_manual_back_up` (Number) 最后系统全备id
 - `machine_spec` (String) 实例规格
+- `name` (String) 实例名称
 - `net_name` (String) 虚拟私有云
 - `new_mysql_version` (String) mysql版本
 - `order_id` (Number) 订单lD
@@ -82,7 +83,6 @@ Read-Only:
 - `prod_id` (Number) 产品id
 - `prod_inst_flag` (String) 实例标签
 - `prod_inst_id` (Number) 内部实例id
-- `prod_inst_name` (String) 实例名称
 - `prod_inst_set_name` (String) 实例set名称
 - `prod_order_status` (Number) 0.正常 1.欠费暂停 2.已注销 3.创建中 4.施工失败 5.到期退订状态 6.新增的状态-openApi暂停 7.创建完成等待变更单 8.待注销 9.手动暂停 10.手动退订
 - `prod_running_status` (Number) 0.正常 1.重启中 2.备份中 3.恢复中 4.修改参数中 5.应用参数组中 6.扩容预处理中 7.扩容预处理完成 8.修改端口中 9.迁移中 10.重置密码中 11.修改数据复制方式中 12.缩容预处理中 13.缩容预处理完成 15.内核小版本升级 17.迁移可用区中 18.修改备份配置中 20.停止中 21.已停止 22.启动中 26.白名单配置中

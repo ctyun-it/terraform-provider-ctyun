@@ -87,8 +87,7 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][a-zA-Z0-9_\\-\\x{4e00}-\\x{9fa5}]*$"), "必须以拉丁字母或中文开头，只能包含拉丁字母、中文、数字、下划线和连字符"),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^([^h]|h[^t]|ht[^t]|htt[^p]|http[^s]|https.).*$`), "不能以http:或https:开头"),
+					validator2.AclName(),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -233,11 +232,11 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 				},
 				Default: stringdefault.StaticString(business.ElbRuleStatusACTIVE),
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
@@ -561,26 +560,39 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var cfg CtyunElbListenerConfig
-	var id string
-	err = terraform_extend.Split(request.ID, &id)
+	var config CtyunElbListenerConfig
+	var ID, projectID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+	config.ProjectID = types.StringValue(projectID)
+	err = c.getAndMergeListener(ctx, &config)
 	if err != nil {
 		return
 	}
-	regionId := c.meta.GetExtraIfEmpty(cfg.RegionID.ValueString(), common.ExtraRegionId)
-	cfg.RegionID = types.StringValue(regionId)
-	azName := c.meta.GetExtraIfEmpty(cfg.AzName.ValueString(), common.ExtraAzName)
-	cfg.AzName = types.StringValue(azName)
-
-	cfg.ID = types.StringValue(id)
-	err = c.getAndMergeListener(ctx, &cfg)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, &cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunElbListener) CreateElbListener(ctx context.Context, plan *CtyunElbListenerConfig) (err error) {
@@ -792,6 +804,9 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.CaEnabled = utils.SecBoolValue(respObj.CaEnabled)
 	plan.ForwardedForEnabled = utils.SecBoolValue(respObj.ForwardedForEnabled)
 	plan.AccessControlType = types.StringValue(respObj.AccessControlType)
+	plan.LoadBalancerID = types.StringValue(respObj.LoadBalancerID)
+	plan.Protocol = types.StringValue(respObj.Protocol)
+	plan.ProtocolPort = types.Int32Value(respObj.ProtocolPort)
 	if respObj.Nat64 == 0 {
 		plan.EnableNat64 = types.BoolValue(false)
 	} else if respObj.Nat64 == 1 {
@@ -1056,8 +1071,8 @@ type CtyunElbListenerConfig struct {
 	AzName              types.String `tfsdk:"az_name"`               //可用区名称
 	ProjectID           types.String `tfsdk:"project_id"`            //项目ID
 	Status              types.String `tfsdk:"status"`                //监听器状态: DOWN / ACTIVE
-	CreatedTime         types.String `tfsdk:"created_time"`          //创建时间，为UTC格式
-	UpdatedTime         types.String `tfsdk:"updated_time"`          //更新时间，为UTC格式
+	CreatedTime         types.String `tfsdk:"create_time"`           //创建时间，为UTC格式
+	UpdatedTime         types.String `tfsdk:"update_time"`           //更新时间，为UTC格式
 	EnableNat64         types.Bool   `tfsdk:"enable_nat_64"`         //是否开启 nat64
 	ListenerQps         types.Int32  `tfsdk:"listener_qps"`          //qps 大小
 	EstablishTimeout    types.Int32  `tfsdk:"establish_timeout"`     //建立连接超时时间，单位秒，取值范围： 1 - 1800

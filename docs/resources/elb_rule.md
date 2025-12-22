@@ -1,5 +1,5 @@
 # ctyun_elb_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110
 
 
 
@@ -35,7 +35,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
@@ -58,10 +57,13 @@ resource "ctyun_elb_target_group" "test2" {
 resource "ctyun_elb_rule" "rule_test" {
   listener_id = ctyun_elb_loadbalancer.listener_test.id
   conditions = [
-    { "type" : "server_name", "condition_server_name" : "terraform-test.com" }
+    {
+      "condition_type" : "server_name",
+      "condition_server_name" : "terraform-test.com"
+    }
   ]
   action_type          = "forward"
-  action_target_groups = [{target_group_id=ctyun_elb_target_group.test2.id}]
+  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test2.id }]
 }
 ```
 
@@ -85,11 +87,11 @@ resource "ctyun_elb_rule" "rule_test" {
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 转发规则 ID
 - `load_balancer_id` (String) 负载均衡Id
 - `status` (String) 状态: ACTIVE / DOWN
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--conditions"></a>
 ### Nested Schema for `conditions`

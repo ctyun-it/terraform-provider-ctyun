@@ -9,6 +9,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -44,7 +45,8 @@ type CtyunRedisAssociationEipConfig struct {
 	ID         types.String `tfsdk:"id"`
 	InstanceID types.String `tfsdk:"instance_id"`
 	RegionID   types.String `tfsdk:"region_id"`
-	EipAddress types.String `tfsdk:"eip_address"`
+	EipID      types.String `tfsdk:"eip_id"`
+	eipAddress string
 }
 
 func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -52,9 +54,11 @@ func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRe
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173`,
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Computed:    true,
+				Description: "ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -68,14 +72,14 @@ func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRe
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"eip_address": schema.StringAttribute{
+			"eip_id": schema.StringAttribute{
 				Required:    true,
-				Description: "弹性IP地址",
+				Description: "弹性IP的ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					validator2.Ip(),
+					validator2.EipValidate(),
 				},
 			},
 			"instance_id": schema.StringAttribute{
@@ -85,7 +89,7 @@ func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRe
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
+					stringvalidator.UTF8LengthBetween(32, 32),
 				},
 			},
 		},
@@ -105,7 +109,7 @@ func (c *ctyunRedisAssociationEip) Create(ctx context.Context, request resource.
 		return
 	}
 	// 创建前检查
-	err = c.checkBeforeAssociate(ctx, plan)
+	err = c.checkBeforeAssociate(ctx, &plan)
 	if err != nil {
 		return
 	}
@@ -179,7 +183,6 @@ func (c *ctyunRedisAssociationEip) Delete(ctx context.Context, request resource.
 	if err != nil {
 		return
 	}
-	//response.State.RemoveResource(ctx)
 }
 
 func (c *ctyunRedisAssociationEip) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -192,23 +195,47 @@ func (c *ctyunRedisAssociationEip) Configure(_ context.Context, request resource
 	c.eipService = business.NewEipService(meta)
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eip_address],[regionID]
 func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eipID],[regionID]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunRedisAssociationEipConfig
-	var instanceID, eipAddress, regionID string
-	err = terraform_extend.Split(request.ID, &instanceID, &eipAddress, &regionID)
-	if err != nil {
+	var instanceID, eipID, regionID string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if instanceID == "" {
+		err = fmt.Errorf("instanceID不能为空")
 		return
 	}
+	if eipID == "" {
+		err = fmt.Errorf("eipID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.InstanceID = types.StringValue(instanceID)
-	cfg.EipAddress = types.StringValue(eipAddress)
+	cfg.EipID = types.StringValue(eipID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
@@ -218,12 +245,13 @@ func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request reso
 }
 
 // checkBeforeAssociate 绑定前检查
-func (c *ctyunRedisAssociationEip) checkBeforeAssociate(ctx context.Context, plan CtyunRedisAssociationEipConfig) (err error) {
-	regionID, instanceID, eipAddress := plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.EipAddress.ValueString()
-	_, err = c.eipService.GetEipByAddress(ctx, eipAddress, regionID)
+func (c *ctyunRedisAssociationEip) checkBeforeAssociate(ctx context.Context, plan *CtyunRedisAssociationEipConfig) (err error) {
+	regionID, instanceID, eipID := plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.EipID.ValueString()
+	eip, err := c.eipService.GetEipAddressByEipID(ctx, eipID, regionID)
 	if err != nil {
 		return
 	}
+	plan.eipAddress = utils.SecString(eip.EipAddress)
 	_, err = c.redisService.GetRedisByID(ctx, instanceID, regionID)
 	if err != nil {
 		return
@@ -237,7 +265,7 @@ func (c *ctyunRedisAssociationEip) associate(ctx context.Context, plan CtyunRedi
 		RegionId:    plan.RegionID.ValueString(),
 		BindObjType: 4,
 		ProdInstId:  plan.InstanceID.ValueString(),
-		ElasticIp:   plan.EipAddress.ValueString(),
+		ElasticIp:   plan.eipAddress,
 	}
 
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2BindElasticIPApi.Do(ctx, c.meta.SdkCredential, params)
@@ -255,26 +283,38 @@ func (c *ctyunRedisAssociationEip) associate(ctx context.Context, plan CtyunRedi
 
 // getAndMerge 从远端查询
 func (c *ctyunRedisAssociationEip) getAndMerge(ctx context.Context, plan *CtyunRedisAssociationEipConfig) (err error) {
-	regionID, instanceID, eipAddress := plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.EipAddress.ValueString()
+	regionID, instanceID, eipID := plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.EipID.ValueString()
+	eip, err := c.eipService.GetEipAddressByEipID(ctx, eipID, regionID)
+	if err != nil {
+		return
+	}
+	plan.eipAddress = utils.SecString(eip.EipAddress)
+
 	instance, err := c.redisService.GetRedisByID(ctx, instanceID, regionID)
 	if err != nil {
 		return
 	}
-	if instance.UserInfo.ElasticIp != plan.EipAddress.ValueString() {
-		err = fmt.Errorf("Redis实例 %s 和弹性IP %s 未绑定", instanceID, eipAddress)
+	if instance.UserInfo.ElasticIpBind != 1 || instance.UserInfo.ElasticIp != plan.eipAddress {
+		err = fmt.Errorf("Redis实例 %s 和弹性IP %s 未绑定", instanceID, eipID)
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instanceID, eipAddress, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
 	return
 }
 
 // dissociate 解绑
 func (c *ctyunRedisAssociationEip) dissociate(ctx context.Context, plan CtyunRedisAssociationEipConfig) (err error) {
+	regionID, instanceID, eipID := plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.EipID.ValueString()
+	eip, err := c.eipService.GetEipAddressByEipID(ctx, eipID, regionID)
+	if err != nil {
+		return
+	}
+	plan.eipAddress = utils.SecString(eip.EipAddress)
 	params := &dcs2.Dcs2UnBindElasticIPRequest{
-		RegionId:    plan.RegionID.ValueString(),
+		RegionId:    regionID,
 		BindObjType: 4,
-		ProdInstId:  plan.InstanceID.ValueString(),
-		ElasticIp:   plan.EipAddress.ValueString(),
+		ProdInstId:  instanceID,
+		ElasticIp:   plan.eipAddress,
 	}
 
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2UnBindElasticIPApi.Do(ctx, c.meta.SdkCredential, params)

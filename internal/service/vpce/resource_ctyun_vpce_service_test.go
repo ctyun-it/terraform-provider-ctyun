@@ -83,6 +83,19 @@ func TestAccCtyunVpceService(t *testing.T) {
 				},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"subnet_id",
+				},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedEndpointPort, updatedWhitelistEmail, dependence.vpcID, dependence.subnetID, dependence.ecsID2) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Destroy: true,

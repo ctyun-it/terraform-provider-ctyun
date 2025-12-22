@@ -1,7 +1,9 @@
 package utils
 
 import (
+	crand "crypto/rand"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -49,15 +51,35 @@ func LoadTestCase(filename string, parameters ...interface{}) string {
 const charset = "abcdefghijklmnopqrstuvwxyz"
 
 func GenerateRandomString() string {
+	return generateRandomStringWithRetry(0)
+}
+
+func generateRandomStringWithRetry(retryCount int) string {
+	if retryCount > 1 { // 最多重试1次
+		return ""
+	}
+
 	length := 10
 	builder := strings.Builder{}
 	builder.Grow(length)
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+	charsetLen := big.NewInt(int64(len(charset)))
+
 	for i := 0; i < length; i++ {
-		randomIndex := rand.Intn(len(charset))
-		builder.WriteByte(charset[randomIndex])
+		randomIndex, _ := crand.Int(crand.Reader, charsetLen)
+		builder.WriteByte(charset[randomIndex.Int64()])
 	}
-	return builder.String()
+
+	result := builder.String()
+
+	// 检查是否有连续3个递增字符
+	for i := 0; i < length-2; i++ {
+		if result[i]+1 == result[i+1] && result[i+1]+1 == result[i+2] {
+			// 如果有，重新生成一次
+			return generateRandomStringWithRetry(retryCount + 1)
+		}
+	}
+
+	return result
 }
 func GenerateRandomPort(min int, max int) int {
 	rand.New(rand.NewSource(time.Now().UnixNano()))

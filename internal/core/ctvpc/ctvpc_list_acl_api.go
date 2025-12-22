@@ -87,6 +87,15 @@ type CtvpcListAclReturnObjResponse struct {
 }
 
 type CtvpcListAclReturnObjAclsResponse struct {
-	AclID *string `json:"aclID,omitempty"` /*  acl id  */
-	Name  *string `json:"name,omitempty"`  /*  acl 名称  */
+	AclID           *string  `json:"aclID,omitempty"`           /*  acl id  */
+	Name            *string  `json:"name,omitempty"`            /*  acl 名称  */
+	Description     *string  `json:"description,omitempty"`     /*  acl描述信息  */
+	ApplyToPublicLb *bool    `json:"applyToPublicLb,omitempty"` /*  是否应用到公网LB，true：是；false：否  */
+	VpcID           *string  `json:"vpcID,omitempty"`           /*  vpc id  */
+	Enabled         *string  `json:"enabled"`
+	InPolicyID      []string `json:"inPolicyID"`
+	OutPolicyID     []string `json:"outPolicyID"`
+	CreatedAt       *string  `json:"createdAt,omitempty"` /*  创建时间  */
+	UpdatedAt       *string  `json:"updatedAt,omitempty"` /*  更新时间  */
+	SubnetIDs       []string `json:"subnetIDs"`
 }

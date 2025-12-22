@@ -26,14 +26,6 @@ resource "ctyun_vpc" "vpc_test" {
   enable_ipv6 = true
 }
 
-resource "ctyun_nat" "nat_test"{
-  vpc_id = ctyun_vpc.vpc_test.id
-  spec = 1
-  name = "tf-nat"
-  description = "terraform测试使用"
-  cycle_type = "on_demand"
-}
-
 resource "ctyun_eip" "eip_test" {
   name                = "tf-eip-for-nat1"
   bandwidth           = 1
@@ -41,22 +33,22 @@ resource "ctyun_eip" "eip_test" {
   demand_billing_type = "upflowc"
 }
 
-resource "ctyun_nat" "nat_test"{
-  vpc_id = ctyun_vpc.vpc_test.id
-  spec = 1
-  name = "tf-nat-expample"
+resource "ctyun_nat" "nat_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  spec        = 1
+  name        = "tf-nat-expample"
   description = "terraform测试使用"
-  cycle_type = "on_demand"
+  cycle_type  = "on_demand"
 }
 
-resource "ctyun_nat_dnat" "dnat_test"{
+resource "ctyun_nat_dnat" "dnat_test" {
   nat_gateway_id = ctyun_nat.nat_test.id
-  external_id = ctyun_eip.eip_test.id
-  external_port = 80
-  internal_ip = "127.0.0.1"
-  dnat_type = "custom"
-  internal_port = 12454
-  protocol = "tcp"
+  external_id    = ctyun_eip.eip_test.id
+  external_port  = 80
+  internal_ip    = "127.0.0.1"
+  dnat_type      = "custom"
+  internal_port  = 12454
+  protocol       = "tcp"
 }
 ```
 
@@ -67,7 +59,7 @@ resource "ctyun_nat_dnat" "dnat_test"{
 
 - `dnat_type` (String) dnat规则类型，支持传递instance或custom，支持更新
 - `external_id` (String) 弹性IP的ID，形如eip-xxxxx，支持更新
-- `external_port` (Number) 弹性IP公网端口，1 - 1024，支持更新
+- `external_port` (Number) 弹性IP公网端口，1 - 65535，支持更新
 - `internal_port` (Number) 主机内网端口，1 - 65535，支持更新
 - `nat_gateway_id` (String) NAT网关Id
 - `protocol` (String) 协议：tcp/udp，支持更新
@@ -82,7 +74,7 @@ resource "ctyun_nat_dnat" "dnat_test"{
 
 ### Read-Only
 
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `dnat_id` (String) Dnat规则的id
 - `external_ip` (String) 弹性公网IP地址
 - `id` (String) ID，同dnat_id

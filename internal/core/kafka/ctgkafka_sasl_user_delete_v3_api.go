@@ -58,12 +58,12 @@ type CtgkafkaSaslUserDeleteV3Request struct {
 }
 
 type CtgkafkaSaslUserDeleteV3Response struct {
-	StatusCode string                                     `json:"statusCode,omitempty"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
-	Message    string                                     `json:"message,omitempty"`    /*  提示信息。  */
-	ReturnObj  *CtgkafkaSaslUserDeleteV3ReturnObjResponse `json:"returnObj"`            /*  返回对象。  */
-	Error      string                                     `json:"error,omitempty"`      /*  错误码，描述错误信息。  */
+	StatusCode string                                     `json:"statusCode"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
+	Message    string                                     `json:"message"`    /*  提示信息。  */
+	ReturnObj  *CtgkafkaSaslUserDeleteV3ReturnObjResponse `json:"returnObj"`  /*  返回对象。  */
+	Error      string                                     `json:"error"`      /*  错误码，描述错误信息。  */
 }
 
 type CtgkafkaSaslUserDeleteV3ReturnObjResponse struct {
-	Data string `json:"data,omitempty"` /*  响应描述。  */
+	Data string `json:"data"` /*  响应描述。  */
 }

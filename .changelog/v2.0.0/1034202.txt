@@ -1,0 +1,95 @@
+release-note:enhancement
+unify the naming of time fields as create_time, update_time, and expire_time, with values complying with RFC3339
+
+release-note:enhancement
+datasource\ctyun_ebs_backup_policies: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_ebs_snapshot_policies: fields remove redundant prefixes
+
+release-note:enhancement
+resource\ctyun_ebs_backup_policy: block to attribute
+
+release-note:enhancement
+resource\ctyun_ebs_snapshot_policy: block to attribute
+
+release-note:enhancement
+datasource\ctyun_ecs_backup_policies: fields remove redundant prefixes
+
+release-note:enhancement
+resource\ctyun_ecs: flavor_name support update
+
+release-note:enhancement
+resource\ctyun_hpfs: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_elb_rules: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_elb_targets: fields remove redundant prefixes
+
+release-note:enhancement
+resource\ctyun_sfs: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_ecs_affinity_groups: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_ecs_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_hpfs_clusters: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_hpfs_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_mongodb_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_mysql_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_postgresql_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_mysql_white_lists: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_scaling_configs: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_scaling_policies: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_sfs_instances: fields remove redundant prefixes
+
+release-note:enhancement
+datasource\ctyun_sfs_permission_rules: fields remove redundant prefixes
+
+release-note:enhancement
+resource\ctyun_ccse_cluster: port range validator change and support update
+
+release-note:enhancement
+resource\ctyun_ebm: support bandwidth and remove eip_id
+
+release-note:enhancement
+resource\ctyun_ecs: support bandwidth
+
+release-note:enhancement
+resource\ctyun_ebs: add support fields
+
+release-note:enhancement
+resource\ctyun_elb_acl: source_ips max length change to 50
+
+release-note:enhancement
+resource\ctyun_redis_association_eip: use eip_id replace eip_address
+
+release-note:enhancement
+resource\ctyun_redis_instance: support update
+
+release-not:deprecation
+datasource\ctyun_mongodb_association_eips
+
+release-not:deprecation
+datasource\ctyun_mysql_association_eips

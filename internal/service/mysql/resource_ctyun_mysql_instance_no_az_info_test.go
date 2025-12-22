@@ -44,7 +44,7 @@ func TestAccCtyunMysqlNoAzInfoInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name1, password, "", "", flavorName, MsProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name1),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -57,7 +57,7 @@ func TestAccCtyunMysqlNoAzInfoInstance(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name1, password, "", "", flavorName, updateProdID, "", storageType, updatedStorageSpace, "", "", backupStorageSpace),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name1),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -111,7 +111,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, prodID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -124,7 +124,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -137,7 +137,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", updatedFlavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -190,7 +190,7 @@ func TestAccCtyunMysqlNoAzInfoInstance2(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name2, password, "", "", flavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name2),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
@@ -204,7 +204,7 @@ func TestAccCtyunMysqlNoAzInfoInstance2(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name2, password, "", "", updatedFlavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name2),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),

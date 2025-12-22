@@ -18,11 +18,60 @@ terraform {
 provider "ctyun" {
 
 }
+resource "ctyun_vpc" "vpc_test" {
+  name        = "tf-vpc-for-mon"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
+}
 
+resource "ctyun_subnet" "subnet_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tf-subnet-for-mon"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  dns = [
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+}
+
+resource "ctyun_security_group" "security_group_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tf-sg-for-mon"
+  description = "terraform测试使用"
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+resource "ctyun_mongodb_instance" "test" {
+  cycle_type          = "on_demand"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  flavor_name         = "s7.large.2"
+  subnet_id           = ctyun_subnet.subnet_test.id
+  security_group_id   = ctyun_security_group.security_group_test.id
+  name                = "mongodb-12ab"
+  prod_id             = "Single34"
+  storage_type        = "SATA"
+  storage_space       = 100
+  backup_storage_type = "OS"
+  password            = var.password
+}
+
+variable "password" {
+  type      = string
+  sensitive = true
+}
+resource "ctyun_eip" "eip_test" {
+  name        = "tf-eip-for-mon"
+  bandwidth   = 2
+  cycle_type  = "month"
+  cycle_count = 1
+}
 resource "ctyun_mongodb_association_eip" "test" {
-  eip_id = "eip-xjw2ndksn3"
-  inst_id = "85d8cb5914ae4b6b9852635f3bc43023"
-  host_ip = "192.168.1.2"
+  eip_id      = ctyun_eip.eip_test.id
+  instance_id = ctyun_mongodb_instance.test.id
 }
 ```
 
@@ -31,9 +80,8 @@ resource "ctyun_mongodb_association_eip" "test" {
 
 ### Required
 
-- `eip_id` (String) 弹性id
-- `host_ip` (String) 主机ip
-- `inst_id` (String) 实例id
+- `eip_id` (String) 弹性IP的ID
+- `instance_id` (String) 实例id
 
 ### Optional
 
@@ -42,4 +90,4 @@ resource "ctyun_mongodb_association_eip" "test" {
 
 ### Read-Only
 
-- `eip_address` (String) 弹性ip对应的地址
+- `id` (String) id

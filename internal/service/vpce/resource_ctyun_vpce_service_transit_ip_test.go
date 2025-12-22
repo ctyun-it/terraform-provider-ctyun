@@ -86,6 +86,18 @@ func TestAccCtyunVpceServiceTransitIP(t *testing.T) {
 				ImportStateVerifyIgnore: []string{},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					endpointServiceID := ds.Attributes["endpoint_service_id"]
+					return fmt.Sprintf("%s,%s", id, endpointServiceID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.reverseVpceServiceID, dependence.subnetID) +
 					utils.LoadTestCase(datasourceFile, dnd, dependence.reverseVpceServiceID),
 				Destroy: true,

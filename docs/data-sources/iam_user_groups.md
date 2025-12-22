@@ -44,7 +44,7 @@ output "iam_user_groups_test" {
 
 ### Read-Only
 
-- `groups` (Attributes Set) 用户组列表 (see [below for nested schema](#nestedatt--groups))
+- `groups` (Attributes List) 用户组列表 (see [below for nested schema](#nestedatt--groups))
 
 <a id="nestedatt--groups"></a>
 ### Nested Schema for `groups`

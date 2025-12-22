@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -66,6 +65,7 @@ type CtyunZosBucketConfig struct {
 	RetentionMode  types.String `tfsdk:"retention_mode"`
 	RetentionDay   types.Int64  `tfsdk:"retention_day"`
 	RetentionYear  types.Int64  `tfsdk:"retention_year"`
+	CreateTime     types.String `tfsdk:"create_time"`
 }
 
 func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -120,7 +120,7 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				ElementType: types.StringType,
 				Optional:    true,
 				Computed:    true,
-				Description: "标签，支持更新",
+				Description: "标签，对标aws s3中桶标签，支持更新",
 				Validators: []validator.Map{
 					mapvalidator.SizeAtMost(10),
 				},
@@ -142,8 +142,9 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Validators: []validator.Bool{
 					validator2.CrossFieldBool(
 						path.MatchRoot("retention_mode"),
-						[]attr.Value{types.StringValue("COMPLIANCE")},
-						[]attr.Value{types.BoolValue(true)}),
+						[]any{"COMPLIANCE"},
+						[]bool{true},
+					),
 				},
 			},
 			"log_enabled": schema.BoolAttribute{
@@ -250,6 +251,13 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 					stringvalidator.OneOf(business.ZosAzPolicySingle, business.ZosAzPolicyMulti),
 				},
 				Default: stringdefault.StaticString(business.ZosAzPolicySingle),
+			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -381,18 +389,35 @@ func (c *ctyunZosBucket) Configure(_ context.Context, request resource.Configure
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [bucket],[regionID]
 func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketConfig
 	var bucket, regionID string
-	err = terraform_extend.Split(request.ID, &bucket, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
+		bucket = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &bucket, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if bucket == "" {
+		err = fmt.Errorf("bucket不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -753,6 +778,7 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	plan.AzPolicy = types.StringValue(b.AZPolicy)
 	plan.StorageType = types.StringValue(b.StorageType)
 	plan.CmkUUID = utils.SecStringValue(b.CmkUUID)
+	plan.CreateTime = types.StringValue(utils.ConvertToUTCZ(utils.Layout4, b.Ctime))
 	if b.CmkUUID != nil {
 		plan.IsEncrypted = types.BoolValue(true)
 	} else {

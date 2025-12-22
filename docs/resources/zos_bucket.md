@@ -20,8 +20,8 @@ provider "ctyun" {
 }
 
 resource "ctyun_zos_bucket" "foo" {
-  bucket = "acc.te21"
-  acl = "public-read"
+  bucket       = "acc-tesss"
+  acl          = "public-read"
   storage_type = "STANDARD_IA"
 }
 ```
@@ -47,11 +47,12 @@ resource "ctyun_zos_bucket" "foo" {
 - `retention_mode` (String) 合规保留模式，创建后不支持修改。默认为空，表示不开启合规保留，若填写，目前只支持为COMPLIANCE，且version_enabled必须为true
 - `retention_year` (Number) 合规保留年数，支持1-60，当retention_mode不为空时，retention_day与retention_year只能填写其中之一，支持更新
 - `storage_type` (String) 存储类型，可选的值STANDARD、STANDARD_IA、GLACIER，分别表示标准、低频、归档，默认STANDARD
-- `tags` (Map of String) 标签，支持更新
+- `tags` (Map of String) 标签，对标aws s3中桶标签，支持更新
 - `version_enabled` (Boolean) 是否启用版本控制，默认不启用。若启用后暂停，将无法在桶内创建新的历史版本，之前创建的历史版本会保留，支持更新
 
 ### Read-Only
 
 - `cmk_uuid` (String) 密钥管理服务中创建的密钥ID，当is_encrypted为true时，会自动创建密钥
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID
 - `name` (String) 名称

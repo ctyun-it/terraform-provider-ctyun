@@ -49,7 +49,8 @@ data "ctyun_vpce_service_transit_ips" "test" {
 
 Read-Only:
 
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID，这里使用中转地址
 - `subnet_id` (String) 子网ID
 - `transit_ip` (String) 中转地址
+- `update_time` (String) 更新时间，为UTC格式

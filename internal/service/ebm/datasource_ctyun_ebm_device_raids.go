@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &ctyunEbmDeviceTypes{}
-	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceTypes{}
+	_ datasource.DataSource              = &ctyunEbmDeviceRaids{}
+	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceRaids{}
 )
 
 type ctyunEbmDeviceRaids struct {

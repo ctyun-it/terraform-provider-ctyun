@@ -43,43 +43,44 @@ func (this *PgsqlCreateApi) Do(ctx context.Context, credential ctyunsdk.Credenti
 }
 
 type PgsqlCreateRequest struct {
-	BillMode              string                                `json:"billMode"`                        // 计费模式：包周期或按需
-	RegionId              string                                `json:"regionId"`                        // 目标资源池ID
-	ResPoolCode           *string                               `json:"resPoolCode,omitempty"`           // 资源池名称
-	HostType              string                                `json:"hostType"`                        // 主机类型
-	ProdVersion           string                                `json:"prodVersion"`                     // 产品版本
-	MysqlNodeInfoList     []PgsqlCreateRequestMysqlNodeInfoList `json:"mysqlNodeInfoList"`               // Mysql节点信息
-	ProdId                int64                                 `json:"prodId"`                          // 产品ID
-	ProjectName           *string                               `json:"projectName,omitempty"`           // 企业项目名称，默认为default
-	AutoScaleParam        *PgsqlCreateRequestAutoScaleParam     `json:"autoScaleParam,omitempty"`        // 自动扩容参数
-	BackupStorageType     *string                               `json:"backupStorageType,omitempty"`     // 备份存储类型
-	VpcId                 string                                `json:"vpcId,omitempty"`                 // 虚拟私有云ID
-	SubnetId              string                                `json:"subnetId"`                        // 子网ID
-	SecurityGroupId       string                                `json:"securityGroupId"`                 // 安全组ID
-	AppointVip            *string                               `json:"appointVip,omitempty"`            // 指定VIP
-	VpcName               *string                               `json:"vpcName,omitempty"`               // VPC名称
-	SubnetName            *string                               `json:"subnetName,omitempty"`            // 子网名称
-	SecurityGroupName     *string                               `json:"securityGroupName,omitempty"`     // 安全组名称
-	Name                  string                                `json:"name"`                            // 集群名称
-	Password              string                                `json:"password,omitempty"`              // 管理员密码（加密）
-	ParamTemplateId       string                                `json:"paramTemplateId"`                 // 参数模板ID
-	Period                int32                                 `json:"period"`                          // 购买时长（单位：月）
-	Count                 int32                                 `json:"count"`                           // 购买数量
-	AutoRenewStatus       int32                                 `json:"autoRenewStatus"`                 // 自动续订状态
-	CaseSensitive         string                                `json:"caseSensitive"`                   // 是否区分大小写
-	TimeZone              string                                `json:"timeZone"`                        // 时区
-	OsType                *string                               `json:"osType,omitempty"`                // 操作系统类型
-	CpuType               *string                               `json:"cpuType,omitempty"`               // CPU类型
-	ProjectId             *string                               `json:"projectId,omitempty"`             // 企业项目ID
-	ProdSpecName          *string                               `json:"prodSpecName,omitempty"`          // 产品规格名称
-	IsMGR                 *string                               `json:"isMGR,omitempty"`                 // 是否开启MRG
-	VpcCIDR               *string                               `json:"vpcCIDR,omitempty"`               // VPC网段
-	ServerCollation       *string                               `json:"serverCollation,omitempty"`       // 数据库字符集
-	CrossInstanceBackup   bool                                  `json:"crossInstanceBackup,omitempty"`   // 是否为恢复到新实例工单
-	SourceInstId          *string                               `json:"sourceInstId,omitempty"`          // 源实例ID
-	BackupId              *string                               `json:"backupId,omitempty"`              // 备份集ID
-	BackupTimePoint       *string                               `json:"backupTimePoint,omitempty"`       // 恢复时间点
-	IsCrossRegionRecovery bool                                  `json:"isCrossRegionRecovery,omitempty"` // 是否跨域恢复
+	BillMode              string                            `json:"billMode"`                        // 计费模式：包周期或按需
+	RegionId              string                            `json:"regionId"`                        // 目标资源池ID
+	ResPoolCode           *string                           `json:"resPoolCode,omitempty"`           // 资源池名称
+	HostType              string                            `json:"hostType"`                        // 主机类型
+	ProdVersion           string                            `json:"prodVersion"`                     // 产品版本
+	MysqlNodeInfoList     []PgsqlCreateRequestNodeInfoList  `json:"mysqlNodeInfoList"`               // Mysql节点信息
+	ProdId                int64                             `json:"prodId"`                          // 产品ID
+	ProjectName           *string                           `json:"projectName,omitempty"`           // 企业项目名称，默认为default
+	AutoScaleParam        *PgsqlCreateRequestAutoScaleParam `json:"autoScaleParam,omitempty"`        // 自动扩容参数
+	BackupStorageType     *string                           `json:"backupStorageType,omitempty"`     // 备份存储类型
+	VpcId                 string                            `json:"vpcId,omitempty"`                 // 虚拟私有云ID
+	SubnetId              string                            `json:"subnetId"`                        // 子网ID
+	SecurityGroupId       string                            `json:"securityGroupId"`                 // 安全组ID
+	AppointVip            *string                           `json:"appointVip,omitempty"`            // 指定VIP
+	VpcName               *string                           `json:"vpcName,omitempty"`               // VPC名称
+	SubnetName            *string                           `json:"subnetName,omitempty"`            // 子网名称
+	SecurityGroupName     *string                           `json:"securityGroupName,omitempty"`     // 安全组名称
+	Name                  string                            `json:"name"`                            // 集群名称
+	Password              string                            `json:"password,omitempty"`              // 管理员密码（加密）
+	ParamTemplateId       string                            `json:"paramTemplateId"`                 // 参数模板ID
+	Period                int32                             `json:"period"`                          // 购买时长（单位：月）
+	Count                 int32                             `json:"count"`                           // 购买数量
+	AutoRenewStatus       int32                             `json:"autoRenewStatus"`                 // 自动续订状态
+	CaseSensitive         string                            `json:"caseSensitive"`                   // 是否区分大小写
+	TimeZone              string                            `json:"timeZone"`                        // 时区
+	OsType                *string                           `json:"osType,omitempty"`                // 操作系统类型
+	CpuType               *string                           `json:"cpuType,omitempty"`               // CPU类型
+	ProjectId             *string                           `json:"projectId,omitempty"`             // 企业项目ID
+	ProdSpecName          *string                           `json:"prodSpecName,omitempty"`          // 产品规格名称
+	IsMGR                 *string                           `json:"isMGR,omitempty"`                 // 是否开启MRG
+	VpcCIDR               *string                           `json:"vpcCIDR,omitempty"`               // VPC网段
+	ServerCollation       *string                           `json:"serverCollation,omitempty"`       // 数据库字符集
+	CrossInstanceBackup   bool                              `json:"crossInstanceBackup,omitempty"`   // 是否为恢复到新实例工单
+	SourceInstId          *string                           `json:"sourceInstId,omitempty"`          // 源实例ID
+	BackupId              *string                           `json:"backupId,omitempty"`              // 备份集ID
+	BackupTimePoint       *string                           `json:"backupTimePoint,omitempty"`       // 恢复时间点
+	IsCrossRegionRecovery bool                              `json:"isCrossRegionRecovery,omitempty"` // 是否跨域恢复
+	InstId                *string                           `json:"instId,omitempty"`
 }
 
 type PgsqlCreateRequestAutoScaleParam struct {
@@ -88,7 +89,7 @@ type PgsqlCreateRequestAutoScaleParam struct {
 	ActiveScaleRate string `json:"activeScaleRate"` // 触发扩容的百分比，取值范围为1-100，必填
 }
 
-type PgsqlCreateRequestMysqlNodeInfoList struct {
+type PgsqlCreateRequestNodeInfoList struct {
 	NodeType             string                                   `json:"nodeType"`                     // 节点类型，主实例或只读实例
 	InstSpec             string                                   `json:"instSpec"`                     // 实例规格
 	StorageType          string                                   `json:"storageType"`                  // 存储类型

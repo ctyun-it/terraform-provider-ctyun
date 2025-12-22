@@ -139,3 +139,64 @@ func TestAccCtyunElbHealthCheck(t *testing.T) {
 		},
 	})
 }
+
+func TestAccCtyunElbHealthCheckImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_elb_health_check." + rnd
+	resourceFile := "resource_ctyun_elb_health_check.tf"
+
+	name := "health_check_" + utils.GenerateRandomString()
+	protocol := "TCP"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1 基础测试，不包含各类超时参数
+			// 1.1验证创建健康检查
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, name, protocol, "", "", "", "", "", "", ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "protocol", protocol),
+				),
+			},
+			// import state 1
+			{ResourceName: resourceName,
+				ImportState: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"}},
+			// import state 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
+			},
+			// 2.3 delete验证
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, name, protocol, "", "", "", "", "", "", ""),
+				Destroy: true,
+			},
+		},
+	})
+}

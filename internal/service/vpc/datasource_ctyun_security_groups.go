@@ -51,7 +51,7 @@ type CtyunSecurityGroupsModel struct {
 	Origin                types.String             `tfsdk:"origin"`
 	VpcName               types.String             `tfsdk:"vpc_name"`
 	VpcID                 types.String             `tfsdk:"vpc_id"`
-	CreationTime          types.String             `tfsdk:"creation_time"`
+	CreationTime          types.String             `tfsdk:"create_time"`
 	Description           types.String             `tfsdk:"description"`
 	SecurityGroupRuleList []CtyunSecurityGroupRule `tfsdk:"security_group_rule_list"`
 }
@@ -72,7 +72,7 @@ type CtyunSecurityGroupsConfig struct {
 
 func (c *ctyunSecurityGroups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028520`,
+		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -142,9 +142,9 @@ func (c *ctyunSecurityGroups) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 							Description: "安全组所属的专有网络。",
 						},
-						"creation_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"description": schema.StringAttribute{
 							Computed:    true,
@@ -185,7 +185,7 @@ func (c *ctyunSecurityGroups) Schema(_ context.Context, _ datasource.SchemaReque
 									},
 									"create_time": schema.StringAttribute{
 										Computed:    true,
-										Description: "创建时间，UTC时间。",
+										Description: "创建时间，为UTC格式",
 									},
 									"rule_id": schema.StringAttribute{
 										Computed:    true,
@@ -287,7 +287,7 @@ func (c *ctyunSecurityGroups) Read(ctx context.Context, request datasource.ReadR
 				Range:           utils.SecStringValue(r.RawRange),
 				DestCidrIp:      utils.SecStringValue(r.DestCidrIp),
 				Description:     utils.SecStringValue(r.Description),
-				CreateTime:      utils.SecStringValue(r.CreateTime),
+				CreateTime:      types.StringValue(utils.ConvertToUTCZ(utils.Layout3, utils.SecString(r.CreateTime))),
 				RuleID:          utils.SecStringValue(r.Id),
 				SecurityGroupID: utils.SecStringValue(r.SecurityGroupID),
 				Action:          utils.SecStringValue(r.Action),

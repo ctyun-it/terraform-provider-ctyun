@@ -23,18 +23,25 @@ func NewOrderLooper(api *ctecs.EcsOrderQueryUuidApi) *OrderLooper {
 func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credential, masterOrderId string, loopCount ...int) (*LoopOrderResponse, error) {
 	var resp *LoopOrderResponse
 	var respError error
-	c := 60
+	c := 360
 	if len(loopCount) > 0 {
 		c = loopCount[0]
 	}
 	var cnt int
-	retryer, _ := NewRetryer(time.Second*5, c)
+	var failed int
+	retryer, _ := NewRetryer(time.Second*10, c)
 	result := retryer.Start(
 		func(currentTime int) bool {
 			detail, err := o.api.Do(ctx, credential, &ctecs.EcsOrderQueryUuidRequest{
 				MasterOrderId: masterOrderId,
 			})
 			if err != nil {
+				// 允许失败一次
+				if failed == 0 {
+					failed++
+					respError = nil
+					return true
+				}
 				respError = err
 				return false
 			}
@@ -78,12 +85,19 @@ func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credent
 func (o *OrderLooper) RefundLoop(ctx context.Context, credential ctyunsdk.Credential, masterOrderId string) error {
 	var respError error
 	retryer, _ := NewRetryer(time.Second*5, 60)
+	var failed int
 	result := retryer.Start(
 		func(currentTime int) bool {
 			detail, err := o.api.Do(ctx, credential, &ctecs.EcsOrderQueryUuidRequest{
 				MasterOrderId: masterOrderId,
 			})
 			if err != nil {
+				// 允许失败一次
+				if failed == 0 {
+					failed++
+					respError = nil
+					return true
+				}
 				respError = err
 				return false
 			}
@@ -119,4 +133,49 @@ func (o *OrderLooper) RefundLoop(ctx context.Context, credential ctyunsdk.Creden
 type LoopOrderResponse struct {
 	Uuid          []string
 	masterOrderId string // 主订单id
+}
+
+func (o *OrderLooper) WaitOrderFinish(ctx context.Context, credential ctyunsdk.Credential, masterOrderId string) error {
+	var respError error
+	retryer, _ := NewRetryer(time.Second*10, 360)
+	var failed int
+	result := retryer.Start(
+		func(currentTime int) bool {
+			detail, err := o.api.Do(ctx, credential, &ctecs.EcsOrderQueryUuidRequest{
+				MasterOrderId: masterOrderId,
+			})
+			if err != nil {
+				// 允许失败一次
+				if failed == 0 {
+					failed++
+					respError = nil
+					return true
+				}
+				respError = err
+				return false
+			}
+			status, err2 := strconv.Atoi(detail.OrderStatus)
+			if err2 != nil {
+				respError = err2
+				return false
+			}
+
+			switch status {
+			case OrderStatusOpening:
+				return true
+			case OrderStatusFinish:
+				return false
+			default:
+				// 其他状态
+				sta := OrderStatusName[status]
+				respError = errors.New("等待订单状态失败，轮询到的订单状态为：" + sta)
+				return false
+			}
+		},
+	)
+	if result.ReturnReason == ReachMaxLoopTime {
+		// 这里出来的全都是异常的
+		return errors.New("等待订单完成失败，已超过最大轮询次数，订单号：" + masterOrderId)
+	}
+	return respError
 }

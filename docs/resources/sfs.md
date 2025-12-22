@@ -35,18 +35,17 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_sfs" "sfs_test" {
-  sfs_type     = "performance"
-  sfs_protocol = "nfs"
-  name         = "sfs-example"
-  sfs_size     = 500
-  cycle_type   = "on_demand"
-  az_name      = "cn-huadong1-jsnj1A-public-ctcloud"
-  vpc_id       = ctyun_vpc.vpc_test.id
-  subnet_id    = ctyun_subnet.subnet_test.id
+  type       = "performance"
+  protocol   = "nfs"
+  name       = "sfs-example"
+  size       = 500
+  cycle_type = "on_demand"
+  az_name    = "cn-huadong1-jsnj1A-public-ctcloud"
+  vpc_id     = ctyun_vpc.vpc_test.id
+  subnet_id  = ctyun_subnet.subnet_test.id
 }
 ```
 
@@ -55,26 +54,30 @@ resource "ctyun_sfs" "sfs_test" {
 
 ### Required
 
-- `cycle_type` (String) 包周期类型，year/month/on_demand；onDemand为false时，必须指定。不支持更新
+- `cycle_type` (String) 计费类型，year/month/on_demand。不支持更新
 - `name` (String) 文件系统名称；单账户单资源池下，命名需唯一，支持更新
-- `sfs_protocol` (String) 协议类型，nfs/cifs
-- `sfs_size` (Number) 大小，单位GB，取值范围：[500GB, 32768GB]。支持更新。弹性文件只支持扩容，不支持缩容
-- `sfs_type` (String) 存储类型，capacity(标准型)或performance（性能型）
+- `protocol` (String) 协议类型，nfs/cifs
+- `size` (Number) 大小，单位GB，取值范围：[500GB, 32768GB]。支持更新。弹性文件只支持扩容，不支持缩容
 - `subnet_id` (String) 子网ID
+- `type` (String) 存储类型，capacity(标准型)或performance（性能型）
 - `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
-- `az_name` (String) 实例部署的az信息。多可用区资源池下，若不填写，将随机分配AZ
-- `cycle_count` (Number) 包周期数。onDemand为false时必须指定；周期最大长度不能超过3年
+- `az_name` (String) 可用区id，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME。获取不到则使用资源池第一个可用区
+- `cycle_count` (Number) 包周期数，cycle_type是year或month时必须指定，周期最大长度不能超过3年
 - `is_encrypt` (Boolean) 是否加密盘，默认false，支持更新。目前仅少量资源池支持加密。具体可查看产品能力地图：https://www.ctyun.cn/document/10027350/10693922
 - `kms_uuid` (String) 如果是加密盘，需要提供kms的uuid，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `read_only` (Boolean) 弹性文件系统是否只读。默认为false。支持更新，true-只读；false-可读写。sfs_protocol=cifs仅支持为false
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 弹性文件系统id
+- `share_path` (String) 挂载路径
+- `share_path_windows` (String) 挂载路径（windows）
 - `status` (String) 弹性文件系统状态
+- `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 弹性文件系统已使用大小（MB）

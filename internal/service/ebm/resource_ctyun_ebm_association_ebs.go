@@ -202,32 +202,66 @@ func (c *ctyunEbmAssociationEbs) Configure(_ context.Context, request resource.C
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[ebsID],[regionID],[azName]
 func (c *ctyunEbmAssociationEbs) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[ebsID],[az_name],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var cfg CtyunEbmAssociationEbsConfig
-	var instanceID, ebsID, regionID, azName string
-	err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &regionID, &azName)
-	if err != nil {
-		return
+	var config CtyunEbmAssociationEbsConfig
+
+	var instanceID, ebsID, azName, regionID string
+	// 根据分隔符数量判断是否输入了regionID,azName
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName, &regionID)
+		if err != nil {
+			return
+		}
 	}
 
-	cfg.InstanceID = types.StringValue(instanceID)
-	cfg.EbsID = types.StringValue(ebsID)
-	cfg.AzName = types.StringValue(azName)
-	cfg.RegionID = types.StringValue(regionID)
+	if instanceID == "" {
+		err = fmt.Errorf("instanceID不能为空")
+		return
+	}
+	if ebsID == "" {
+		err = fmt.Errorf("ebsID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	if azName == "" {
+		err = fmt.Errorf("azName不能为空")
+		return
+	}
+	config.InstanceID = types.StringValue(instanceID)
+	config.EbsID = types.StringValue(ebsID)
+	config.AzName = types.StringValue(azName)
+	config.RegionID = types.StringValue(regionID)
 
 	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
+	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // checkBeforeAssociate 绑定前检查
@@ -399,7 +433,7 @@ func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbm
 		if ebsID == utils.SecString(attachID) {
 			plan.ID = types.StringValue(fmt.Sprintf(
 				"%s,%s,%s,%s",
-				instanceID, ebsID, plan.RegionID.ValueString(), plan.AzName.ValueString()))
+				instanceID, ebsID, plan.AzName.ValueString(), plan.RegionID.ValueString()))
 			return
 		}
 	}

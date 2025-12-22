@@ -1,5 +1,5 @@
 # ctyun_eips (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026753
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10026909
 
 
 
@@ -20,9 +20,9 @@ provider "ctyun" {
 }
 
 resource "ctyun_eip" "eip_test1" {
-  name        = "tf-eip-test1"
-  bandwidth   = 2
-  cycle_type = "on_demand"
+  name                = "tf-eip-test1"
+  bandwidth           = 2
+  cycle_type          = "on_demand"
   demand_billing_type = "upflowc"
 }
 
@@ -66,13 +66,13 @@ Read-Only:
 - `bandwidth` (Number) 带宽峰值大小，单位Mb
 - `bandwidth_id` (String) 绑定的共享带宽ID
 - `bandwidth_type` (String) eip带宽规格：standalone/upflowc
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `eip_address` (String) eip地址
-- `expired_at` (String) 到期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) eipID
 - `name` (String) eip名称
 - `private_ip_address` (String) 交换机网段内的一个IP地址
 - `status` (String) 弹性ip状态，取值范围：active：有效，down：未绑定，error：出错，updating：更新中，banding_or_unbangding：绑定解绑中，deleting：删除中，deleted：已删除，expired：已过期
 - `tags` (String) EIP的标签集合
-- `updated_at` (String) 更新时间
+- `update_time` (String) 更新时间，为UTC格式

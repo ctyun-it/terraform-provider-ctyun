@@ -81,6 +81,6 @@ type CtvpcDhcplistvpcReturnObjResultsResponse struct {
 	Name           *string   `json:"name,omitempty"`      /*  名字  */
 	Cidr           *string   `json:"cidr,omitempty"`      /*  vpc cidr  */
 	SecondaryCidrs []*string `json:"secondaryCidrs"`      /*  扩展网段  */
-	Status         []*string `json:"status"`              /*  状态  */
+	Status         *string   `json:"status"`              /*  状态  */
 	CreatedAt      *string   `json:"createdAt,omitempty"` /*  关联时间  */
 }

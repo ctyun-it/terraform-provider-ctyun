@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -34,13 +35,66 @@ func NewCtyunMongodbAssociationEip() resource.Resource {
 }
 
 type CtyunMongodbAssociationEip struct {
-	meta       *common.CtyunMetadata
-	eipService *business.EipService
+	meta           *common.CtyunMetadata
+	eipService     *business.EipService
+	mongodbService *business.MongodbService
 }
 
 func (c *CtyunMongodbAssociationEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eipID],[projectID],[regionID]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config MongodbAssociationEipConfig
+	var eipID, regionID, projectID, instanceID string
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if instanceID == "" {
+		err = fmt.Errorf("instanceID不能为空")
+		return
+	}
+	if eipID == "" {
+		err = fmt.Errorf("eipID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.InstID = types.StringValue(instanceID)
+	config.EipID = types.StringValue(eipID)
+	config.RegionID = types.StringValue(regionID)
+	if projectID != "" {
+		config.ProjectID = types.StringValue(projectID)
+	}
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
+	err = c.getAndMergeBindEip(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &config)...)
 }
 
 func (c *CtyunMongodbAssociationEip) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -50,6 +104,7 @@ func (c *CtyunMongodbAssociationEip) Configure(ctx context.Context, request reso
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.eipService = business.NewEipService(c.meta)
+	c.mongodbService = business.NewMongodbService(c.meta)
 }
 
 func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -58,23 +113,22 @@ func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resourc
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,
-				Description: "弹性id",
+				Description: "弹性IP的ID",
 				Validators: []validator.String{
 					validator2.EipValidate(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
-			"inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Required:    true,
 				Description: "实例id",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-			},
-			"host_ip": schema.StringAttribute{
-				Required:    true,
-				Description: "主机ip",
-				Validators: []validator.String{
-					validator2.Ip(),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -101,9 +155,12 @@ func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resourc
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"eip_address": schema.StringAttribute{
+			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "弹性ip对应的地址",
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -132,6 +189,8 @@ func (c *CtyunMongodbAssociationEip) Create(ctx context.Context, request resourc
 	if err != nil {
 		return
 	}
+	// id， instance id + eip id
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.InstID.ValueString(), plan.EipID.ValueString()))
 	// 查询实例详情，确认是否绑定成功
 	err = c.getAndMergeBindEip(ctx, &plan)
 	if err != nil {
@@ -188,9 +247,22 @@ func (c *CtyunMongodbAssociationEip) Delete(ctx context.Context, request resourc
 	if response.Diagnostics.HasError() {
 		return
 	}
+
+	// 根据eip id 获取 eip地址
+	eip, err := c.eipService.GetEipAddressByEipID(ctx, state.EipID.ValueString(), state.RegionID.ValueString())
+	if err != nil {
+		return
+	}
+	if eip == nil {
+		err = fmt.Errorf("eip is not found")
+		return
+	}
+
+	state.eipAddress = *eip.EipAddress
+
 	unbindParams := &mongodb.MongodbUnbindEipRequest{
 		EipID:  state.EipID.ValueString(),
-		Eip:    state.EipAddress.ValueString(),
+		Eip:    state.eipAddress,
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &mongodb.MongodbUnbindEipRequestHeader{}
@@ -212,18 +284,24 @@ func (c *CtyunMongodbAssociationEip) Delete(ctx context.Context, request resourc
 }
 
 func (c *CtyunMongodbAssociationEip) MongodbBindEip(ctx context.Context, config *MongodbAssociationEipConfig) (err error) {
-
+	// 根据eip id 获取 eip地址
 	eip, err := c.eipService.GetEipAddressByEipID(ctx, config.EipID.ValueString(), config.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
-	config.EipAddress = types.StringValue(*eip.EipAddress)
+	// 根据inst id 获取 host ip
+	hostIP, err := c.mongodbService.GetHostIpByInstID(ctx, config.InstID.ValueString(), config.RegionID.ValueString(), config.ProjectID.ValueString())
+	if err != nil {
+		return err
+	}
+	config.hostIP = hostIP
+	config.eipAddress = *eip.EipAddress
 
 	bindParams := &mongodb.MongodbBindEipRequest{
 		EipID:  config.EipID.ValueString(),
-		Eip:    config.EipAddress.ValueString(),
+		Eip:    config.eipAddress,
 		InstID: config.InstID.ValueString(),
-		HostIp: config.HostIP.ValueString(),
+		HostIp: config.hostIP,
 	}
 	bindHeader := &mongodb.MongodbBindEipRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
@@ -270,7 +348,7 @@ func (c *CtyunMongodbAssociationEip) BindLoop(ctx context.Context, config *Mongo
 			}
 			nodeInfoVos := resp.ReturnObj.NodeInfoVOS
 			for _, vos := range nodeInfoVos {
-				if vos.OuterElasticIpId == config.EipID.ValueString() && vos.ElasticIp == config.EipAddress.ValueString() {
+				if vos.OuterElasticIpId == config.EipID.ValueString() && vos.ElasticIp == config.eipAddress {
 					return false
 				}
 			}
@@ -337,7 +415,7 @@ func (c *CtyunMongodbAssociationEip) getAndMergeBindEip(ctx context.Context, con
 	if err2 != nil {
 		err = err2
 		return
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -346,16 +424,15 @@ func (c *CtyunMongodbAssociationEip) getAndMergeBindEip(ctx context.Context, con
 	}
 	nodeinfoVos := resp.ReturnObj.NodeInfoVOS[0]
 	config.EipID = types.StringValue(nodeinfoVos.OuterElasticIpId)
-	config.EipAddress = types.StringValue(nodeinfoVos.ElasticIp)
-	config.HostIP = types.StringValue(resp.ReturnObj.Host)
 	return
 }
 
 type MongodbAssociationEipConfig struct {
 	EipID      types.String `tfsdk:"eip_id"`      // 弹性ip id
-	InstID     types.String `tfsdk:"inst_id"`     // 实例id
-	HostIP     types.String `tfsdk:"host_ip"`     // 主机ip
+	InstID     types.String `tfsdk:"instance_id"` // 实例id
 	ProjectID  types.String `tfsdk:"project_id"`  // 项目id
 	RegionID   types.String `tfsdk:"region_id"`   // 资源池id
-	EipAddress types.String `tfsdk:"eip_address"` // eip地址
+	ID         types.String `tfsdk:"id"`
+	eipAddress string
+	hostIP     string // 主机ip
 }

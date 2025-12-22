@@ -72,5 +72,5 @@ type CtvpcShowVpcReturnObjResponse struct {
 	NatGatewayIDs    []*string `json:"natGatewayIDs"`         /*  网关 id 列表  */
 	SecondaryCIDRS   []*string `json:"secondaryCIDRS"`        /*  附加网段  */
 	ProjectID        *string   `json:"projectID,omitempty"`   /*  企业项目 ID，默认为0  */
-	DhcpOptionsSetID []*string `json:"dhcpOptionsSetID"`      /*  VPC关联的dhcp选项集  */
+	DhcpOptionsSetID *string   `json:"dhcpOptionsSetID"`      /*  VPC关联的dhcp选项集  */
 }

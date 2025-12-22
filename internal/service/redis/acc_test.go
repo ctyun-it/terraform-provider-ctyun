@@ -14,8 +14,17 @@ type Dependence struct {
 	subnetID           string
 	securityGroupID    string
 	eipAddress         string
+	eipID              string
 	redisVersion       string
 	redisEngineEdition string
+	instanceId         string
+	instance2Id        string
+	address            string
+	address2           string
+	userName           string
+	userPassword       string
+	user2Name          string
+	user2Password      string
 }
 
 var dependence Dependence
@@ -37,8 +46,17 @@ func TestMain(m *testing.M) {
 		subnetID:           outputs["subnet_id"].Value,
 		securityGroupID:    outputs["security_group_id"].Value,
 		eipAddress:         outputs["eip_address"].Value,
+		eipID:              outputs["eip_id"].Value,
 		redisVersion:       outputs["redis_version"].Value,
 		redisEngineEdition: outputs["redis_engine_edition"].Value,
+		instanceId:         outputs["redis_instance_id"].Value,
+		instance2Id:        outputs["redis_instance2_id"].Value,
+		address:            outputs["redis_address"].Value,
+		address2:           outputs["redis2_address"].Value,
+		userName:           outputs["instance_account_name"].Value,
+		userPassword:       outputs["instance_account_pswd"].Value,
+		user2Name:          outputs["instance2_account_name"].Value,
+		user2Password:      outputs["instance2_account_pswd"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 

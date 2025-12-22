@@ -19,7 +19,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_redis_instances" "test"{
+data "ctyun_redis_instances" "test" {
 
 }
 ```

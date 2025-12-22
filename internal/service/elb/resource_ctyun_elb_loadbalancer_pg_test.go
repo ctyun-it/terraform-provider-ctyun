@@ -92,3 +92,77 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 	})
 
 }
+
+func TestAccCtyunElbLoadBalancerImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_elb_loadbalancer." + rnd
+	resourceFile := "resource_ctyun_elb_loadbalancer.tf"
+	name := "elb_" + utils.GenerateRandomString()
+
+	resourceType := "internal"
+
+	updateSlaName := "elb.s2.small"
+	cycleType := `cycle_type="month"`
+	CycleCount := `cycle_count=1`
+	eip := ""
+
+	update2SlaName := "elb.s3.small"
+
+	updateName := "elb_pg_" + utils.GenerateRandomString()
+	updateDescription := "terraform测试——" + utils.GenerateRandomString()
+
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+
+			// 创建保障型elb
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
+				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip),
+				Destroy: true,
+			},
+		},
+	})
+
+}

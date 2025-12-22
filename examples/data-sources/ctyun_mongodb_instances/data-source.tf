@@ -13,7 +13,7 @@ provider "ctyun" {
 
 
 data "ctyun_mongodb_instances" "test" {
-  prod_inst_name = "db-aswd"
+  name = "db-aswd"
 }
 
 output "t" {

@@ -2,15 +2,19 @@ package mysql
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -40,11 +44,49 @@ type CtyunMysqlInstance struct {
 	meta         *common.CtyunMetadata
 	ecsService   *business.EcsService
 	mysqlService *business.MysqlService
+	orderLooper  *business.OrderLooper
 }
 
+// password, masterOrderID, autoRenew, availabilityZoneInfo, backupStorageType 无法获取到
+
 func (c *CtyunMysqlInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunMysqlInstanceConfig
+	var ID, regionId, projectId string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.InstID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionId)
+	config.ProjectID = types.StringValue(projectId)
+	err = c.getAndMergeMysqlInstance(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunMysqlInstance) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -55,6 +97,7 @@ func (c *CtyunMysqlInstance) Configure(ctx context.Context, request resource.Con
 	c.meta = meta
 	c.ecsService = business.NewEcsService(c.meta)
 	c.mysqlService = business.NewMysqlService(c.meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func NewCtyunMysqlInstance() resource.Resource {
@@ -122,7 +165,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -158,12 +201,12 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					validator2.SecurityGroupValidate(),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "实例名称（长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符）",
+				Description: "实例名称，支持更新。要求：长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(4, 64),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][0-9a-zA-Z_-]+$"), "终端节点服务名称不符合规则"),
@@ -172,7 +215,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"password": schema.StringAttribute{
 				Optional:    true,
 				Sensitive:   true,
-				Description: "实例密码，密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写",
+				Description: "实例密码，支持更新。密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写",
 				Validators: []validator.String{
 					validator2.DBPassword(
 						8,
@@ -230,26 +273,26 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"availability_zone_info": schema.ListNestedAttribute{
 				Optional:    true,
-				Description: "可用区信息，需要根据prod_id而定。创建阶段，需要指定master和slave的所在az。例：若一主一备，需要传参：[｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'master'｝,｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'slave'｝]；在更新阶段，仅需要填写扩容部分的AZ信息。例：将单节点扩容至1主2备，[{'availability_zone_name':'xxxx', 'availability_zone_count':2,node_type:'slave'}]",
+				Description: "可用区信息，支持更新。需要根据prod_id而定。创建阶段，需要指定master和slave的所在az。例：若一主一备，需要传参：[｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'master'｝,｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'slave'｝]；在更新阶段，仅需要填写扩容部分的AZ信息。例：将单节点扩容至1主2备，[{'availability_zone_name':'xxxx', 'availability_zone_count':2,node_type:'slave'}]",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"availability_zone_name": schema.StringAttribute{
 							Required:    true,
-							Description: "资源池可用区名称",
+							Description: "资源池可用区名称，支持更新。",
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
 							},
 						},
 						"availability_zone_count": schema.Int32Attribute{
 							Required:    true,
-							Description: "该AZ内存在的实例节点数量",
+							Description: "该AZ内存在的实例节点数量，支持更新。",
 							Validators: []validator.Int32{
 								int32validator.Between(1, 16),
 							},
 						},
 						"node_type": schema.StringAttribute{
 							Required:    true,
-							Description: "表示分布AZ的节点类型，master/slave",
+							Description: "表示分布AZ的节点类型，master/slave，支持更新。",
 							Validators: []validator.String{
 								stringvalidator.OneOf("master", "slave"),
 							},
@@ -261,7 +304,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 				Computed:    true,
 				Description: "订单id",
 			},
-			"inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "实例Id",
 			},
@@ -294,6 +337,9 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 				Description: "写数据端口，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(0, 65535),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"read_port": schema.StringAttribute{
@@ -354,7 +400,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
-				Description:   "实例Id，同inst_id",
+				Description:   "实例Id，同instance_id",
 			},
 		},
 	}
@@ -379,20 +425,25 @@ func (c *CtyunMysqlInstance) Create(ctx context.Context, request resource.Create
 		return
 	}
 	// 开始创建
-	err = c.CreateMysqlInstance(ctx, &plan)
+	err = c.createMysqlInstance(ctx, &plan)
 	if err != nil {
 		return
 	}
+	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
+	id, err := c.acquireAndSetIdIfOrderNotFinished(ctx, plan)
+	if err != nil {
+		return
+	}
+	plan.InstID = types.StringValue(id)
 
 	// 创建后，获取mysql详情
 	err = c.getAndMergeMysqlInstance(ctx, &plan)
 	if err != nil {
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	time.Sleep(5 * time.Second)
 }
 
 func (c *CtyunMysqlInstance) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -444,11 +495,6 @@ func (c *CtyunMysqlInstance) Update(ctx context.Context, request resource.Update
 		return
 	}
 
-	if !plan.Password.Equal(state.Password) {
-		err = fmt.Errorf("数据库密码暂时不支持修改")
-		return
-	}
-
 	// 校验规格
 	err = c.checkSpec(ctx, &plan)
 	if err != nil {
@@ -459,7 +505,7 @@ func (c *CtyunMysqlInstance) Update(ctx context.Context, request resource.Update
 		return
 	}
 	state.FlavorName = plan.FlavorName
-	time.Sleep(30 * time.Second)
+
 	// 更新远端后，查询远端并同步一下本地信息
 	err = c.getAndMergeMysqlInstance(ctx, &state)
 	if err != nil {
@@ -486,51 +532,84 @@ func (c *CtyunMysqlInstance) Delete(ctx context.Context, request resource.Delete
 		return
 	}
 
-	// 确保主机在退订之前是处于running状态
-	err = c.StartedLoop(ctx, &state)
+	// 确保在退订之前是处于running状态
+	err = c.startedLoop(ctx, &state)
 	if err != nil {
 		return
 	}
-
 	err = c.refund(ctx, state)
 	if err != nil {
 		return
 	}
-	// 轮询确认时候退订成功
-	err = c.refundLoop(ctx, state)
-	if err != nil {
-		return
-	}
-	time.Sleep(30 * time.Second)
 	err = c.destroy(ctx, state)
-	if err != nil {
-		return
-	}
-	err = c.destroyLoop(ctx, state)
 	if err != nil {
 		return
 	}
 	response.Diagnostics.AddWarning("删除MySql集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
-// CreateMysqlInstance 创建mysql实例
-func (c *CtyunMysqlInstance) CreateMysqlInstance(ctx context.Context, config *CtyunMysqlInstanceConfig) (err error) {
+// checkSpec 检查规格
+func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInstanceConfig) error {
+	// 先根据spec_name调用云主机规格接口
+	_, err := c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
+	if err != nil {
+		return err
+	}
+
+	f := strings.Split(plan.FlavorName.ValueString(), ".")
+	hostType := strings.ToUpper(f[0])
+	plan.instanceSeries = string(hostType[0]) // S、M 或 C
+	if len(hostType) > 2 {
+		plan.instanceSeries = hostType
+	}
+	// 再调用数据库规格接口
+	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
+		ctx,
+		plan.ProdID.ValueString(),
+		plan.FlavorName.ValueString(),
+		plan.RegionID.ValueString(),
+		plan.instanceSeries,
+	)
+	if err != nil {
+		return err
+	}
+	plan.prodPerformanceSpec = mysqlFlavor.ProdPerformanceSpec
+	plan.hostType = mysqlFlavor.Generation
+
+	// 映射关系
+	if strings.HasPrefix(plan.hostType, "K") { // 鲲鹏
+		plan.cpuType = "KunPeng"
+	} else if strings.HasPrefix(plan.hostType, "H") { // 海光
+		plan.cpuType = "Hygon"
+	} else if strings.HasPrefix(plan.hostType, "F") {
+		plan.cpuType = "Phytium"
+	} else {
+		plan.cpuType = "Intel"
+	}
+	plan.osType = "ctyunos"
+	return nil
+}
+
+// createMysqlInstance 创建mysql实例
+func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *CtyunMysqlInstanceConfig) (err error) {
 	cycleType := config.CycleType.ValueString()
 	params := &mysql.TeledbCreateRequest{
-		BillMode:        business.MysqlBillMode[cycleType],
-		RegionId:        config.RegionID.ValueString(),
-		ProdVersion:     business.MysqlProdVersionDict[config.ProdID.ValueString()],
-		VpcId:           config.VpcID.ValueString(),
-		HostType:        config.hostType,
-		SubnetId:        config.SubnetID.ValueString(),
-		SecurityGroupId: config.SecurityGroupID.ValueString(),
-		Name:            config.Name.ValueString(),
-		Period:          config.CycleCount.ValueInt32(),
-		Count:           1,
-		ProdId:          business.MysqlProdIdDict[config.ProdID.ValueString()],
-		CpuType:         business.MysqlCpuTypeDict[config.cpuType],
-		OsType:          business.MysqlOSTypeDict[config.osType],
+		BillMode:    business.MysqlBillMode[cycleType],
+		RegionId:    config.RegionID.ValueString(),
+		ProdVersion: business.MysqlProdVersionDict[config.ProdID.ValueString()],
+		VpcId:       config.VpcID.ValueString(),
+		HostType:    config.hostType,
+		SubnetId:    config.SubnetID.ValueString(),
+		Name:        config.Name.ValueString(),
+		Period:      config.CycleCount.ValueInt32(),
+		Count:       1,
+		ProdId:      business.MysqlProdIdDict[config.ProdID.ValueString()],
+		CpuType:     business.MysqlCpuTypeDict[config.cpuType],
+		OsType:      business.MysqlOSTypeDict[config.osType],
 	}
+
+	params.SecurityGroupId = config.SecurityGroupID.ValueString()
+
 	if !config.Password.IsNull() && !config.Password.IsUnknown() {
 		password := business.Encode(config.Password.ValueString())
 		params.Password = password
@@ -579,89 +658,61 @@ func (c *CtyunMysqlInstance) CreateMysqlInstance(ctx context.Context, config *Ct
 		err = common.InvalidReturnObjError
 		return
 	}
-	// 保存orderId
-	if resp.ReturnObj.Data.NewOrderId == nil {
-		err = errors.New("订单id为空，创建有误！")
+	masterOrderID := utils.SecString(resp.ReturnObj.Data.NewOrderId)
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err != nil {
 		return
 	}
+	config.MasterOrderID = types.StringValue(masterOrderID)
+	return
+}
 
-	config.MasterOrderID = types.StringValue(*resp.ReturnObj.Data.NewOrderId)
+// acquireAndSetIdIfOrderNotFinished 获取ID
+func (c *CtyunMysqlInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Context, config CtyunMysqlInstanceConfig) (id string, err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
+	if err != nil {
+		return
+	}
+	result := retryer.Start(
+		func(currentTime int) bool {
+			id, err = c.mysqlService.GetIDByOrder(ctx, config.MasterOrderID.ValueString(), config.ProjectID.ValueString())
+			if err != nil {
+				return false
+			}
+			if id != "" {
+				return false
+			}
+			return true
+		},
+	)
+	if result.ReturnReason == business.ReachMaxLoopTime {
+		return "", fmt.Errorf("实例 %s 创建超时", config.Name.ValueString())
+	}
 	return
 }
 
 func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, config *CtyunMysqlInstanceConfig) (err error) {
-	// 若实例id为空，可能是因为实例刚创建，需要通过查询列表获取
-	if config.InstID.ValueString() == "" {
-		mysqlListParams := &mysql.TeledbGetListRequest{
-			PageNow:      1,
-			PageSize:     100,
-			ProdInstName: config.Name.ValueStringPointer(),
-		}
-		mysqlListHeaders := &mysql.TeledbGetListHeaders{
-			RegionID: config.RegionID.ValueString(),
-		}
-		if config.ProjectID.ValueString() != "" {
-			mysqlListHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-		}
-
-		resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, mysqlListParams, mysqlListHeaders)
-		if err2 != nil {
-			err = err2
+	// 若实例id为空，可能是因为实例创建时异常中断，需要根据订单号查询实例id
+	if config.ID.IsNull() || config.ID.IsUnknown() || config.InstID.ValueString() == "" {
+		var id string
+		id, err = c.acquireAndSetIdIfOrderNotFinished(ctx, *config)
+		if err != nil {
 			return
 		}
-		if len(resp.ReturnObj.List) > 1 {
-			err = errors.New("实例名重复！")
-			return
-		} else if len(resp.ReturnObj.List) < 1 {
-			//若根据name查询不到机器，可能存在还未创建好的情况，需要轮询
-			resp, err = c.ListLoop(ctx, mysqlListParams, mysqlListHeaders, 60)
-			if err != nil {
-				return
-			}
-			if len(resp.ReturnObj.List) != 1 {
-				err = errors.New("未查询该实例mysql，mysql name:" + config.Name.ValueString())
-				return
-			}
-		}
-		config.InstID = types.StringValue(resp.ReturnObj.List[0].OuterProdInstId)
-		config.ID = config.InstID
-		// 确认资源是否开通完成
-		// 若暂未开通完成，需要轮询等待
-		if resp.ReturnObj.List[0].ProdOrderStatus != business.MysqlOrderStatusStarted {
-			err = c.CreateLoop(ctx, mysqlListParams, mysqlListHeaders)
-			if err != nil {
-				return err
-			}
-		}
+		config.InstID = types.StringValue(id)
 	}
-	// 获取实例详情
-	if config.InstID.ValueString() == "" {
-		err = errors.New("查询实例详情时，实例 ID为空")
-		return err
-	}
-	detailParams := &mysql.TeledbQueryDetailRequest{
-		OuterProdInstId: config.InstID.ValueString(),
-	}
-	detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-		InstID:   config.InstID.ValueString(),
-		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() {
-		detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	}
-	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
+	config.ID = config.InstID
+	var returnOjb *mysql.DetailRespReturnObj
+	returnOjb, err = c.mysqlService.GetDetailByID(
+		ctx,
+		config.InstID.ValueString(),
+		config.ProjectID.ValueString(),
+		config.RegionID.ValueString(),
+	)
 	if err != nil {
-		return err
-	} else if resp.StatusCode != 0 {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
 		return
 	}
-
 	// 处理实例详情
-	returnOjb := resp.ReturnObj
 	config.ProdRunningStatus = types.Int32Value(returnOjb.ProdRunningStatus)
 	config.ProdOrderStatus = types.Int32Value(returnOjb.ProdOrderStatus)
 	config.Vip = types.StringValue(returnOjb.Vip)
@@ -682,266 +733,46 @@ func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, confi
 		return
 	}
 	config.WritePort = types.Int32Value(int32(writePort))
-
 	// 更新disk， 主机配置相关信息
 	config.ProdID = types.StringValue(business.MysqlProdIdRevDict[returnOjb.ProdId])
-
 	config.StorageSpace = types.Int32Value(returnOjb.DiskSize)
+	config.StorageType = types.StringValue(returnOjb.DiskType)
 	config.BackupStorageSpace = types.Int32Value(returnOjb.BackupDiskSize)
-	return
-}
-
-func (c *CtyunMysqlInstance) CreateLoop(ctx context.Context, ListParams *mysql.TeledbGetListRequest, ListHeaders *mysql.TeledbGetListHeaders, loopCount ...int) (err error) {
-
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, ListParams, ListHeaders)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-
-			status := resp.ReturnObj.List[0].ProdOrderStatus
-			switch status {
-			case business.MysqlOrderStatusStarted:
-				return false
-			case business.MysqlOrderStatusCreating:
-				return true
-			case business.MysqlOrderStatusWaiting:
-				return true
-			case business.MysqlRunningStatusBackup:
-				return true
-			default:
-				// 在开通的时候，其他状态是异常的，因此抛出异常，并跳出轮询
-				err = errors.New("mysql创建状态有误： " + fmt.Sprintf("%d", status))
-				return false
-			}
-		},
-	)
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未创建成功！")
-	}
-	return
-}
-
-func (c *CtyunMysqlInstance) ListLoop(ctx context.Context, params *mysql.TeledbGetListRequest, headers *mysql.TeledbGetListHeaders, loopCount ...int) (*mysql.TeledbGetListResponse, error) {
-	var err error
-	var response *mysql.TeledbGetListResponse
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return nil, err
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, params, headers)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-
-			if len(resp.ReturnObj.List) > 1 {
-				err = fmt.Errorf("查询到多条为名为%s的记录！", *params.ProdInstName)
-				return false
-			}
-			if len(resp.ReturnObj.List) == 1 {
-				response = resp
-				return false
-			}
-			// 未查询到，继续轮询
-			return true
+	config.VpcID = types.StringValue(returnOjb.VpcId)
+	config.SubnetID = types.StringValue(returnOjb.SubnetId)
+	config.SecurityGroupID = types.StringValue(returnOjb.SecurityGroupId)
+	config.CycleType = types.StringValue(business.MysqlBillModeRev[returnOjb.ProdBillType])
+	if config.AvailabilityZoneInfo.IsNull() || config.AvailabilityZoneInfo.IsUnknown() {
+		config.AvailabilityZoneInfo = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"availability_zone_name":  types.StringType,
+				"node_type":               types.StringType,
+				"availability_zone_count": types.Int32Type,
+			},
 		})
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return nil, errors.New("轮询已达最大次数，资源仍未创建或查询到！")
-	}
-	return response, nil
-}
-
-func (c *CtyunMysqlInstance) UpgradeLoop(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig, loopCount ...int) (err error) {
-
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			// 获取实例详情
-			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
-			}
-			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-			runningStatus := resp.ReturnObj.ProdRunningStatus
-			orderStatus := resp.ReturnObj.ProdOrderStatus
-			// 若符合预期，跳出循环，扩容成功
-			if resp.ReturnObj.ProdId == business.MysqlProdIdDict[plan.ProdID.ValueString()] && resp.ReturnObj.DiskSize == plan.StorageSpace.ValueInt32() && resp.ReturnObj.MachineSpec == plan.prodPerformanceSpec {
-				//若备份磁盘空间不为空，且预期的分配磁盘空间与远端磁盘备份空间不相同，则继续轮询
-				if plan.BackupStorageSpace.ValueInt32() != 0 && plan.BackupStorageSpace.ValueInt32() != resp.ReturnObj.BackupDiskSize {
-					return true
-				}
-				if runningStatus == business.MysqlRunningStatusStarted && orderStatus == business.MysqlOrderStatusStarted {
-					return false
-				} else {
-					return true
-				}
-			}
-			return true
-		},
-	)
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未升级成功！")
 	}
 	return
 }
 
-func (c *CtyunMysqlInstance) RunningStatusLoop(ctx context.Context, config *CtyunMysqlInstanceConfig, runningStatus int32, orderStatus int32, loopCount ...int) (err error) {
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
+func (c *CtyunMysqlInstance) updateInfoLoop(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig) (err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
 	if err != nil {
 		return
 	}
 	result := retryer.Start(
 		func(currentTime int) bool {
-			mysqlListParams := &mysql.TeledbGetListRequest{
-				PageNow:      1,
-				PageSize:     100,
-				ProdInstName: config.Name.ValueStringPointer(),
-			}
-			mysqlListHeaders := &mysql.TeledbGetListHeaders{
-				RegionID: config.RegionID.ValueString(),
-			}
-			if config.ProjectID.ValueString() != "" {
-				mysqlListHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-			}
-
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, mysqlListParams, mysqlListHeaders)
-			if err2 != nil {
-				err = err2
+			var instance *mysql.DetailRespReturnObj
+			instance, err = c.mysqlService.GetDetailByID(
+				ctx,
+				state.InstID.ValueString(),
+				state.ProjectID.ValueString(),
+				state.RegionID.ValueString(),
+			)
+			if err != nil {
 				return false
 			}
-			if len(resp.ReturnObj.List) > 1 {
-				err = errors.New("实例名重复！")
+			if instance.ProdInstName == plan.Name.ValueString() && instance.WritePort == fmt.Sprintf("%d", plan.WritePort.ValueInt32()) {
 				return false
-			} else if len(resp.ReturnObj.List) < 1 {
-				//若根据name查询不到机器，可能存在还未创建好的情况，需要轮询
-				resp, err = c.ListLoop(ctx, mysqlListParams, mysqlListHeaders, 60)
-				if err != nil {
-					return false
-				}
-				if len(resp.ReturnObj.List) != 1 {
-					err = errors.New("未查询该实例mysql，mysql name:" + config.Name.ValueString())
-					return false
-				}
-			}
-
-			currentRunningStatus := resp.ReturnObj.List[0].ProdRunningStatus
-			currentOrderStatus := resp.ReturnObj.List[0].ProdOrderStatus
-			if currentOrderStatus == orderStatus && currentRunningStatus == runningStatus {
-				return false
-			}
-			return true
-
-		})
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍完成状态更新！")
-	}
-	return
-}
-
-func (c *CtyunMysqlInstance) updateInfoLoop(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig, loopCount ...int) (err error) {
-
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			// 获取实例详情
-			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
-			}
-			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-			//status := resp.ReturnObj.ProdRunningStatus
-			// 跳出轮询条件如下：
-			// 当state.name = plan.name，并且write_port无须更新时
-			// 当state.name = plan.name，且write_port符合预期时
-			if resp.ReturnObj.ProdInstName == plan.Name.ValueString() {
-				if plan.WritePort.ValueInt32() == 0 {
-					return false
-				} else {
-					if resp.ReturnObj.WritePort == fmt.Sprintf("%d", plan.WritePort.ValueInt32()) {
-						return false
-					} else {
-						return true
-					}
-				}
 			}
 			return true
 		},
@@ -952,42 +783,27 @@ func (c *CtyunMysqlInstance) updateInfoLoop(ctx context.Context, state *CtyunMys
 	return
 }
 
-func (c *CtyunMysqlInstance) StartedLoop(ctx context.Context, state *CtyunMysqlInstanceConfig, loopCount ...int) (err error) {
-	count := 30
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
+// startedLoop 等待实例处于启动状态
+func (c *CtyunMysqlInstance) startedLoop(ctx context.Context, state *CtyunMysqlInstanceConfig) (err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
 	if err != nil {
 		return
 	}
 	var cnt int
 	result := retryer.Start(
 		func(currentTime int) bool {
-			// 获取实例详情
-			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
-			}
-			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
+			var instance *mysql.DetailRespReturnObj
+			instance, err = c.mysqlService.GetDetailByID(
+				ctx,
+				state.InstID.ValueString(),
+				state.ProjectID.ValueString(),
+				state.RegionID.ValueString(),
+			)
+			if err != nil {
 				return false
 			}
-			runningStatus := resp.ReturnObj.ProdRunningStatus
-			orderStatus := resp.ReturnObj.ProdOrderStatus
+			runningStatus := instance.ProdRunningStatus
+			orderStatus := instance.ProdOrderStatus
 			// 若变配前，发现数据库已冻结，将其恢复
 			if orderStatus == business.MysqlOrderStatusPause {
 				err = c.startMysqlInstance(ctx, state, nil)
@@ -998,7 +814,7 @@ func (c *CtyunMysqlInstance) StartedLoop(ctx context.Context, state *CtyunMysqlI
 			if runningStatus == business.MysqlRunningStatusStarted && orderStatus == business.MysqlRunningStatusStarted {
 				// 有三次是start，才认为状态正常
 				cnt++
-				if cnt > 3 {
+				if cnt > 2 {
 					return false
 				}
 			}
@@ -1010,7 +826,6 @@ func (c *CtyunMysqlInstance) StartedLoop(ctx context.Context, state *CtyunMysqlI
 				err = errors.New("主机处于关机状态，不可进行变更操作")
 				return false
 			}
-
 			return true
 		},
 	)
@@ -1036,66 +851,8 @@ func (c *CtyunMysqlInstance) refund(ctx context.Context, state CtyunMysqlInstanc
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
-	return
-}
-
-// refundLoop 退订后检查
-func (c *CtyunMysqlInstance) refundLoop(ctx context.Context, state CtyunMysqlInstanceConfig, loopCount ...int) (err error) {
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			params := &mysql.TeledbGetListRequest{
-				PageNow:      1,
-				PageSize:     100,
-				ProdInstName: state.Name.ValueStringPointer(),
-			}
-			headers := &mysql.TeledbGetListHeaders{
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				headers.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, params, headers)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-			// 若查询列表已经查询不到，资源已经销毁
-			if len(resp.ReturnObj.List) == 0 {
-				return false
-			}
-			status := resp.ReturnObj.List[0].ProdOrderStatus
-			switch status {
-			case business.MysqlOrderStatusDestroy:
-				return false
-			case business.MysqlOrderStatusDestroyed:
-				return false
-			case business.MysqlOrderStatusStarted:
-				return true
-			case business.MysqlOrderStatusPause:
-				return true
-			default:
-				err = errors.New("退订状态有误，当前状态为：" + fmt.Sprintf("%d", status))
-				return false
-			}
-		},
-	)
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未退订成功！")
-	}
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -1115,63 +872,14 @@ func (c *CtyunMysqlInstance) destroy(ctx context.Context, state CtyunMysqlInstan
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
-	return
-}
-
-// destroyLoop 销毁后检查
-func (c *CtyunMysqlInstance) destroyLoop(ctx context.Context, state CtyunMysqlInstanceConfig, loopCount ...int) (err error) {
-	count := 60
-	if len(loopCount) > 0 {
-		count = loopCount[0]
-	}
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			params := &mysql.TeledbGetListRequest{
-				PageNow:      1,
-				PageSize:     100,
-				ProdInstName: state.Name.ValueStringPointer(),
-			}
-			headers := &mysql.TeledbGetListHeaders{
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				headers.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, params, headers)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-			// 若查询列表已经查询不到，资源已经销毁
-			if len(resp.ReturnObj.List) == 0 {
-				return false
-			}
-			return true
-		},
-	)
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未退订成功！")
-	}
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
 func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig) (err error) {
-	if state.InstID.ValueString() == "" {
-		err = errors.New("变配实例时，实例ID为空！")
-		return err
-	}
 	// 修改实例名称
-	if plan.Name.ValueString() != "" && state.Name.ValueString() != plan.Name.ValueString() {
+	if !plan.Name.Equal(state.Name) {
 		updateNameParams := &mysql.TeledbUpdateInstanceNameRequest{
 			OuterProdInstID:     state.InstID.ValueString(),
 			InstanceDescription: plan.Name.ValueString(),
@@ -1192,11 +900,32 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 			return
 		}
 	}
+	// 修改实例密码
+	if !plan.Password.Equal(state.Password) {
+		// 更新之前需要确定主机状态必须为started
+		err = c.startedLoop(ctx, state)
+		if err != nil {
+			return
+		}
+		err = c.updateMysqlRootPassword(ctx, state, plan)
+		if err != nil {
+			return
+		}
+		state.Password = plan.Password
+	}
+	//  修改安全组，当前只增不减
+	//if !plan.SecurityGroupID.Equal(state.SecurityGroupID) {
+	//	err = c.startedLoop(ctx, state)
+	//	if err != nil {
+	//		return
+	//	}
+	//	err = c.updateSecurityGroup(ctx, state, plan)
+	//}
 
 	// 修改实例写端口
-	if plan.WritePort.ValueInt32() != 0 && state.WritePort.ValueInt32() != plan.WritePort.ValueInt32() {
+	if !plan.WritePort.Equal(state.WritePort) {
 		// 更新之前需要确定主机状态必须为started
-		err = c.StartedLoop(ctx, state)
+		err = c.startedLoop(ctx, state)
 		if err != nil {
 			return
 		}
@@ -1219,6 +948,7 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 			return
 		}
 	}
+
 	// 轮询基础信息是否修改成功
 	err = c.updateInfoLoop(ctx, state, plan)
 	if err != nil {
@@ -1313,7 +1043,7 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 	// 若ProdPerformanceSpec, DiskVolume或者ProdId不为空时候，触发变配
 	if upgradeParams.ProdPerformanceSpec != nil || upgradeParams.ProdId != nil {
 		// 更新之前需要确定主机状态必须为started
-		err = c.StartedLoop(ctx, state)
+		err = c.startedLoop(ctx, state)
 		if err != nil {
 			return
 		}
@@ -1325,8 +1055,8 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 			err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, resp.Error)
 			return
 		}
-		// 扩容后，轮循请求实例详情，确认已经完成升配
-		err = c.UpgradeLoop(ctx, state, plan)
+		masterOrderID := resp.ReturnObj.Data.NewOrderId
+		err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 		if err != nil {
 			return
 		}
@@ -1347,7 +1077,7 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 	// 停止实例
 	if plan.RunningControl.ValueString() == "freeze" {
 		// 进行重启、停止实例时，确保实例处于started状态
-		err = c.StartedLoop(ctx, state)
+		err = c.startedLoop(ctx, state)
 		if err != nil {
 			return
 		}
@@ -1370,7 +1100,14 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 			return
 		}
 		// 轮询验证，是否已停止，停止状态下，验证订单状态，预期=6
-		err = c.RunningStatusLoop(ctx, state, business.MysqlRunningStatusStarted, business.MysqlOrderStatusPause, 60)
+		err = c.mysqlService.WaitInstanceStatus(
+			ctx,
+			state.InstID.ValueString(),
+			state.ProjectID.ValueString(),
+			state.RegionID.ValueString(),
+			business.MysqlRunningStatusStarted,
+			business.MysqlOrderStatusPause,
+		)
 		if err != nil {
 			return
 		}
@@ -1379,7 +1116,7 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 	// 重启实例
 	if plan.RunningControl.ValueString() == "restart" {
 		// 进行重启、关机实例时，确保实例处于started状态
-		err = c.StartedLoop(ctx, state)
+		err = c.startedLoop(ctx, state)
 		if err != nil {
 			return
 		}
@@ -1402,7 +1139,14 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 			return
 		}
 		//轮询验证，是否已完成重启
-		err = c.RunningStatusLoop(ctx, state, business.MysqlRunningStatusStarted, business.MysqlOrderStatusStarted, 60)
+		err = c.mysqlService.WaitInstanceStatus(
+			ctx,
+			state.InstID.ValueString(),
+			state.ProjectID.ValueString(),
+			state.RegionID.ValueString(),
+			business.MysqlRunningStatusStarted,
+			business.MysqlOrderStatusStarted,
+		)
 		if err != nil {
 			return
 		}
@@ -1431,7 +1175,14 @@ func (c *CtyunMysqlInstance) startMysqlInstance(ctx context.Context, state *Ctyu
 		return
 	}
 	// 轮询验证，是否已启动
-	err = c.RunningStatusLoop(ctx, state, business.MysqlRunningStatusStarted, business.MysqlOrderStatusStarted, 60)
+	err = c.mysqlService.WaitInstanceStatus(
+		ctx,
+		state.InstID.ValueString(),
+		state.ProjectID.ValueString(),
+		state.RegionID.ValueString(),
+		business.MysqlRunningStatusStarted,
+		business.MysqlOrderStatusStarted,
+	)
 	if err != nil {
 		return
 	}
@@ -1449,7 +1200,9 @@ func (c *CtyunMysqlInstance) generateAzInfos(ctx context.Context, config *CtyunM
 		// 2. 获取az信息
 		var regionAzList []mysql.TeledbGetAvailabilityZoneResponseReturnObjData
 		regionAzList, err = c.getAzInfoByRegion(ctx, config)
-
+		if err != nil {
+			return err
+		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
 		}
@@ -1677,61 +1430,8 @@ func (c *CtyunMysqlInstance) getAzInfoByRegion(ctx context.Context, config *Ctyu
 	return
 }
 
-func (c *CtyunMysqlInstance) UpgradeStorageLoop(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig, NodeType string) (err error) {
-	count := 60
-	retryer, err := business.NewRetryer(time.Second*30, count)
-	if err != nil {
-		return
-	}
-	result := retryer.Start(
-		func(currentTime int) bool {
-			// 获取实例详情
-			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
-			}
-			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
-				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
-			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
-			if err2 != nil {
-				err = err2
-				return false
-			} else if resp.StatusCode != 0 {
-				err = fmt.Errorf("API return error. Message: %s", resp.Message)
-				return false
-			} else if resp.ReturnObj == nil {
-				err = common.InvalidReturnObjError
-				return false
-			}
-			runningStatus := resp.ReturnObj.ProdRunningStatus
-			orderStatus := resp.ReturnObj.ProdOrderStatus
-			// 若符合预期，跳出循环，扩容成功
-			if runningStatus == business.MysqlRunningStatusStarted && orderStatus == business.MysqlOrderStatusStarted {
-				if NodeType == business.PgsqlStorageTypeMaster {
-					if resp.ReturnObj.DiskSize == plan.StorageSpace.ValueInt32() {
-						return false
-					}
-				} else if NodeType == business.PgsqlStorageTypeBackUp {
-					if plan.BackupStorageSpace.ValueInt32() != 0 && plan.BackupStorageSpace.ValueInt32() == resp.ReturnObj.BackupDiskSize {
-						return false
-					}
-				}
-			}
-			return true
-		},
-	)
-	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未升级成功！")
-	}
-	return
-}
-
 func (c *CtyunMysqlInstance) upgradeMysqlStorage(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig, upgradeParams *mysql.TeledbUpgradeRequest, upgradeHeader *mysql.TeledbUpgradeRequestHeader) (err error) {
-	err = c.StartedLoop(ctx, state)
+	err = c.startedLoop(ctx, state)
 	if err != nil {
 		return
 	}
@@ -1743,51 +1443,37 @@ func (c *CtyunMysqlInstance) upgradeMysqlStorage(ctx context.Context, state *Cty
 		err = fmt.Errorf("update storage failed, API return error. Message: %s Error: %s", resp.Message, resp.Error)
 		return
 	}
-	// 扩容后，轮循请求实例详情，确认已经完成升配
-	err = c.UpgradeStorageLoop(ctx, state, plan, *upgradeParams.NodeType)
+	masterOrderID := resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
-// checkSpec 检查规格
-func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInstanceConfig) error {
-	// 先根据spec_name调用云主机规格接口
-	_, err := c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
+func (c *CtyunMysqlInstance) updateMysqlRootPassword(ctx context.Context, state *CtyunMysqlInstanceConfig, plan *CtyunMysqlInstanceConfig) error {
+	params := &mysql.TeledbResetRootPasswordRequest{
+		OuterProdInstId: state.ID.ValueString(),
+		RootPassword:    c.encodeBase64(plan.Password.ValueString()),
+	}
+	header := &mysql.TeledbResetRootPasswordRequestHeader{
+		InstID:   state.InstID.ValueString(),
+		RegionID: state.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbResetRootPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
-	}
-
-	f := strings.Split(plan.FlavorName.ValueString(), ".")
-	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
-	}
-	// 再调用数据库规格接口
-	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
-		ctx,
-		plan.ProdID.ValueString(),
-		plan.FlavorName.ValueString(),
-		plan.RegionID.ValueString(),
-		plan.instanceSeries,
-	)
-	if err != nil {
+	} else if resp == nil {
+		err = fmt.Errorf("修改mysql实例(id=%s)的root密码失败，接口返回nil，请联系研发确认问题原因！", state.InstID.ValueString())
+		return err
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	plan.prodPerformanceSpec = mysqlFlavor.ProdPerformanceSpec
-	plan.hostType = mysqlFlavor.Generation
+	return err
 
-	// 映射关系
-	if strings.HasPrefix(plan.hostType, "K") { // 鲲鹏
-		plan.cpuType = "KunPeng"
-	} else if strings.HasPrefix(plan.hostType, "H") { // 海光
-		plan.cpuType = "Hygon"
-	} else if strings.HasPrefix(plan.hostType, "F") {
-		plan.cpuType = "Phytium"
-	} else {
-		plan.cpuType = "Intel"
-	}
-	plan.osType = "ctyunos"
-	return nil
+}
+
+func (c *CtyunMysqlInstance) encodeBase64(password string) string {
+	encodedPassword := base64.StdEncoding.EncodeToString([]byte(password))
+	return encodedPassword
 }
 
 type CtyunMysqlInstanceConfig struct {
@@ -1803,7 +1489,7 @@ type CtyunMysqlInstanceConfig struct {
 	AutoRenew                   types.Bool   `tfsdk:"auto_renew"`                     // 自动续订状态
 	ProdID                      types.String `tfsdk:"prod_id"`                        // 产品id
 	MasterOrderID               types.String `tfsdk:"master_order_id"`                // 订单id
-	InstID                      types.String `tfsdk:"inst_id"`                        // 实例id
+	InstID                      types.String `tfsdk:"instance_id"`                    // 实例id
 	ProjectID                   types.String `tfsdk:"project_id"`                     // 项目id
 	ProdRunningStatus           types.Int32  `tfsdk:"prod_running_status"`            // 以查询实例列表为主，0.正常 1.重启中 2.备份中 3.恢复中 4.修改参数中 5.应用参数组中 6&7.扩容中 8.修改端口中 9.迁移中 10.重置密码中
 	Vip                         types.String `tfsdk:"vip"`                            // 虚拟IP地址

@@ -3,6 +3,7 @@ package image
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
@@ -21,7 +22,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunImage{}
+	_ resource.ResourceWithConfigure   = &ctyunImage{}
+	_ resource.ResourceWithImportState = &ctyunImage{}
 )
 
 func NewCtyunImage() resource.Resource {
@@ -53,12 +61,12 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]+/[^/]+/.+$`), "格式应为{internetEndpoint}/{bucket}/{key}"),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]+//[^/]+/.+$`), "格式应为{internetEndpoint}/{bucket}/{key}"),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾",
+				Description: "镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9]$"), "不满足镜像名称要求"),
@@ -98,7 +106,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 			"boot_mode": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS）",
+				Description: "启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS），支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageBootModes...),
 				},
@@ -106,7 +114,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "镜像描述信息。注意：长度为1~128个字符。",
+				Description: "镜像描述信息。注意：长度为1~128个字符。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 128),
 				},
@@ -319,13 +327,37 @@ func (c *ctyunImage) Delete(ctx context.Context, request resource.DeleteRequest,
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [imageId],[regionId]
 func (c *ctyunImage) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [imageId],[region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunImageConfig
 	var imageId, regionId string
-	err := terraform_extend.Split(request.ID, &imageId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	// 根据分隔符数量判断是否输入了regionId,projectId
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &imageId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &imageId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if imageId == "" {
+		err = fmt.Errorf("imageId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionId不能为空")
 		return
 	}
 
@@ -334,7 +366,6 @@ func (c *ctyunImage) ImportState(ctx context.Context, request resource.ImportSta
 
 	instance, err := c.getAndMergeImage(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

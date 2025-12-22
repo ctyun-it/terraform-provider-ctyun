@@ -29,6 +29,7 @@ type Dependence struct {
 	instanceUUID3    string
 	scalingConfigID  string
 	scalingConfigID1 string
+	azName           string
 }
 
 var dependence Dependence
@@ -59,11 +60,14 @@ func TestMain(m *testing.M) {
 		//targetGroupID:    "tg-ntp6ws9y6b",
 		//targetGroupID1:   "tg-naw5sqhn8t",
 		securityGroupID1: outputs["security_group_id1"].Value,
-		imageID:          "e419d569-1a16-4e4e-9efc-5bc3773ca6bf",
-		keyPairID:        outputs["key_pair_id"].Value,
-		imageID1:         "995ecd83-c011-498b-bec7-9ab585255f9e",
-		scalingGroupID:   outputs["scaling_group_id"].Value,
-		instanceUUID:     outputs["instance_uuid"].Value,
+		//imageID:          "e419d569-1a16-4e4e-9efc-5bc3773ca6bf",
+		imageID:   outputs["image_id1"].Value,
+		keyPairID: outputs["key_pair_id"].Value,
+		//imageID1:       "995ecd83-c011-498b-bec7-9ab585255f9e",
+		//imageID1:       "de0b0498-a5c3-47da-a7b7-3b7540d68e58",
+		imageID1:       outputs["image_id2"].Value,
+		scalingGroupID: outputs["scaling_group_id"].Value,
+		instanceUUID:   outputs["instance_uuid"].Value,
 		//instanceUUID: "fb081ebe-87e8-6d68-951b-d8c4a56cf4fe",
 		instanceUUID1: outputs["instance_uuid1"].Value,
 		//instanceUUID1:    "d8c0c1e1-3dde-9b03-b950-6bab59aa37f8",
@@ -71,6 +75,7 @@ func TestMain(m *testing.M) {
 		instanceUUID3:    outputs["instance_uuid3"].Value,
 		scalingConfigID:  outputs["scaling_config_id"].Value,
 		scalingConfigID1: outputs["scaling_config_id1"].Value,
+		azName:           outputs["az_name"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

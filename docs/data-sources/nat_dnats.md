@@ -29,7 +29,7 @@ data "ctyun_nat_dnats" "test" {
 
 ### Required
 
-- `nat_gateway_id` (String) 要查询的NAT网关的ID
+- `nat_gateway_id` (String) NAT网关ID
 
 ### Optional
 
@@ -37,16 +37,15 @@ data "ctyun_nat_dnats" "test" {
 
 ### Read-Only
 
-- `dnats` (Attributes List) dnats列表 (see [below for nested schema](#nestedatt--dnats))
+- `dnats` (Attributes List) dnat列表 (see [below for nested schema](#nestedatt--dnats))
 
 <a id="nestedatt--dnats"></a>
 ### Nested Schema for `dnats`
 
 Read-Only:
 
-- `create_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述信息
-- `dnat_id` (String) dnatID 值
 - `extend_id` (String) 弹性 IP id
 - `external_ip` (String) 弹性 IP 地址
 - `external_port` (Number) 外部访问端口

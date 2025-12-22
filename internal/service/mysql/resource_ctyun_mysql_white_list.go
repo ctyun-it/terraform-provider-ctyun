@@ -7,8 +7,10 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -32,6 +34,49 @@ type CtyunMysqlWhiteList struct {
 	meta *common.CtyunMetadata
 }
 
+func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name][instanceID],[projectID],[regionID]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunMysqlWhiteListConfig
+	var name, instanceID, regionId, projectId string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &name, &instanceID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &name, &instanceID, &projectId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if instanceID == "" {
+		err = fmt.Errorf("instanceID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	config.GroupName = types.StringValue(name)
+	config.ProdInstID = types.StringValue(instanceID)
+	config.RegionID = types.StringValue(regionId)
+	config.ProjectID = types.StringValue(projectId)
+	err = c.getAndMergeMysqlAccessWhiteList(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
+}
+
 func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794`,
@@ -51,7 +96,7 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -60,7 +105,7 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"prod_inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Required:    true,
 				Description: "mysql实例id",
 				PlanModifiers: []planmodifier.String{
@@ -83,7 +128,7 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"group_white_list": schema.SetAttribute{
 				Required:    true,
 				ElementType: types.StringType,
-				Description: "白名单ip列表，举例：['192.168.0.1', '192.168.0.*'],指定IP地址192.168.0.1：表示允许192.168.0.1的IP地址访问实例。 指定IP地址192.168.0.*：表示允许从192.168.0.1到192.168.0.255的IP地址访问实例。",
+				Description: "白名单ip列表，支持更新，举例：['192.168.0.1', '192.168.0.*'],指定IP地址192.168.0.1：表示允许192.168.0.1的IP地址访问实例。 指定IP地址192.168.0.*：表示允许从192.168.0.1到192.168.0.255的IP地址访问实例。",
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
 					setvalidator.ValueStringsAre(stringvalidator.UTF8LengthAtLeast(1)),
@@ -93,17 +138,22 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 				Computed:    true,
 				Description: "白名单分组组内数量",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "创建时间",
+				Description: "创建时间，为UTC格式",
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "更新时间",
+				Description: "更新时间，为UTC格式",
 			},
 			"access_machine_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "访问类型",
+			},
+			"id": schema.StringAttribute{
+				Computed:      true,
+				Description:   "id 唯一标识",
+				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -258,10 +308,6 @@ func NewCtyunMysqlWhiteList() resource.Resource {
 	return &CtyunMysqlWhiteList{}
 }
 
-func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	// todo
-}
-
 func (c *CtyunMysqlWhiteList) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
 		return
@@ -297,9 +343,7 @@ func (c *CtyunMysqlWhiteList) CreateMysqlAccessWhiteList(ctx context.Context, co
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
-
 	return
-
 }
 
 func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Context, config *CtyunMysqlWhiteListConfig) (err error) {
@@ -331,14 +375,27 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 			config.GroupWhiteListCount = types.Int32Value(whileListInfo.GroupWhiteListCount)
 			config.AccessMachineType = types.StringValue(whileListInfo.AccessMachineType)
 			config.GroupName = types.StringValue(whileListInfo.GroupName)
-			config.CreatedTime = types.StringValue(fmt.Sprintf("%d", whileListInfo.CreateTime))
-			config.UpdatedTime = types.StringValue(fmt.Sprintf("%d", whileListInfo.UpdateTime))
+			config.CreatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.CreateTime))
+			config.UpdatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.UpdateTime))
+			if whileListInfo.WhiteList == nil {
+				whileListInfo.WhiteList = make([]string, 0)
+			}
 			groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, whileListInfo.WhiteList)
 			if diags.HasError() {
 				return
 			}
 			config.GroupWhiteList = groupWhiteList
 		}
+	}
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s", config.ProdInstID.ValueString(), config.GroupName.ValueString()))
+	if config.GroupWhiteList.IsNull() || config.GroupWhiteList.IsUnknown() {
+		initGroupWhiteList := make([]string, 0)
+		groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, initGroupWhiteList)
+		if diags.HasError() {
+			err = fmt.Errorf(diags[0].Detail())
+			return
+		}
+		config.GroupWhiteList = groupWhiteList
 	}
 	return
 }
@@ -379,13 +436,14 @@ func (c *CtyunMysqlWhiteList) updateMysqlWhiteList(ctx context.Context, state *C
 type CtyunMysqlWhiteListConfig struct {
 	ProjectID           types.String `tfsdk:"project_id"`
 	RegionID            types.String `tfsdk:"region_id"`
-	ProdInstID          types.String `tfsdk:"prod_inst_id"`
+	ProdInstID          types.String `tfsdk:"instance_id"`
 	GroupName           types.String `tfsdk:"group_name"`
 	GroupWhiteList      types.Set    `tfsdk:"group_white_list"`
 	GroupWhiteListCount types.Int32  `tfsdk:"group_white_list_count"`
-	CreatedTime         types.String `tfsdk:"created_time"`
-	UpdatedTime         types.String `tfsdk:"updated_time"`
+	CreatedTime         types.String `tfsdk:"create_time"`
+	UpdatedTime         types.String `tfsdk:"update_time"`
 	AccessMachineType   types.String `tfsdk:"access_machine_type"` // 访问类型
+	ID                  types.String `tfsdk:"id"`
 }
 
 // checkStatus 数据库状态为running

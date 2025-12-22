@@ -21,11 +21,11 @@ provider "ctyun" {
 
 
 resource "ctyun_ebs_snapshot_policy" "test" {
-    name           = "test"
-    repeat_weekdays            = "0,1,2"
-    repeat_times            = "0,1,2"
-    retention_time        = 2
-    is_enabled  = true
+  name            = "test"
+  repeat_weekdays = "0,1,2"
+  repeat_times    = "0,1,2"
+  retention_time  = 2
+  enabled         = true
 }
 ```
 
@@ -41,13 +41,13 @@ resource "ctyun_ebs_snapshot_policy" "test" {
 
 ### Optional
 
-- `is_enabled` (Boolean) 是否启用策略，取值范围：true：启用，false：不启用，默认为true。支持更新
+- `enabled` (Boolean) 是否启用策略，取值范围：true：启用，false：不启用，默认为true。支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `bound_disk_num` (Number) 关联云硬盘的数量
+- `create_time` (String) 策略创建时间
 - `id` (String) 云硬盘快照策略id
-- `snapshot_policy_create_time` (String) 策略创建时间
-- `snapshot_policy_status` (String) 自动快照策略状态，取值范围：activated:启用，nonactivated：停用
+- `status` (String) 自动快照策略状态，取值范围：activated:启用，nonactivated：停用

@@ -134,11 +134,11 @@ package ecs
 //						},
 //						"created_at": schema.StringAttribute{
 //							Computed:    true,
-//							Description: "创建时间",
+//							Description: "创建时间，为UTC格式",
 //						},
 //						"expired_at": schema.StringAttribute{
 //							Computed:    true,
-//							Description: "到期时间",
+//							Description: "到期时间，为UTC格式，按需时为空",
 //						},
 //						"expired": schema.BoolAttribute{
 //							Computed:    true,

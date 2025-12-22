@@ -75,12 +75,12 @@ func TestAccCtyunElbRule(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, listenerId, updatedConditions, actionType, actionTargetGroups) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.0.listener_id", listenerId),
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.0.conditions.0.condition_type", "server_name"),
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.0.conditions.0.server_name", "terraform-test-new.com"),
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.0.action_type", actionType),
-					resource.TestCheckResourceAttr(datasourceName, "elb_rules.0.action_target_groups.0.target_group_id", dependence.targetGroupID4),
+					resource.TestCheckResourceAttr(datasourceName, "rules.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.listener_id", listenerId),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.conditions.0.condition_type", "server_name"),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.conditions.0.server_name", "terraform-test-new.com"),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.action_type", actionType),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.action_target_groups.0.target_group_id", dependence.targetGroupID4),
 				),
 			},
 			//1.4 destroy
@@ -118,6 +118,80 @@ func TestAccCtyunElbRule(t *testing.T) {
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, listenerId, pathConditions, actionType, actionTargetGroups),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+func TestAccCtyunElbRuleImportState(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_elb_rule." + rnd
+	resourceFile := "resource_ctyun_elb_rule.tf"
+
+	actionType := "forward"
+
+	listenerId := dependence.listenerID
+	//conditions := fmt.Sprintf(`{"type": "%s", "condition_server_name": "%s", "condition_url_paths":"%s","condition_match_type":"%s"}`, "server_name", "terraform-test.com", "/test", "PREFIX")
+	conditions := fmt.Sprintf(`{"condition_type": "%s", "condition_server_name": "%s"}`, "server_name", "terraform-test.com")
+	//updatedConditions := fmt.Sprintf(`{"type": "%s", "condition_server_name": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "server_name", "terraform-test-new.com", "test_new", "PREFIX")
+	//updatedPathConditions := fmt.Sprintf(`{"type": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "url_path", "test-new", "PREFIX")
+	actionTargetGroups := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID4)
+	//updatedActionTargetGroups := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1.1 Create验证
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, listenerId, conditions, actionType, actionTargetGroups),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "listener_id", listenerId),
+					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_type", "server_name"),
+					resource.TestCheckResourceAttr(resourceName, "action_type", actionType),
+					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_server_name", "terraform-test.com"),
+					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "test"),
+					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_match_type", "PREFIX"),
+					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
+				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, listenerId, conditions, actionType, actionTargetGroups),
 				Destroy: true,
 			},
 		},

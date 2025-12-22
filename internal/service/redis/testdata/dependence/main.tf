@@ -67,6 +67,18 @@ locals {
   real_security_group_id = local.data_security_group_id == "" ? try(ctyun_security_group.security_group_test[0].id, "") : local.data_security_group_id
 }
 
+resource "ctyun_security_group_rule" "security_group_rule_ingress" {
+ security_group_id = local.real_security_group_id
+ direction         = "ingress"
+ action            = "accept"
+ priority          = 1
+ protocol          = "tcp"
+ ether_type        = "ipv4"
+ dest_cidr_ip      = "0.0.0.0/0"
+ range             = "6379"
+}
+
+
 resource "ctyun_eip" "eip_test" {
   name                = "tf-eip-for-redis"
   bandwidth           = 10
@@ -80,4 +92,55 @@ data "ctyun_redis_specs" "test"{
 
 locals {
   spec = data.ctyun_redis_specs.test.series_infos[0]
+}
+
+resource "ctyun_redis_instance" "test_redis_instance" {
+  instance_name = "test-redis-instance7"
+  engine_version = "7.0"
+  edition = local.spec.series_code
+  vpc_id = local.real_vpc_id
+  subnet_id = local.real_subnet_id
+  security_group_id = local.real_security_group_id
+  password=var.password
+  cycle_type = "month"
+  cycle_count = 1
+  auto_renew = true
+  auto_renew_cycle_count = 12
+  shard_mem_size = 8
+  host_type = "C"
+}
+
+resource "ctyun_redis_instance" "test_redis_instance2" {
+  instance_name = "test-redis-instance6"
+  engine_version = "7.0"
+  edition = local.spec.series_code
+  vpc_id = local.real_vpc_id
+  subnet_id = local.real_subnet_id
+  security_group_id = local.real_security_group_id
+  password=var.password
+  cycle_type = "month"
+  cycle_count = 1
+  auto_renew = true
+  auto_renew_cycle_count = 12
+  shard_mem_size = 8
+  host_type = "C"
+}
+
+resource "ctyun_redis_account" "test_instance1_account" {
+  name = "instance1_account"
+  instance_id = ctyun_redis_instance.test_redis_instance.id
+  password  = var.password
+  privilege = "rw"
+}
+
+resource "ctyun_redis_account" "test_instance2_account" {
+  name = "instance2_account"
+  instance_id = ctyun_redis_instance.test_redis_instance2.id
+  password  = var.password
+  privilege = "rw"
+}
+
+variable "password" {
+  type      = string
+  sensitive = true
 }

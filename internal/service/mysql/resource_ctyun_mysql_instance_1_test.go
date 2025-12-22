@@ -47,7 +47,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, ProdId, "", storageType, storageSpace, NodeOneAvailabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single57"),
 				),
 			},
@@ -55,7 +55,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updatedDoubleProId, "", storageType, storageSpace, updatedDiskAvailabilityZoneInfo, "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},
@@ -63,7 +63,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updatedDoubleProId, "", storageType, storageSpace, updatedDiskAvailabilityZoneInfo, `running_control="freeze"`, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_running_status", fmt.Sprintf("%d", 0)),
 					resource.TestCheckResourceAttr(resourceName, "prod_order_status", fmt.Sprintf("%d", 6)),
 				),
@@ -72,7 +72,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updatedDoubleProId, "", storageType, storageSpace, updatedDiskAvailabilityZoneInfo, `running_control="unfreeze"`, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_running_status", fmt.Sprintf("%d", 0)),
 					resource.TestCheckResourceAttr(resourceName, "prod_order_status", fmt.Sprintf("%d", 0)),
 				),
@@ -81,7 +81,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleBillMode, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updatedDoubleProId, "", storageType, storageSpace, updatedDiskAvailabilityZoneInfo, `running_control="restart"`, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "inst_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "instance_id"),
 					resource.TestCheckResourceAttr(resourceName, "prod_running_status", fmt.Sprintf("%d", 0)),
 					resource.TestCheckResourceAttr(resourceName, "prod_order_status", fmt.Sprintf("%d", 0)),
 				),

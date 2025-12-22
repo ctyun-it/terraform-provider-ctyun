@@ -19,15 +19,15 @@ provider "ctyun" {
   env = "prod"
 }
 
-resource "ctyun_eip" "eip_test2" {
- name                = "eip-test2"
- bandwidth           = 10
- cycle_type          = "on_demand"
- demand_billing_type = "bandwidth"
+resource "ctyun_eip" "eip_test" {
+  name                = "eip-test"
+  bandwidth           = 10
+  cycle_type          = "on_demand"
+  demand_billing_type = "bandwidth"
 }
 
 resource "ctyun_redis_association_eip" "test" {
-  eip_address = ctyun_eip.eip_test2.address
+  eip_id      = ctyun_eip.eip_test.id
   instance_id = "d59e17a10dda4105936b7e3ede290ba5"
 }
 ```
@@ -37,7 +37,7 @@ resource "ctyun_redis_association_eip" "test" {
 
 ### Required
 
-- `eip_address` (String) 弹性IP地址
+- `eip_id` (String) 弹性IP的ID
 - `instance_id` (String) Redis实例ID
 
 ### Optional

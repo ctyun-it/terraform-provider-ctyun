@@ -55,7 +55,7 @@ func (c *ctyunElbRules) Schema(ctx context.Context, request datasource.SchemaReq
 				Optional:    true,
 				Description: "负载均衡实例ID",
 			},
-			"elb_rules": schema.ListNestedAttribute{
+			"rules": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "elb转发规则",
 				NestedObject: schema.NestedAttributeObject{
@@ -153,11 +153,11 @@ func (c *ctyunElbRules) Schema(ctx context.Context, request datasource.SchemaReq
 								stringvalidator.OneOf(business.ElbRuleStatus...),
 							},
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -260,7 +260,7 @@ type CtyunElbRulesConfig struct {
 	RegionID       types.String   `tfsdk:"region_id"`        //区域ID
 	IDs            types.String   `tfsdk:"ids"`              //转发规则ID列表，以,分隔
 	LoadBalancerID types.String   `tfsdk:"load_balancer_id"` //负载均衡实例ID
-	ElbRules       []ElbRuelModel `tfsdk:"elb_rules"`
+	ElbRules       []ElbRuelModel `tfsdk:"rules"`
 }
 
 type ElbRuelModel struct {
@@ -277,8 +277,8 @@ type ElbRuelModel struct {
 	ActionTargetGroups       []TargetGroupModel `tfsdk:"action_target_groups"`        //后端服务组
 	ActionRedirectListenerID types.String       `tfsdk:"action_redirect_listener_id"` //重定向监听器ID
 	Status                   types.String       `tfsdk:"status"`                      //状态: ACTIVE / DOWN
-	CreatedTime              types.String       `tfsdk:"created_time"`                //创建时间，为UTC格式
-	UpdatedTime              types.String       `tfsdk:"updated_time"`                //更新时间，为UTC格式
+	CreatedTime              types.String       `tfsdk:"create_time"`                 //创建时间，为UTC格式
+	UpdatedTime              types.String       `tfsdk:"update_time"`                 //更新时间，为UTC格式
 }
 
 type ConditionModel struct {

@@ -12,8 +12,7 @@ resource "ctyun_subnet" "subnet_test" {
   description = "terraform测试使用"
   dns         = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
@@ -64,4 +63,9 @@ resource "ctyun_ebs_snapshot" "ebs_snapshot_test" {
 variable "password" {
   type      = string
   sensitive = true
+}
+
+
+data "ctyun_ebs_snapshot_policies" "aaa" {
+
 }

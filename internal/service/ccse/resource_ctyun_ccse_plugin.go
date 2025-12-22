@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 	"time"
 )
 
@@ -251,20 +252,44 @@ func (c *ctyunCcsePlugin) Configure(_ context.Context, request resource.Configur
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [pluginName],[clusterID],[regionID]
 func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [pluginName],[clusterID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunCcsePluginConfig
 	var chartName, clusterID, regionID string
-	err = terraform_extend.Split(request.ID, &chartName, &clusterID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &chartName, &clusterID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &chartName, &clusterID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if chartName == "" {
+		err = fmt.Errorf("chartName不能为空")
 		return
 	}
+	if clusterID == "" {
+		err = fmt.Errorf("clusterID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
 	cfg.ChartName = types.StringValue(chartName)
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ClusterID = types.StringValue(clusterID)
@@ -297,7 +322,7 @@ func (c *ctyunCcsePlugin) checkBeforeCreate(ctx context.Context, plan CtyunCcseP
 func (c *ctyunCcsePlugin) checkAfterCreate(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
 	var failedCnt int
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
@@ -411,7 +436,7 @@ func (c *ctyunCcsePlugin) updateChartVersion(ctx context.Context, plan, state Ct
 func (c *ctyunCcsePlugin) checkAfterChartVersion(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
 	var failedCnt int
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
@@ -464,7 +489,7 @@ func (c *ctyunCcsePlugin) delete(ctx context.Context, plan CtyunCcsePluginConfig
 // checkAfterDelete 删除后检查
 func (c *ctyunCcsePlugin) checkAfterDelete(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse

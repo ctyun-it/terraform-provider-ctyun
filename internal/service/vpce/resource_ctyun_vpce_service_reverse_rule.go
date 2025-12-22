@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 )
 
 var (
@@ -49,6 +50,8 @@ type CtyunVpceServiceReverseRuleConfig struct {
 	TargetIP          types.String `tfsdk:"target_ip"`
 	TargetPort        types.Int32  `tfsdk:"target_port"`
 	Protocol          types.String `tfsdk:"protocol"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 func (c *ctyunVpceServiceReverseRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -142,6 +145,17 @@ func (c *ctyunVpceServiceReverseRule) Schema(_ context.Context, _ resource.Schem
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Description: "更新时间，为UTC格式",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -225,18 +239,38 @@ func (c *ctyunVpceServiceReverseRule) Configure(_ context.Context, request resou
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[endpointServiceID],[regionID]
 func (c *ctyunVpceServiceReverseRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[endpointServiceID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceReverseRuleConfig
 	var id, endpointServiceID, regionID string
-	err = terraform_extend.Split(request.ID, &id, &endpointServiceID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &id, &endpointServiceID)
+	} else {
+		err = terraform_extend.Split(request.ID, &id, &endpointServiceID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if id == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if endpointServiceID == "" {
+		err = fmt.Errorf("endpointServiceID不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -305,6 +339,8 @@ func (c *ctyunVpceServiceReverseRule) getAndMerge(ctx context.Context, plan *Cty
 			plan.TransitPort = types.Int32Value(rule.TransitPort)
 			plan.TargetPort = types.Int32Value(rule.TargetPort)
 			plan.Protocol = utils.SecStringValue(rule.Protocol)
+			plan.CreateTime = utils.SecStringValue(rule.CreatedAt)
+			plan.UpdateTime = utils.SecStringValue(rule.UpdatedAt)
 			exist = true
 		}
 	}

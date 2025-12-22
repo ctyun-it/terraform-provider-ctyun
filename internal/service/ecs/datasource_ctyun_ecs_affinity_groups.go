@@ -28,19 +28,19 @@ func (c *ctyunEcsAffinityGroups) Metadata(_ context.Context, request datasource.
 }
 
 type CtyunEcsAffinityGroupsModel struct {
-	AffinityGroupID     types.String `tfsdk:"affinity_group_id"`
-	AffinityGroupName   types.String `tfsdk:"affinity_group_name"`
-	AffinityGroupPolicy types.String `tfsdk:"affinity_group_policy"`
-	CreatedTime         types.String `tfsdk:"created_time"`
-	UpdatedTime         types.String `tfsdk:"updated_time"`
+	ID         types.String `tfsdk:"id"`
+	Name       types.String `tfsdk:"name"`
+	Policy     types.String `tfsdk:"policy"`
+	CreateTime types.String `tfsdk:"create_time"`
+	UpdateTime types.String `tfsdk:"update_time"`
 }
 
 type CtyunEcsAffinityGroupsConfig struct {
-	RegionID        types.String                  `tfsdk:"region_id"`
-	AffinityGroupID types.String                  `tfsdk:"affinity_group_id"`
-	PageNo          types.Int32                   `tfsdk:"page_no"`
-	PageSize        types.Int32                   `tfsdk:"page_size"`
-	Groups          []CtyunEcsAffinityGroupsModel `tfsdk:"groups"`
+	RegionID types.String                  `tfsdk:"region_id"`
+	ID       types.String                  `tfsdk:"id"`
+	PageNo   types.Int32                   `tfsdk:"page_no"`
+	PageSize types.Int32                   `tfsdk:"page_size"`
+	Groups   []CtyunEcsAffinityGroupsModel `tfsdk:"groups"`
 }
 
 func (c *ctyunEcsAffinityGroups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
@@ -52,7 +52,7 @@ func (c *ctyunEcsAffinityGroups) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed:    true,
 				Description: "资源池id，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 			},
-			"affinity_group_id": schema.StringAttribute{
+			"id": schema.StringAttribute{
 				Optional:    true,
 				Description: "云主机组ID",
 			},
@@ -68,25 +68,25 @@ func (c *ctyunEcsAffinityGroups) Schema(_ context.Context, _ datasource.SchemaRe
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"affinity_group_id": schema.StringAttribute{
+						"id": schema.StringAttribute{
 							Computed:    true,
 							Description: "云主机组ID",
 						},
-						"affinity_group_name": schema.StringAttribute{
+						"name": schema.StringAttribute{
 							Computed:    true,
 							Description: "云主机组名称",
 						},
-						"affinity_group_policy": schema.StringAttribute{
+						"policy": schema.StringAttribute{
 							Computed:    true,
 							Description: "云主机组策略",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				}},
@@ -116,7 +116,7 @@ func (c *ctyunEcsAffinityGroups) Read(ctx context.Context, request datasource.Re
 	// 组装请求体
 	params := &ctecs2.CtecsListAffinityGroupV41Request{
 		RegionID:        regionId,
-		AffinityGroupID: config.AffinityGroupID.ValueString(),
+		AffinityGroupID: config.ID.ValueString(),
 		PageNo:          config.PageNo.ValueInt32(),
 		PageSize:        config.PageSize.ValueInt32(),
 	}
@@ -134,13 +134,13 @@ func (c *ctyunEcsAffinityGroups) Read(ctx context.Context, request datasource.Re
 	// 解析返回值
 	for _, group := range resp.ReturnObj.Results {
 		item := CtyunEcsAffinityGroupsModel{
-			AffinityGroupID:   types.StringValue(group.AffinityGroupID),
-			AffinityGroupName: types.StringValue(group.AffinityGroupName),
-			CreatedTime:       types.StringValue(group.CreatedTime),
-			UpdatedTime:       types.StringValue(group.UpdatedTime),
+			ID:         types.StringValue(group.AffinityGroupID),
+			Name:       types.StringValue(group.AffinityGroupName),
+			CreateTime: types.StringValue(group.CreatedTime),
+			UpdateTime: types.StringValue(group.UpdatedTime),
 		}
 		if group.AffinityGroupPolicy != nil {
-			item.AffinityGroupPolicy = types.StringValue(group.AffinityGroupPolicy.PolicyTypeName)
+			item.Policy = types.StringValue(group.AffinityGroupPolicy.PolicyTypeName)
 		}
 		config.Groups = append(config.Groups, item)
 	}

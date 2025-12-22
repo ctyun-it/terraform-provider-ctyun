@@ -16,10 +16,9 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test"
   cidr        = "10.0.0.0/8"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }

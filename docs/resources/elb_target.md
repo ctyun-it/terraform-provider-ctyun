@@ -34,8 +34,8 @@ resource "ctyun_elb_target_group" "target_group_test" {
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
-  page_no = 1
-  page_size = 10
+  page_no    = 1
+  page_size  = 10
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
@@ -46,14 +46,13 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   type   = "CPU_C7"
 }
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-for-elb"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
 }
 
@@ -66,10 +65,10 @@ resource "ctyun_ecs" "ecs_test" {
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type    = "sata"
   system_disk_size    = 40
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id              = ctyun_vpc.vpc_test.id
   password            = var.password
   cycle_type          = "on_demand"
-  subnet_id = ctyun_subnet.subnet_test.id
+  subnet_id           = ctyun_subnet.subnet_test.id
   is_destroy_instance = false
 }
 
@@ -80,9 +79,9 @@ variable "password" {
 
 resource "ctyun_elb_target" "elb_target_test" {
   target_group_id = ctyun_elb_target_group.target_group_test.id
-  instance_type = "VM"
-  instance_id = ctyun_ecs.ecs_test.id
-  protocol_port = 12345
+  instance_type   = "VM"
+  instance_id     = ctyun_ecs.ecs_test.id
+  protocol_port   = 12345
 }
 ```
 
@@ -107,9 +106,9 @@ resource "ctyun_elb_target" "elb_target_test" {
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `health_check_status` (String) IPv4的健康检查状态: offline / online / unknown
 - `health_check_status_ipv6` (String) IPv6的健康检查状态: offline / online / unknown
 - `id` (String) 后端主机服务(elb_target)ID
 - `status` (String) 状态: DOWN / ACTIVE
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式

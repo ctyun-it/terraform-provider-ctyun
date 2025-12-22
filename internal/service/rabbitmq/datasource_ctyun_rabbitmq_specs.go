@@ -220,7 +220,7 @@ func (c *ctyunRabbitmqSpecs) Read(ctx context.Context, request datasource.ReadRe
 	// 组装请求体
 	params := &amqp.AmqpProdDetailRequest{regionId}
 	// 调用API
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpProdDetailApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpProdDetailApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {

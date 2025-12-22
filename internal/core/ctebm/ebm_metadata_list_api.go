@@ -66,7 +66,7 @@ type EbmMetadataListResponse struct {
 }
 
 type EbmMetadataListReturnObjResponse struct {
-	Metadata *EbmMetadataListReturnObjMetadataResponse `json:"metadata"` /*  元数据，未设置情况下元数据则返回{}
+	Metadata map[string]string `json:"metadata"` /*  元数据，未设置情况下元数据则返回{}
 	 */
 }
 

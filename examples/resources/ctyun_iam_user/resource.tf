@@ -27,11 +27,11 @@ variable "phone" {
 }
 
 resource "ctyun_iam_user" "iam_user_test" {
-  email          = var.email
-  phone          = var.phone
-  name           = "Mddi3"
-  password       = var.password
-  description    = "测试创建账号111"
+  email       = var.email
+  phone       = var.phone
+  name        = "Mddi3"
+  password    = var.password
+  description = "测试创建账号111"
   user_group_ids = [
     "6edf8a6a9b09442295206feef0d39132"
   ]

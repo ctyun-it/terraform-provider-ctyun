@@ -39,17 +39,17 @@ resource "ctyun_security_group" "security_group_test" {
 }
 
 resource "ctyun_mongodb_instance" "test" {
-  cycle_type             = "on_demand"
-  vpc_id                 = ctyun_vpc.vpc_test.id
-  flavor_name            = "s7.large.2"
-  subnet_id              = ctyun_subnet.subnet_test.id
-  security_group_id      =  ctyun_security_group.security_group_test.id
-  name                   = "mongodb-12ab"
-  prod_id                = "Single34"
-  storage_type           = "SATA"
-  storage_space          = 100
-  backup_storage_type    = "OS"
-  password = var.password
+  cycle_type          = "on_demand"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  flavor_name         = "s7.large.2"
+  subnet_id           = ctyun_subnet.subnet_test.id
+  security_group_id   = ctyun_security_group.security_group_test.id
+  name                = "mongodb-12ab"
+  prod_id             = "Single34"
+  storage_type        = "SATA"
+  storage_space       = 100
+  backup_storage_type = "OS"
+  password            = var.password
 }
 
 variable "password" {

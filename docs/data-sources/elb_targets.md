@@ -19,7 +19,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_elb_targets" "test"{
+data "ctyun_elb_targets" "test" {
 }
 ```
 
@@ -34,15 +34,15 @@ data "ctyun_elb_targets" "test"{
 
 ### Read-Only
 
-- `elb_targets` (Attributes List) 后端主机列表 (see [below for nested schema](#nestedatt--elb_targets))
+- `targets` (Attributes List) 后端主机列表 (see [below for nested schema](#nestedatt--targets))
 
-<a id="nestedatt--elb_targets"></a>
-### Nested Schema for `elb_targets`
+<a id="nestedatt--targets"></a>
+### Nested Schema for `targets`
 
 Read-Only:
 
 - `az_name` (String) 可用区名称
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `health_check_status` (String) IPv4的健康检查状态: offline / online / unknown
 - `health_check_status_ipv6` (String) IPv6的健康检查状态: offline / online / unknown
@@ -54,5 +54,5 @@ Read-Only:
 - `region_id` (String) 资源池ID
 - `status` (String) 状态: DOWN / ACTIVE
 - `target_group_id` (String) 后端服务组ID
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 - `weight` (Number) 权重

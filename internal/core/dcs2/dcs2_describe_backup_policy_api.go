@@ -60,4 +60,6 @@ type Dcs2DescribeBackupPolicyResponse struct {
 type Dcs2DescribeBackupPolicyReturnObjResponse struct {
 	PreferredBackupPeriod string `json:"preferredBackupPeriod,omitempty"` /*  日期范围，1-7表示周一至周日，多个日期使用英文逗号分隔。  */
 	PreferredBackupTime   string `json:"preferredBackupTime,omitempty"`   /*  备份时间，0-23点准点  */
+	EnableAutoBackup      bool   `json:"enableAutoBackup,omitempty"`      /*  是否开启自动备份，true为开启，false为关闭*/
+	BackupRetentionPeriod int32  `json:"backupRetentionPeriod,omitempty"` /*  备份文件保留天数，默认值3，允许1-7天。  */
 }

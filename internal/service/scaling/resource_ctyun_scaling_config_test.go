@@ -23,13 +23,13 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 
 	name := "sc-" + utils.GenerateRandomString()
 	imageID := dependence.imageID
-	flavorName := "s7.large.2"
+	flavorName := "c7.xlarge.2"
 	useFloating := "auto"
 	bandwidth := 1
 	loginMode := "password"
 	password := "Kyk136@" + utils.GenerateRandomString()
 	monitorService := true
-	azNames := fmt.Sprintf(`["%s", "%s"]`, "cn-huadong1-jsnj1A-public-ctcloud", "cn-huadong1-jsnj2A-public-ctcloud")
+	//azNames := fmt.Sprintf(`["%s", "%s"]`, "cn-huadong1-jsnj1A-public-ctcloud", "cn-huadong1-jsnj2A-public-ctcloud")
 	//azNames := fmt.Sprintf(`["%s"]`, "cn-huadong1-jsnj1A-public-ctcloud")
 	tags := fmt.Sprintf(`[{"key":"%s", "value":"%s"}, {"key":"%s", "value":"%s"}]`, "provider", "scaling_conifg", "version", "1.1.1")
 	volumes := fmt.Sprintf(`[{"volume_type":"%s", "volume_size":%d, "flag":"%s"}, {"volume_type":"%s", "volume_size":%d, "flag":"%s"}]`,
@@ -37,14 +37,14 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 
 	updatedName := "scn-" + utils.GenerateRandomString()
 	updatedImageID := dependence.imageID1
-	updatedFlavorName := "s8e.large.2"
-	updateduseFloating := "diable"
+	updatedFlavorName := "c7.large.2"
+	updateduseFloating := "disable"
 	updatedLoginMode := "key_pair"
 	keyPairId := dependence.keyPairID
 	updatedMonitorService := false
 	updatedTags := fmt.Sprintf(`[ {"key":"%s", "value":"%s"}]`, "version", "1.1.1")
 	updatedVolumes := fmt.Sprintf(`[{"volume_type":"%s", "volume_size":%d, "flag":"%s"}]`, "SATA", 40, "OS")
-	updatedAzName := fmt.Sprintf(`["%s"]`, "cn-huadong1-jsnj2A-public-ctcloud")
+	//updatedAzName := fmt.Sprintf(`["%s"]`, "cn-huadong1-jsnj2A-public-ctcloud")
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
 			_, exists := s.RootModule().Resources[resourceName]
@@ -56,7 +56,7 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, azNames, tags, volumes),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, tags, volumes),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -67,18 +67,17 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, azNames, tags, volumes) +
+				Config: utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, tags, volumes) +
 					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("%s.id", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "scaling_config_list.0.name", name),
-					resource.TestCheckResourceAttr(datasourceName, "scaling_config_list.0.flavor_name", flavorName),
-					resource.TestCheckResourceAttr(datasourceName, "scaling_config_list.0.bandwidth", fmt.Sprintf("%d", bandwidth)),
+					resource.TestCheckResourceAttr(datasourceName, "configs.0.name", name),
+					resource.TestCheckResourceAttr(datasourceName, "configs.0.flavor_name", flavorName),
+					resource.TestCheckResourceAttr(datasourceName, "configs.0.bandwidth", fmt.Sprintf("%d", bandwidth)),
 				),
 			},
 			// 更新
 			{
-				Config: utils.LoadTestCase(resourceFile1, rnd, updatedName, updatedImageID, updatedFlavorName, updateduseFloating, updatedLoginMode, keyPairId, updatedMonitorService,
-					updatedAzName, updatedTags, updatedVolumes),
+				Config: utils.LoadTestCase(resourceFile1, rnd, updatedName, updatedImageID, updatedFlavorName, updateduseFloating, updatedLoginMode, keyPairId, updatedMonitorService, updatedTags, updatedVolumes),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
@@ -105,7 +104,92 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"key_pair_id"},
 			},
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, azNames, tags, volumes),
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"key_pair_id"},
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, tags, volumes),
+				Destroy: true,
+			},
+		},
+	})
+
+}
+
+func TestAccCtyunScalingAZConfig(t *testing.T) {
+
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_scaling_config." + rnd
+	resourceFile := "resource_ctyun_scaling_config_floating.tf"
+	resourceFile1 := "resource_ctyun_scaling_config_az.tf"
+	name := "sc-" + utils.GenerateRandomString()
+	imageID := dependence.imageID
+	flavorName := "c7.xlarge.2"
+	useFloating := "auto"
+	bandwidth := 1
+	loginMode := "password"
+	password := "Kyk136@" + utils.GenerateRandomString()
+	monitorService := true
+	//azNames := fmt.Sprintf(`["%s", "%s"]`, "cn-huadong1-jsnj1A-public-ctcloud", "cn-huadong1-jsnj2A-public-ctcloud")
+	//azNames := fmt.Sprintf(`["%s"]`, "cn-huadong1-jsnj1A-public-ctcloud")
+	tags := fmt.Sprintf(`[{"key":"%s", "value":"%s"}, {"key":"%s", "value":"%s"}]`, "provider", "scaling_conifg", "version", "1.1.1")
+	volumes := fmt.Sprintf(`[{"volume_type":"%s", "volume_size":%d, "flag":"%s"}, {"volume_type":"%s", "volume_size":%d, "flag":"%s"}]`,
+		"SATA", 40, "OS", "SAS", 100, "DATA")
+
+	updatedName := "scn-" + utils.GenerateRandomString()
+	updatedImageID := dependence.imageID1
+	updatedFlavorName := "c7.large.2"
+	updateduseFloating := "disable"
+	updatedLoginMode := "key_pair"
+	keyPairId := dependence.keyPairID
+	updatedMonitorService := false
+	updatedTags := fmt.Sprintf(`[ {"key":"%s", "value":"%s"}]`, "version", "1.1.1")
+	updatedVolumes := fmt.Sprintf(`[{"volume_type":"%s", "volume_size":%d, "flag":"%s"}]`, "SATA", 40, "OS")
+	updatedAzName := fmt.Sprintf(`["%s"]`, dependence.azName)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, name, imageID, flavorName, useFloating, bandwidth, loginMode, password, monitorService, tags, volumes),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
+					resource.TestCheckResourceAttr(resourceName, "image_id", imageID),
+					resource.TestCheckResourceAttr(resourceName, "bandwidth", fmt.Sprintf("%d", bandwidth)),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
+			},
+			// 更新
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, updatedName, updatedImageID, updatedFlavorName, updateduseFloating, updatedLoginMode, keyPairId, updatedMonitorService, updatedTags, updatedVolumes, updatedAzName),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "image_id", updatedImageID),
+					resource.TestCheckResourceAttr(resourceName, "key_pair_id", keyPairId),
+					resource.TestCheckResourceAttr(resourceName, "monitor_service", fmt.Sprintf("%t", updatedMonitorService)),
+				),
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile1, rnd, updatedName, updatedImageID, updatedFlavorName, updateduseFloating, updatedLoginMode, keyPairId, updatedMonitorService, updatedTags, updatedVolumes, updatedAzName),
 				Destroy: true,
 			},
 		},

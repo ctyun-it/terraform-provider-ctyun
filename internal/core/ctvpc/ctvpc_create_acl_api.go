@@ -46,20 +46,22 @@ func (a *CtvpcCreateAclApi) Do(ctx context.Context, credential core.Credential, 
 }
 
 type CtvpcCreateAclRequest struct {
-	ClientToken string  `json:"clientToken,omitempty"` /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
-	RegionID    string  `json:"regionID,omitempty"`    /*  资源池ID  */
-	ProjectID   *string `json:"projectID,omitempty"`   /*  企业项目 ID，默认为'0'  */
-	VpcID       string  `json:"vpcID,omitempty"`       /*  关联的vpc  */
-	Name        string  `json:"name,omitempty"`        /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	ClientToken     string  `json:"clientToken,omitempty"`     /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	RegionID        string  `json:"regionID,omitempty"`        /*  资源池ID  */
+	ProjectID       *string `json:"projectID,omitempty"`       /*  企业项目 ID，默认为'0'  */
+	VpcID           string  `json:"vpcID,omitempty"`           /*  关联的vpc  */
+	Name            string  `json:"name,omitempty"`            /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	Description     *string `json:"description,omitempty"`     /*  描述，长度 0 - 256  */
+	ApplyToPublicLb *bool   `json:"applyToPublicLb,omitempty"` /* 是否应用到公网负载均衡器上，默认false  */
 }
 
 type CtvpcCreateAclResponse struct {
-	StatusCode  int32                              `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
-	Message     *string                            `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
-	Description *string                            `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
-	ErrorCode   *string                            `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
-	ReturnObj   []*CtvpcCreateAclReturnObjResponse `json:"returnObj"`             /*  接口业务数据  */
-	Error       *string                            `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	StatusCode  int32                            `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
+	Message     *string                          `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
+	Description *string                          `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
+	ErrorCode   *string                          `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	ReturnObj   *CtvpcCreateAclReturnObjResponse `json:"returnObj"`             /*  接口业务数据  */
+	Error       *string                          `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
 type CtvpcCreateAclReturnObjResponse struct {

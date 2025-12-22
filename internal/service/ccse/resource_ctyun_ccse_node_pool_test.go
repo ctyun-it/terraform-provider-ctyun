@@ -152,9 +152,26 @@ auto_renew = true
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id = ds.ID
-					regionId := ds.Attributes["region_id"]
 					clusterId := ds.Attributes["cluster_id"]
+					regionId := ds.Attributes["region_id"]
 					return fmt.Sprintf("%s,%s,%s", id, clusterId, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"password",
+					"az_infos",
+					"use_affinity_group",
+					"sys_disk",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					clusterId := ds.Attributes["cluster_id"]
+					return fmt.Sprintf("%s,%s", id, clusterId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

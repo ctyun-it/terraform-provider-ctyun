@@ -49,6 +49,23 @@ func (u EcsService) GetFlavorByName(ctx context.Context, flavorName, regionId st
 	return
 }
 
+func (u EcsService) GetFlavorIDByName(ctx context.Context, flavorName, regionId, azName string) (flavorID string, err error) {
+	resp, err := u.meta.Apis.CtEcsApis.EcsFlavorListApi.Do(ctx, u.meta.Credential, &ctecs.EcsFlavorListRequest{
+		RegionId:   regionId,
+		FlavorName: flavorName,
+		AzName:     azName,
+	})
+	if err != nil {
+		return
+	}
+	if len(resp.FlavorList) == 0 {
+		err = fmt.Errorf("云主机规格 %s 不存在", flavorName)
+		return
+	}
+	flavorID = resp.FlavorList[0].FlavorId
+	return
+}
+
 func (u EcsService) MustExist(ctx context.Context, id, regionId string) error {
 	_, err := u.meta.Apis.CtEcsApis.EcsInstanceDetailsApi.Do(ctx, u.meta.Credential, &ctecs.EcsInstanceDetailsRequest{
 		RegionId:   regionId,
@@ -77,6 +94,21 @@ func (u EcsService) GetEcsStatus(ctx context.Context, id, regionId string) (stri
 		return "", err
 	}
 	return instance.InstanceStatus, nil
+}
+
+func (u EcsService) GetEcsAttachedVolume(ctx context.Context, id, regionId string) ([]string, error) {
+	instance, err := u.meta.Apis.CtEcsApis.EcsInstanceDetailsApi.Do(ctx, u.meta.Credential, &ctecs.EcsInstanceDetailsRequest{
+		RegionId:   regionId,
+		InstanceId: id,
+	})
+	if err != nil {
+		// 实例已经被退订的情况
+		if err.ErrorCode() == common.EcsInstanceNotFound {
+			return nil, fmt.Errorf("云主机 %s 不存在", id)
+		}
+		return nil, err
+	}
+	return instance.AttachedVolume, nil
 }
 
 func (u EcsService) CheckEcsStatus(ctx context.Context, id, regionId string) error {

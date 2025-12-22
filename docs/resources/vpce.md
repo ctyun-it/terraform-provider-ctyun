@@ -27,41 +27,40 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-test"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
 
 resource "ctyun_vpce_service" "test" {
-  name  = "tf-vpce-server-sss"
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
+  name            = "tf-vpce-server-sss"
+  vpc_id          = ctyun_vpc.vpc_test.id
+  subnet_id       = ctyun_subnet.subnet_test.id
   auto_connection = true
-  type = "interface"
-  instance_id = "d40b78e2-23de-4fa6-baf0-e500750f985b"
-  instance_type = "vm"
+  type            = "interface"
+  instance_id     = "d40b78e2-23de-4fa6-baf0-e500750f985b"
+  instance_type   = "vm"
   rules = [{
-    protocol = "TCP"
+    protocol      = "TCP"
     endpoint_port = 2
-    server_port = 2
-  },
+    server_port   = 2
+    },
   ]
 }
 
 resource "ctyun_vpce" "test" {
-  name  = "tf-vpce-123"
+  name                = "tf-vpce-123"
   endpoint_service_id = ctyun_vpce_service.test.id
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
-  whitelist_flag = true
-  whitelist_cidr = ["192.168.1.0/24"]
+  vpc_id              = ctyun_vpc.vpc_test.id
+  subnet_id           = ctyun_subnet.subnet_test.id
+  whitelist_flag      = true
+  whitelist_cidr      = ["192.168.1.0/24"]
 }
 ```
 
@@ -84,6 +83,8 @@ resource "ctyun_vpce" "test" {
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID
 - `master_order_id` (String) 主订单号
 - `status` (Number) endpoint状态, 1 表示已链接，2 表示未链接
+- `update_time` (String) 更新时间，为UTC格式

@@ -53,6 +53,7 @@ type CtvpcCreatePrivateZoneRecordRequest struct {
 	ValueList   []string `json:"valueList"`             /*  最多同时支持 8 个，最多同时支持 8 个，当 type = A 时，valueList 中必须是 IPv4 地址；当 type = CNAME 时，valueList 只能存在一个元素, 数组中元素格式要求如下：域名以点号分隔成多个字符串, 单个字符串由各国文字的特定字符集、字母、数字、连字符（-）组成，字母不区分大小写，连字符（-）不得出现在字符串的头部或者尾部, 单个字符串长度不超过63个字符, 总长度不超过 254；当 type = AAAA 时，valueList 中必须是 IPv6 地址；当 type = TXT 时，valueList 数组中元素格式要求如下：支持数字，字符，符号：~!@#$%^&*()_+-={}[]:;',,./<>?，空格，且元素中的值和 zone record name 拼接起来长度不能超过 256；当 type = MX 时，valueList 数组中元素格式要求如下：priority dnsname，priority 的取值在 0 - 65535，dnsname 域名以点号分隔成多个字符串, 单个字符串由字母、数字、连字符（-）组成，字母不区分大小写，连字符（-）不得出现在字符串的头部或者尾部, 单个字符串长度不超过63个字符, 总长度不超过 254：一个例子：0 ctyun.cn  */
 	TTL         int32    `json:"TTL"`                   /*  zone ttl, 单位秒。default is 300，大于等于300，小于等于2147483647  */
 	Name        *string  `json:"name,omitempty"`        /*  dns 记录集的 name 长度 + dns 记录的 name 长度，总和不超过 256, 支持数字、英文字母、连字符、*, 不能以连字符结尾或开头  */
+	Description *string  `json:"description,omitempty"`
 }
 
 type CtvpcCreatePrivateZoneRecordResponse struct {

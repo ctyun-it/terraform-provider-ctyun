@@ -35,24 +35,40 @@ resource "ctyun_ebs" "ebs_test" {
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填
 - `mode` (String) 磁盘模式，vbd，iscsi，fcsan
-- `name` (String) 磁盘命名，单账户单资源池下，命名需唯一，长度为2-63个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新
-- `size` (Number) 磁盘大小，单位GB，取值范围[10, 32768]，支持更新（不支持缩容）
-- `type` (String) 磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD
+- `name` (String) 磁盘命名，单账户单资源池下，命名需唯一，长度为2-64个字符，仅允许英文字母、数字及特殊字符._-，不能以特殊字符开头，支持更新
+- `size` (Number) 磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；XSSD-0：10GB-65536GB；XSSD-1：20GB-65536GB；XSSD-2：512GB-65536GB 支持更新（不支持缩容）
+- `type` (String) 磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；XSSD-0、XSSD-1、XSSD-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式
 
 ### Optional
 
 - `az_name` (String) 可用区id，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME
+- `backup_id` (String) 云硬盘备份ID参数，有以下限制：从备份创建盘仅支持VBD模式；新盘容量不能小于备份源盘容量；不支持配置加密属性（自动与备份源盘保持一致）；备份状态必须是可用。
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年
+- `delete_snap_with_ebs` (Boolean) 设置快照是否随云硬盘删除，true表示随盘删除，false表示不随盘删除
+- `image_id` (String) 镜像ID，如果用镜像创建，只支持数据盘的私有镜像和共享镜像，所创建的数据盘的所在地域要与镜像源一致，容量不可小于镜像对应的磁盘容量。从镜像创建的数据盘不支持加密、ISCSI和FCSAN高级配置。
+- `labels` (Attributes List) 设置云硬盘标签，实际绑定标签的结果请查询云硬盘详情的labels返回值是否如预期。 (see [below for nested schema](#nestedatt--labels))
+- `multi_attach` (Boolean) 是否共享云硬盘
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `provisioned_iops` (Number) XSSD类型云硬盘的预配置IOPS值，最小值为1，最大值计算公式为“min(单盘最大IOPS，500*容量) - 基础性能IOPS”。 其他类型磁盘不支持此参数 具体取值范围如下：
+	●XSSD-0：（基础IOPS（min{1800+12×容量， 10000}） + 预配置IOPS） ≤ min{500×容量，100000}
+	●XSSD-1：（基础IOPS（min{1800+50×容量， 50000}） + 预配置IOPS） ≤ min{500×容量，100000}
+	●XSSD-2：（基础IOPS（min{3000+50×容量， 100000}） + 预配置IOPS） ≤ min{500×容量，1000000}  */  支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
-- `encrypted` (Boolean) 是否加密盘
-- `expire_time` (String) 到期时间，为UTC格式
+- `encrypted` (Boolean) 是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 磁盘id
 - `kms_uuid` (String) 加密盘密钥UUID，是加密盘时才返回
 - `master_order_id` (String) 订购的受理单id
-- `multi_attach` (Boolean) 是否共享云硬盘
 - `status` (String) 云硬盘使用状态，deleting：删除中，creating：资源创建中，detaching：解绑中，detached：未绑定云主机，attaching：绑定中，attached：已绑定，extending：扩容中，error：错误状态，backup：备份中，backupRestoring：从备份恢复中，expired：包周期已结束，freezing：按需计费，处于冻结状态，可能账户受限或余额不足，available：可用，in-use：已挂载云主机，resizing：扩容中
+
+<a id="nestedatt--labels"></a>
+### Nested Schema for `labels`
+
+Required:
+
+- `key` (String) 标签的key值，长度不能超过32个字符。
+- `value` (String) 标签的value值，长度不能超过32个字符。

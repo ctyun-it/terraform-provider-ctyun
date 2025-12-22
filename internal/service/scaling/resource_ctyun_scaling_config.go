@@ -13,6 +13,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -25,6 +26,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strconv"
 	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunScalingConfig{}
+	_ resource.ResourceWithConfigure   = &ctyunScalingConfig{}
+	_ resource.ResourceWithImportState = &ctyunScalingConfig{}
 )
 
 type ctyunScalingConfig struct {
@@ -51,35 +58,50 @@ func NewCtyunScalingConfig() resource.Resource {
 	return &ctyunScalingConfig{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId],[projectId]
 func (c *ctyunScalingConfig) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
-	var cfg CtyunScalingConfigModel
+	var config CtyunScalingConfigModel
 	var ID, regionId string
-	err = terraform_extend.Split(request.ID, &ID, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
+		err = fmt.Errorf("ID必须是有效数字")
 		return
 	}
-	cfg.ID = types.Int64Value(id)
-	cfg.RegionID = types.StringValue(regionId)
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
 
-	err = c.getAndMergeScalingConfig(ctx, &cfg)
+	config.ID = types.Int64Value(id)
+	config.RegionID = types.StringValue(regionId)
+
+	err = c.getAndMergeScalingConfig(ctx, &config)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -94,6 +116,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -106,6 +131,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"image_id": schema.StringAttribute{
 				Required:    true,
 				Description: "镜像ID，可以通过data.ctyun_images(datasource)获取，支持更新",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			//"security_group_id_list": schema.SetAttribute{
 			//	ElementType: types.StringType,
@@ -116,6 +144,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"flavor_name": schema.StringAttribute{
 				Required:    true,
 				Description: "规格名称，形如c7.2xlarge.4，支持更新。",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			"volumes": schema.ListNestedAttribute{
 				Required:    true,
@@ -125,10 +156,16 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 						"volume_type": schema.StringAttribute{
 							Required:    true,
 							Description: "磁盘类型: SATA/SAS/SSD/SATA-KUNPENG/SATA-HAIGUANG/SAS-KUNPENG/SAS-HAIGUANG/SSD-genric，支持更新",
+							Validators: []validator.String{
+								stringvalidator.OneOf("SATA", "SAS", "SSD", "SATA-KUNPENG", "SATA-HAIGUANG", "SAS-KUNPENG", "SAS-HAIGUANG", "SSD-genric"),
+							},
 						},
 						"volume_size": schema.Int32Attribute{
 							Required:    true,
 							Description: "磁盘大小(GB)，支持更新",
+							Validators: []validator.Int32{
+								int32validator.AtLeast(1),
+							},
 						},
 						"disk_mode": schema.StringAttribute{
 							Optional:    true,
@@ -157,7 +194,7 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			},
 			"use_floatings": schema.StringAttribute{
 				Required:    true,
-				Description: "是否使用弹性IP: diable-不使用, auto-自动分配。支持更新",
+				Description: "是否使用弹性IP: disable-不使用, auto-自动分配。支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingUseFloatings...),
 				},
@@ -233,10 +270,16 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 						"key": schema.StringAttribute{
 							Required:    true,
 							Description: "标签键，支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 						"value": schema.StringAttribute{
 							Required:    true,
 							Description: "标签值，支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 					},
 				},
@@ -244,8 +287,11 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"az_names": schema.SetAttribute{
 				ElementType: types.StringType,
 				Optional:    true,
-				Description: "可用区列表，仅多可用区资源池支持，支持更新",
-			},
+				Computed:    true,
+				Description: "可用区列表，不填写默认包含该资源池下所有AZ，支持更新",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				}},
 			"monitor_service": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -412,15 +458,15 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 		MonitorService: config.MonitorService.ValueBoolPointer(),
 	}
 
-	// 判断资源池是否为多AZ
+	// 获取资源池内所有AZ
 	zones, err2 := c.regionService.GetZonesByRegionID(ctx, config.RegionID.ValueString())
 	if err2 != nil {
 		return err2
 	}
-	isNaz := false
-	if len(zones) > 1 {
-		isNaz = true
-	}
+	//isNaz := false
+	//if len(zones) > 1 {
+	//	isNaz = true
+	//}
 	//// 当AZ必填
 	//if !config.SecurityGroupIDList.IsNull() && !config.SecurityGroupIDList.IsUnknown() && !isNaz {
 	//	var securityGroupIDList []string
@@ -432,7 +478,7 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 	//	params.SecurityGroupIDList = securityGroupIDList
 	//}
 
-	if !config.AzNames.IsNull() && !config.AzNames.IsUnknown() && isNaz {
+	if !config.AzNames.IsNull() && !config.AzNames.IsUnknown() {
 		var azNames []string
 		diags := config.AzNames.ElementsAs(ctx, &azNames, true)
 		if diags.HasError() {
@@ -440,6 +486,8 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 			return err
 		}
 		params.AzNames = azNames
+	} else {
+		params.AzNames = zones
 	}
 	if !config.Volumes.IsNull() && !config.Volumes.IsUnknown() {
 		var volumeList []CtyunVolumesModel
@@ -729,6 +777,14 @@ func (c *ctyunScalingConfig) updateScalingConfig(ctx context.Context, state *Cty
 	if !plan.AzNames.IsNull() && !plan.AzNames.IsUnknown() {
 		var azNames []string
 		diags := plan.AzNames.ElementsAs(ctx, &azNames, true)
+		if diags.HasError() {
+			err := errors.New(diags[0].Detail())
+			return err
+		}
+		params.AzNames = azNames
+	} else {
+		var azNames []string
+		diags := state.AzNames.ElementsAs(ctx, &azNames, true)
 		if diags.HasError() {
 			err := errors.New(diags[0].Detail())
 			return err

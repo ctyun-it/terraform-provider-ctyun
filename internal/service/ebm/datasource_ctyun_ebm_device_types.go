@@ -35,7 +35,6 @@ type CtyunEbmDeviceTypesModel struct {
 	NvmeVolumeType          types.String `tfsdk:"nvme_volume_type"`
 	NameZh                  types.String `tfsdk:"name_zh"`
 	NvmeVolumeInterface     types.String `tfsdk:"nvme_volume_interface"`
-	UpdateTime              types.String `tfsdk:"update_time"`
 	SystemVolumeSize        types.Int32  `tfsdk:"system_volume_size"`
 	SystemVolumeType        types.String `tfsdk:"system_volume_type"`
 	CpuManufacturer         types.String `tfsdk:"cpu_manufacturer"`
@@ -61,7 +60,6 @@ type CtyunEbmDeviceTypesModel struct {
 	NvmeVolumeSize          types.Int32  `tfsdk:"nvme_volume_size"`
 	CpuSockets              types.Int32  `tfsdk:"cpu_sockets"`
 	CpuAmount               types.Int32  `tfsdk:"cpu_amount"`
-	CreateTime              types.String `tfsdk:"create_time"`
 	SupportCloud            types.Bool   `tfsdk:"support_cloud"`
 	DataVolumeAmount        types.Int32  `tfsdk:"data_volume_amount"`
 	NumaNodeAmount          types.Int32  `tfsdk:"numa_node_amount"`
@@ -135,10 +133,6 @@ func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaReque
 						"nvme_volume_interface": schema.StringAttribute{
 							Computed:    true,
 							Description: "NVME接口类型；包含SAS、SATA、NVMe",
-						},
-						"update_time": schema.StringAttribute{
-							Computed:    true,
-							Description: "最后更新时间",
 						},
 						"system_volume_size": schema.Int64Attribute{
 							Computed:    true,
@@ -239,10 +233,6 @@ func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaReque
 						"cpu_amount": schema.Int64Attribute{
 							Computed:    true,
 							Description: "单个cpu核数",
-						},
-						"create_time": schema.StringAttribute{
-							Computed:    true,
-							Description: "创建时间",
 						},
 						"support_cloud": schema.BoolAttribute{
 							Computed:    true,
@@ -372,7 +362,6 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 			NvmeVolumeType:          utils.SecStringValue(f.NvmeVolumeType),
 			NameZh:                  utils.SecStringValue(f.NameZh),
 			NvmeVolumeInterface:     utils.SecStringValue(f.NvmeVolumeInterface),
-			UpdateTime:              utils.SecStringValue(f.UpdateTime),
 			SystemVolumeSize:        types.Int32Value(f.SystemVolumeSize),
 			SystemVolumeType:        utils.SecStringValue(f.SystemVolumeType),
 			CpuManufacturer:         utils.SecStringValue(f.CpuManufacturer),
@@ -398,7 +387,6 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 			NvmeVolumeSize:          types.Int32Value(f.NvmeVolumeSize),
 			CpuSockets:              types.Int32Value(f.CpuSockets),
 			CpuAmount:               types.Int32Value(f.CpuAmount),
-			CreateTime:              utils.SecStringValue(f.CreateTime),
 			SupportCloud:            utils.SecBoolValue(f.SupportCloud),
 			DataVolumeAmount:        types.Int32Value(f.DataVolumeAmount),
 			NumaNodeAmount:          types.Int32Value(f.NumaNodeAmount),

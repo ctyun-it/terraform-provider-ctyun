@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
@@ -21,6 +22,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunSubnet{}
+	_ resource.ResourceWithConfigure   = &ctyunSubnet{}
+	_ resource.ResourceWithImportState = &ctyunSubnet{}
 )
 
 func NewCtyunSubnet() resource.Resource {
@@ -74,10 +82,9 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"dns": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "子网dns列表, 最多同时支持4个dns地址，支持更新",
+				Description: "子网dns列表, 最多同时支持2个dns地址，支持更新",
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(4),
+					setvalidator.SizeBetween(1, 2),
 					setvalidator.ValueStringsAre(validator2.Ip()),
 				},
 			},
@@ -294,20 +301,52 @@ func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[vpcId],[regionId]
 func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[vpcId],[project_id][region_id]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunSubnetConfig
-	var subnetId, vpcId, regionId string
-	err := terraform_extend.Split(request.ID, &subnetId, &vpcId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	var subnetId, vpcId, projectID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if subnetId == "" {
+		err = fmt.Errorf("subnetId不能为空")
 		return
 	}
-
+	if vpcId == "" {
+		err = fmt.Errorf("vpcId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
 	cfg.Id = types.StringValue(subnetId)
 	cfg.VpcId = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
-
+	cfg.ProjectId = types.StringValue(projectID)
 	instance, err := c.getAndMergeSubnet(ctx, cfg)
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())

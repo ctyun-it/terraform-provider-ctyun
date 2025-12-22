@@ -39,20 +39,20 @@ output "ctyun_ebs_snapshot_policies" {
 
 ### Read-Only
 
-- `snapshot_policies` (Attributes List) (see [below for nested schema](#nestedatt--snapshot_policies))
-- `snapshot_policy_total_count` (Number) 云硬盘自动快照策略总数
+- `policies` (Attributes List) (see [below for nested schema](#nestedatt--policies))
+- `total_count` (Number) 云硬盘自动快照策略总数
 
-<a id="nestedatt--snapshot_policies"></a>
-### Nested Schema for `snapshot_policies`
+<a id="nestedatt--policies"></a>
+### Nested Schema for `policies`
 
 Read-Only:
 
 - `bound_disk_num` (Number) 关联云硬盘的数量
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 云硬盘自动快照策略ID
 - `name` (String) 云硬盘自动快照策略名称
 - `project_id` (String) 企业项目ID
 - `repeat_times` (String) 创建快照的重复时间，0-23分别代表零点-23点，多个时间用英文逗号隔开。支持更新
 - `repeat_weekdays` (String) 创建快照的重复日期，0-6分别代表周日-周六，多个日期用英文逗号隔开。支持更新
 - `retention_time` (Number) 创建快照的保留时间，输入范围为[-1，1-65535]，-1代表永久保留。单位为天。支持更新
-- `snapshot_policy_create_time` (String) 策略创建时间
-- `snapshot_policy_status` (String) 自动快照策略状态，取值范围：activated:启用，deactivated：停用
+- `status` (String) 自动快照策略状态，取值范围：activated:启用，deactivated：停用

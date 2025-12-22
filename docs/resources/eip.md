@@ -1,5 +1,5 @@
 # ctyun_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026753
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975
 
 
 
@@ -66,8 +66,10 @@ resource "ctyun_eip" "eip_test1" {
 
 - `address` (String) ip地址
 - `bandwidth_type` (String) 弹性ip的类型的带宽类型，standalone：独享，share：共享
+- `create_time` (String) 创建时间，为UTC格式
 - `current_bandwidth` (Number) 当前实际的带宽大小，如果绑定了共享带宽，此值显示为共享带宽的值，否则此值与bandwidth一致
-- `expire_time` (String) 到期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) id
 - `master_order_id` (String) 订购的受理单id
 - `status` (String) 弹性ip状态，取值范围：active：有效，down：未绑定，error：出错，updating：更新中，banding_or_unbangding：绑定解绑中，deleting：删除中，deleted：已删除，expired：已过期
+- `update_time` (String) 更新时间，为UTC格式

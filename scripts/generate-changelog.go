@@ -29,9 +29,9 @@ func main() {
 	cl := &ChangeLog{
 		Entries: make(map[string][]string),
 	}
-
+	dir := changelogDir + "\\" + version
 	// 读取所有PR文件
-	files, err := os.ReadDir(changelogDir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		panic(fmt.Sprintf("Error reading changelog directory: %v", err))
 	}
@@ -39,7 +39,7 @@ func main() {
 	// 解析每个文件内容
 	for _, f := range files {
 		if filepath.Ext(f.Name()) == ".txt" {
-			processFile(cl, filepath.Join(changelogDir, f.Name()))
+			processFile(cl, filepath.Join(dir, f.Name()))
 		}
 	}
 

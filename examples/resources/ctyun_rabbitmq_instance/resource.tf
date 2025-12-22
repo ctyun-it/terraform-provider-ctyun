@@ -23,10 +23,9 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test-mq"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
 }
 
@@ -36,29 +35,29 @@ resource "ctyun_security_group" "security_group_test" {
   description = "terraform测试使用"
 }
 
-data "ctyun_zones" "test"{
+data "ctyun_zones" "test" {
 
 }
 
-data "ctyun_rabbitmq_specs" "test"{
+data "ctyun_rabbitmq_specs" "test" {
 
 }
 
 locals {
-  single_sku = [for sku in data.ctyun_rabbitmq_specs.test.specs[0].sku : sku if sku.prod_name == "单机版"]
+  single_sku       = [for sku in data.ctyun_rabbitmq_specs.test.specs[0].sku : sku if sku.prod_name == "单机版"]
   single_disk_type = local.single_sku[0].disk_item.res_items[0]
   single_spec_name = local.single_sku[0].res_item.res_items[0].spec[0].spec_name
 }
 
 resource "ctyun_rabbitmq_instance" "test" {
-  instance_name = "tf-rabbitmq-example"
-  spec_name = local.single_spec_name
-  node_num = 1
-  zone_list = [data.ctyun_zones.test.zones[0]]
-  disk_type = local.single_disk_type
-  disk_size = 300
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
+  instance_name     = "tf-rabbitmq-example"
+  spec_name         = local.single_spec_name
+  node_num          = 1
+  zone_list         = [data.ctyun_zones.test.zones[0]]
+  disk_type         = local.single_disk_type
+  disk_size         = 300
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
-  cycle_type = "on_demand"
+  cycle_type        = "on_demand"
 }

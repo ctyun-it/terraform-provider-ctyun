@@ -72,6 +72,21 @@ func TestAccCtyunSecurityGroupRule(t *testing.T) {
 				},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+
+					sgID := ds.Attributes["security_group_id"]
+					return fmt.Sprintf("%s,%s", id, sgID), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+				},
+			},
+			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, dependence.securityGroupID, egressDirection, egressAction, egressProtocol, egressEtherType),
 				Destroy: true,
 			},

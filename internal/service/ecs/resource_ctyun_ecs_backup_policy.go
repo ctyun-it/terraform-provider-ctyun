@@ -20,6 +20,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunEcsBackupPolicy{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsBackupPolicy{}
+	_ resource.ResourceWithImportState = &ctyunEcsBackupPolicy{}
 )
 
 /*
@@ -201,9 +208,8 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				},
 				Description: "策略已绑定的云主机备份库列表",
 			},
-		},
-		Blocks: map[string]schema.Block{
-			"adv_retention": schema.SingleNestedBlock{
+			"adv_retention": schema.SingleNestedAttribute{
+				Optional: true,
 				Attributes: map[string]schema.Attribute{
 					"adv_day": schema.Int64Attribute{
 						Optional:    true,
@@ -573,17 +579,34 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsBackupPolicyConfig
-	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
-	cfg.RegionID = types.StringValue(regionID)
-	cfg.Id = types.StringValue(id)
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+
+	cfg.RegionID = types.StringValue(regionId)
+	cfg.Id = types.StringValue(ID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

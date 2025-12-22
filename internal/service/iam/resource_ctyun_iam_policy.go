@@ -20,6 +20,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
+var (
+	_ resource.Resource                = &ctyunPolicy{}
+	_ resource.ResourceWithConfigure   = &ctyunPolicy{}
+	_ resource.ResourceWithImportState = &ctyunPolicy{}
+)
+
 func NewCtyunPolicy() resource.Resource {
 	return &ctyunPolicy{}
 }
@@ -43,7 +49,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "策略的名称，长度最大为64",
+				Description: "策略的名称，长度最大为64，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(64),
 				},
@@ -51,7 +57,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"range": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "策略范围，region：资源池级别，global：全局级别，默认为全局级别global",
+				Description: "策略范围，region：资源池级别，global：全局级别，默认为全局级别global，支持更新",
 				Default:     stringdefault.StaticString(business.PolicyRangeGlobal),
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.PolicyRanges...),
@@ -60,7 +66,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "策略描述，长度最大为128",
+				Description: "策略描述，长度最大为128，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
 				},
@@ -72,10 +78,13 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 					"version": schema.StringAttribute{
 						Optional:    true,
 						Computed:    true,
-						Description: "权限控制的版本号，默认为1.1",
+						Description: "权限控制的版本号，目前只支持为1.1",
 						Default:     stringdefault.StaticString("1.1"),
 						Validators: []validator.String{
 							stringvalidator.OneOf("1.1"),
+						},
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.RequiresReplace(),
 						},
 					},
 					"statement": schema.SetNestedAttribute{
@@ -86,7 +95,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 								"action": schema.SetAttribute{
 									Required:    true,
 									ElementType: types.StringType,
-									Description: "对应权限点的code，必填，项目至少为1个，详见ctyun_iam_authorities中的code属性",
+									Description: "对应权限点的code，必填，项目至少为1个，详见ctyun_iam_authorities中的code属性，支持更新",
 									Validators: []validator.Set{
 										setvalidator.SizeAtLeast(1),
 										setvalidator.ValueStringsAre(stringvalidator.UTF8LengthAtMost(128)),
@@ -94,7 +103,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 								},
 								"effect": schema.StringAttribute{
 									Required:    true,
-									Description: "对应的权限策略动作，allow：允许，deny：拒绝",
+									Description: "对应的权限策略动作，allow：允许，deny：拒绝，支持更新",
 									Validators: []validator.String{
 										stringvalidator.OneOf(business.PolicyEffects...),
 									},
@@ -103,7 +112,7 @@ func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, respon
 									Optional:    true,
 									Computed:    true,
 									ElementType: types.StringType,
-									Description: "资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*",
+									Description: "资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*，支持更新",
 									Default:     setdefault.StaticValue(types.SetValueMust(basetypes.StringType{}, []attr.Value{types.StringValue("*")})),
 									Validators: []validator.Set{
 										setvalidator.SizeAtLeast(1),
@@ -278,13 +287,19 @@ func (c *ctyunPolicy) Delete(ctx context.Context, request resource.DeleteRequest
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyId]
 func (c *ctyunPolicy) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyId]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunPolicyConfig
 	var policyId string
-	err := terraform_extend.Split(request.ID, &policyId)
+	err = terraform_extend.Split(request.ID, &policyId)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -292,7 +307,6 @@ func (c *ctyunPolicy) ImportState(ctx context.Context, request resource.ImportSt
 
 	instance, err := c.getAndMergeIamPolicy(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

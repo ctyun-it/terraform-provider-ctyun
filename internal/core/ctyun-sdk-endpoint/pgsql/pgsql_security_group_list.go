@@ -16,7 +16,7 @@ func NewPgsqlSecurityGroupListApi(client *ctyunsdk.CtyunClient) *PgsqlSecurityGr
 	return &PgsqlSecurityGroupListApi{
 		client: client,
 		CtyunRequestBuilder: ctyunsdk.CtyunRequestBuilder{
-			Method:  http.MethodPost,
+			Method:  http.MethodGet,
 			UrlPath: "/teledb-dcp/v2/openapi/dcp-order-info/securityGroup",
 		},
 	}
@@ -35,6 +35,8 @@ func (this *PgsqlSecurityGroupListApi) Do(ctx context.Context, credential ctyuns
 		err = errors.New("missing required field: RegionID")
 		return
 	}
+
+	builder.AddHeader("regionId", req.RegionID)
 	if req.InstID == "" {
 		err = errors.New("missing required field: InstID")
 	}

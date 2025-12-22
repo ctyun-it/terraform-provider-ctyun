@@ -31,7 +31,7 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test-ccse1"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "100.95.0.1"
   ]
   enable_ipv6 = true
@@ -48,37 +48,37 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
 
 resource "ctyun_ccse_cluster" "example" {
   base_info = {
-    vpc_id     = ctyun_vpc.vpc_test.id
-    subnet_id  = ctyun_subnet.subnet_test.id
-    cluster_name = "tf-custer-n213nds9124n3"
-    cluster_domain = "www.ccc.com"
-    network_plugin = "cubecni"
-    start_port = 30000
-    end_port   = 65535
-    elb_prod_code = "standardI"
-    pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
-    cycle_type  = "on_demand"
-    container_runtime = "containerd"
-    timezone    = "Asia/Shanghai"
-    cluster_version = "1.29.3"
-    deploy_type   = "single"
-    kube_proxy    = "iptables"
-    cluster_series = "cce.standard"
-    enable_api_server_eip = true
-    enable_snat= true          
-    nat_gateway_spec = "small"
+    vpc_id                 = ctyun_vpc.vpc_test.id
+    subnet_id              = ctyun_subnet.subnet_test.id
+    cluster_name           = "tf-custer-n213nds9124n3"
+    cluster_domain         = "www.ccc.com"
+    network_plugin         = "cubecni"
+    start_port             = 30000
+    end_port               = 32767
+    elb_prod_code          = "standardI"
+    pod_subnet_id_list     = [ctyun_subnet.subnet_test.id]
+    cycle_type             = "on_demand"
+    container_runtime      = "containerd"
+    timezone               = "Asia/Shanghai"
+    cluster_version        = "1.29.3"
+    deploy_type            = "single"
+    kube_proxy             = "iptables"
+    cluster_series         = "cce.standard"
+    enable_api_server_eip  = true
+    enable_snat            = true
+    nat_gateway_spec       = "small"
     install_als_cube_event = true
-    install_als= true          
-    install_ccse_monitor = true
-    install_nginx_ingress = true
-    nginx_ingress_lb_spec = "standardI"
-    nginx_ingress_network = "external"
-    ip_vlan = true
-    network_policy= true
+    install_als            = true
+    install_ccse_monitor   = true
+    install_nginx_ingress  = true
+    nginx_ingress_lb_spec  = "standardI"
+    nginx_ingress_network  = "external"
+    ip_vlan                = true
+    network_policy         = true
   }
 
   master_host = {
-    item_def_name =  data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+    item_def_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 
     sys_disk = {
       type = "SSD"
@@ -135,7 +135,7 @@ resource "ctyun_ccse_cluster" "example" {
 #     cluster_domain = "www.ccc.s"
 #     network_plugin = "cubecni"
 #     start_port = 30000
-#     end_port   = 65535
+#     end_port   = 32767
 #     elb_prod_code = "standardI"
 #     pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
 #     cycle_type  = "on_demand"
@@ -186,10 +186,9 @@ resource "ctyun_ccse_cluster" "example" {
 #     cluster_domain = "www.ccc.s"
 #     network_plugin = "calico"
 #     start_port = 30000
-#     end_port   = 65535
+#     end_port   = 32767
 #     elb_prod_code = "standardI"
 #     pod_cidr = "172.26.0.0/16"
-#     pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
 #     cycle_type  = "on_demand"
 #     container_runtime = "containerd"
 #     timezone    = "Asia/Shanghai"
@@ -252,6 +251,8 @@ resource "ctyun_ccse_cluster" "example" {
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `external_kube_config` (String) 外网连接信息
 - `id` (String) ID
 - `internal_kube_config` (String) 内网连接信息
@@ -271,10 +272,10 @@ Required:
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填
 - `deploy_type` (String) 部署模式，单可用区为single，多可用区为multi
 - `elb_prod_code` (String) ApiServer的ELB类型，支持standardI（标准I型），standardII（标准II型），enhancedI（增强I型），enhancedII（增强II型），higherI（高阶I型），您可查看<a href="https://www.ctyun.cn/document/10026756/10032048">ELB类型规格说明</a>
-- `end_port` (Number) 节点服务终止端口，可选范围30000-65535，startPort到endPort范围需大于20
+- `end_port` (Number) 节点服务终止端口，可选范围30000-32767，startPort到endPort范围需大于20，支持更新
 - `kube_proxy` (String) kubeProxy类型：iptables或ipvs。您可查看<a href="https://www.ctyun.cn/document/10083472/10915725">iptables与IPVS如何选择</a>
 - `network_plugin` (String) 网络插件，可选calico和cubecni，calico需要申请白名单。您可查看<a href="https://www.ctyun.cn/document/10083472/10520760">容器网络插件说明</a>
-- `start_port` (Number) 节点服务开始端口，可选范围30000-65535
+- `start_port` (Number) 节点服务开始端口，可选范围30000-32767，支持更新
 - `subnet_id` (String) 子网ID
 - `timezone` (String) 时区，例如Asia/Shanghai (UTC+08:00)
 - `vpc_id` (String) 虚拟私有云ID
@@ -294,11 +295,12 @@ Optional:
 - `network_policy` (Boolean) 是否提供基于策略的网络访问控制，默认false
 - `nginx_ingress_lb_spec` (String) install_nginx_ingress=true必填，支持规格：standardI（标准I型） ,standardII（标准II型）, enhancedI（增强I型）, enhancedII（增强II型） , higherI（高阶I型），可参考<a href="https://www.ctyun.cn/document/10026756/10032048">规格详情</a>
 - `nginx_ingress_network` (String) install_nginx_ingress=true必填，nginx ingress访问方式：external（公网），internal（内网），当选择公网时将自动创建eip额外产生eip相关费用
+- `node_scale` (Number) 托管版集群节点规模。series_type=managedbase时，选择节点规模，可选10；series_type=managedpro时，选择节点规模，可选为50，200，1000，2000，支持更新
 - `pod_cidr` (String) pod网络cidr，使用cubecni作为网络插件时，podCidr不填，服务端会取vpcCidr。使用calico作为网络插件时，podCidr与vpcCidr和serviceCidr不能重叠。
-- `pod_subnet_id_list` (Set of String) pod子网ID列表，网络插件选择cubecni必传，需要属于所选VPC，最多支持10个子网
+- `pod_subnet_id_list` (Set of String) pod子网ID列表，仅网络插件选择cubecni必传，需要属于所选VPC，最多支持10个子网，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `security_group_id` (String) 安全组ID，需属于所选vpc。使用自定义安全组时，需要配置如下规则，参考<a href="https://www.ctyun.cn/document/10083472/10915714">集群安全组规则配置</a>
-- `series_type` (String) 托管版集群规格，托管版集群必填。支持managedbase（单实例），managedpro（多实例）。单/多实例指控制面是否高可用，生产环境建议使用多实例
+- `series_type` (String) 托管版集群规格，托管版集群必填。支持managedbase（单实例），managedpro（多实例）。单/多实例指控制面是否高可用，生产环境建议使用多实例，支持更新
 - `service_cidr` (String) 服务cidr，默认10.96.0.0/16。网络插件为calico时，podCidr与vpcCidr与serviceCidr不能重叠。选择cubecni时，podCidr（vpcCidr）与serviceCidr不能重叠。
 
 

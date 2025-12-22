@@ -1,5 +1,5 @@
 # ctyun_elb_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032777**
+-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032777
 
 
 
@@ -20,8 +20,8 @@ provider "ctyun" {
 }
 
 resource "ctyun_elb_acl" "test" {
-  name = "tf_acl"
-  source_ips = ["127.0.0.1/32","192.168.0.0/16","192.168.10.0"]
+  name       = "tf_acl"
+  source_ips = ["127.0.0.1/32", "192.168.0.0/16", "192.168.10.0"]
 }
 ```
 
@@ -31,7 +31,7 @@ resource "ctyun_elb_acl" "test" {
 ### Required
 
 - `name` (String) 唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
-- `source_ips` (Set of String) IP地址的集合或者CIDR, 单次最多添加 10 条数据，支持更新
+- `source_ips` (Set of String) IP地址的集合或者CIDR, 单次最多添加 50 条数据，支持更新
 
 ### Optional
 

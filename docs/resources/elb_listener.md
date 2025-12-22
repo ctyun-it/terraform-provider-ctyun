@@ -34,7 +34,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
@@ -60,7 +59,7 @@ resource "ctyun_elb_listener" "elb_listener_test" {
   protocol            = "TCP"
   protocol_port       = 12345
   default_action_type = "forward"
-  target_groups = [{ target_group_id = ctyun_elb_target_group.test2.id }]
+  target_groups       = [{ target_group_id = ctyun_elb_target_group.test2.id }]
   listener_cps        = 1
   establish_timeout   = 100
 }
@@ -101,9 +100,9 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 监听器ID
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--target_groups"></a>
 ### Nested Schema for `target_groups`

@@ -83,26 +83,26 @@ type EbsbackupListBackupPolicyReturnObjResponse struct {
 }
 
 type EbsbackupListBackupPolicyReturnObjPolicyListResponse struct {
-	RegionID              string                                                                `json:"regionID"`              /*  资源池ID  */
-	AccountID             string                                                                `json:"accountID"`             /*  账户ID  */
-	Status                int32                                                                 `json:"status"`                /*  状态，0-停用，1-启用  */
-	CreatedTime           int32                                                                 `json:"createdTime"`           /*  创建时间  */
-	PolicyID              string                                                                `json:"policyID"`              /*  策略ID  */
-	PolicyName            string                                                                `json:"policyName"`            /*  策略名  */
-	CycleType             string                                                                `json:"cycleType"`             /*  备份周期类型，day-按天备份，week-按星期备份  */
-	CycleDay              int32                                                                 `json:"cycleDay"`              /*  备份周期，只有cycleType为day时返回  */
-	CycleWeek             string                                                                `json:"cycleWeek"`             /*  备份周期，只有cycleType为week时返回，则取值范围0-6代表星期日-星期六，如果一周有多天备份，以逗号隔开  */
-	Time                  string                                                                `json:"time"`                  /*  备份整点时间，取值范围0-23，如果一天内多个时间节点备份，以逗号隔开  */
-	RetentionType         string                                                                `json:"retentionType"`         /*  备份保留类型，num-按数量保留，date-按时间保留，all-全部保留  */
-	RetentionNum          int32                                                                 `json:"retentionNum"`          /*  保留数量，只有retentionType为num时返回  */
-	RetentionDay          int32                                                                 `json:"retentionDay"`          /*  保留天数，只有retentionType为date时返回  */
-	RemainFirstOfCurMonth *bool                                                                 `json:"remainFirstOfCurMonth"` /*  是否保留每个月第一个备份，在retentionType为num时返回  */
-	BindedDiskCount       int32                                                                 `json:"bindedDiskCount"`       /*  策略绑定的云硬盘数量  */
-	BindedDiskIDs         string                                                                `json:"bindedDiskIDs"`         /*  策略绑定的云硬盘ID，以逗号分隔  */
-	RepositoryList        []*CtebsListDiskBackupPolicyReturnObjPolicyListRepositoryListResponse `json:"repositoryList"`        /*  策略绑定的云硬盘备份存储库列表  */
-	ProjectID             string                                                                `json:"projectID"`             /*  企业项目ID  */
-	FullBackupInterval    int32                                                                 `json:"fullBackupInterval"`    /*  启用周期性全量备份。-1代表不开启，默认为-1；取值范围为[-1,100]，即每执行n次增量备份后，执行一次全量备份。  */
-	AdvRetentionStatus    *bool                                                                 `json:"advRetentionStatus"`    /*  是否启用高级保留策略，取值范围：
+	RegionID              string                                                       `json:"regionID"`              /*  资源池ID  */
+	AccountID             string                                                       `json:"accountID"`             /*  账户ID  */
+	Status                int32                                                        `json:"status"`                /*  状态，0-停用，1-启用  */
+	CreatedTime           int32                                                        `json:"createdTime"`           /*  创建时间  */
+	PolicyID              string                                                       `json:"policyID"`              /*  策略ID  */
+	PolicyName            string                                                       `json:"policyName"`            /*  策略名  */
+	CycleType             string                                                       `json:"cycleType"`             /*  备份周期类型，day-按天备份，week-按星期备份  */
+	CycleDay              int32                                                        `json:"cycleDay"`              /*  备份周期，只有cycleType为day时返回  */
+	CycleWeek             string                                                       `json:"cycleWeek"`             /*  备份周期，只有cycleType为week时返回，则取值范围0-6代表星期日-星期六，如果一周有多天备份，以逗号隔开  */
+	Time                  string                                                       `json:"time"`                  /*  备份整点时间，取值范围0-23，如果一天内多个时间节点备份，以逗号隔开  */
+	RetentionType         string                                                       `json:"retentionType"`         /*  备份保留类型，num-按数量保留，date-按时间保留，all-全部保留  */
+	RetentionNum          int32                                                        `json:"retentionNum"`          /*  保留数量，只有retentionType为num时返回  */
+	RetentionDay          int32                                                        `json:"retentionDay"`          /*  保留天数，只有retentionType为date时返回  */
+	RemainFirstOfCurMonth *bool                                                        `json:"remainFirstOfCurMonth"` /*  是否保留每个月第一个备份，在retentionType为num时返回  */
+	BindedDiskCount       int32                                                        `json:"bindedDiskCount"`       /*  策略绑定的云硬盘数量  */
+	BindedDiskIDs         string                                                       `json:"bindedDiskIDs"`         /*  策略绑定的云硬盘ID，以逗号分隔  */
+	RepositoryList        []*ListBackupPolicyReturnObjPolicyListRepositoryListResponse `json:"repositoryList"`        /*  策略绑定的云硬盘备份存储库列表  */
+	ProjectID             string                                                       `json:"projectID"`             /*  企业项目ID  */
+	FullBackupInterval    int32                                                        `json:"fullBackupInterval"`    /*  启用周期性全量备份。-1代表不开启，默认为-1；取值范围为[-1,100]，即每执行n次增量备份后，执行一次全量备份。  */
+	AdvRetentionStatus    *bool                                                        `json:"advRetentionStatus"`    /*  是否启用高级保留策略，取值范围：
 	●true：启用
 	●false：不启用  */
 	AdvRetention *EbsbackupListBackupPolicyReturnObjPolicyListAdvRetentionResponse `json:"advRetention"` /*  高级保留策略内容。  */
@@ -119,7 +119,7 @@ type EbsbackupListBackupPolicyReturnObjPolicyListAdvRetentionResponse struct {
 	● 单位为年，取值范围：[0, 100]，默认值0  */
 }
 
-type CtebsListDiskBackupPolicyReturnObjPolicyListRepositoryListResponse struct {
+type ListBackupPolicyReturnObjPolicyListRepositoryListResponse struct {
 	RepositoryID   string `json:"repositoryID,omitempty"`   /*  云主机备份库ID  */
 	RepositoryName string `json:"repositoryName,omitempty"` /*  云主机备份库名称  */
 }

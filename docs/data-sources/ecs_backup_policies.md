@@ -43,10 +43,10 @@ output "ctyun_ecs_backup_policies_test" {
 
 ### Read-Only
 
-- `backup_policies` (Attributes List) (see [below for nested schema](#nestedatt--backup_policies))
+- `policies` (Attributes List) (see [below for nested schema](#nestedatt--policies))
 
-<a id="nestedatt--backup_policies"></a>
-### Nested Schema for `backup_policies`
+<a id="nestedatt--policies"></a>
+### Nested Schema for `policies`
 
 Read-Only:
 
@@ -59,7 +59,7 @@ Read-Only:
 - `name` (String) 云主机备份策略名称
 - `project_id` (String) 企业项目ID
 - `region_id` (String) 资源池ID
-- `repository_list` (Attributes List) 策略已绑定的云主机备份库列表 (see [below for nested schema](#nestedatt--backup_policies--repository_list))
+- `repository_list` (Attributes List) 策略已绑定的云主机备份库列表 (see [below for nested schema](#nestedatt--policies--repository_list))
 - `resource_count` (Number) 策略已绑定的云主机数量
 - `resource_ids` (String) 策略已绑定的云主机ID，以逗号分隔
 - `retention_day` (Number) 只有retentionType为date时返回保留天数值
@@ -68,8 +68,8 @@ Read-Only:
 - `status` (Number) 是否启用策略，取值范围：0：停用，1：启用
 - `time` (String) 备份整点时间，取值范围：0-23，如果一天内多个时间节点备份，以逗号隔开
 
-<a id="nestedatt--backup_policies--repository_list"></a>
-### Nested Schema for `backup_policies.repository_list`
+<a id="nestedatt--policies--repository_list"></a>
+### Nested Schema for `policies.repository_list`
 
 Read-Only:
 

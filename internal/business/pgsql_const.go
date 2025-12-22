@@ -74,7 +74,53 @@ const (
 
 	PgsqlStorageTypeBackUp = "backup"
 	PgsqlStorageTypeMaster = "master"
+
+	PgsqlAccountTypeNormal   = "normal"
+	PgsqlAccountTypeAdvanced = "advanced"
+
+	PgsqlBackupTypeAuto     = 1
+	PgsqlBackupTypeManual   = 2
+	PgsqlBackupTypeRecovery = 3
+
+	PgsqlBackupTypeAutoStr     = "auto"
+	PgsqlBackupTypeManualStr   = "manual"
+	PgsqlBackupTypeRecoveryStr = "recovery"
+
+	PgsqlBackupResultING     = 0
+	PgsqlBackupResultING1    = 2
+	PgsqlBackupResultSuccess = 3
+	PgsqlBackupResultFail    = 5
+
+	PgsqlBackupResultINGStr     = "ing"
+	PgsqlBackupResultSuccessStr = "success"
+	PgsqlBackupResultFailStr    = "fail"
+
+	PgsqlNodeTypeReadNode = "readNode"
 )
+
+var PgsqlBackupTypeMap = map[string]int32{
+	PgsqlBackupTypeAutoStr:     PgsqlBackupTypeAuto,
+	PgsqlBackupTypeManualStr:   PgsqlBackupTypeManual,
+	PgsqlBackupTypeRecoveryStr: PgsqlBackupTypeRecovery,
+}
+
+var PgsqlBackupTypeMapConv = map[int32]string{
+	PgsqlBackupTypeAuto:     PgsqlBackupTypeAutoStr,
+	PgsqlBackupTypeManual:   PgsqlBackupTypeManualStr,
+	PgsqlBackupTypeRecovery: PgsqlBackupTypeRecoveryStr,
+}
+
+var PgsqlBackupResultMap = map[string]int32{
+	PgsqlBackupResultINGStr:     PgsqlBackupResultING,
+	PgsqlBackupResultSuccessStr: PgsqlBackupResultSuccess,
+	PgsqlBackupResultFailStr:    PgsqlBackupResultFail,
+}
+var PgsqlBackupResultMapConv = map[int32]string{
+	PgsqlBackupResultING:     PgsqlBackupResultINGStr,
+	PgsqlBackupResultING1:    PgsqlBackupResultINGStr,
+	PgsqlBackupResultFail:    PgsqlBackupResultFailStr,
+	PgsqlBackupResultSuccess: PgsqlBackupResultSuccessStr,
+}
 
 var PgsqlBillModes = []string{
 	BillModeCycle,
@@ -184,6 +230,14 @@ var PgsqlProdIDDict = map[string]int64{
 	"MasterSlave168":   PgsqlProdIDMS168,
 	"Master2Slave168":  PgsqlProdIDM2S168,
 	"ReadOnly168":      PgsqlProdIDRead168,
+}
+
+var PgsqlReadNodeVersionProdIdDict = map[string]string{
+	"12.22": "ReadOnly1222",
+	"14.17": "ReadOnly1417",
+	"15.12": "ReadOnly1512",
+	"13.20": "ReadOnly1320",
+	"16.8":  "ReadOnly168",
 }
 
 var PgsqlProdIDRevDict = map[int64]string{
@@ -304,4 +358,9 @@ var PgsqlInstanceSeriesDict = map[string]string{
 	"S": "1",
 	"C": "2",
 	"M": "3",
+}
+
+var PgsqlAccountTypes = []string{
+	PgsqlAccountTypeAdvanced,
+	PgsqlAccountTypeNormal,
 }

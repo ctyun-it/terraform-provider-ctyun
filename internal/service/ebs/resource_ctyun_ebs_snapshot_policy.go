@@ -20,7 +20,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEbsSnapshotPolicy{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsSnapshotPolicy{}
+	_ resource.ResourceWithImportState = &ctyunEbsSnapshotPolicy{}
 )
 
 func NewCtyunEbsSnapshotPolicy() resource.Resource {
@@ -78,7 +85,7 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 					int64validator.Between(-1, 65535),
 				},
 			},
-			"is_enabled": schema.BoolAttribute{
+			"enabled": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否启用策略，取值范围：true：启用，false：不启用，默认为true。支持更新",
@@ -108,8 +115,7 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-
-			"snapshot_policy_status": schema.StringAttribute{
+			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "自动快照策略状态，取值范围：activated:启用，nonactivated：停用",
 			},
@@ -117,7 +123,7 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 				Computed:    true,
 				Description: "关联云硬盘的数量",
 			},
-			"snapshot_policy_create_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "策略创建时间",
 			},
@@ -315,7 +321,7 @@ func (c *ctyunEbsSnapshotPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsS
 	cfg.Id = types.StringValue(*policy.SnapshotPolicyID)
 	cfg.RepeatWeekdays = types.StringValue(*policy.RepeatWeekdays)
 	cfg.RepeatTimes = types.StringValue(*policy.RepeatTimes)
-	// 根据 SnapshotPolicyStatus 设置 is_enabled
+	// 根据 SnapshotPolicyStatus 设置 enabled
 	isEnabled := false
 	if *policy.SnapshotPolicyStatus == StatusActivated {
 		isEnabled = true
@@ -497,23 +503,40 @@ func (c *ctyunEbsSnapshotPolicy) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotPolicyConfig
-	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if ID == "" {
+		err = fmt.Errorf("ID不能为空")
 		return
 	}
-	cfg.RegionId = types.StringValue(regionID)
-	cfg.Id = types.StringValue(id)
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	cfg.Id = types.StringValue(ID)
+	cfg.RegionId = types.StringValue(regionId)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -523,11 +546,11 @@ type CtyunEbsSnapshotPolicyConfig struct {
 	RepeatWeekdays types.String `tfsdk:"repeat_weekdays"`
 	RepeatTimes    types.String `tfsdk:"repeat_times"`
 	RetentionTime  types.Int64  `tfsdk:"retention_time"`
-	IsEnabled      types.Bool   `tfsdk:"is_enabled"`
+	IsEnabled      types.Bool   `tfsdk:"enabled"`
 	ProjectId      types.String `tfsdk:"project_id"`
 	RegionId       types.String `tfsdk:"region_id"`
 
-	SnapshotPolicyStatus     types.String `tfsdk:"snapshot_policy_status"`
+	SnapshotPolicyStatus     types.String `tfsdk:"status"`
 	BoundDiskNum             types.Int64  `tfsdk:"bound_disk_num"`
-	SnapshotPolicyCreateTime types.String `tfsdk:"snapshot_policy_create_time"`
+	SnapshotPolicyCreateTime types.String `tfsdk:"create_time"`
 }

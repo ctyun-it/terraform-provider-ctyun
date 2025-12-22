@@ -74,7 +74,22 @@ func TestAccCtyunBandwidth(t *testing.T) {
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, regionId, projectId), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"project_id",
+					"cycle_type",
+					"cycle_count",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

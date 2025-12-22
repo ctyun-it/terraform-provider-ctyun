@@ -34,13 +34,13 @@ resource "ctyun_idp" "idp_test" {
 
 ### Required
 
-- `file` (String) 联邦登录文件
-- `file_name` (String) 文件名称（需携带后缀）
+- `file` (String) 联邦登录文件，支持更新
+- `file_name` (String) 文件名称（需携带后缀），支持更新
 - `name` (String) 身份提供商名称
 
 ### Optional
 
-- `description` (String) 描述
+- `description` (String) 描述，支持更新
 - `protocol` (String) 协议类型，saml：SAML协议，oidc：OIDC协议，不填默认为SAML协议
 - `type` (String) 类型，virtual：虚拟用户SSO，iam：IAM用户SSO
 

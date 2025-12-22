@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &ctyunEbmDeviceTypes{}
-	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceTypes{}
+	_ datasource.DataSource              = &ctyunEbms{}
+	_ datasource.DataSourceWithConfigure = &ctyunEbms{}
 )
 
 type ctyunEbms struct {
@@ -46,8 +46,8 @@ type CtyunEbmsModel struct {
 	Freezing             types.Bool                 `tfsdk:"freezing"`
 	Expired              types.Bool                 `tfsdk:"expired"`
 	CreateTime           types.String               `tfsdk:"create_time"`
-	UpdatedTime          types.String               `tfsdk:"updated_time"`
-	ExpiredTime          types.String               `tfsdk:"expired_time"`
+	UpdateTime           types.String               `tfsdk:"update_time"`
+	ExpireTime           types.String               `tfsdk:"expire_time"`
 }
 type CtyunEbmsNetworkCardList struct {
 	InterfaceID types.String `tfsdk:"interface_id"`
@@ -189,15 +189,15 @@ func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 						},
 						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "最后更新时间",
+							Description: "更新时间，为UTC格式",
 						},
-						"expired_time": schema.StringAttribute{
+						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "到期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 					},
 				},
@@ -265,9 +265,9 @@ func (c *ctyunEbms) Read(ctx context.Context, request datasource.ReadRequest, re
 			OsTypeName:           utils.SecStringValue(ebm.OsTypeName),
 			Freezing:             utils.SecBoolValue(ebm.Freezing),
 			Expired:              utils.SecBoolValue(ebm.Expired),
-			UpdatedTime:          utils.SecStringValue(ebm.UpdatedTime),
+			UpdateTime:           utils.SecStringValue(ebm.UpdatedTime),
 			CreateTime:           utils.SecStringValue(ebm.CreateTime),
-			ExpiredTime:          utils.SecStringValue(ebm.ExpiredTime),
+			ExpireTime:           utils.SecStringValue(ebm.ExpiredTime),
 		}
 
 		item.AttachedVolumes = utils.StrPointerArrayToStrArray(ebm.AttachedVolumes)

@@ -3,10 +3,7 @@ package core
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -110,12 +107,8 @@ func (c CtyunClient) send(ctx context.Context, req *http.Request) (*CtyunRespons
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode == http.StatusBadRequest && strings.Contains(req.URL.Path, "/v2/cce") {
-		resp.StatusCode = http.StatusOK
-	}
-
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, errors.New("response error, status code: " + strconv.Itoa(resp.StatusCode))
+		return &CtyunResponse{Request: req, Response: resp}, nil
 	}
 	return &CtyunResponse{Request: req, Response: resp}, nil
 }
