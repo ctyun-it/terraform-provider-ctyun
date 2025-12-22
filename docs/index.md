@@ -2,7 +2,7 @@
 
 ## 依赖
 
-- terraform v1.10.5，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
+- terraform v1.5.7，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
 - 天翼云账号AK、SK，[点击进入](https://www.ctyun.cn/console/user/setting)，在账号中心，安全设置，用户AccessKey中查看
 
 ## 建议配置
