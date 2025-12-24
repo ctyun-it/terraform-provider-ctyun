@@ -11,7 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-
+	planmodifierCustom "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
@@ -233,13 +232,16 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+				},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true",
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
 				},
 				Default: booldefault.StaticBool(true),
 				Validators: []validator.Bool{
@@ -284,7 +286,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringvalidator.UTF8LengthBetween(1, 16384),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
 				},
 			},
 			"master_order_id": schema.StringAttribute{
@@ -296,7 +298,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -572,8 +574,24 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	}
 	instance.IsDestroyInstance = plan.IsDestroyInstance
 	instance.Password = plan.Password
-	instance.CycleType = plan.CycleType
-	instance.CycleCount = plan.CycleCount
+	if !plan.AutoRenew.IsNull() {
+		instance.AutoRenew = plan.AutoRenew
+	}
+	if !plan.PayVoucherPrice.IsNull() {
+		instance.PayVoucherPrice = plan.PayVoucherPrice
+	}
+	if !plan.ProjectId.IsNull() {
+		instance.ProjectId = plan.ProjectId
+	}
+	if !plan.CycleType.IsNull() {
+		instance.CycleType = plan.CycleType
+	}
+	if !plan.CycleCount.IsNull() {
+		instance.CycleCount = plan.CycleCount
+	}
+	if !plan.UserData.IsNull() {
+		instance.UserData = plan.UserData
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
@@ -1533,7 +1551,11 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		cfg.AffinityGroupId = types.StringNull()
 
 	}
-
+	cfg.AzName = types.StringValue(*instance_details_resp.AzName)
+	if *instance_details_resp.OnDemand {
+		cfg.CycleType = types.StringValue(business.OrderCycleTypeOnDemand)
+	}
+	cfg.KeyPairName = types.StringValue(*instance_details_resp.KeypairName)
 	return &cfg, nil
 }
 
@@ -2028,6 +2050,9 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	config.RegionId = types.StringValue(regionId)
 
 	cfg, err := c.getAndMergeEcs(ctx, config)
+	// 处理ImageId字段 仅在import的时候处理
+	cfg.ImageId = cfg.ActualImageID
+	cfg.PayVoucherPrice = types.Float64Value(0)
 	if err != nil {
 		return
 	}
