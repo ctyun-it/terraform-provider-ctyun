@@ -648,7 +648,12 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	}
 
 	// 处理IOPS字段
-	cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	//如果ProvisionedIops为0，那么就不设置ProvisionedIops
+	if obj.ProvisionedIops > 0 {
+		cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	} else {
+		cfg.ProvisionedIops = types.Int64Null()
+	}
 
 	// 处理删除快照策略字段
 	if obj.DeleteSnapWithEbs == "true" {

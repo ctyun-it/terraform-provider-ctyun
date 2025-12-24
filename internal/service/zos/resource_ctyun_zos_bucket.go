@@ -403,7 +403,6 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
 		bucket = request.ID
 	} else {
 		err = terraform_extend.Split(request.ID, &bucket, &regionID)
