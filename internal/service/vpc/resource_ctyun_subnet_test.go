@@ -54,7 +54,11 @@ func TestAccCtyunSubnet(t *testing.T) {
 					id := ds.ID
 					projectID := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", id, projectID, regionId), nil
+					vpcID := ds.Attributes["vpc_id"]
+					if id == "" || regionId == "" || vpcID == "" {
+						return "", fmt.Errorf("id or region_id os vpcID is required")
+					}
+					return fmt.Sprintf("%s,%s,%s,%s", id, vpcID, projectID, regionId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{
@@ -67,7 +71,8 @@ func TestAccCtyunSubnet(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
+					vpcID := ds.Attributes["vpc_id"]
+					return fmt.Sprintf("%s,%s", id, vpcID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{

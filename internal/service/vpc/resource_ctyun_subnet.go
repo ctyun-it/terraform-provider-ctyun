@@ -310,28 +310,28 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[project_id][region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[vpcId],[project_id][region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSubnetConfig
-	var subnetId, projectID, regionId string
+	var subnetId, vpcId, projectID, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &subnetId)
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &subnetId, &projectID)
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &subnetId, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID, &regionId)
 		if err != nil {
 			return
 		}
@@ -340,12 +340,16 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 		err = fmt.Errorf("subnetId不能为空")
 		return
 	}
-
+	if vpcId == "" {
+		err = fmt.Errorf("vpcId不能为空")
+		return
+	}
 	if regionId == "" {
 		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(subnetId)
+	cfg.VpcId = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
 	cfg.ProjectId = types.StringValue(projectID)
 	err = c.getAndMergeSubnet(ctx, &cfg)
