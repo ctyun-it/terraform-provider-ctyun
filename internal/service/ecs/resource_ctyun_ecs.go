@@ -232,9 +232,10 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
-				PlanModifiers: []planmodifier.Int64{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
-				},
+
+				//PlanModifiers: []planmodifier.Int64{
+				//	planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+				//},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
@@ -574,24 +575,19 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	}
 	instance.IsDestroyInstance = plan.IsDestroyInstance
 	instance.Password = plan.Password
-	if !plan.AutoRenew.IsNull() {
-		instance.AutoRenew = plan.AutoRenew
-	}
-	if !plan.PayVoucherPrice.IsNull() {
-		instance.PayVoucherPrice = plan.PayVoucherPrice
-	}
-	if !plan.ProjectId.IsNull() {
-		instance.ProjectId = plan.ProjectId
-	}
-	if !plan.CycleType.IsNull() {
-		instance.CycleType = plan.CycleType
-	}
-	if !plan.CycleCount.IsNull() {
-		instance.CycleCount = plan.CycleCount
-	}
-	if !plan.UserData.IsNull() {
-		instance.UserData = plan.UserData
-	}
+
+	instance.AutoRenew = plan.AutoRenew
+
+	instance.PayVoucherPrice = plan.PayVoucherPrice
+
+	instance.ProjectId = plan.ProjectId
+
+	instance.CycleType = plan.CycleType
+
+	instance.CycleCount = plan.CycleCount
+
+	instance.UserData = plan.UserData
+
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
