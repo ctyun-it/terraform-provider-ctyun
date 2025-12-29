@@ -15,11 +15,10 @@ func NewBandwidthService(meta *common.CtyunMetadata) *BandwidthService {
 	return &BandwidthService{meta: meta}
 }
 
-func (u BandwidthService) MustExist(ctx context.Context, id, regionId, projectId string) error {
+func (u BandwidthService) MustExist(ctx context.Context, id, regionId string) error {
 	_, err := u.meta.Apis.CtVpcApis.BandwidthDescribeApi.Do(ctx, u.meta.Credential, &ctvpc.BandwidthDescribeRequest{
 		BandwidthId: id,
 		RegionId:    regionId,
-		ProjectId:   projectId,
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSharedbandwidthNotFound {

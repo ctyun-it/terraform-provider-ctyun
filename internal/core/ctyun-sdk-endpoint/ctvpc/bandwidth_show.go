@@ -52,6 +52,8 @@ func (this *BandwidthDescribeApi) Do(ctx context.Context, credential ctyunsdk.Cr
 		Bandwidth: result.Bandwidth,
 		Name:      result.Name,
 		Eips:      eips,
+		CreatedAt: result.CreatedAt,
+		ExpireAt:  result.ExpireAt,
 	}, nil
 }
 
@@ -64,6 +66,8 @@ type bandwidthDescribeRealResponse struct {
 		Ip    string `json:"ip"`
 		EipID string `json:"eipID"`
 	} `json:"eips"`
+	ExpireAt  string `json:"expireAt"`  /*  过期时间  */
+	CreatedAt string `json:"createdAt"` /*  创建时间  */
 }
 
 type BandwidthDescribeRequest struct {
@@ -83,4 +87,6 @@ type BandwidthDescribeResponse struct {
 	Bandwidth int
 	Name      string
 	Eips      []BandwidthDescribeEipsResponse
+	ExpireAt  string
+	CreatedAt string
 }
