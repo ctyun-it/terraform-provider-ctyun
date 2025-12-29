@@ -43,6 +43,22 @@ func TestAccEcCloudGateway_basic(t *testing.T) {
 				),
 			},
 			{
+				// 测试导入
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("not found: %s", resourceName)
+					}
+					ID := rs.Primary.ID
+					EcId := rs.Primary.Attributes["ec_id"]
+					return fmt.Sprintf("%s,%s", EcId, ID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.expressConnectID, name, updatedDescription, regionType),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -57,24 +73,7 @@ func TestAccEcCloudGateway_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(datasourceName, "ec_id", dependence.expressConnectID),
 				),
 			},
-			{
-				// 测试导入
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("not found: %s", resourceName)
-					}
-					ID := rs.Primary.ID
-					EcId := rs.Primary.Attributes["ec_id"]
-					return fmt.Sprintf("%s,%s", EcId, ID), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"region_id",
-				},
-			},
+
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, name, updatedDescription),
 				Destroy: true,

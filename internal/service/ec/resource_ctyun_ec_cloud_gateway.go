@@ -361,11 +361,8 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 	plan.RegionID = types.StringValue(*result.DcID)
 	plan.DcName = types.StringValue(*result.DcName)
 	plan.Region = types.Int64Value(*result.Region)
-	plan.Description = types.StringValue(*resp.Description)
-	//
-
 	if result.Region != nil {
-		plan.Region = types.Int64Value(int64(*result.Region))
+		plan.Region = types.Int64Value(*result.Region)
 	}
 
 	if result.CgwDescription != nil {
@@ -444,7 +441,6 @@ func (c *CtyunEcCloudGateway) createCgwBill(ctx context.Context, plan *CtyunEcCl
 		// 构造请求参数（这里需要根据实际业务需求进行调整）
 		req := &ec.EcEcCgwBillNewRequest{
 			EcID: plan.EcID.ValueString(),
-			// RegionID, ClientToken, PayVoucherPrice 等参数根据实际需求添加
 		}
 
 		tflog.Info(ctx, "创建云网关计费", map[string]interface{}{

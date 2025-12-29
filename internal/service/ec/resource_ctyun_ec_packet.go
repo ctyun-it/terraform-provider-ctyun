@@ -7,7 +7,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -42,7 +41,6 @@ type CtyunEcPacket struct {
 type CtyunEcPacketConfig struct {
 	ID                   types.String `tfsdk:"id"`
 	EcID                 types.String `tfsdk:"ec_id"`
-	RegionID             types.String `tfsdk:"region_id"`
 	Name                 types.String `tfsdk:"name"`
 	Bandwidth            types.Int64  `tfsdk:"bandwidth"`
 	CycleType            types.String `tfsdk:"cycle_type"`
@@ -82,18 +80,6 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-			},
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "带宽包名字",
@@ -106,10 +92,7 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"bandwidth": schema.Int64Attribute{
 				Required:    true,
-				Description: "带宽，单位MB",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
+				Description: "带宽，单位MB 支持更新",
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
@@ -336,9 +319,9 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	}()
 	var config CtyunEcPacketConfig
 
-	var ecId, resourceId string
+	var ecId, packetId string
 
-	err = terraform_extend.Split(request.ID, &ecId, &resourceId)
+	err = terraform_extend.Split(request.ID, &ecId, &packetId)
 	if err != nil {
 		return
 	}
@@ -347,22 +330,19 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 		err = fmt.Errorf("ecId不能为空")
 		return
 	}
-	if resourceId == "" {
+	if packetId == "" {
 		err = fmt.Errorf("resourceId不能为空")
 		return
 	}
 
 	config.EcID = types.StringValue(ecId)
-	config.ResourceID = types.StringValue(resourceId)
+	config.ID = types.StringValue(packetId)
 
 	// 查询远端
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-
-	// 设置ID字段，确保导入时有正确的ID（修复：保持与Create中一致的格式）
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s", ecId, resourceId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -377,7 +357,9 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 	if !state.ResourceID.IsNull() && !state.ResourceID.IsUnknown() {
 		listReq.ResourceID = state.ResourceID.ValueStringPointer()
 	}
-
+	if !state.ID.IsNull() && !state.ID.IsUnknown() {
+		listReq.PacketID = state.ID.ValueStringPointer()
+	}
 	tflog.Info(ctx, "查询云间高速带宽包信息", map[string]interface{}{
 		"ec_id":       state.EcID.ValueString(),
 		"resource_id": state.ResourceID.ValueString(),
@@ -414,6 +396,21 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		if result.PacketID != nil {
 			state.ID = types.StringValue(*result.PacketID)
 		}
+		if result.AreaB != nil {
+			state.AreaB = types.StringValue(*result.AreaB)
+		}
+		if result.AreaA != nil {
+			state.AreaA = types.StringValue(*result.AreaA)
+		}
+		if result.PacketName != nil {
+			state.Name = types.StringValue(*result.PacketName)
+		}
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
+		}
+		if result.BillingModel != nil && *result.BillingModel != "" {
+			state.CycleType = types.StringValue(*result.BillingModel)
+		}
 	}
 
 	return
@@ -428,7 +425,7 @@ func (c *CtyunEcPacket) upgrade(ctx context.Context, plan, state *CtyunEcPacketC
 	clientToken := uuid.NewString()
 	upgradeReq := &ec.EcEcOrderPacketUpgradeRequest{
 		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
+		RegionID:    "bb9fdb42056f11eda1610242ac110002",
 		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
 		ResourceID:  state.ResourceID.ValueString(),
 		ClientToken: &clientToken,
@@ -453,10 +450,10 @@ func (c *CtyunEcPacket) upgrade(ctx context.Context, plan, state *CtyunEcPacketC
 	// 更新状态信息
 	if resp.ReturnObj != nil {
 		if resp.ReturnObj.MasterOrderID != nil {
-			plan.MasterOrderID = types.StringValue(*resp.ReturnObj.MasterOrderID)
+			state.MasterOrderID = types.StringValue(*resp.ReturnObj.MasterOrderID)
 		}
 		if resp.ReturnObj.MasterOrderNO != nil {
-			plan.MasterOrderNO = types.StringValue(*resp.ReturnObj.MasterOrderNO)
+			state.MasterOrderNO = types.StringValue(*resp.ReturnObj.MasterOrderNO)
 		}
 	}
 
@@ -472,7 +469,7 @@ func (c *CtyunEcPacket) renew(ctx context.Context, plan, state *CtyunEcPacketCon
 	clientToken := uuid.NewString()
 	renewReq := &ec.EcEcOrderPacketRenewRequest{
 		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
+		RegionID:    "bb9fdb42056f11eda1610242ac110002",
 		ResourceID:  state.ResourceID.ValueString(),
 		CycleType:   plan.CycleType.ValueString(),
 		CycleCount:  int32(plan.CycleCount.ValueInt64()),
@@ -519,7 +516,7 @@ func (c *CtyunEcPacket) refund(ctx context.Context, state *CtyunEcPacketConfig) 
 	clientToken := uuid.NewString()
 	refundReq := &ec.EcEcOrderPacketRefundRequest{
 		EcID:        state.EcID.ValueString(),
-		RegionID:    state.RegionID.ValueString(),
+		RegionID:    "bb9fdb42056f11eda1610242ac110002",
 		ResourceID:  state.ResourceID.ValueString(),
 		ClientToken: &clientToken,
 	}
@@ -556,7 +553,7 @@ func (c *CtyunEcPacket) create(ctx context.Context, plan *CtyunEcPacketConfig) (
 	clientToken := uuid.NewString()
 	newReq := &ec.EcEcOrderPacketNewRequest{
 		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
+		RegionID:    "bb9fdb42056f11eda1610242ac110002",
 		PacketName:  plan.Name.ValueString(),
 		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
 		AreaA:       plan.AreaA.ValueStringPointer(),
