@@ -431,7 +431,7 @@ func (c *CtyunElbListener) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMergeListener(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -778,6 +778,9 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbShowListenerApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
+	} else if resp.ErrorCode == common.OpenapiListenerNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return

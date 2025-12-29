@@ -339,7 +339,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, false),
+				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"is_destroy_instance": schema.BoolAttribute{
 				Optional:    true,

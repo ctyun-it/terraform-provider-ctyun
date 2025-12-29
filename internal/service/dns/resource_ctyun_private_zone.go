@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -250,8 +251,10 @@ func (c *CtyunPrivateZone) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -414,6 +417,9 @@ func (c *CtyunPrivateZone) getPrivateZoneDetail(ctx context.Context, config *Cty
 		return nil, err
 	} else if resp == nil {
 		err = fmt.Errorf("获取内网DNS详情失败(id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
+		return nil, err
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiPrivateZoneNotFound {
+		err = common.ResourceNotExistError
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
