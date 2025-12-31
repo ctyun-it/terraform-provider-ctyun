@@ -242,6 +242,7 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	instance.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(instance.ProjectId.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
