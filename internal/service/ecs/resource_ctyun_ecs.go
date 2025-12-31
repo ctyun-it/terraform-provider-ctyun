@@ -232,10 +232,6 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
-
-				//PlanModifiers: []planmodifier.Int64{
-				//	planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
-				//},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,

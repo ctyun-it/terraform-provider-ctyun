@@ -8,7 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
