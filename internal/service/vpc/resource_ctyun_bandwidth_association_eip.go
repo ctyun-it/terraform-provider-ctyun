@@ -72,8 +72,7 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 			},
 			"project_id": schema.StringAttribute{
 				Optional:           true,
-				Computed:           true,
-				DeprecationMessage: "本字段即将在新版本废弃，尤其是导入时请不要指定本字段",
+				DeprecationMessage: "本字段即将在新版本废弃，请不要指定本字段",
 				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.Project(),
@@ -252,6 +251,9 @@ func (c *ctyunBandwidthAssociationEip) getAndMergeBandwidthAssociationEip(ctx co
 		BandwidthId: cfg.BandwidthId.ValueString(),
 	})
 	if err != nil {
+		if err.ErrorCode() == common.OpenapiSharedbandwidthNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if len(result.Eips) == 0 {
@@ -267,6 +269,9 @@ func (c *ctyunBandwidthAssociationEip) getAndMergeBandwidthAssociationEip(ctx co
 	}
 	if !bind {
 		return nil, nil
+	}
+	if cfg.ProjectId.IsUnknown() {
+		cfg.ProjectId = types.StringNull()
 	}
 	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.BandwidthId.ValueString(), cfg.EipId.ValueString(), cfg.RegionId.ValueString()))
 	return &cfg, nil

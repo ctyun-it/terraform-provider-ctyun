@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -213,8 +215,10 @@ func (c *CtyunSubnetAssociationAcl) Read(ctx context.Context, request resource.R
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -319,7 +323,7 @@ func (c *CtyunSubnetAssociationAcl) getAndMerge(ctx context.Context, config *Cty
 			return nil
 		}
 	}
-	return fmt.Errorf("subnet 和 acl未绑定")
+	return common.ResourceNotExistError
 }
 
 func (c *CtyunSubnetAssociationAcl) getAclDetail(ctx context.Context, config *CtyunSubnetAssociationAclConfig) (*ctvpc.CtvpcShowAclResponse, error) {
@@ -337,7 +341,12 @@ func (c *CtyunSubnetAssociationAcl) getAclDetail(ctx context.Context, config *Ct
 		err = fmt.Errorf("获取acl详情失败，接口返回nil，请联系研发确认问题原因！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

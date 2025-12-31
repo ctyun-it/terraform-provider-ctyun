@@ -2,6 +2,7 @@ package vpce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -288,7 +289,7 @@ func (c *ctyunVpceService) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "resource not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -579,6 +580,9 @@ func (c *ctyunVpceService) show(ctx context.Context, plan CtyunVpceServiceConfig
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointServiceApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceServiceNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)

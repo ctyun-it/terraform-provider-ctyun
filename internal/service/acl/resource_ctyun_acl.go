@@ -371,7 +371,7 @@ func (c *CtyunAcl) getAclDetail(ctx context.Context, config *CtyunAclConfig) (*c
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
 		msg := utils.SecString(resp.Message)
-		if msg == "resource not found" {
+		if msg == common.OpenapiAclNotFoundMsg {
 			err = common.ResourceNotExistError
 		} else {
 			err = fmt.Errorf("API return error. Message: %s", msg)
