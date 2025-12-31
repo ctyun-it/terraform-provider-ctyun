@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -118,7 +120,6 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"instance_type": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,当type为interface时必填。支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf("vm", "bm", "vip", "lb"),
@@ -134,7 +135,6 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"instance_id": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "服务后端实例ID，当type为interface时必填，支持更新",
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
@@ -148,10 +148,10 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Required:    true,
-				Description: "服务后端子网id",
+				Optional:    true,
+				Description: "子网ID，创建反向终端节点服务时必填",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -169,6 +169,9 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(validator2.Email()),
 					setvalidator.SizeAtMost(10),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"create_time": schema.StringAttribute{
@@ -194,6 +197,9 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 						path.MatchRoot("type"),
 						types.StringValue(business.VpceServiceTypeReverse),
 					),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 				Description: "节点服务规则，当type为interface时必填，支持更新",
 				NestedObject: schema.NestedAttributeObject{
@@ -342,7 +348,9 @@ func (c *ctyunVpceService) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-
+	if state.SubnetID.IsNull() {
+		state.SubnetID = plan.SubnetID
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 

@@ -74,11 +74,10 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 				Optional:           true,
 				Computed:           true,
 				DeprecationMessage: "本字段即将在新版本废弃，尤其是导入时请不要指定本字段",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.Project(),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
 					validator2.Project(),
 				},
@@ -258,11 +257,16 @@ func (c *ctyunBandwidthAssociationEip) getAndMergeBandwidthAssociationEip(ctx co
 	if len(result.Eips) == 0 {
 		return nil, nil
 	}
+	var bind bool
 	for _, eip := range result.Eips {
 		if eip.EipId == cfg.EipId.ValueString() {
 			cfg.EipId = types.StringValue(eip.EipId)
+			bind = true
 			break
 		}
+	}
+	if !bind {
+		return nil, nil
 	}
 	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.BandwidthId.ValueString(), cfg.EipId.ValueString(), cfg.RegionId.ValueString()))
 	return &cfg, nil

@@ -244,33 +244,39 @@ func (c *ctyunVpceServiceReverseRule) ImportState(ctx context.Context, request r
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[endpointServiceID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[endpoint_service_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceReverseRuleConfig
 	var id, endpointServiceID, regionID string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入ip和endpoint_service_id")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &id, &endpointServiceID)
-	} else {
+		if err != nil {
+			return
+		}
+	default:
 		err = terraform_extend.Split(request.ID, &id, &endpointServiceID, &regionID)
 		if err != nil {
 			return
 		}
 	}
-
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id 不能为空")
 		return
 	}
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("endpoint_service_id 不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id 不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
