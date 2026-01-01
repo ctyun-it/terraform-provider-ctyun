@@ -73,11 +73,11 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 		}
 	}
 	if instId == "" {
-		err = fmt.Errorf("instanceID 不能为空")
+		err = fmt.Errorf("instanceID不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID 不能为空")
+		err = fmt.Errorf("regionID不能为空")
 	}
 
 	cfg.RegionID = types.StringValue(regionId)

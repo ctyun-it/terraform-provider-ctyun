@@ -229,15 +229,15 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 		}
 	}
 	if ip == "" {
-		err = fmt.Errorf("ip 不能为空")
+		err = fmt.Errorf("ip不能为空")
 		return
 	}
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpoint_service_id 不能为空")
+		err = fmt.Errorf("endpoint_service_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

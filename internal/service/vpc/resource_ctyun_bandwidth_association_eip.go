@@ -196,28 +196,33 @@ func (c *ctyunBandwidthAssociationEip) ImportState(ctx context.Context, request 
 	}()
 	var cfg CtyunBandwidAssociationEipConfig
 	var bandwidthID, eipID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("bandwidth_id和eip_id必须输入")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	default:
 		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if bandwidthID == "" {
-		err = fmt.Errorf("bandwidth_id 不能为空")
+		err = fmt.Errorf("bandwidth_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eip_id 不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

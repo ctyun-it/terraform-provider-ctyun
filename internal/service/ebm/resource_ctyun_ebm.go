@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
@@ -249,7 +250,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					int32validator.Between(1, 2000),
 				},
 				PlanModifiers: []planmodifier.Int32{
-					explanmodifier.NullIgnoreInt32(),
+					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"eip_address": schema.StringAttribute{
@@ -583,8 +584,13 @@ func (c *ctyunEbm) Update(ctx context.Context, request resource.UpdateRequest, r
 		return
 	}
 	state.Password = plan.Password
-	if err != nil {
-		return
+	if !plan.UserData.IsUnknown() && state.UserData.IsNull() {
+		state.UserData = plan.UserData
+		response.Diagnostics.AddWarning("user_data的更新仅写入状态文件", "在import时，状态文件中user_data为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.AutoRenew.IsUnknown() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
@@ -662,6 +668,11 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	case 2:
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID, &projectID)
 		if err != nil {
 			return
 		}
@@ -1048,7 +1059,7 @@ func (c *ctyunEbm) stopInstance(ctx context.Context, plan CtyunEbmConfig) (err e
 	return
 }
 
-// getAndMerge 查询何必
+// getAndMerge 查询并合并
 func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err error) {
 	instance, err := c.getEbm(ctx, *cfg)
 	if err != nil {
@@ -1068,7 +1079,17 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 	cfg.UpdateTime = types.StringPointerValue(instance.UpdatedTime)
 	cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
 	eipAddress := utils.SecString(instance.PublicIP)
-	cfg.EipAddress = types.StringValue(eipAddress)
+	if len(eipAddress) > 0 {
+		cfg.EipAddress = types.StringValue(eipAddress)
+		var eip *ctvpc.CtvpcNewEipListReturnObjEipsResponse
+		eip, err = business.NewEipService(c.meta).GetEipByAddress(ctx, eipAddress, cfg.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+		cfg.BandWidth = types.Int32Value(eip.Bandwidth)
+	} else {
+		cfg.EipAddress = types.StringNull()
+	}
 	if utils.SecString(instance.SystemVolumeRaidID) != "" {
 		cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)
 	} else {

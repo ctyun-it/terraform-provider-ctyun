@@ -317,19 +317,19 @@ func (c *ctyunEbmInterface) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instance_id 不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if interfaceID == "" {
-		err = fmt.Errorf("interface_id 不能为空")
+		err = fmt.Errorf("interface_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if azName == "" {
-		err = fmt.Errorf("az_name 不能为空")
+		err = fmt.Errorf("az_name不能为空")
 		return
 	}
 	config.InstanceID = types.StringValue(instanceID)

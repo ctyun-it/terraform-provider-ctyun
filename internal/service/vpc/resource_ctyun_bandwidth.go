@@ -319,29 +319,30 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 	}()
 	var cfg CtyunBandwidthConfig
 	var bandwidthID, regionID, projectID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		bandwidthID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if bandwidthID == "" {
-		err = fmt.Errorf("id 不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(bandwidthID)

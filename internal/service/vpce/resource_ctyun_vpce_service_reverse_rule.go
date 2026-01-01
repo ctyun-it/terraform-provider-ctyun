@@ -273,15 +273,15 @@ func (c *ctyunVpceServiceReverseRule) ImportState(ctx context.Context, request r
 		}
 	}
 	if id == "" {
-		err = fmt.Errorf("id 不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpoint_service_id 不能为空")
+		err = fmt.Errorf("endpoint_service_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
