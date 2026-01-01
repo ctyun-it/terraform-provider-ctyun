@@ -323,7 +323,7 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 	initExtra := fmt.Sprintf(
 		`status             = "running"
   cycle_type         = "on_demand"
-  deletion_protection = true
+  deletion_protection = false
   flavor_name        = "%s"
   affinity_group_id  = "%s"
   metadata = {
@@ -344,7 +344,7 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 	updatedExtra := fmt.Sprintf(
 		`status              = "stopped"
   cycle_type         = "on_demand"
-  deletion_protection = false
+  deletion_protection = true
   flavor_name        = "%s"
   metadata = {
     environment = "production"
@@ -472,6 +472,19 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					initExtra,
+				),
+			},
 			// 4.销毁测试
 			{
 				Config: utils.LoadTestCase(
@@ -483,8 +496,8 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 					dependence.vpcID,
 					dependence.subnetID,
 					dependence.keyPairName,
-					updatedExtra,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+					initExtra,
+				),
 				Destroy: true,
 			},
 		},
