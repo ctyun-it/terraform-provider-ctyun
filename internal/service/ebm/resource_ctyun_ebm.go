@@ -218,6 +218,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_disk_type")),
 				},
 			},
@@ -1068,8 +1069,16 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 	cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
 	eipAddress := utils.SecString(instance.PublicIP)
 	cfg.EipAddress = types.StringValue(eipAddress)
-	cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)
-	cfg.DataVolumeRaidUUID = utils.SecStringValue(instance.DataVolumeRaidID)
+	if utils.SecString(instance.SystemVolumeRaidID) != "" {
+		cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)
+	} else {
+		cfg.SystemVolumeRaidUUID = types.StringNull()
+	}
+	if utils.SecString(instance.DataVolumeRaidID) != "" {
+		cfg.DataVolumeRaidUUID = utils.SecStringValue(instance.DataVolumeRaidID)
+	} else {
+		cfg.DataVolumeRaidUUID = types.StringNull()
+	}
 	cfg.SecurityGroupIDs = types.SetNull(types.StringType)
 	for _, card := range instance.Interfaces {
 		master := utils.SecBoolValue(card.Master)

@@ -35,25 +35,27 @@ data "ctyun_zones" "test" {
 }
 
 locals {
-  device_type1 = "physical.s5.2xlarge4"       // az2、有本地盘、弹性、不支持云硬盘
-  device_type2 = "physical.s5.2xlarge1"       // az2、无本地盘、弹性、支持云硬盘
-  az2 = data.ctyun_zones.test.zones[2]
+  device_type1 = "physical.s5.2xlarge4"
+  device_type2 = "physical.s5.2xlarge1"
+  az1 =  data.ctyun_zones.test.zones[0]
+  az2 =  data.ctyun_zones.test.zones[1]
+  az3 =  data.ctyun_zones.test.zones[2]
 }
 
 data "ctyun_ebm_device_raids" "system_raid" {
-  az_name = local.az2
+  az_name = local.az3
   device_type = local.device_type1
   volume_type = "system"
 }
 
 data "ctyun_ebm_device_raids" "data_raid" {
-  az_name = local.az2
+  az_name = local.az3
   device_type = local.device_type1
   volume_type = "data"
 }
 
 data "ctyun_ebm_device_images" "test" {
-  az_name = local.az2
+  az_name = local.az3
   device_type = local.device_type1
   os_type = "linux"
   image_type = "standard"
@@ -67,13 +69,13 @@ locals {
 
 data "ctyun_ebm_device_images" "dependence" {
   device_type = local.device_type2
-  az_name = local.az2
+  az_name = local.az3
   os_type = "linux"
   image_type = "standard"
 }
 
 resource "ctyun_ebs" "ebs_test" {
-  az_name   = local.az2
+  az_name   = local.az3
   name       = "tf-ebs-for-ebm"
   mode       = "vbd"
   type       = "sata"
@@ -82,7 +84,7 @@ resource "ctyun_ebs" "ebs_test" {
 }
 
 resource "ctyun_ebm" "ebm_test" {
-  az_name   = local.az2
+  az_name   = local.az3
   instance_name = "tf-ebm-for-ebm"
   hostname = "tf-ebm-for-ebm"
   password = var.password

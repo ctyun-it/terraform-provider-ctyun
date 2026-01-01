@@ -525,7 +525,7 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	if resp.ReturnObj.Detail != nil && resp.ReturnObj.Detail.SourceDbInfo != nil {
 		sourceDbInfo := resp.ReturnObj.Detail.SourceDbInfo
 		state.SourceDbInfo.SpuInstId = types.StringValue(sourceDbInfo.SpuInstId)
-		state.SourceDbInfo.IpAddr = types.StringValue(sourceDbInfo.IpAddr)
+		//state.SourceDbInfo.IpAddr = types.StringValue(sourceDbInfo.IpAddr)
 		state.SourceDbInfo.AccountName = types.StringValue(sourceDbInfo.AccountName)
 		// 处理 OriginalCluster 字段
 		if sourceDbInfo.OriginalCluster != nil {
@@ -539,7 +539,7 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	if resp.ReturnObj.Detail != nil && resp.ReturnObj.Detail.TargetDbInfo != nil {
 		targetDbInfo := resp.ReturnObj.Detail.TargetDbInfo
 		state.TargetDbInfo.SpuInstId = types.StringValue(targetDbInfo.SpuInstId)
-		state.TargetDbInfo.IpAddr = types.StringValue(targetDbInfo.IpAddr)
+		//state.TargetDbInfo.IpAddr = types.StringValue(targetDbInfo.IpAddr)
 		state.TargetDbInfo.AccountName = types.StringValue(targetDbInfo.AccountName)
 		// 处理 OriginalCluster 字段
 		if targetDbInfo.OriginalCluster != nil {
