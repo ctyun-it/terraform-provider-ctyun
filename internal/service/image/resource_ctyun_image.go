@@ -69,7 +69,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Description: "镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9]$"), "不满足镜像名称要求"),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9.-]*[a-zA-Z0-9]$"), "不满足镜像名称要求"),
 				},
 			},
 			"os_distro": schema.StringAttribute{
@@ -478,7 +478,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	}
 	cfg.Id = types.StringValue(resp.ImageId)
 	cfg.Name = types.StringValue(resp.ImageName)
-	cfg.OsDistro = types.StringValue(resp.OsDistro)
+	cfg.OsDistro = types.StringValue(strings.ToLower(resp.OsDistro))
 	cfg.OsVersion = types.StringValue(resp.OsVersion)
 	cfg.Architecture = types.StringValue(resp.Architecture)
 	cfg.BootMode = types.StringValue(resp.BootMode)
