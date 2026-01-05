@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -60,7 +61,7 @@ func (c *CtyunSdwan) Schema(ctx context.Context, req resource.SchemaRequest, res
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, true),
 				Validators: []validator.String{
@@ -80,7 +81,7 @@ func (c *CtyunSdwan) Schema(ctx context.Context, req resource.SchemaRequest, res
 				Description: "SD-WAN描述 支持更新",
 				Validators: []validator.String{
 					validator2.Desc(),
-					stringvalidator.LengthAtLeast(1),
+					stringvalidator.LengthAtLeast(0),
 					stringvalidator.RegexMatches(regexp.MustCompile(`^\S*$`), "不能含有空格"),
 				},
 			},
@@ -196,6 +197,7 @@ func (c *CtyunSdwan) ImportState(ctx context.Context, req resource.ImportStateRe
 	if err != nil {
 		return
 	}
+	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
 	resp.Diagnostics.Append(resp.State.Set(ctx, config)...)
 }
 

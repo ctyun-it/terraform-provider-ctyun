@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -54,7 +55,7 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -230,6 +231,7 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	state.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(state.ProjectId.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -310,11 +312,13 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 
 	if returnObj.Ipv4 != nil {
 		state.Ipv4Address = types.StringValue(*returnObj.Ipv4)
+		state.VipType = types.StringValue("v4")
 	}
 
-	//if returnObj.Ipv6 != nil {
-	//	state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
-	//}
+	if returnObj.Ipv6 != nil {
+		state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
+		state.VipType = types.StringValue("v6")
+	}
 
 	if returnObj.VpcID != nil {
 		state.VpcId = types.StringValue(*returnObj.VpcID)
@@ -323,7 +327,6 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 	if returnObj.SubnetID != nil {
 		state.SubnetId = types.StringValue(*returnObj.SubnetID)
 	}
-
 	return
 }
 

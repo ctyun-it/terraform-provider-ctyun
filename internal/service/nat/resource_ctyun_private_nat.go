@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -161,7 +162,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Description: "是否自动续订，默认为true",
-				Default:     booldefault.StaticBool(false),
+				Default:     booldefault.StaticBool(true),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
@@ -205,6 +206,10 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Computed:      true,
 				Description:   "NAT网关的创建时间,为UTC格式",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
 			},
 		},
 	}
@@ -512,6 +517,20 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.Description = types.StringValue(natObj.Description)
 	cfg.VpcName = types.StringValue(natObj.VpcName)
 	cfg.CreationTime = types.StringValue(natObj.CreateDate)
+	cfg.ExpiredTime = types.StringValue(natObj.ExpiredTime)
+	cfg.AzName = types.StringValue(natObj.AzName)
+	cfg.SubnetID = types.StringValue(natObj.SubnetID)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
 	return nil
 }
 
@@ -756,7 +775,7 @@ type CtyunPrivateNatConfig struct {
 	NatGatewayID    types.String `tfsdk:"nat_gateway_id"`    //网关 ID
 	VpcName         types.String `tfsdk:"vpc_name"`          //NAT所属的专有网络名字
 	CreationTime    types.String `tfsdk:"create_time"`       //NAT网关的创建时间
-
+	ExpiredTime     types.String `tfsdk:"expire_time"`       //NAT网关实例的过期时间
 }
 
 type LoopOrderPrivateResponse struct {
