@@ -575,12 +575,18 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.Algorithm = types.StringValue(returnObj.Algorithm)
 	plan.Name = types.StringValue(returnObj.Name)
 	plan.SessionStickyMode = types.StringValue(returnObj.SessionSticky.SessionStickyMode)
-	plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+	if returnObj.SessionSticky.SessionStickyMode != "CLOSE" {
+		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
+	} else {
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Null()
+	}
 	plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
-	plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
+	plan.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 

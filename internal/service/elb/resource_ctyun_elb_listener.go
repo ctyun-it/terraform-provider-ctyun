@@ -592,6 +592,7 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	if err != nil {
 		return
 	}
+	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -792,10 +793,8 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.Status = types.StringValue(respObj.Status)
 	plan.CreatedTime = types.StringValue(respObj.CreatedTime)
 	plan.UpdatedTime = types.StringValue(respObj.UpdatedTime)
-	plan.ListenerQps = types.Int32Value(respObj.Qps)
-	plan.ResponseTimeout = types.Int32Value(respObj.ResponseTimeout)
 	plan.EstablishTimeout = types.Int32Value(respObj.EstablishTimeout)
-	plan.IdleTimeout = types.Int32Value(respObj.IdleTimeout)
+
 	plan.ListenerCps = types.Int32Value(respObj.Cps)
 	plan.Name = types.StringValue(respObj.Name)
 	plan.CertificateID = types.StringValue(respObj.CertificateID)
@@ -807,6 +806,11 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.LoadBalancerID = types.StringValue(respObj.LoadBalancerID)
 	plan.Protocol = types.StringValue(respObj.Protocol)
 	plan.ProtocolPort = types.Int32Value(respObj.ProtocolPort)
+	if plan.Protocol.ValueString() != "TCP" {
+		plan.IdleTimeout = types.Int32Value(respObj.IdleTimeout)
+		plan.ListenerQps = types.Int32Value(respObj.Qps)
+		plan.ResponseTimeout = types.Int32Value(respObj.ResponseTimeout)
+	}
 	if respObj.Nat64 == 0 {
 		plan.EnableNat64 = types.BoolValue(false)
 	} else if respObj.Nat64 == 1 {

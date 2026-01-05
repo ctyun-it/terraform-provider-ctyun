@@ -502,7 +502,11 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	plan.Description = types.StringValue(resp.ReturnObj.Description)
 	plan.Name = types.StringValue(resp.ReturnObj.Name)
 	plan.Protocol = types.StringValue(resp.ReturnObj.Protocol)
-	plan.ProtocolPort = types.Int32Value(resp.ReturnObj.ProtocolPort)
+	if plan.ProtocolPort.ValueInt32() > 0 {
+		plan.ProtocolPort = types.Int32Value(resp.ReturnObj.ProtocolPort)
+	} else {
+		plan.ProtocolPort = types.Int32Null()
+	}
 	plan.Timeout = types.Int32Value(resp.ReturnObj.Timeout)
 	plan.Interval = types.Int32Value(resp.ReturnObj.Interval)
 	plan.MaxRetry = types.Int32Value(resp.ReturnObj.MaxRetry)

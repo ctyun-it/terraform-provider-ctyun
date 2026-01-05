@@ -57,6 +57,31 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
 				),
 			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify: true,
+				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+			},
 			// 保障型elb变配测试
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
@@ -103,7 +128,7 @@ func TestAccCtyunElbLoadBalancerImportState(t *testing.T) {
 	resourceType := "internal"
 
 	updateSlaName := "elb.s2.small"
-	cycleType := `cycle_type="month"`
+	cycleType := `cycle_type="on_demand"`
 	CycleCount := `cycle_count=1`
 	eip := ""
 
@@ -143,7 +168,7 @@ func TestAccCtyunElbLoadBalancerImportState(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			// importState 2
 			{
@@ -156,7 +181,7 @@ func TestAccCtyunElbLoadBalancerImportState(t *testing.T) {
 					return fmt.Sprintf("%s,,%s", id, regionID), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip),

@@ -74,6 +74,7 @@ func (c *CtyunElbAcl) ImportState(ctx context.Context, request resource.ImportSt
 	if err != nil {
 		return
 	}
+	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -347,6 +348,7 @@ func (c *CtyunElbAcl) getAndMergeAcl(ctx context.Context, config *CtyunElbAclCon
 		sourceIps = append(sourceIps, types.StringValue(sourceIp))
 	}
 	config.SourceIps, _ = types.SetValueFrom(ctx, types.StringType, sourceIps)
+	config.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 

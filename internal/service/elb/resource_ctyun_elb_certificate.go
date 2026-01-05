@@ -68,6 +68,8 @@ func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeCertificate(ctx, &config)
+	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
+
 	if err != nil {
 		return
 	}
@@ -453,6 +455,7 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	config.Name = types.StringValue(returnObj.Name)
 	config.Description = types.StringValue(returnObj.Description)
 	config.Type = types.StringValue(returnObj.RawType)
+	config.Certificate = types.StringValue(returnObj.Certificate)
 	return
 }
 

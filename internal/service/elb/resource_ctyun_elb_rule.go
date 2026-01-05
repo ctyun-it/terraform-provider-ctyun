@@ -72,6 +72,7 @@ func (c *CtyunElbRule) ImportState(ctx context.Context, request resource.ImportS
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeRule(ctx, &config)
+	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
 	if err != nil {
 		return
 	}

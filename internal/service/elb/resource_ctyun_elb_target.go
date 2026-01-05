@@ -85,6 +85,7 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	if err != nil {
 		return
 	}
+	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -418,6 +419,7 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	plan.InstanceID = types.StringValue(returnObj.InstanceID)
 	plan.InstanceType = types.StringValue(returnObj.InstanceType)
 	plan.TargetGroupID = types.StringValue(returnObj.TargetGroupID)
+	plan.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 
