@@ -20,7 +20,6 @@ func TestMain(m *testing.M) {
 		return
 	}
 	os.Setenv("CTYUN_REGION_ID", "200000003573")
-
 	os.Setenv("CTYUN_AZ_NAME", "cn-nm-het3-1a-public-ctcloud")
 
 	fmt.Println("开始初始化依赖资源")

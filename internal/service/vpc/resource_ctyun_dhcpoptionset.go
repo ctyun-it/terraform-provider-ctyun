@@ -41,13 +41,12 @@ func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunDhcpOptionSetConfig
 	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
@@ -57,16 +56,14 @@ func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.I
 			return
 		}
 	}
-
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
 	err = c.getAndMerge(ctx, &config)
@@ -302,7 +299,6 @@ func (c *ctyunDhcpOptionSet) getAndMerge(ctx context.Context, state *CtyunDhcpOp
 	state.Id = utils.SecStringValue(resp.ReturnObj.DhcpOptionSetsID)
 	state.Name = utils.SecStringValue(resp.ReturnObj.Name)
 	state.Description = utils.SecStringValue(resp.ReturnObj.Description)
-
 	state.DomainName = utils.SecStringValue(resp.ReturnObj.DomainName)
 
 	// 更新DNS列表

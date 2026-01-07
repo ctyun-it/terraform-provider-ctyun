@@ -73,7 +73,7 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				Computed:           true,
-				DeprecationMessage: "本字段即将在新版本废弃，请不要指定本字段",
+				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.Project(),

@@ -302,7 +302,6 @@ func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStat
 	}()
 	var cfg CtyunVpceConfig
 	var endpointID, regionID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		endpointID = request.ID

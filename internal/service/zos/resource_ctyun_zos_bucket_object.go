@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -110,7 +111,7 @@ func (c *ctyunZosBucketObject) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    true,
 				Description: "文件路径，和content有且只能有一个",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
@@ -122,7 +123,7 @@ func (c *ctyunZosBucketObject) Schema(_ context.Context, _ resource.SchemaReques
 				Optional:    true,
 				Description: "内容，和source有且只能有一个",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
@@ -316,6 +317,14 @@ func (c *ctyunZosBucketObject) Update(ctx context.Context, request resource.Upda
 		return
 	}
 
+	if !plan.Content.IsUnknown() && !plan.Content.IsNull() && state.Content.IsNull() {
+		state.Content = plan.Content
+		response.Diagnostics.AddWarning("content的更新仅写入状态文件", "在import时，状态文件中content为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Source.IsUnknown() && !plan.Source.IsNull() && state.Source.IsNull() {
+		state.Source = plan.Source
+		response.Diagnostics.AddWarning("source的更新仅写入状态文件", "在import时，状态文件中source为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -356,13 +365,12 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [key],[bucket],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketObjectConfig
 	var key, bucket, regionID string
-	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &key, &bucket)
@@ -375,7 +383,6 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 			return
 		}
 	}
-
 	if key == "" {
 		err = fmt.Errorf("key不能为空")
 		return
@@ -385,7 +392,7 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -497,7 +504,10 @@ func (c *ctyunZosBucketObject) getAndMerge(ctx context.Context, plan *CtyunZosBu
 	if err != nil {
 		return
 	}
-
+	err = c.getAcl(ctx, plan)
+	if err != nil {
+		return
+	}
 	return
 }
 
@@ -549,6 +559,21 @@ func (c *ctyunZosBucketObject) getTags(ctx context.Context, plan *CtyunZosBucket
 	return
 }
 
+func (c *ctyunZosBucketObject) getAcl(ctx context.Context, plan *CtyunZosBucketObjectConfig) (err error) {
+	input := &s3.GetObjectAclInput{
+		Bucket: plan.Bucket.ValueStringPointer(),
+		Key:    plan.Key.ValueStringPointer(),
+	}
+	output, err := plan.client.GetObjectAcl(input)
+	if err != nil {
+		return
+	}
+	grants := output.Grants
+	acl := utils.ParseAcl(grants)
+	plan.ACL = types.StringValue(acl)
+	return
+}
+
 // updateACL 更新ACL
 func (c *ctyunZosBucketObject) updateACL(ctx context.Context, plan, state *CtyunZosBucketObjectConfig) (err error) {
 	if plan.ACL.Equal(state.ACL) {
@@ -563,7 +588,6 @@ func (c *ctyunZosBucketObject) updateACL(ctx context.Context, plan, state *Ctyun
 	if err != nil {
 		return
 	}
-	state.ACL = plan.ACL
 	return
 }
 

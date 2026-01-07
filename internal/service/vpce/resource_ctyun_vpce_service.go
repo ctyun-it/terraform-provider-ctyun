@@ -349,7 +349,7 @@ func (c *ctyunVpceService) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-	if plan.SubnetID.IsUnknown() && state.SubnetID.IsNull() {
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
 		state.SubnetID = plan.SubnetID
 		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}

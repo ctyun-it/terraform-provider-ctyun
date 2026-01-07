@@ -71,9 +71,9 @@ type ZosGetObjectLockConfReturnObjObjectLockConfigurationRuleResponse struct {
 }
 
 type ZosGetObjectLockConfReturnObjObjectLockConfigurationRuleDefaultRetentionResponse struct {
-	Mode  *ZosGetObjectLockConfReturnObjObjectLockConfigurationRuleDefaultRetentionModeResponse `json:"mode"`            /*  保留模式  */
-	Days  int64                                                                                 `json:"days,omitempty"`  /*  保留天数  */
-	Years int64                                                                                 `json:"years,omitempty"` /*  保留年数  */
+	Mode  string `json:"mode"`            /*  保留模式  */
+	Days  int64  `json:"days,omitempty"`  /*  保留天数  */
+	Years int64  `json:"years,omitempty"` /*  保留年数  */
 }
 
 type ZosGetObjectLockConfReturnObjObjectLockConfigurationRuleDefaultRetentionModeResponse struct{}

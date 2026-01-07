@@ -29,6 +29,7 @@ const (
 	OpenapiAclNotFoundMsg            = "resource not found"
 	OpenapiVpceEndpointNotFound      = "Openapi.VpceEndpoint.NotFound"
 	OpenapiVpceServiceNotFound       = "Openapi.EndpointService.NotFound"
+	OpenapiSfsNotExists              = "sfs.sfsInfo.resourceNotExists"
 	OpenapiPrefixListAccessFailed    = "Openapi.PrefixList.AccessFailed"
 	OpenapiVpceServiceAccessFailed   = "Openapi.Endpoint_service.AccessFailed"
 	OpenapiVpcPortNotFound           = "Openapi.Parameter.Error"
