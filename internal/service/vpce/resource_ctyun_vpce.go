@@ -124,6 +124,7 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -220,7 +221,7 @@ func (c *ctyunVpce) Read(ctx context.Context, request resource.ReadRequest, resp
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "resource not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -301,7 +302,6 @@ func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStat
 	}()
 	var cfg CtyunVpceConfig
 	var endpointID, regionID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		endpointID = request.ID
@@ -400,6 +400,9 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceEndpointNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)

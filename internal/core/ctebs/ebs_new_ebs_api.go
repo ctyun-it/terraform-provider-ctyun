@@ -83,7 +83,7 @@ type EbsNewEbsRequest struct {
 	●XSSD-0：（基础IOPS（min{1800+12×容量， 10,000}）   + 预配置IOPS） ≤ min{500×容量，50,000}
 	●XSSD-1：（基础IOPS（min{1800+50×容量， 50000}） + 预配置IOPS） ≤ min{500×容量，100000}
 	●XSSD-2：（基础IOPS（min{3000+50×容量， 100000}） + 预配置IOPS） ≤ min{500×容量，1000000}  */
-	DeleteSnapWithEbs *bool `json:"deleteSnapWithEbs"` /*  设置全部快照是否随盘删除，取值范围：
+	DeleteSnapWithEbs *bool `json:"deleteSnapWithEbs,omitempty"` /*  设置全部快照是否随盘删除，取值范围：
 	●true：是
 	●false：否
 	默认值：false

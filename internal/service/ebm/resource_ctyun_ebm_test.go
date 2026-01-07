@@ -53,7 +53,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.az3,
 					k, v,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -76,7 +76,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.az3,
 					k, uv,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -98,9 +98,9 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.az3,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az3),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
 					resource.TestCheckResourceAttr(datasourceName, "instances.0.instance_name", updatedName),
@@ -171,9 +171,9 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.az3,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az3),
 			},
 			{
 				Config: utils.LoadTestCase(
@@ -186,9 +186,9 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.az3,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az3),
 				Destroy: true,
 			},
 		},

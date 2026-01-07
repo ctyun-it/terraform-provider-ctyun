@@ -203,7 +203,6 @@ func (c *ctyunEbsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEbsSnapsho
 	}
 	// 调用API
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
-
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
@@ -213,7 +212,7 @@ func (c *ctyunEbsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEbsSnapsho
 		err = common.InvalidReturnObjError
 		return
 	} else if resp.ReturnObj.SnapshotTotal == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
+		err = common.ResourceNotExistError
 		return
 	}
 	status := resp.ReturnObj.SnapshotList[0].SnapshotStatus
@@ -240,7 +239,7 @@ func (c *ctyunEbsSnapshot) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "no snapshot details found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -394,7 +393,8 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 				SnapshotID: &snapshotId,
 			}
 			// 调用API
-			resp, err := c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
+			var resp *ctebs2.EbsListEbsSnapResponse
+			resp, err = c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
 			if err != nil {
 				return false
 			} else if resp.StatusCode == common.ErrorStatusCode {
@@ -404,7 +404,7 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 				err = common.InvalidReturnObjError
 				return false
 			} else if resp.ReturnObj.SnapshotTotal == 0 {
-				err = fmt.Errorf("no snapshot details found for snapshot ID: %s", state.Id.ValueString())
+				err = common.ResourceNotExistError
 				return false
 			}
 
@@ -415,6 +415,9 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 			return true
 		},
 	)
+	if err != nil {
+		return
+	}
 	if result.ReturnReason == business.ReachMaxLoopTime {
 		return errors.New("轮询已达最大次数，资源仍未到达启动状态！")
 	}
@@ -426,42 +429,45 @@ func (c *ctyunEbsSnapshot) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotConfig
 
-	var ID, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
+	var ID, projectID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if projectID == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectId)
+	cfg.ProjectId = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

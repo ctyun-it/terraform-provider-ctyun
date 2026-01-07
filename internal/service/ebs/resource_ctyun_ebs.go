@@ -283,7 +283,6 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 	// 构建标签请求
 	var labels []*ctebs2.EbsNewEbsLabelsRequest
 	if plan.Labels != nil {
-		var labels []*ctebs2.EbsNewEbsLabelsRequest
 		for _, label := range plan.Labels {
 			labels = append(labels, &ctebs2.EbsNewEbsLabelsRequest{
 				Key:   label.Key.ValueString(),
@@ -292,31 +291,32 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		}
 	}
 
-	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, &ctebs2.EbsNewEbsRequest{
-		ClientToken:       uuid.NewString(),
-		RegionID:          regionId,
-		MultiAttach:       plan.MultiAttach.ValueBoolPointer(),
-		IsEncrypt:         plan.Encrypted.ValueBoolPointer(),
-		KmsUUID:           plan.KmsUuid.ValueString(),
-		ProjectID:         projectId,
-		DiskMode:          diskMode.(string),
-		DiskType:          diskType.(string),
-		DiskName:          plan.Name.ValueString(),
-		DiskSize:          plan.Size.ValueInt64(),
-		OnDemand:          &onDemand,
-		CycleType:         plan.CycleType.ValueString(),
-		CycleCount:        int32(plan.CycleCount.ValueInt64()),
-		ImageID:           plan.ImageId.ValueString(),
-		AzName:            azName,
-		ProvisionedIops:   plan.ProvisionedIops.ValueInt64(),
-		DeleteSnapWithEbs: plan.DeleteSnapWithEbs.ValueBoolPointer(),
-		Labels:            labels,
-		BackupID:          plan.BackupId.ValueString(),
-	})
-
+	params := &ctebs2.EbsNewEbsRequest{
+		ClientToken:     uuid.NewString(),
+		RegionID:        regionId,
+		MultiAttach:     plan.MultiAttach.ValueBoolPointer(),
+		IsEncrypt:       plan.Encrypted.ValueBoolPointer(),
+		KmsUUID:         plan.KmsUuid.ValueString(),
+		ProjectID:       projectId,
+		DiskMode:        diskMode.(string),
+		DiskType:        diskType.(string),
+		DiskName:        plan.Name.ValueString(),
+		DiskSize:        plan.Size.ValueInt64(),
+		OnDemand:        &onDemand,
+		CycleType:       plan.CycleType.ValueString(),
+		CycleCount:      int32(plan.CycleCount.ValueInt64()),
+		ImageID:         plan.ImageId.ValueString(),
+		AzName:          azName,
+		ProvisionedIops: plan.ProvisionedIops.ValueInt64(),
+		Labels:          labels,
+		BackupID:        plan.BackupId.ValueString(),
+	}
+	if !plan.DeleteSnapWithEbs.IsUnknown() && !plan.DeleteSnapWithEbs.IsNull() {
+		params.DeleteSnapWithEbs = plan.DeleteSnapWithEbs.ValueBoolPointer()
+	}
+	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, params)
 	var id, masterOrderId string
 	if err2 == nil {
-
 		if resp.StatusCode == common.ErrorStatusCode && resp.ErrorCode != common.EbsOrderInProgress {
 			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 			response.Diagnostics.AddError(err.Error(), err.Error())

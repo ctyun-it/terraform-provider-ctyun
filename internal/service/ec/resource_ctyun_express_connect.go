@@ -2,6 +2,7 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
@@ -139,6 +140,10 @@ func (c *CtyunExpressConnect) Read(ctx context.Context, req resource.ReadRequest
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			resp.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -247,10 +252,9 @@ func (c *CtyunExpressConnect) getAndMerge(ctx context.Context, plan *CtyunExpres
 	} else if *resp.StatusCode != common.NormalStatusCode {
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
+		return common.InvalidReturnObjError
 	} else if len(resp.ReturnObj.Results) == 0 {
-		return fmt.Errorf("no express connect instance found")
+		return common.ResourceNotExistError
 	}
 	result := resp.ReturnObj.Results[0]
 	plan.Name = types.StringValue(*result.EcName)

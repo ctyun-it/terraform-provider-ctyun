@@ -2,6 +2,7 @@ package vpce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -158,7 +159,7 @@ func (c *ctyunVpceServiceTransitIP) Read(ctx context.Context, request resource.R
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "endpointServiceID ensure") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -204,37 +205,39 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[endpointServiceID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ip],[endpoint_service_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceTransitIPConfig
 	var ip, endpointServiceID, regionID string
-	// 根据分隔符数量判断是否输入了 regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入ip和endpoint_service_id")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID)
-
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID, &regionID)
 		if err != nil {
 			return
 		}
 	}
-
 	if ip == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("ip不能为空")
 		return
 	}
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("endpoint_service_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -285,6 +288,9 @@ func (c *ctyunVpceServiceTransitIP) getAndMerge(ctx context.Context, plan *Ctyun
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListEndpointServiceTransitIPApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceServiceNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
@@ -303,7 +309,7 @@ func (c *ctyunVpceServiceTransitIP) getAndMerge(ctx context.Context, plan *Ctyun
 		}
 	}
 	if !exist {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 

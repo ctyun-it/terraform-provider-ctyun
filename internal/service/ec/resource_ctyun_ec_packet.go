@@ -2,6 +2,7 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -249,9 +250,12 @@ func (c *CtyunEcPacket) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
-	// 读取操作成功，保持当前状态
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
 }
@@ -373,6 +377,9 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
+	} else if len(resp.ReturnObj.Results) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 

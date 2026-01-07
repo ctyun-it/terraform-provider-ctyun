@@ -8,7 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -73,12 +73,11 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				Computed:           true,
-				DeprecationMessage: "本字段即将在新版本废弃，尤其是导入时请不要指定本字段",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.Project(),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
 					validator2.Project(),
 				},
@@ -197,28 +196,33 @@ func (c *ctyunBandwidthAssociationEip) ImportState(ctx context.Context, request 
 	}()
 	var cfg CtyunBandwidAssociationEipConfig
 	var bandwidthID, eipID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("bandwidth_id和eip_id必须输入")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	default:
 		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if bandwidthID == "" {
-		err = fmt.Errorf("bandwidth_id 不能为空")
+		err = fmt.Errorf("bandwidth_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eip_id 不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -253,16 +257,27 @@ func (c *ctyunBandwidthAssociationEip) getAndMergeBandwidthAssociationEip(ctx co
 		BandwidthId: cfg.BandwidthId.ValueString(),
 	})
 	if err != nil {
+		if err.ErrorCode() == common.OpenapiSharedbandwidthNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if len(result.Eips) == 0 {
 		return nil, nil
 	}
+	var bind bool
 	for _, eip := range result.Eips {
 		if eip.EipId == cfg.EipId.ValueString() {
 			cfg.EipId = types.StringValue(eip.EipId)
+			bind = true
 			break
 		}
+	}
+	if !bind {
+		return nil, nil
+	}
+	if cfg.ProjectId.IsUnknown() {
+		cfg.ProjectId = types.StringNull()
 	}
 	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.BandwidthId.ValueString(), cfg.EipId.ValueString(), cfg.RegionId.ValueString()))
 	return &cfg, nil

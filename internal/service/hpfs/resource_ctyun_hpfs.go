@@ -43,7 +43,7 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -60,11 +60,15 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if projectID == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -146,7 +150,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			},
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
-				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36",
+				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持",
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
@@ -215,24 +219,14 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 				},
 			},
 			"vpc_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "虚拟网 ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.VpcValidate(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "虚拟网 ID",
 			},
 			"subnet_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "子网 ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.SubnetValidate(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "子网 ID",
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
@@ -342,7 +336,7 @@ func (c *CtyunHpfs) Read(ctx context.Context, request resource.ReadRequest, resp
 	// 查询远端
 	err = c.getAndMergeHpfs(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotExists") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -439,8 +433,6 @@ func (c *CtyunHpfs) createHpfs(ctx context.Context, config *CtyunHpfsConfig) (*h
 		CycleType:   config.CycleType.ValueString(),
 		SfsName:     config.Name.ValueString(),
 		SfsSize:     config.SfsSize.ValueInt32(),
-		Vpc:         config.VpcID.ValueString(),
-		Subnet:      config.SubnetID.ValueString(),
 		AzName:      config.AzName.ValueString(),
 	}
 	if config.CycleType.ValueString() == business.HpfsCycleTypeOnDemand {
@@ -476,7 +468,6 @@ func (c *CtyunHpfs) createHpfs(ctx context.Context, config *CtyunHpfsConfig) (*h
 		return nil, err
 	}
 	config.MasterOrderID = types.StringValue(resp.ReturnObj.MasterOrderID)
-	//config.ID = types.StringValue(resp.ReturnObj.Resources[0].SfsUID)
 	return params, nil
 }
 
@@ -498,6 +489,8 @@ func (c *CtyunHpfs) getAndMergeHpfs(ctx context.Context, config *CtyunHpfsConfig
 	config.SfsProtocol = types.StringValue(hpfsDetail.SfsProtocol)
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(hpfsDetail.CreateTime))
 	config.UpdateTime = types.StringValue(utils.FromUnixToUTC(hpfsDetail.UpdateTime))
+	config.AzName = types.StringValue(hpfsDetail.AzName)
+	config.CycleType = types.StringValue(business.OnDemandCycleType)
 	dataFlowList, diags := types.SetValueFrom(ctx, types.StringType, hpfsDetail.DataflowList)
 	if diags.HasError() {
 		err = errors.New(diags[0].Detail())
@@ -517,6 +510,9 @@ func (c *CtyunHpfs) getHpfsDetail(ctx context.Context, config *CtyunHpfsConfig) 
 		return nil, err
 	} else if resp == nil {
 		err = errors.New("获取hpfs详情失败，返回为nil")
+		return nil, err
+	} else if resp.ErrorCode == common.OpenapiSfsNotExists {
+		err = common.ResourceNotExistError
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
@@ -650,7 +646,7 @@ func (c *CtyunHpfs) deleteLoop(ctx context.Context, config *CtyunHpfsConfig, loo
 		func(currentTime int) bool {
 			resp, err2 := c.getHpfsDetail(ctx, config)
 			if err2 != nil {
-				if strings.Contains(err2.Error(), "资源不存在") {
+				if errors.Is(err, common.ResourceNotExistError) {
 					err = nil
 				} else {
 					err = err2

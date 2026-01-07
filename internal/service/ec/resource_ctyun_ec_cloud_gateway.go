@@ -2,6 +2,7 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
@@ -196,6 +197,10 @@ func (c *CtyunEcCloudGateway) Read(ctx context.Context, req resource.ReadRequest
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -331,8 +336,10 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 		return
 	} else if *resp.StatusCode != common.NormalStatusCode {
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
-	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Results) == 0 {
+	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if len(resp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
 	result := resp.ReturnObj.Results[0]
 	if result.CgwID == nil {
