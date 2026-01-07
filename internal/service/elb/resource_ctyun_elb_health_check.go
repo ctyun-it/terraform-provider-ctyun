@@ -512,6 +512,7 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	plan.MaxRetry = types.Int32Value(resp.ReturnObj.MaxRetry)
 	plan.HttpMethod = types.StringValue(resp.ReturnObj.HttpMethod)
 	plan.HttpUrlPath = types.StringValue(resp.ReturnObj.HttpUrlPath)
+	plan.ProjectID = types.StringValue(resp.ReturnObj.ProjectID)
 	// HttpExpectedCodes解析
 	var HttpExpectedCodesList []string
 	HttpExpectedCodesList = strings.Split(resp.ReturnObj.HttpExpectedCodes, " ")
