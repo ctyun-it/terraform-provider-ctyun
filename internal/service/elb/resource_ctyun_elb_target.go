@@ -54,18 +54,33 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbTargetConfig
-	var ID, projectID, regionID string
+	var ID, projectID, azName, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
 		if err != nil {
 			return
 		}
@@ -81,11 +96,11 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
+	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeElbTarget(ctx, &config)
 	if err != nil {
 		return
 	}
-	config.AzName = types.StringValue(c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName))
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 

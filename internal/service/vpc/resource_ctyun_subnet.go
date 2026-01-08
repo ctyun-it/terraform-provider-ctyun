@@ -9,7 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	planmodifierCustom "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -146,7 +146,7 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -280,8 +280,9 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	if !plan.ProjectId.IsNull() {
+	if !plan.ProjectId.IsUnknown() && !plan.ProjectId.IsNull() && state.ProjectId.IsNull() {
 		state.ProjectId = plan.ProjectId
+		response.Diagnostics.AddWarning("project_id的更新仅写入状态文件", "在import时，状态文件中project_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }

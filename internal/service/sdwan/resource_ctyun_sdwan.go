@@ -7,7 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -62,7 +62,7 @@ func (c *CtyunSdwan) Schema(ctx context.Context, req resource.SchemaRequest, res
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
+					planmodifier2.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, true),
 				Validators: []validator.String{

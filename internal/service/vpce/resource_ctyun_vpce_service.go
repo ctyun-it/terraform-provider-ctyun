@@ -9,7 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -152,7 +152,7 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Description: "子网ID，创建反向终端节点服务时必填",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.NullIgnoreString(),
+					planmodifier2.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),

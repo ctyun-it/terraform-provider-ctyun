@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -23,6 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"strings"
+	"time"
 )
 
 var (
@@ -54,6 +56,8 @@ type CtyunEcPacketConfig struct {
 	MasterResourceID     types.String `tfsdk:"master_resource_id"`
 	MasterResourceStatus types.String `tfsdk:"master_resource_status"`
 	ResourceID           types.String `tfsdk:"resource_id"` // 添加ResourceID字段用于后续操作
+	ExpireTime           types.String `tfsdk:"expire_time"`
+	CreateTime           types.String `tfsdk:"create_time"`
 }
 
 func (c *CtyunEcPacket) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -200,6 +204,14 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+			},
 		},
 	}
 }
@@ -317,7 +329,7 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[resourceId]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[packetId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -415,9 +427,58 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		if result.Rate != nil {
 			state.Bandwidth = types.Int64Value(int64(*result.Rate))
 		}
-		if result.BillingModel != nil && *result.BillingModel != "" {
-			state.CycleType = types.StringValue(*result.BillingModel)
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
 		}
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
+		}
+		if result.CreateDate != nil {
+			state.CreateTime = types.StringValue(*result.CreateDate) // Use CreateTime instead of CreateTimeUTC
+
+		}
+		if result.DeleteDate != nil {
+			state.ExpireTime = types.StringValue(*result.DeleteDate)
+		}
+		// 在调用CalculateMonthOnlyDiff之前添加时间格式验证
+		createTimeStr := state.CreateTime.ValueString()
+		expireTimeStr := state.ExpireTime.ValueString()
+
+		// 确保时间格式是RFC3339
+		if createTimeStr != "" && expireTimeStr != "" {
+			// 验证是否已经是RFC3339格式，如果不是则转换
+			_, err1 := time.Parse(time.RFC3339, createTimeStr)
+			if err1 != nil {
+				// 尝试解析其他常见格式并转换为RFC3339
+				parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", createTimeStr)
+				if parseErr != nil {
+					return fmt.Errorf("无法解析创建时间: %v", parseErr)
+				}
+				createTimeStr = parsedTime.Format(time.RFC3339)
+			}
+
+			_, err2 := time.Parse(time.RFC3339, expireTimeStr)
+			if err2 != nil {
+				// 尝试解析其他常见格式并转换为RFC3339
+				parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", expireTimeStr)
+				if parseErr != nil {
+					return fmt.Errorf("无法解析到期时间: %v", parseErr)
+				}
+				expireTimeStr = parsedTime.Format(time.RFC3339)
+			}
+
+			cycleType, cycleCount, err1 := utils.CalculateMonthOnlyDiff(createTimeStr, expireTimeStr)
+			if err1 != nil {
+				return err1
+			}
+			state.CycleType = types.StringValue(cycleType)
+			if cycleCount > 0 {
+				state.CycleCount = types.Int64Value(int64(cycleCount))
+			} else {
+				state.CycleCount = types.Int64Null()
+			}
+		}
+
 	}
 
 	return

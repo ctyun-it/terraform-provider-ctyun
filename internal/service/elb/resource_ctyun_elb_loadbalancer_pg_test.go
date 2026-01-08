@@ -77,7 +77,9 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,,%s", id, regionID), nil
+					projectID := ds.Attributes["project_id"]
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
 				},
 				ImportStateVerify: true,
 				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},

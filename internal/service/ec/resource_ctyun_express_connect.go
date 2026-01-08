@@ -261,7 +261,7 @@ func (c *CtyunExpressConnect) getAndMerge(ctx context.Context, plan *CtyunExpres
 	plan.Status = types.Int64Value(int64(*result.Status))
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(utils.SecString(result.CreateDate)))
 
-	if result.EcDescription != nil {
+	if result.EcDescription != nil && *result.EcDescription != "" {
 		plan.Description = types.StringValue(*result.EcDescription)
 	}
 

@@ -66,7 +66,7 @@ func TestAccCtyunElbRule(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			// importState 2
 			{
@@ -76,10 +76,12 @@ func TestAccCtyunElbRule(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,,%s", id, regionID), nil
+					projectID := ds.Attributes["project_id"]
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+				ImportStateVerifyIgnore: []string{},
 			},
 			// 1.2 update
 			{

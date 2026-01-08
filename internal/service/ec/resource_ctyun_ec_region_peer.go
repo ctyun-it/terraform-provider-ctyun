@@ -7,13 +7,12 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -149,15 +148,15 @@ func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request reso
 				},
 			},
 			"route_learn": schema.Int32Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int32default.StaticInt32(1),
+				Optional: true,
+				//Computed:    true,
+				//Default:     int32default.StaticInt32(1),
 				Description: "是否开启两端云网关路由自动学习，0：不开启，1：开启。默认开启",
 				Validators: []validator.Int32{
 					int32validator.OneOf(0, 1),
 				},
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreInt32(),
 				},
 			},
 			"id": schema.StringAttribute{
@@ -270,6 +269,10 @@ func (c *CtyunExpressConnectRegionPeer) Update(ctx context.Context, request reso
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
+	}
+	if !plan.RouteLearn.IsUnknown() && !plan.RouteLearn.IsNull() && state.RouteLearn.IsNull() {
+		state.RouteLearn = plan.RouteLearn
+		response.Diagnostics.AddWarning("route_learn的更新仅写入状态文件", "在import时，状态文件中route_learn为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {

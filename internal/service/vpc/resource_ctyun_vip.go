@@ -7,7 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/explanmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -55,7 +55,7 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
+					planmodifier2.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -198,17 +198,24 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var state CtyunVipConfig
-	var vipId, regionId string
+	var vipId, projectID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		vipId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &vipId, &projectID)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &vipId, &regionId)
+		err = terraform_extend.Split(request.ID, &vipId, &projectID, &regionId)
 		if err != nil {
 			return
 		}
@@ -225,13 +232,12 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 
 	state.Id = types.StringValue(vipId)
 	state.RegionId = types.StringValue(regionId)
-
+	state.ProjectId = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	state.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(state.ProjectId.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -310,12 +316,12 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 		state.Id = types.StringValue(*returnObj.Id)
 	}
 
-	if returnObj.Ipv4 != nil {
+	if returnObj.Ipv4 != nil && *returnObj.Ipv4 != "" {
 		state.Ipv4Address = types.StringValue(*returnObj.Ipv4)
 		state.VipType = types.StringValue("v4")
 	}
 
-	if returnObj.Ipv6 != nil {
+	if returnObj.Ipv6 != nil && *returnObj.Ipv6 != "" {
 		state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
 		state.VipType = types.StringValue("v6")
 	}

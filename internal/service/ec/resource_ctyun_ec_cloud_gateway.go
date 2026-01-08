@@ -372,7 +372,7 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 		plan.Region = types.Int64Value(*result.Region)
 	}
 
-	if result.CgwDescription != nil {
+	if result.CgwDescription != nil && *result.CgwDescription != "" {
 		plan.Description = types.StringValue(*result.CgwDescription)
 	}
 

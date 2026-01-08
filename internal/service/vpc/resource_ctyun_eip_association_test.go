@@ -41,8 +41,9 @@ func TestAccCtyunEipAssociation(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					regionId := ds.Attributes["region_id"]
+					projectId := ds.Attributes["project_id"]
 					eipId := ds.Attributes["eip_id"]
-					return fmt.Sprintf("%s,%s", eipId, regionId), nil // eipId is not used
+					return fmt.Sprintf("%s,%s,%s", eipId, projectId, regionId), nil // eipId is not used
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

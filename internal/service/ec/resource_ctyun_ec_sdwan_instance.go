@@ -367,6 +367,9 @@ func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSd
 		if result.InstanceID != nil {
 			state.ID = types.StringValue(*result.InstanceID)
 		}
+		if result.DefaultRtbID != nil {
+			state.RtbID = types.StringValue(*result.DefaultRtbID)
+		}
 		break
 	}
 
