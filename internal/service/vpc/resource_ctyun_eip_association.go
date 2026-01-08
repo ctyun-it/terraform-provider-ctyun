@@ -230,12 +230,12 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 		eipId = request.ID
 	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectId, &regionId)
 		if err != nil {
 			return
 		}

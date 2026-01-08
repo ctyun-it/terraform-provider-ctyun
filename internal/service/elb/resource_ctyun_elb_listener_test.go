@@ -64,6 +64,31 @@ func TestAccCtyunElbListener1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "establish_timeout", "100"),
 				),
 			},
+			// import state 1
+			{ResourceName: resourceName,
+				ImportState: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}},
+			// import state 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					projectID := ds.Attributes["project_id"]
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, tfEnableNat64, "", tfCPS, tfEstablishTimeout, "", "", "DOWN"),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -160,6 +185,31 @@ func TestAccCtyunElbListener2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
 					resource.TestCheckResourceAttr(resourceName, "default_action_type", defaultActionType),
 				),
+			},
+			// import state 1
+			{ResourceName: resourceName,
+				ImportState: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"}},
+			// import state 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					projectID := ds.Attributes["project_id"]
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
 			},
 			// 1.2 update验证
 			{
@@ -266,29 +316,7 @@ func TestAccCtyunElbListenerImportState(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "default_action_type", defaultActionType),
 				),
 			},
-			// import state 1
-			{ResourceName: resourceName,
-				ImportState: true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"}},
-			// import state 2
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,,%s", id, regionID), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
+
 			// 1.4 destroy验证
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, "", "", "", "", "", "", "ACTIVE"),
