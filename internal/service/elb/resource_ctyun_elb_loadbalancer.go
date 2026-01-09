@@ -626,7 +626,7 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	if err != nil {
 		return
 	}
-	if cycleType == business.YearCycleType && cycleCount == 100 {
+	if cycleType == business.YearCycleType || cycleCount == 100 {
 		config.CycleType = types.StringValue(business.OnDemandCycleType)
 		config.CycleCount = types.Int64Null()
 		return
