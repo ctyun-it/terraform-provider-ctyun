@@ -467,7 +467,6 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 	config.AcceptVpcName = types.StringValue(returnObj.AcceptVpcName)
 	config.UserType = types.StringValue(returnObj.UserType)
 	config.Status = types.StringValue(returnObj.Status)
-
 	// 处理tags的id
 	tagList := make([]CtyunVpcPeerConnectionTagsModel, 0)
 	tags, err := c.getTags(ctx, config)
@@ -481,7 +480,7 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 		tag.ID = types.StringValue(*tagItem.LabelID)
 		tagList = append(tagList, tag)
 	}
-	if config.Tags.IsNull() {
+	if config.Tags.IsNull() && len(tagList) == 0 {
 		tagList = nil
 	}
 	tagListTmp, diags := types.SetValueFrom(ctx, utils.StructToTFObjectTypes(CtyunVpcPeerConnectionTagsModel{}), tagList)
@@ -522,7 +521,7 @@ func (c *CtyunVpcPeerConnection) getPeerConnectionDetail(ctx context.Context, co
 		err = fmt.Errorf("获取vpc对等连接详情失败(instance_id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("detail, API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

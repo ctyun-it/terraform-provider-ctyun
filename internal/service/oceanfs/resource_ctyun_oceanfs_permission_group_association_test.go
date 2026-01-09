@@ -72,16 +72,15 @@ func TestAccCtyunOceanfsPermissionGroupAssociation(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s,%s",
-						rs.Primary.Attributes["region_id"],
-						rs.Primary.Attributes["permission_group_id"],
+					return fmt.Sprintf("%s,%s,%s,%s",
 						rs.Primary.Attributes["oceanfs_id"],
 						rs.Primary.Attributes["vpc_id"],
-						rs.Primary.Attributes["subnet_id"],
+						rs.Primary.Attributes["permission_group_id"],
+						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"is_vpce"}, // VPCE设置可能变化
+				ImportStateVerifyIgnore: []string{"is_vpce", "subnet_id"}, // VPCE设置可能变化
 
 			},
 			// 4. 清理资源

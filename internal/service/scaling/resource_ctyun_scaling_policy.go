@@ -423,7 +423,6 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 				Optional:    true,
 				Computed:    true,
 				Description: "控制是否需要执行弹性伸缩策略，true表示执行，false表示不执行。默认为false，支持更新",
-				Default:     booldefault.StaticBool(false),
 			},
 			"id": schema.Int64Attribute{
 				Computed:    true,

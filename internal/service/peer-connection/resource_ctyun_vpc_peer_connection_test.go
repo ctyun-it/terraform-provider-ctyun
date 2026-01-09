@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"testing"
+	"time"
 )
 
 func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
@@ -27,6 +28,11 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 
 	updatedName := "peer-conn-updated-" + utils.GenerateRandomString()
 	updatedDescription := "updated test peer connection"
+	// 等待函数
+	wait10Seconds := func() {
+		t.Logf("等待10秒...")
+		time.Sleep(10 * time.Second)
+	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -71,6 +77,9 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 			},
 			// 3. datasource验证
 			{
+				PreConfig: func() {
+					wait10Seconds()
+				},
 				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
 					utils.LoadTestCase(datasourceFile, dnd),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -187,6 +196,24 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "tags.0.id"),
 					resource.TestCheckResourceAttrSet(resourceName, "tags.1.id"),
 				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["project_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"accept_email", "description"},
 			},
 			// 2. 更新标签（增删改）
 			{

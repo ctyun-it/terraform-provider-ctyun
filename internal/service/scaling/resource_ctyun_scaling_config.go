@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
@@ -231,7 +232,6 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			},
 			"password": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Sensitive:   true,
 				Description: "密码，login_mode为password时必填。密码规则：（1）8～30 个字符（2）必须同时包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）（3）不能以斜线号（/）开头 （4）不能包含3个及以上连续字符，如abc、123 （5）Windows镜像不能包含镜像用户名（Administrator）、用户名大小写变化（adminiSTrator），支持更新",
 				Validators: []validator.String{
@@ -522,11 +522,12 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 		if err != nil {
 			return err
 		}
-		if imageInfo.OsType == "linux" {
-			config.Username = types.StringValue("root")
-		} else if imageInfo.OsType == "windows" {
-			config.Username = types.StringValue("administrator")
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", config.ImageID.ValueString())
+			return err
 		}
+		config.Username = types.StringValue(username)
 		params.Username = config.Username.ValueString()
 
 		//if !config.Username.IsNull() {
@@ -651,13 +652,24 @@ func (c *ctyunScalingConfig) getAndMergeScalingConfig(ctx context.Context, confi
 	}
 
 	if config.LoginMode.ValueString() == business.ScalingLoginModePasswordStr {
-		config.KeyPairID = types.StringValue("")
+		config.KeyPairID = types.StringNull()
+
+		imageInfo, err2 := c.imageService.GetImageInfo(ctx, config.ImageID.ValueString(), config.RegionID.ValueString())
+		if err2 != nil {
+			return err2
+		}
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", config.ImageID.ValueString())
+			return err
+		}
+		config.Username = types.StringValue(username)
 	} else if config.LoginMode.ValueString() == business.ScalingLoginModeKeyPairStr {
-		config.Password = types.StringValue("")
-		config.Username = types.StringValue("")
+		config.Password = types.StringNull()
+		config.Username = types.StringNull()
 	}
 	if config.UseFloatings.ValueString() == business.ScalingUseFloatingsDisableStr {
-		config.BandWidth = types.Int32Value(0)
+		config.BandWidth = types.Int32Null()
 	}
 	return nil
 
@@ -725,13 +737,13 @@ func (c *ctyunScalingConfig) updateScalingConfig(ctx context.Context, state *Cty
 		if err != nil {
 			return err
 		}
-		if imageInfo.OsType == "linux" {
-			state.Username = types.StringValue("root")
-		} else if imageInfo.OsType == "windows" {
-			state.Username = types.StringValue("administrator")
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", state.ImageID.ValueString())
+			return err
 		}
+		state.Username = types.StringValue(username)
 		params.Username = state.Username.ValueString()
-
 		params.Password = plan.Password.ValueString()
 	} else if params.LoginMode == business.ScalingLoginModeKeyPair {
 		params.KeyPairID = plan.KeyPairID.ValueString()
@@ -824,6 +836,16 @@ func (c *ctyunScalingConfig) checkPassword(password string, username types.Strin
 		return false, err
 	}
 	return true, nil
+}
+
+func (c *ctyunScalingConfig) getUserName(imageInfo ctimage.ImageDetailImagesResponse) string {
+	username := ""
+	if imageInfo.OsType == "linux" {
+		username = "root"
+	} else if imageInfo.OsType == "windows" {
+		username = "administrator"
+	}
+	return username
 }
 
 type CtyunScalingConfigModel struct {
