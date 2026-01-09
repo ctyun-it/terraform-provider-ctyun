@@ -29,6 +29,7 @@ var (
 
 type ctyunEbmAssociationEbs struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbmAssociationEbs() resource.Resource {
@@ -37,6 +38,7 @@ func NewCtyunEbmAssociationEbs() resource.Resource {
 
 func (c *ctyunEbmAssociationEbs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm_association_ebs"
+	c.name = response.TypeName
 }
 
 type CtyunEbmAssociationEbsConfig struct {
@@ -206,7 +208,7 @@ func (c *ctyunEbmAssociationEbs) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[ebs_id],[az_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

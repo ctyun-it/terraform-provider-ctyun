@@ -36,6 +36,7 @@ var (
 
 type ctyunVpceService struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceService() resource.Resource {
@@ -44,6 +45,7 @@ func NewCtyunVpceService() resource.Resource {
 
 func (c *ctyunVpceService) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceConfig struct {
@@ -388,8 +390,8 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointServiceID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -407,11 +409,11 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

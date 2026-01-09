@@ -37,11 +37,13 @@ func NewCtyunEbsBackup() resource.Resource {
 
 type ctyunEbsBackup struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ebsService *business.EbsService
 }
 
 func (c *ctyunEbsBackup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup"
+	c.name = response.TypeName
 }
 
 type CtyunEbsBackupConfig struct {
@@ -135,12 +137,13 @@ func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"full_backup": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。",
+				Computed:    true,
+				Description: "是否启用全量备份，如您是第一次备份，或者切换了存储库，则本次备份为全量备份，不受该参数影响。",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
-
 			// 返回参数
 			"backup_status": schema.StringAttribute{
 				Computed:    true,
@@ -283,6 +286,13 @@ func (c *ctyunEbsBackup) getAndMerge(ctx context.Context, cfg *CtyunEbsBackupCon
 		cfg.Description = types.StringValue(result.Description)
 	}
 
+	if cfg.FullBackup.IsUnknown() || cfg.FullBackup.IsNull() {
+		if result.BackupType == "full-backup" {
+			cfg.FullBackup = types.BoolValue(true)
+		} else {
+			cfg.FullBackup = types.BoolValue(false)
+		}
+	}
 	cfg.DiskID = types.StringValue(result.DiskID)
 	cfg.RepositoryID = types.StringValue(result.RepositoryID)
 	cfg.RepositoryName = types.StringValue(result.RepositoryName)
@@ -470,8 +480,8 @@ func (c *ctyunEbsBackup) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -491,11 +501,11 @@ func (c *ctyunEbsBackup) ImportState(ctx context.Context, request resource.Impor
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(ID)

@@ -38,6 +38,7 @@ var (
 
 type ctyunBandwidth struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunBandwidthConfig struct {
@@ -59,6 +60,7 @@ func NewCtyunBandwidth() resource.Resource {
 
 func (c *ctyunBandwidth) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_bandwidth"
+	c.name = response.TypeName
 }
 
 func (c *ctyunBandwidth) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -312,7 +314,7 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -343,6 +345,10 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 	}
 	if regionID == "" {
 		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if projectID == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(bandwidthID)

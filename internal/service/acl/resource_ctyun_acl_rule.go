@@ -35,11 +35,13 @@ var (
 
 type CtyunAclRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunAclRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_acl_rule"
+	c.name = response.TypeName
 }
 
 func (c *CtyunAclRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -60,7 +62,7 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[acl_id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

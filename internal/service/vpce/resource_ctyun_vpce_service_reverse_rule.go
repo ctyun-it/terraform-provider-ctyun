@@ -31,6 +31,7 @@ var (
 
 type ctyunVpceServiceReverseRule struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceServiceReverseRule() resource.Resource {
@@ -39,6 +40,7 @@ func NewCtyunVpceServiceReverseRule() resource.Resource {
 
 func (c *ctyunVpceServiceReverseRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service_reverse_rule"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceReverseRuleConfig struct {
@@ -248,7 +250,7 @@ func (c *ctyunVpceServiceReverseRule) ImportState(ctx context.Context, request r
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[endpoint_service_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -258,7 +260,7 @@ func (c *ctyunVpceServiceReverseRule) ImportState(ctx context.Context, request r
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		err = fmt.Errorf("至少需要输入ip和endpoint_service_id")
+		err = fmt.Errorf("至少需要输入id和endpoint_service_id")
 		return
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)

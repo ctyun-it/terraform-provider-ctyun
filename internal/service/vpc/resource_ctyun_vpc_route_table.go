@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -31,6 +32,7 @@ var (
 
 type ctyunVpcRouteTable struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpcRouteTable() resource.Resource {
@@ -39,6 +41,7 @@ func NewCtyunVpcRouteTable() resource.Resource {
 
 func (c *ctyunVpcRouteTable) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_route_table"
+	c.name = response.TypeName
 }
 
 type CtyunVpcRouteTableConfig struct {
@@ -161,7 +164,7 @@ func (c *ctyunVpcRouteTable) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -235,7 +238,7 @@ func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -314,7 +317,10 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiRouteTableAccessFailed {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

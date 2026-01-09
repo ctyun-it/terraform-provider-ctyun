@@ -15,7 +15,7 @@ func TestAccCtyunAcl(t *testing.T) {
 	resourceName := "ctyun_acl." + rnd
 	resourceFile := "resource_ctyun_acl.tf"
 	resourceFile1 := "resource_ctyun_acl_all.tf"
-	projectID := ""
+	projectID := "0"
 	vpcID := dependence.vpcID
 
 	// 测试数据

@@ -62,7 +62,7 @@ type ZosGetObjectLockConfReturnObjResponse struct {
 }
 
 type ZosGetObjectLockConfReturnObjObjectLockConfigurationResponse struct {
-	ObjectLockEnabled string                                                            `json:"objectLockEnabled,omitempty"` /*  应始终为 Enabled  */
+	ObjectLockEnabled interface{}                                                       `json:"objectLockEnabled,omitempty"` /*  应始终为 Enabled  */
 	Rule              *ZosGetObjectLockConfReturnObjObjectLockConfigurationRuleResponse `json:"rule"`                        /*  规则对象  */
 }
 

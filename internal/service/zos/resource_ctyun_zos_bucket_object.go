@@ -35,6 +35,7 @@ var (
 
 type ctyunZosBucketObject struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunZosBucketObject() resource.Resource {
@@ -43,6 +44,7 @@ func NewCtyunZosBucketObject() resource.Resource {
 
 func (c *ctyunZosBucketObject) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_zos_bucket_object"
+	c.name = response.TypeName
 }
 
 type CtyunZosBucketObjectConfig struct {
@@ -364,7 +366,7 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [key],[bucket],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -478,6 +480,9 @@ func (c *ctyunZosBucketObject) getAndMerge(ctx context.Context, plan *CtyunZosBu
 	}
 	output, err := plan.client.HeadObject(input)
 	if err != nil {
+		if strings.Contains(err.Error(), "NotFound") {
+			err = common.ResourceNotExistError
+		}
 		return
 	}
 	plan.ContentDisposition = utils.SecStringValue(output.ContentDisposition)
