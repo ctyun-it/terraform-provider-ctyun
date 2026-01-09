@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -57,7 +58,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Required:    true,
 				Description: "镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -148,7 +149,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -299,6 +300,10 @@ func (c *ctyunImage) Update(ctx context.Context, request resource.UpdateRequest,
 	if err2 != nil {
 		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
+	}
+	if !plan.FileSource.IsUnknown() && !plan.FileSource.IsNull() && state.FileSource.IsNull() {
+		state.FileSource = plan.FileSource
+		response.Diagnostics.AddWarning("file_source的更新仅写入状态文件", "在import时，状态文件中file_source为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
@@ -488,6 +493,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	cfg.Status = types.StringValue(resp.Status)
 	// cfg.MaximumRam = types.Int64Value(int64(resp.MaximumRam))
 	// cfg.MinimumRam = types.Int64Value(int64(resp.MinimumRam))
+	cfg.ProjectId = types.StringValue(resp.ProjectId)
 	return &cfg, nil
 }
 

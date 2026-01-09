@@ -235,7 +235,6 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	state.ProjectId = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
