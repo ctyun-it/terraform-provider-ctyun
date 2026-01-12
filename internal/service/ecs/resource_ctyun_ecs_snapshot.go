@@ -70,18 +70,6 @@ func (c *ctyunEcsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:    true,
 				Description: "云主机快照状态： pending：创建中, available：可用， restoring：恢复中， error：错误",
 			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -454,6 +442,5 @@ type CtyunEcsSnapshotConfig struct {
 	InstanceId     types.String `tfsdk:"instance_id"`
 	SnapshotName   types.String `tfsdk:"name"`
 	SnapshotStatus types.String `tfsdk:"snapshot_status"`
-	ProjectId      types.String `tfsdk:"project_id"`
 	RegionId       types.String `tfsdk:"region_id"`
 }

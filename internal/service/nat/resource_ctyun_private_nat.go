@@ -9,14 +9,14 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctnat"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -159,11 +159,9 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 			//TODO 添加单元测试
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认为true",
-				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"az_name": schema.StringAttribute{
@@ -205,6 +203,10 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Computed:      true,
 				Description:   "NAT网关的创建时间,为UTC格式",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
 			},
 		},
 	}
@@ -321,7 +323,10 @@ func (c *ctyunPrivateNat) Update(ctx context.Context, request resource.UpdateReq
 	if err != nil {
 		return
 	}
-
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -512,6 +517,20 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.Description = types.StringValue(natObj.Description)
 	cfg.VpcName = types.StringValue(natObj.VpcName)
 	cfg.CreationTime = types.StringValue(natObj.CreateDate)
+	cfg.ExpiredTime = types.StringValue(natObj.ExpiredTime)
+	cfg.AzName = types.StringValue(natObj.AzName)
+	cfg.SubnetID = types.StringValue(natObj.SubnetID)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
 	return nil
 }
 
@@ -756,7 +775,7 @@ type CtyunPrivateNatConfig struct {
 	NatGatewayID    types.String `tfsdk:"nat_gateway_id"`    //网关 ID
 	VpcName         types.String `tfsdk:"vpc_name"`          //NAT所属的专有网络名字
 	CreationTime    types.String `tfsdk:"create_time"`       //NAT网关的创建时间
-
+	ExpiredTime     types.String `tfsdk:"expire_time"`       //NAT网关实例的过期时间
 }
 
 type LoopOrderPrivateResponse struct {

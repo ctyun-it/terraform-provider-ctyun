@@ -38,6 +38,7 @@ var (
 
 type ctyunZosBucket struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunZosBucket() resource.Resource {
@@ -46,6 +47,7 @@ func NewCtyunZosBucket() resource.Resource {
 
 func (c *ctyunZosBucket) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_zos_bucket"
+	c.name = response.TypeName
 }
 
 type CtyunZosBucketConfig struct {
@@ -393,7 +395,7 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id],[project_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

@@ -9,7 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -126,7 +126,7 @@ func (c *CtyunSubnetAssociationAcl) Schema(ctx context.Context, request resource
 				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
+					planmodifier2.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),

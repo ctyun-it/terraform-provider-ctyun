@@ -21,7 +21,8 @@ import (
 )
 
 type CtyunExpressConnectRoute struct {
-	meta *common.CtyunMetadata
+	meta       *common.CtyunMetadata
+	vpcService *business.VpcService
 }
 
 func (c *CtyunExpressConnectRoute) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -34,7 +35,7 @@ func (c *CtyunExpressConnectRoute) Configure(_ context.Context, request resource
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
-
+	c.vpcService = business.NewVpcService(c.meta)
 }
 
 func NewCtyunExpressConnectRoute() resource.Resource {
@@ -46,15 +47,15 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecId],[cgwId],[rtbId],[nextHopId]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecId],[cgwId],[rtbId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunExpressConnectRouteConfig
 
-	var ID, ecId, cgwId, rtbId, nextHopId string
+	var ID, ecId, cgwId, rtbId string
 
-	err = terraform_extend.Split(request.ID, &ID, &ecId, &cgwId, &rtbId, &nextHopId)
+	err = terraform_extend.Split(request.ID, &ID, &ecId, &cgwId, &rtbId)
 	if err != nil {
 		return
 	}
@@ -75,16 +76,12 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 		err = fmt.Errorf("rtbId不能为空")
 		return
 	}
-	if nextHopId == "" {
-		err = fmt.Errorf("nextHopId不能为空")
-		return
-	}
 
 	config.ID = types.StringValue(ID)
 	config.EcID = types.StringValue(ecId)
 	config.CgwID = types.StringValue(cgwId)
 	config.RtbID = types.StringValue(rtbId)
-	config.NextHopID = types.StringValue(nextHopId)
+	//config.NextHopID = types.StringValue(nextHopId)
 
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -368,8 +365,16 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 		if *routeObj.RouteID == config.ID.ValueString() {
 			//config.RouteType = types.StringValue(business.EcRouteTypeRevMap[*routeObj.RouteType])
 			config.CIDR = types.StringValue(*routeObj.RouteCIDR)
+			nexthoptype := *routeObj.NexthopType
+			config.IsBlackHoleRoute = types.BoolValue(nexthoptype == "20")
 			if !config.IsBlackHoleRoute.ValueBool() {
 				config.NextHopType = types.StringValue(business.EcNextHopTypeRevMap[*routeObj.NexthopType])
+				//vpcName := *routeObj.NexthopID
+				//vpcid, err2 := c.vpcService.GetVpcID(vpcName)
+				//if err2 != nil {
+				//	return err2
+				//}
+				//config.NextHopID = types.StringValue(vpcid)
 			} else {
 				config.NextHopType = types.StringNull()
 				config.NextHopID = types.StringNull()
@@ -377,6 +382,7 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			config.IPVersion = types.StringValue(business.EcIpVersionRevMap[*routeObj.IPVersion])
 			config.Description = types.StringValue(*routeObj.RouteDescription)
 			config.CreateTime = types.StringValue(*routeObj.CreateDate)
+
 		}
 	}
 	return nil

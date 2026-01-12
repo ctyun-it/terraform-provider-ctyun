@@ -28,6 +28,7 @@ var (
 
 type ctyunVpceServiceConnection struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceServiceConnection() resource.Resource {
@@ -36,6 +37,7 @@ func NewCtyunVpceServiceConnection() resource.Resource {
 
 func (c *ctyunVpceServiceConnection) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service_connection"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceConnectionConfig struct {
@@ -209,8 +211,8 @@ func (c *ctyunVpceServiceConnection) ImportState(ctx context.Context, request re
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [enpointServiceID],[endpointID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpoint_service_id],[endpoint_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -231,15 +233,15 @@ func (c *ctyunVpceServiceConnection) ImportState(ctx context.Context, request re
 	}
 
 	if enpointServiceID == "" {
-		err = fmt.Errorf("enpointServiceID不能为空")
+		err = fmt.Errorf("endpoint_service_id不能为空")
 		return
 	}
 	if endpointID == "" {
-		err = fmt.Errorf("endpointID不能为空")
+		err = fmt.Errorf("endpoint_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

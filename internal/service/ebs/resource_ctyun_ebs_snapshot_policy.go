@@ -9,7 +9,7 @@ import (
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -38,10 +38,12 @@ func NewCtyunEbsSnapshotPolicy() resource.Resource {
 type ctyunEbsSnapshotPolicy struct {
 	meta       *common.CtyunMetadata
 	ebsService *business.EbsService
+	name       string
 }
 
 func (c *ctyunEbsSnapshotPolicy) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_snapshot_policy"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -97,7 +99,7 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
+					planmodifier2.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -119,9 +121,6 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "自动快照策略状态，取值范围：activated:启用，nonactivated：停用",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"bound_disk_num": schema.Int64Attribute{
 				Computed:    true,
@@ -510,7 +509,7 @@ func (c *ctyunEbsSnapshotPolicy) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

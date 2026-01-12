@@ -525,34 +525,20 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[project_id],[az_name],[region_id]"
+			//$ terraform import ctyun_ebs.test <ID>,[region_id]
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbsConfig
 
-	var ID, projectId, azName, regionId string
+	var ID, regionId string
 	// 根据分隔符数量判断是否输入了regionId,projectId,azName
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &azName)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -568,9 +554,6 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-	config.ProjectId = types.StringValue(projectId)
-	config.AzName = types.StringValue(azName)
-
 	instance, err := c.getAndMergeEbs(ctx, config)
 	if err != nil {
 		return
@@ -617,6 +600,8 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	cfg.Status = types.StringValue(obj.DiskStatus)
 	cfg.ExpireTime = types.StringValue(utils.FromUnixToUTC(obj.ExpireTime))
 	cfg.CreateTime = types.StringValue(utils.FromUnixToUTC(obj.CreateTime))
+	cfg.AzName = types.StringValue(obj.AzName)
+	cfg.ProjectId = types.StringValue(obj.ProjectID)
 
 	// 处理可选的布尔字段
 	if obj.MultiAttach != nil {
@@ -648,7 +633,12 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	}
 
 	// 处理IOPS字段
-	cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	//如果ProvisionedIops为0，那么就不设置ProvisionedIops
+	if obj.ProvisionedIops > 0 {
+		cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	} else {
+		cfg.ProvisionedIops = types.Int64Null()
+	}
 
 	// 处理删除快照策略字段
 	if obj.DeleteSnapWithEbs == "true" {

@@ -35,6 +35,7 @@ var (
 
 type CtyunHpfs struct {
 	meta        *common.CtyunMetadata
+	name        string
 	orderLooper *business.OrderLooper
 }
 
@@ -42,7 +43,7 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -83,6 +84,7 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 
 func (c *CtyunHpfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_hpfs"
+	c.name = response.TypeName
 }
 
 func (c *CtyunHpfs) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -646,7 +648,7 @@ func (c *CtyunHpfs) deleteLoop(ctx context.Context, config *CtyunHpfsConfig, loo
 		func(currentTime int) bool {
 			resp, err2 := c.getHpfsDetail(ctx, config)
 			if err2 != nil {
-				if errors.Is(err, common.ResourceNotExistError) {
+				if errors.Is(err2, common.ResourceNotExistError) {
 					err = nil
 				} else {
 					err = err2

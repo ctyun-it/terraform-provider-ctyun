@@ -36,6 +36,7 @@ func NewCtyunEbsSnapshot() resource.Resource {
 type ctyunEbsSnapshot struct {
 	meta       *common.CtyunMetadata
 	ebsService *business.EbsService
+	name       string
 }
 
 func (c *ctyunEbsSnapshot) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -43,6 +44,7 @@ func (c *ctyunEbsSnapshot) Update(ctx context.Context, request resource.UpdateRe
 
 func (c *ctyunEbsSnapshot) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_snapshot"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -428,7 +430,7 @@ func (c *ctyunEbsSnapshot) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

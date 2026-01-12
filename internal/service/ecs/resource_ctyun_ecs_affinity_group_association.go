@@ -197,9 +197,17 @@ func (c *ctyunEcsAffinityGroupAssociation) ImportState(ctx context.Context, requ
 	}()
 	var cfg CtyunEcsAffinityGroupAssociationConfig
 	var instanceID, groupID, regionID string
-	err = terraform_extend.Split(request.ID, &instanceID, &groupID, &regionID)
-	if err != nil {
-		return
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &groupID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &groupID, &regionID)
+		if err != nil {
+			return
+		}
 	}
 
 	if instanceID == "" {

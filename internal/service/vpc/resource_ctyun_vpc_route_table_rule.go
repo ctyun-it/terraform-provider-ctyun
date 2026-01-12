@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -28,6 +29,7 @@ var (
 
 type ctyunVpcRouteTableRule struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpcRouteTableRule() resource.Resource {
@@ -36,6 +38,7 @@ func NewCtyunVpcRouteTableRule() resource.Resource {
 
 func (c *ctyunVpcRouteTableRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_route_table_rule"
+	c.name = response.TypeName
 }
 
 type CtyunVpcRouteTableRuleConfig struct {
@@ -180,7 +183,7 @@ func (c *ctyunVpcRouteTableRule) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -254,7 +257,7 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [rule_id],[route_table_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -360,7 +363,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		pageNo++
 	}
 	if len(rules) == 0 {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 	var exist bool
@@ -376,7 +379,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		}
 	}
 	if !exist {
-		err = fmt.Errorf("未找到路由表 %s 下的规则 %s", routeTableID, ruleID)
+		err = common.ResourceNotExistError
 	}
 	return
 }

@@ -43,6 +43,7 @@ var (
 
 type ctyunEbm struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbm() resource.Resource {
@@ -51,6 +52,7 @@ func NewCtyunEbm() resource.Resource {
 
 func (c *ctyunEbm) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm"
+	c.name = response.TypeName
 }
 
 type CtyunEbmConfig struct {
@@ -643,7 +645,7 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[az_name],[region_id],[project_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

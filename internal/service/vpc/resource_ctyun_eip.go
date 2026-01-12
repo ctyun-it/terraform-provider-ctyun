@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -224,15 +225,15 @@ func (c *ctyunEip) Create(ctx context.Context, request resource.CreateRequest, r
 	plan.Id = types.StringValue(id)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 
-	instance, ctyunRequestError := c.getAndMergeEip(ctx, plan)
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	err = c.getAndMergeEip(ctx, &plan)
+	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
 func (c *ctyunEip) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -245,16 +246,15 @@ func (c *ctyunEip) Read(ctx context.Context, request resource.ReadRequest, respo
 	if !c.acquireAndSetIdIfOrderNotFinished(ctx, &state, response) {
 		return
 	}
-	instance, err := c.getAndMergeEip(ctx, state)
+	err := c.getAndMergeEip(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -316,12 +316,12 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		}
 	}
 
-	instance, ctyunRequestError := c.getAndMergeEip(ctx, state)
+	ctyunRequestError := c.getAndMergeEip(ctx, &state)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -357,18 +357,25 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[projectID],[regionId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEipConfig
-	var eipId, regionId string
+	var eipId, regionId, projectID string
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		eipId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectID)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectID, &regionId)
 		if err != nil {
 			return
 		}
@@ -376,13 +383,12 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 
 	cfg.Id = types.StringValue(eipId)
 	cfg.RegionId = types.StringValue(regionId)
-
-	instance, err := c.getAndMergeEip(ctx, cfg)
+	cfg.ProjectId = types.StringValue(projectID)
+	err = c.getAndMergeEip(ctx, &cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 func (c *ctyunEip) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -399,18 +405,17 @@ func (c *ctyunEip) isBindWithShareBandwidth(bandwidthId string) bool {
 }
 
 // getAndMergeEip 查询eip
-func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*CtyunEipConfig, error) {
+func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) error {
 	resp, err := c.meta.Apis.CtVpcApis.EipShowApi.Do(ctx, c.meta.Credential, &ctvpc.EipShowRequest{
 		RegionId: cfg.RegionId.ValueString(),
 		EipId:    cfg.Id.ValueString(),
 	})
 	if err != nil {
-		if err.ErrorCode() == common.OpenapiEipNotFound {
-			return nil, nil
+		if err.ErrorCode() == common.OpenapiSubnetNotFound {
+			return common.ResourceNotExistError
 		}
-		return nil, err
+		return err
 	}
-
 	// 带宽类型
 	bandwidthType := business.EipBandwidthTypeStandalone
 	if c.isBindWithShareBandwidth(resp.BandwidthId) {
@@ -427,7 +432,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*Cty
 
 	statusResp, err2 := business.EipStatusMap.ToOriginalScene(resp.Status, business.EipStatusMapScene1)
 	if err2 != nil {
-		return nil, err2
+		return err2
 	}
 
 	cfg.Id = types.StringValue(resp.Id)
@@ -439,7 +444,26 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*Cty
 	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
-	return &cfg, nil
+
+	if resp.BillingMethod == business.OnDemandCycleType {
+		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
+		if resp.BandwidthType == "standalone" {
+			cfg.DemandBillingType = types.StringValue("bandwidth")
+		} else {
+			cfg.DemandBillingType = types.StringValue(resp.BandwidthType)
+		}
+	}
+	var cycleType, cycleCount, err3 = utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err3 != nil {
+		return err3
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
+	return nil
 }
 
 // getMasterOrderIdIfOrderInProgress 获取masterOrderId

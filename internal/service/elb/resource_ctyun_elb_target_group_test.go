@@ -84,6 +84,31 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "algorithm", algorithm),
 				),
 			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
+			},
 			// 1.2 update 验证
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, updatedAlgorithm, "", "", "", "", "", "", ""),

@@ -2,12 +2,14 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -144,7 +146,7 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -213,15 +215,15 @@ func (c *ctyunSubnet) Create(ctx context.Context, request resource.CreateRequest
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeSubnet(ctx, plan)
+	ctyunRequestError := c.getAndMergeSubnet(ctx, &plan)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	//if instance == nil {
+	//	response.State.RemoveResource(ctx)
+	//}
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
 func (c *ctyunSubnet) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -231,16 +233,15 @@ func (c *ctyunSubnet) Read(ctx context.Context, request resource.ReadRequest, re
 		return
 	}
 
-	instance, err := c.getAndMergeSubnet(ctx, state)
+	err := c.getAndMergeSubnet(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -274,12 +275,16 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeSubnet(ctx, state)
+	ctyunRequestError := c.getAndMergeSubnet(ctx, &state)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	if !plan.ProjectId.IsUnknown() && !plan.ProjectId.IsNull() && state.ProjectId.IsNull() {
+		state.ProjectId = plan.ProjectId
+		response.Diagnostics.AddWarning("project_id的更新仅写入状态文件", "在import时，状态文件中project_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -315,6 +320,7 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &subnetId, &vpcId)
 		if err != nil {
 			return
@@ -347,12 +353,12 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	cfg.VpcId = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
 	cfg.ProjectId = types.StringValue(projectID)
-	instance, err := c.getAndMergeSubnet(ctx, cfg)
+	err = c.getAndMergeSubnet(ctx, &cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 func (c *ctyunSubnet) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -365,7 +371,8 @@ func (c *ctyunSubnet) Configure(_ context.Context, request resource.ConfigureReq
 }
 
 // getAndMergeSubnet 查询子网
-func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConfig) (*CtyunSubnetConfig, error) {
+func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetConfig) error {
+
 	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, &ctvpc.SubnetQueryRequest{
 		RegionId:    cfg.RegionId.ValueString(),
 		ProjectId:   cfg.ProjectId.ValueString(),
@@ -374,9 +381,9 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConf
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSubnetNotFound {
-			return nil, nil
+			return common.ResourceNotExistError
 		}
-		return nil, err
+		return err
 	}
 
 	dl := []types.String{}
@@ -387,7 +394,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConf
 
 	subnetType, err2 := business.SubnetTypeMap.ToOriginalScene(resp.Type, business.SubnetTypeMapScene1)
 	if err2 != nil {
-		return nil, err2
+		return err2
 	}
 
 	cfg.Id = types.StringValue(resp.SubnetId)
@@ -403,7 +410,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConf
 	cfg.Ipv4End = types.StringValue(resp.End)
 	cfg.Ipv6Start = types.StringValue(resp.Ipv6Start)
 	cfg.Ipv6End = types.StringValue(resp.Ipv6End)
-	return &cfg, nil
+	return nil
 }
 
 // checkCreate 校验创建动作是否能执行

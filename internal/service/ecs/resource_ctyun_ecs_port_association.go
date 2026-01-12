@@ -227,6 +227,9 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 	if describeResponse.ReturnObj != nil {
 		for _, networkCard := range describeResponse.ReturnObj.NetworkCardList {
 			if networkCard != nil && utils.SecString(networkCard.NetworkCardID) == state.PortID.ValueString() {
+				state.PortID = types.StringValue(*networkCard.NetworkCardID)
+				state.AzName = types.StringValue(*describeResponse.ReturnObj.AzName)
+				state.ProjectID = types.StringValue(*describeResponse.ReturnObj.ProjectID)
 				return nil
 			}
 		}
