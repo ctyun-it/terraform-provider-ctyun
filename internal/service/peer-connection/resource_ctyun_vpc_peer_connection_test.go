@@ -64,27 +64,6 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "accept_vpc_cidr"),
 				),
 			},
-			// 2. 资源更新测试（更新名称和描述）
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
-					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
-					resource.TestCheckResourceAttr(resourceName, "request_vpc_id", requestVpcID),
-					resource.TestCheckResourceAttr(resourceName, "accept_vpc_id", acceptVpcID),
-				),
-			},
-			// 3. datasource验证
-			{
-				PreConfig: func() {
-					wait10Seconds()
-				},
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
-					utils.LoadTestCase(datasourceFile, dnd),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "peer_connections.#")),
-			},
 			// 4. import state验证
 			{
 				ResourceName: resourceName,
@@ -137,6 +116,28 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"accept_email", "description", "project_id"},
 			},
+			// 2. 资源更新测试（更新名称和描述）
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "request_vpc_id", requestVpcID),
+					resource.TestCheckResourceAttr(resourceName, "accept_vpc_id", acceptVpcID),
+				),
+			},
+			// 3. datasource验证
+			{
+				PreConfig: func() {
+					wait10Seconds()
+				},
+				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
+					utils.LoadTestCase(datasourceFile, dnd),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(datasourceName, "peer_connections.#")),
+			},
+
 			// 5. 销毁资源
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),

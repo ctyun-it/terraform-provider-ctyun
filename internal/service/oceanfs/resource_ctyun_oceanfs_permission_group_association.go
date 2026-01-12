@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -145,23 +144,6 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Schema(ctx context.Context, req
 				},
 				Validators: []validator.String{
 					validator2.VpcValidate(),
-				},
-			},
-			"is_vpce": schema.BoolAttribute{
-				Optional:    true,
-				Description: "文件系统绑定VPC时是否自动创建VPC终端节点。已弃用。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。取值：\ntrue：创建VPC终端节点（推荐）\nfalse：不创建VPC终端节点\n注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须",
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
-			},
-			"subnet_id": schema.StringAttribute{
-				Description: "子网ID，已弃用",
-				Optional:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.SubnetValidate(),
 				},
 			},
 			"id": schema.StringAttribute{
@@ -426,7 +408,5 @@ type CtyunOceanfsPermissionGroupAssociationConfig struct {
 	RegionID            types.String `tfsdk:"region_id"`
 	SfsUID              types.String `tfsdk:"oceanfs_id"`
 	VpcID               types.String `tfsdk:"vpc_id"`
-	IsVpce              types.Bool   `tfsdk:"is_vpce"`
-	SubnetID            types.String `tfsdk:"subnet_id"`
 	ID                  types.String `tfsdk:"id"`
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -81,7 +82,7 @@ func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -231,17 +232,23 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [securityGroupId],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [security_group_id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSecurityGroupConfig
-	var securityGroupId, regionId string
+	var securityGroupId, regionId, projectId string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		securityGroupId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		err = terraform_extend.Split(request.ID, &securityGroupId, &projectId)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &securityGroupId, &regionId)
+		err = terraform_extend.Split(request.ID, &securityGroupId, &projectId, &regionId)
 		if err != nil {
 			return
 		}
@@ -258,7 +265,7 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 
 	cfg.Id = types.StringValue(securityGroupId)
 	cfg.RegionId = types.StringValue(regionId)
-
+	cfg.ProjectId = types.StringValue(projectId)
 	instance, err := c.getAndMergeSecurityGroup(ctx, cfg)
 	if err != nil {
 		//response.Diagnostics.AddError(err.Error(), err.Error())
