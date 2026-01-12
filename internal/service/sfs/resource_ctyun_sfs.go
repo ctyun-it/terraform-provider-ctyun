@@ -491,6 +491,17 @@ func (c *ctyunSfs) getAndMergeSfs(ctx context.Context, config *CtyunSfsConfig) e
 	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnObj.ExpireTime))
 	//config.AzName = types.StringValue(returnObj.AzName)
 
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return err
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
 	return nil
 }
 
@@ -643,7 +654,7 @@ func (c *ctyunSfs) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[vpcID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

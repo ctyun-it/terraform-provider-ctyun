@@ -261,7 +261,7 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 
 	instance, err := c.getAndMergeSecurityGroup(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		//response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
