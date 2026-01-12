@@ -81,6 +81,7 @@ type CtelbShowLoadBalancerReturnObjResponse struct {
 	ResourceType     string                                           `json:"resourceType,omitempty"`     /*  负载均衡类型: external / internal  */
 	CreatedTime      string                                           `json:"createdTime,omitempty"`      /*  创建时间，为UTC格式  */
 	UpdatedTime      string                                           `json:"updatedTime,omitempty"`      /*  更新时间，为UTC格式  */
+	ExpiredTime      string                                           `json:"expiredTime,omitempty"`      /*  到期时间，为UTC格式  */
 }
 
 type CtelbShowLoadBalancerReturnObjEipInfoResponse struct {

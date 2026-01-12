@@ -11,7 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	planmodifierCustom "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -236,19 +236,13 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
-
-				//PlanModifiers: []planmodifier.Int64{
-				//	planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
-				//},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true",
 				PlanModifiers: []planmodifier.Bool{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					explanmodifier.NullIgnoreBool(),
 				},
-				Default: booldefault.StaticBool(true),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -284,14 +278,12 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"user_data": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符",
-				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 16384),
 				},
 				PlanModifiers: []planmodifier.String{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"master_order_id": schema.StringAttribute{
@@ -303,7 +295,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -580,17 +572,26 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	instance.IsDestroyInstance = plan.IsDestroyInstance
 	instance.Password = plan.Password
 
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	instance.AutoRenew = plan.AutoRenew
 
-	instance.PayVoucherPrice = plan.PayVoucherPrice
+	if !plan.PayVoucherPrice.IsUnknown() && !plan.PayVoucherPrice.IsNull() && state.PayVoucherPrice.IsNull() {
+		state.PayVoucherPrice = plan.PayVoucherPrice
+		response.Diagnostics.AddWarning("pay_voucher_price的更新仅写入状态文件", "在import时，状态文件中pay_voucher_price为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 
-	instance.ProjectId = plan.ProjectId
+	if !plan.ProjectId.IsUnknown() && !plan.ProjectId.IsNull() && state.ProjectId.IsNull() {
+		state.ProjectId = plan.ProjectId
+		response.Diagnostics.AddWarning("project_id的更新仅写入状态文件", "在import时，状态文件中project_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 
-	instance.CycleType = plan.CycleType
-
-	instance.CycleCount = plan.CycleCount
-
-	instance.UserData = plan.UserData
+	if !plan.UserData.IsUnknown() && !plan.UserData.IsNull() && state.UserData.IsNull() {
+		state.UserData = plan.UserData
+		response.Diagnostics.AddWarning("user_data的更新仅写入状态文件", "在import时，状态文件中user_data为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
@@ -1433,10 +1434,21 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
 	if instance_details_resp.ExpiredTime != nil {
-		cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(*instance_details_resp.ExpiredTime))
+		cfg.ExpireTime = types.StringValue(*instance_details_resp.ExpiredTime)
 	} else {
 		// 当ExpiredTime为nil时，设置为空字符串
 		cfg.ExpireTime = types.StringValue("")
+	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return nil, err
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
 	}
 
 	// 填充安全组信息
@@ -1552,9 +1564,6 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 
 	}
 	cfg.AzName = types.StringValue(*instance_details_resp.AzName)
-	if *instance_details_resp.OnDemand {
-		cfg.CycleType = types.StringValue(business.OrderCycleTypeOnDemand)
-	}
 	cfg.KeyPairName = types.StringValue(*instance_details_resp.KeypairName)
 	return &cfg, nil
 }
@@ -2020,19 +2029,26 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectId],[az_name],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcsConfig
-	var ID, regionId string
+	var ID, regionId, projectID string
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
 	} else {
 
-		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
 		if err != nil {
 			return
 		}
@@ -2048,13 +2064,15 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-
+	config.ProjectId = types.StringValue(projectID)
 	cfg, err := c.getAndMergeEcs(ctx, config)
-	// 处理ImageId字段 仅在import的时候处理
-	cfg.ImageId = cfg.ActualImageID
-	cfg.PayVoucherPrice = types.Float64Value(0)
 	if err != nil {
 		return
 	}
+	// 处理ImageId字段 仅在import的时候处理
+	cfg.ImageId = cfg.ActualImageID
+	cfg.PayVoucherPrice = types.Float64Value(0)
+	cfg.IsDestroyInstance = types.BoolValue(false)
+
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }

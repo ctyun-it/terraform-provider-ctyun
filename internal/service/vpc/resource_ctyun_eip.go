@@ -11,7 +11,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	planmodifierCustom "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -20,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -102,7 +102,7 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Required:    true,
 				Description: "订购周期类型，与cycle_count配合使用，month：按月，year：按年，on_demand：按需计费类型，当为按需时，demand_billing_type为必填。当此值为month或者year时，cycle_count为必填",
 				PlanModifiers: []planmodifier.String{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypes...),
@@ -112,7 +112,7 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-3年",
 				PlanModifiers: []planmodifier.Int64{
-					planmodifierCustom.RequiresReplaceIfStateNotNullModifier(),
+					int64planmodifier.RequiresReplace(),
 				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
@@ -321,13 +321,6 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	if !plan.CycleType.IsNull() {
-		state.CycleType = plan.CycleType
-	}
-	if !plan.CycleCount.IsNull() {
-		state.CycleCount = plan.CycleCount
-	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -364,7 +357,7 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[projectID],[regionId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -373,9 +366,16 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		eipId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectID)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectID, &regionId)
 		if err != nil {
 			return
 		}
@@ -383,7 +383,7 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 
 	cfg.Id = types.StringValue(eipId)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId))
+	cfg.ProjectId = types.StringValue(projectID)
 	err = c.getAndMergeEip(ctx, &cfg)
 	if err != nil {
 		return
@@ -444,6 +444,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
+
 	if resp.BillingMethod == business.OnDemandCycleType {
 		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
 		if resp.BandwidthType == "standalone" {
@@ -452,7 +453,16 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 			cfg.DemandBillingType = types.StringValue(resp.BandwidthType)
 		}
 	}
-
+	var cycleType, cycleCount, err3 = utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err3 != nil {
+		return err3
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
 	return nil
 }
 

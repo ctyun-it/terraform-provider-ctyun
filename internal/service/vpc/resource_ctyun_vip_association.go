@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/google/uuid"
@@ -21,8 +22,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &ctyunVipAssociation{}
-	_ resource.ResourceWithConfigure = &ctyunVipAssociation{}
+	_ resource.Resource                = &ctyunVipAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunVipAssociation{}
+	_ resource.ResourceWithImportState = &ctyunVipAssociation{}
 )
 
 func NewCtyunVipAssociation() resource.Resource {
@@ -196,6 +198,70 @@ func (c *ctyunVipAssociation) Delete(ctx context.Context, request resource.Delet
 		return
 	}
 }
+func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vipId],[(instance_id:network_interface_id)/floating_id],[regionId]"
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var state CtyunVipAssociationConfig
+	var vipId, info, regionId, instanceId, networkInterfaceId string
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &vipId, &info)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &vipId, &info, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if vipId == "" {
+		err = fmt.Errorf("vipId不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("regionID不能为空")
+		return
+	}
+	if info == "" {
+		err = fmt.Errorf("info不能为空")
+		return
+	}
+	state.VipId = types.StringValue(vipId)
+	state.RegionId = types.StringValue(regionId)
+	if strings.Count(info, ":") == 1 {
+		state.ResourceType = types.StringValue("PM")
+		err = terraform_extend.SplitComma(info, &instanceId, &networkInterfaceId)
+		state.InstanceId = types.StringValue(instanceId)
+		state.NetworkInterfaceId = types.StringValue(networkInterfaceId)
+		err = c.getAndMerge(ctx, &state)
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vipId],[instance_id:network_interface_id],[regionId]"
+			response.Diagnostics.AddError(title, detail)
+			return
+		}
+	} else {
+		state.ResourceType = types.StringValue("NETWORK")
+		state.FloatingId = types.StringValue(info)
+		err = c.getAndMerge(ctx, &state)
+		if err != nil {
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vipId],[floating_id],[regionId]"
+			response.Diagnostics.AddError(title, detail)
+			return
+		}
+	}
+
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
+}
 
 // create 绑定虚拟IP
 func (c *ctyunVipAssociation) create(ctx context.Context, plan *CtyunVipAssociationConfig) (err error) {
@@ -338,7 +404,7 @@ func (c *ctyunVipAssociation) getAndMerge(ctx context.Context, state *CtyunVipAs
 	}
 
 	// 更新状态
-	state.Id = types.StringValue(fmt.Sprintf("%s:%s", regionId, state.VipId.ValueString()))
+	state.Id = types.StringValue(state.VipId.ValueString())
 	state.RegionId = types.StringValue(regionId)
 
 	return

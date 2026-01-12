@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	ctvpc2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	"github.com/google/uuid"
 )
@@ -30,6 +31,30 @@ func (v VpcService) MustExist(ctx context.Context, vpcId, regionId, projectId st
 		return err
 	}
 	return nil
+}
+
+func (v VpcService) GetVpcID(ctx context.Context, vpcName, regionId, projectId string) (string, error) {
+	params := &ctvpc2.CtvpcNewVpcListRequest{
+		RegionID: regionId,
+		VpcName:  &vpcName,
+		PageNo:   1,
+		PageSize: 1000,
+	}
+	if projectId != "" {
+		params.ProjectID = &projectId
+	}
+	// 调用API
+	resp, err := v.meta.Apis.SdkCtVpcApis.CtvpcNewVpcListApi.Do(ctx, v.meta.SdkCredential, params)
+	if err != nil {
+		return "", err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		return "", err
+	} else if resp.ReturnObj == nil || resp.ReturnObj.Vpcs == nil || len(resp.ReturnObj.Vpcs) == 0 || len(resp.ReturnObj.Vpcs) > 1 {
+		err = common.InvalidReturnObjError
+		return "", err
+	}
+	return *resp.ReturnObj.Vpcs[0].VpcID, nil
 }
 
 func (v VpcService) GetVpcSubnet(ctx context.Context, vpcId, regionId, projectId string) (map[string]ctvpc.SubnetListSubnetsResponse, error) {

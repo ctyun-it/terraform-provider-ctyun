@@ -91,14 +91,10 @@ func TestAccCtyunEcs(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"auto_renew",
 					"default_security_group_id",
 					"flavor_id",
-					"is_destroy_instance",
 					"master_order_id",
-					"project_id",
 					"security_group_ids",
-					"user_data",
 				},
 			},
 			{
@@ -109,21 +105,18 @@ func TestAccCtyunEcs(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"auto_renew",
 					"default_security_group_id",
 					"flavor_id",
-					"is_destroy_instance",
 					"master_order_id",
-					"project_id",
 					"security_group_ids",
-					"user_data",
 				},
 			},
 			// 2.节省关机

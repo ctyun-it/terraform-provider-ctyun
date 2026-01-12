@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -40,7 +39,6 @@ type CtyunExpressConnectConfig struct {
 	Description types.String `tfsdk:"description"`
 	Status      types.Int64  `tfsdk:"status"`
 	CreateTime  types.String `tfsdk:"create_time"`
-	RegionId    types.String `tfsdk:"region_id"`
 }
 
 func (c *CtyunExpressConnect) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -85,18 +83,6 @@ func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaReq
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 		},
 	}
@@ -275,7 +261,7 @@ func (c *CtyunExpressConnect) getAndMerge(ctx context.Context, plan *CtyunExpres
 	plan.Status = types.Int64Value(int64(*result.Status))
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(utils.SecString(result.CreateDate)))
 
-	if result.EcDescription != nil {
+	if result.EcDescription != nil && *result.EcDescription != "" {
 		plan.Description = types.StringValue(*result.EcDescription)
 	}
 
@@ -350,8 +336,7 @@ func (c *CtyunExpressConnect) deleteCgwBill(ctx context.Context, state *CtyunExp
 		// 构造请求参数（这里需要根据实际业务需求进行调整）
 		req := &ec.EcEcCgwBillRefundRequest{
 			EcID:       state.ID.ValueString(),
-			RegionID:   state.RegionId.ValueString(), // 使用实际的RegionID
-			ResourceID: *resourceID,                  // 使用实际的ResourceID
+			ResourceID: *resourceID, // 使用实际的ResourceID
 			// ClientToken 参数根据实际需求添加
 		}
 

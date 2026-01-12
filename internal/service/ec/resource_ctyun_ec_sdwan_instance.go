@@ -257,16 +257,19 @@ func (c *CtyunEcSdwanInstance) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [sdwanId],[cgwID],[ecID]"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcSdwanInstanceConfig
-	var ID, ecID string
-	err = terraform_extend.Split(request.ID, &ID, &ecID)
+	var sdwanId, cgwID, ecID string
+	err = terraform_extend.Split(request.ID, &sdwanId, &cgwID, &ecID)
 	if err != nil {
 		return
 	}
-	config.ID = types.StringValue(ID)
+	config.SdwanID = types.StringValue(sdwanId)
+	config.CgwID = types.StringValue(cgwID)
 	config.EcID = types.StringValue(ecID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -323,8 +326,6 @@ func (c *CtyunEcSdwanInstance) create(ctx context.Context, plan *CtyunEcSdwanIns
 }
 
 func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSdwanInstanceConfig) (err error) {
-	// 通过查询接口获取实例信息
-	instanceID := state.ID.ValueString()
 
 	// 根据InstanceID查询实例
 	listReq := &ec.EcEcListSDWANInstanceRequest{
@@ -345,27 +346,31 @@ func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSd
 	} else if *listResp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s", *listResp.Message)
 		return
-	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) == 0 {
+	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) == 0 || len(listResp.ReturnObj.Results) > 1 {
 		err = common.ResourceNotExistError
 		return
 	}
 	// 检查返回的实例是否匹配
 	found := false
 	for _, result := range listResp.ReturnObj.Results {
-		if result.InstanceID != nil && *result.InstanceID == instanceID {
-			found = true
-			// 更新状态值
-			if result.RouteLearn != nil {
-				state.RouteLearn = types.Int64Value(int64(*result.RouteLearn))
-			}
-			if result.RouteSync != nil {
-				state.RouteSync = types.Int64Value(int64(*result.RouteSync))
-			}
-			if result.Weights != nil {
-				state.Weights = types.Int64Value(int64(*result.Weights))
-			}
-			break
+		found = true
+		// 更新状态值
+		if result.RouteLearn != nil {
+			state.RouteLearn = types.Int64Value(int64(*result.RouteLearn))
 		}
+		if result.RouteSync != nil {
+			state.RouteSync = types.Int64Value(int64(*result.RouteSync))
+		}
+		if result.Weights != nil {
+			state.Weights = types.Int64Value(int64(*result.Weights))
+		}
+		if result.InstanceID != nil {
+			state.ID = types.StringValue(*result.InstanceID)
+		}
+		if result.DefaultRtbID != nil {
+			state.RtbID = types.StringValue(*result.DefaultRtbID)
+		}
+		break
 	}
 
 	if !found {

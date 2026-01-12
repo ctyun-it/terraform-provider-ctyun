@@ -217,18 +217,25 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[projectId],[regionId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEipAssociationConfig
-	var eipId, regionId string
+	var eipId, projectId, regionId string
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		eipId = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectId)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &eipId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &projectId, &regionId)
 		if err != nil {
 			return
 		}
@@ -242,6 +249,7 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	instance.ProjectId = types.StringValue(projectId)
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
