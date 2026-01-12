@@ -37,10 +37,12 @@ func NewCtyunEcsBackupPolicyBindDisks() resource.Resource {
 
 type ctyunEcsBackupPolicyBindDisks struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEcsBackupPolicyBindDisks) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup_policy_bind_disks"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupPolicyBindDisksConfig struct {
@@ -393,16 +395,13 @@ func (c *ctyunEcsBackupPolicyBindDisks) getBindingDisks(ctx context.Context, pla
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEcsBackupPolicyBindDisks) getAndMerge(ctx context.Context, plan *CtyunEcsBackupPolicyBindDisksConfig) (err error) {
-	policyId, diskIDList, regionID := plan.PolicyID.ValueString(), plan.DiskIDList.ValueString(), plan.RegionID.ValueString()
+	policyId, regionID := plan.PolicyID.ValueString(), plan.RegionID.ValueString()
 	bindID, err := c.getBindingDisks(ctx, *plan)
 	if err != nil {
 		return
 	}
-	if bindID != diskIDList {
-		err = fmt.Errorf("云硬盘策略 %s 和云硬盘 %s 未关联  regionID： %s", policyId, diskIDList, regionID)
-		return
-	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskIDList, regionID))
+	plan.DiskIDList = types.StringValue(bindID)
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", policyId, regionID))
 	return
 }
 
@@ -410,41 +409,31 @@ func (c *ctyunEcsBackupPolicyBindDisks) ImportState(ctx context.Context, request
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[diskIDList],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policy_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsBackupPolicyBindDisksConfig
-
-	var diskIDList, policyID, regionId string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+	var policyID, regionId string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &policyID, &diskIDList)
-		if err != nil {
-			return
-		}
+		policyID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &policyID, &diskIDList, &regionId)
+		err = terraform_extend.Split(request.ID, &policyID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
-		return
-	}
-	if diskIDList == "" {
-		err = fmt.Errorf("diskIDList不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	cfg.DiskIDList = types.StringValue(diskIDList)
 	cfg.PolicyID = types.StringValue(policyID)
 	cfg.RegionID = types.StringValue(regionId)
 

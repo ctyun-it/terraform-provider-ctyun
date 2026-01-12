@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -144,6 +145,10 @@ func (c *ctyunEcsAffinityGroup) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -292,9 +297,8 @@ func (c *ctyunEcsAffinityGroup) getAndMerge(ctx context.Context, plan *CtyunEcsA
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	}
-	if len(resp.ReturnObj.Results) != 1 || resp.ReturnObj.Results[0].AffinityGroupPolicy == nil {
-		err = common.InvalidReturnObjResultsError
+	} else if len(resp.ReturnObj.Results) != 1 || resp.ReturnObj.Results[0].AffinityGroupPolicy == nil {
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.Name = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupName)

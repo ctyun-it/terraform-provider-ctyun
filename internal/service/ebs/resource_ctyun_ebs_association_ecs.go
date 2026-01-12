@@ -31,12 +31,14 @@ func NewCtyunEbsAssociation() resource.Resource {
 
 type ctyunEbsAssociation struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ecsService *business.EcsService
 	ebsService *business.EbsService
 }
 
 func (c *ctyunEbsAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_association_ecs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -190,21 +192,25 @@ func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [diskId],[ecsId],[regionId]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ebs_id],[instance_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsAssociationConfig
 	var diskId, ecsId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("ebs_id和instance_id必须输入")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &diskId, &ecsId)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &diskId, &ecsId, &regionId)
 		if err != nil {
 			return
@@ -212,11 +218,15 @@ func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.
 	}
 
 	if diskId == "" {
-		err = fmt.Errorf("diskId不能为空")
+		err = fmt.Errorf("ebs_id不能为空")
+		return
+	}
+	if ecsId == "" {
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -227,6 +237,10 @@ func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.
 	var instance *CtyunEbsAssociationConfig
 	instance, err = c.getAndMergeEbsAssociationEcs(ctx, cfg)
 	if err != nil {
+		return
+	}
+	if instance == nil {
+		err = common.ResourceNotExistError
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

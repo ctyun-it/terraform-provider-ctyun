@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -244,8 +245,10 @@ func (c *CtyunPrefix) Read(ctx context.Context, request resource.ReadRequest, re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -322,14 +325,13 @@ func (c *CtyunPrefix) getAndMerge(ctx context.Context, config *CtyunPrefixConfig
 	if err != nil {
 		return err
 	} else if resp == nil {
-		err = fmt.Errorf("获取prefix失败，接口返回nil，请联系研发确认问题原因！")
-		return err
+		return fmt.Errorf("获取prefix失败，接口返回nil，请联系研发确认问题原因！")
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiPrefixListAccessFailed {
+		return common.ResourceNotExistError
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-		return err
+		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return err
+		return common.InvalidReturnObjError
 	}
 	returnObj := resp.ReturnObj
 	config.Name = types.StringValue(*returnObj.Name)

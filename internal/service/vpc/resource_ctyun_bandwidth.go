@@ -11,6 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -37,6 +38,7 @@ var (
 
 type ctyunBandwidth struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunBandwidthConfig struct {
@@ -48,6 +50,8 @@ type CtyunBandwidthConfig struct {
 	Status     types.String `tfsdk:"status"`
 	ProjectId  types.String `tfsdk:"project_id"`
 	RegionId   types.String `tfsdk:"region_id"`
+	CreateTime types.String `tfsdk:"create_time"`
+	ExpireTime types.String `tfsdk:"expire_time"`
 }
 
 func NewCtyunBandwidth() resource.Resource {
@@ -56,6 +60,7 @@ func NewCtyunBandwidth() resource.Resource {
 
 func (c *ctyunBandwidth) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_bandwidth"
+	c.name = response.TypeName
 }
 
 func (c *ctyunBandwidth) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -83,7 +88,7 @@ func (c *ctyunBandwidth) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"cycle_type": schema.StringAttribute{
-				Optional:    true,
+				Required:    true,
 				Description: "订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -111,16 +116,33 @@ func (c *ctyunBandwidth) Schema(_ context.Context, _ resource.SchemaRequest, res
 					validator2.CycleCount(1, 11, 1, 3),
 				},
 			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "共享带宽状态: active：有效，expired：已过期，freezing：冻结",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -292,38 +314,65 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bandwidthId],[projectId],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunBandwidthConfig
-	var bandwidthId, regionId, projectId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		bandwidthId = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &bandwidthId, &projectId)
+	var bandwidthID, regionID, projectID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		bandwidthID = request.ID
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID)
 		if err != nil {
 			return
 		}
-	} else {
-		err = terraform_extend.Split(request.ID, &bandwidthId, &projectId, &regionId)
+	default:
+		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID, &regionID)
 		if err != nil {
 			return
 		}
 	}
-	cfg.Id = types.StringValue(bandwidthId)
-	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectId)
+	if bandwidthID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if projectID == "" {
+		err = fmt.Errorf("project_id不能为空")
+		return
+	}
+	cfg.Id = types.StringValue(bandwidthID)
+	cfg.RegionId = types.StringValue(regionID)
+	cfg.ProjectId = types.StringValue(projectID)
 
 	instance, err := c.getAndMergeBandwidth(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
+	}
+	if instance == nil {
+		err = common.ResourceNotExistError
+		return
+	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(instance.CreateTime.ValueString(), instance.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	instance.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		instance.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		instance.CycleCount = types.Int64Null()
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
@@ -365,6 +414,8 @@ func (c *ctyunBandwidth) getAndMergeBandwidth(ctx context.Context, cfg CtyunBand
 	cfg.Status = types.StringValue(statusResp.(string))
 	cfg.Bandwidth = types.Int32Value(int32(resp.Bandwidth))
 	cfg.Name = types.StringValue(resp.Name)
+	cfg.CreateTime = types.StringValue(resp.CreatedAt)
+	cfg.ExpireTime = types.StringValue(resp.ExpireAt)
 	return &cfg, nil
 }
 

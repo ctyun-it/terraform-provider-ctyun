@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -17,8 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -43,6 +43,7 @@ var (
 
 type ctyunEbm struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbm() resource.Resource {
@@ -51,6 +52,7 @@ func NewCtyunEbm() resource.Resource {
 
 func (c *ctyunEbm) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm"
+	c.name = response.TypeName
 }
 
 type CtyunEbmConfig struct {
@@ -192,7 +194,6 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"password": schema.StringAttribute{
 				Sensitive:   true,
 				Optional:    true,
-				Computed:    true,
 				Description: "密码(必须包含大小写字母和（一个数字或者特殊字符）长度8到30位)，未传入有效的keyName时必须传入password，支持更新",
 				Validators: []validator.String{
 					validator2.EbmPassword(),
@@ -206,7 +207,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -220,6 +221,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_disk_type")),
 				},
 			},
@@ -262,7 +264,6 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"security_group_ids": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID",
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Set{
@@ -337,14 +338,12 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"user_data": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符",
-				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 16384),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"key_pair_name": schema.StringAttribute{
@@ -361,9 +360,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写。",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -371,7 +368,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"cycle_type": schema.StringAttribute{
@@ -437,6 +434,9 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -586,8 +586,13 @@ func (c *ctyunEbm) Update(ctx context.Context, request resource.UpdateRequest, r
 		return
 	}
 	state.Password = plan.Password
-	if err != nil {
-		return
+	if !plan.UserData.IsUnknown() && !plan.UserData.IsNull() && state.UserData.IsNull() {
+		state.UserData = plan.UserData
+		response.Diagnostics.AddWarning("user_data的更新仅写入状态文件", "在import时，状态文件中user_data为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
@@ -640,51 +645,73 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[az_name],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[az_name],[region_id],[project_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbmConfig
 
-	var instanceUUID, azName, regionID string
-	// 根据分隔符数量判断是否输入了regionID,azName
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var instanceID, azName, regionID, projectID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		instanceUUID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		instanceID = request.ID
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &instanceUUID, &azName)
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &instanceID, &azName)
 		if err != nil {
 			return
 		}
-	} else {
-		err = terraform_extend.Split(request.ID, &instanceUUID, &azName, &regionID)
+	case 2:
+		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID, &projectID)
 		if err != nil {
 			return
 		}
 	}
-
-	if instanceUUID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if azName == "" {
-		err = fmt.Errorf("azName不能为空")
+		err = fmt.Errorf("az_name不能为空")
 		return
 	}
-	config.InstanceID = types.StringValue(instanceUUID)
+	config.InstanceID = types.StringValue(instanceID)
 	config.RegionID = types.StringValue(regionID)
 	config.AzName = types.StringValue(azName)
+	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
+	config.ImageUUID = config.ActualImageID
+	config.MasterOrderID = types.StringValue("")
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -712,8 +739,10 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 		AutoRenewStatus: map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()],
 		ClientToken:     uuid.NewString(),
 		OrderCount:      1,
-		SecurityGroupID: &securityGroupStr,
 		NetworkCardList: []*ctebm.EbmCreateInstanceV4plusNetworkCardListRequest{{Master: true, SubnetID: plan.SubnetID.ValueString()}},
+	}
+	if len(securityGroupStr) > 0 {
+		params.SecurityGroupID = &securityGroupStr
 	}
 
 	if plan.BandWidth.ValueInt32() > 0 {
@@ -1032,7 +1061,7 @@ func (c *ctyunEbm) stopInstance(ctx context.Context, plan CtyunEbmConfig) (err e
 	return
 }
 
-// getAndMerge 查询并何必
+// getAndMerge 查询并合并
 func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err error) {
 	instance, err := c.getEbm(ctx, *cfg)
 	if err != nil {
@@ -1052,8 +1081,28 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 	cfg.UpdateTime = types.StringPointerValue(instance.UpdatedTime)
 	cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
 	eipAddress := utils.SecString(instance.PublicIP)
-	cfg.EipAddress = types.StringValue(eipAddress)
-
+	if len(eipAddress) > 0 {
+		cfg.EipAddress = types.StringValue(eipAddress)
+		var eip *ctvpc.CtvpcNewEipListReturnObjEipsResponse
+		eip, err = business.NewEipService(c.meta).GetEipByAddress(ctx, eipAddress, cfg.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+		cfg.BandWidth = types.Int32Value(eip.Bandwidth)
+	} else {
+		cfg.EipAddress = types.StringNull()
+	}
+	if utils.SecString(instance.SystemVolumeRaidID) != "" {
+		cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)
+	} else {
+		cfg.SystemVolumeRaidUUID = types.StringNull()
+	}
+	if utils.SecString(instance.DataVolumeRaidID) != "" {
+		cfg.DataVolumeRaidUUID = utils.SecStringValue(instance.DataVolumeRaidID)
+	} else {
+		cfg.DataVolumeRaidUUID = types.StringNull()
+	}
+	cfg.SecurityGroupIDs = types.SetNull(types.StringType)
 	for _, card := range instance.Interfaces {
 		master := utils.SecBoolValue(card.Master)
 		if master.ValueBool() && len(card.SecurityGroups) > 0 {

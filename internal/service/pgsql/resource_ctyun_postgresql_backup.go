@@ -73,15 +73,15 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 		}
 	}
 	if name == "" {
-		err = fmt.Errorf("name 不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 	if instId == "" {
-		err = fmt.Errorf("instID 不能为空")
+		err = fmt.Errorf("instID不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID 不能为空")
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)

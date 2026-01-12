@@ -50,23 +50,10 @@ func TestAccCtyunSubnetAssociationAcl(t *testing.T) {
 			},
 			// 3. 导入测试
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s,%s,%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["subnet_id"],
-						rs.Primary.Attributes["acl_id"],
-						rs.Primary.Attributes["project_id"],
-						rs.Primary.Attributes["region_id"],
-					), nil
-				},
+				ResourceName:            resourceName,
+				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"project_id"},
 			},
 			{
 				ResourceName: resourceName,
@@ -76,15 +63,13 @@ func TestAccCtyunSubnetAssociationAcl(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
-						rs.Primary.Attributes["id"],
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["subnet_id"], // 假设资源代码需要name
 						rs.Primary.Attributes["acl_id"],    // 假设资源代码需要vpc_id
-						rs.Primary.Attributes["project_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"project_id"},
 			},
 			{
 				ResourceName: resourceName,
@@ -95,9 +80,9 @@ func TestAccCtyunSubnetAssociationAcl(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["id"],
 						rs.Primary.Attributes["subnet_id"],
 						rs.Primary.Attributes["acl_id"],
+						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,

@@ -2,6 +2,7 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -258,8 +259,10 @@ func (c *CtyunExpressConnectVpcInstance) Read(ctx context.Context, request resou
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -430,7 +433,7 @@ func (c *CtyunExpressConnectVpcInstance) getAndMerge(ctx context.Context, config
 		return err
 	}
 	if len(resp.ReturnObj.Results) == 0 {
-		err = fmt.Errorf("通过id=%s查询，未找到VPC网络实例，请联系研发确认问题原因！", config.ID.ValueString())
+		err = common.ResourceNotExistError
 		return err
 	}
 	result := resp.ReturnObj.Results[0]

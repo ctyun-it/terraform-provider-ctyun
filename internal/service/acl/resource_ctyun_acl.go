@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -31,11 +32,13 @@ var (
 
 type CtyunAcl struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunAcl) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_acl"
+	c.name = response.TypeName
 }
 
 func (c *CtyunAcl) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -45,7 +48,6 @@ func (c *CtyunAcl) Configure(_ context.Context, request resource.ConfigureReques
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
 }
 
 func NewCtyunAcl() resource.Resource {
@@ -56,8 +58,8 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectId],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -83,11 +85,15 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if projectId == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -234,14 +240,13 @@ func (c *CtyunAcl) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (c *CtyunAcl) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -367,10 +372,15 @@ func (c *CtyunAcl) getAclDetail(ctx context.Context, config *CtyunAclConfig) (*c
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("获取acl详情失败，接口f返回nil，请联系研发确认问题原因！")
+		err = fmt.Errorf("获取acl详情失败，接口返回nil，请联系研发确认问题原因！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

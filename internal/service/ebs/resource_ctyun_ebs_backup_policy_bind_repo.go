@@ -37,10 +37,12 @@ func NewCtyunEbsBackupPolicyBindRepo() resource.Resource {
 
 type ctyunEbsBackupPolicyBindRepo struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEbsBackupPolicyBindRepo) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup_policy_bind_repo"
+	c.name = response.TypeName
 }
 
 type CtyunEbsBackupPolicyBindRepoConfig struct {
@@ -269,7 +271,8 @@ func (c *ctyunEbsBackupPolicyBindRepo) checkAfterBindRepo(ctx context.Context, p
 	retryer.Start(
 		func(currentTime int) bool {
 			if plan.RepositoryID.ValueString() != "" {
-				hasBind, err := c.getBindingRepos(ctx, plan)
+				var hasBind bool
+				hasBind, err = c.getBindingRepos(ctx, plan)
 				if err != nil {
 					return false
 				}
@@ -308,7 +311,8 @@ func (c *ctyunEbsBackupPolicyBindRepo) checkAfterDissociation(ctx context.Contex
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
-			hasBind, err := c.getBindingRepos(ctx, plan)
+			var hasBind bool
+			hasBind, err = c.getBindingRepos(ctx, plan)
 			if err != nil {
 				return false
 			}
@@ -410,7 +414,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

@@ -29,6 +29,7 @@ var (
 
 type ctyunEbmAssociationEbs struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbmAssociationEbs() resource.Resource {
@@ -37,6 +38,7 @@ func NewCtyunEbmAssociationEbs() resource.Resource {
 
 func (c *ctyunEbmAssociationEbs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm_association_ebs"
+	c.name = response.TypeName
 }
 
 type CtyunEbmAssociationEbsConfig struct {
@@ -206,29 +208,33 @@ func (c *ctyunEbmAssociationEbs) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[ebsID],[az_name],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[ebs_id],[az_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbmAssociationEbsConfig
 
 	var instanceID, ebsID, azName, regionID string
-	// 根据分隔符数量判断是否输入了regionID,azName
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入instance_id和ebs_id")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		err = terraform_extend.Split(request.ID, &instanceID, &ebsID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	case 2:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName, &regionID)
 		if err != nil {
 			return
@@ -236,19 +242,19 @@ func (c *ctyunEbmAssociationEbs) ImportState(ctx context.Context, request resour
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if ebsID == "" {
-		err = fmt.Errorf("ebsID不能为空")
+		err = fmt.Errorf("ebs_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if azName == "" {
-		err = fmt.Errorf("azName不能为空")
+		err = fmt.Errorf("az_name不能为空")
 		return
 	}
 	config.InstanceID = types.StringValue(instanceID)

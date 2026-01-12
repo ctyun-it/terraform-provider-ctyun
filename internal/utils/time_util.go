@@ -63,3 +63,32 @@ func FromBJTimeToUTCZ(input string) string {
 	}
 	return t.UTC().Format(time.RFC3339)
 }
+
+// CalculateMonthOnlyDiff 仅计算两个RFC3339时间的年月差值（忽略日时分秒）
+// 参数：createTime、expireTime 为 RFC3339 格式时间字符串（如 2025-09-09T03:42:52Z）
+func CalculateMonthOnlyDiff(createTime, expireTime string) (string, int32, error) {
+	// 匹配 2025-09-09T03:42:52Z 格式的布局
+	const layout = time.RFC3339
+	if expireTime == "" {
+		return "on_demand", 0, nil
+	}
+	t1, err := time.Parse(layout, createTime)
+	if err != nil {
+		return "", 0, err
+	}
+	t2, err := time.Parse(layout, expireTime)
+	if err != nil {
+		return "", 0, err
+	}
+
+	// 仅提取年、月（忽略日/时/分/秒）
+	y1, m1 := t1.Year(), t1.Month()
+	y2, m2 := t2.Year(), t2.Month()
+
+	// 核心计算：年份差×12 + 月份差
+	monthDiff := (y2-y1)*12 + int(m2-m1)
+	if monthDiff >= 12 {
+		return "year", int32(y2 - y1), nil
+	}
+	return "month", int32(monthDiff), nil
+}
