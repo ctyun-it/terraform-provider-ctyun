@@ -61,13 +61,10 @@ func TestAccEcPacket_basic(t *testing.T) {
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"cycle_count",
-					"cycle_type",
 					"master_order_id",
 					"master_order_no",
 					"master_resource_id",
 					"master_resource_status",
-					"on_demand",
 				},
 			},
 			{
