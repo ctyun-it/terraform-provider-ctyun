@@ -237,9 +237,20 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 	state.VipId = types.StringValue(vipId)
 	state.RegionId = types.StringValue(regionId)
 	if strings.Count(info, ":") == 1 {
-		state.ResourceType = types.StringValue("PM")
 		err = terraform_extend.SplitComma(info, &instanceId, &networkInterfaceId)
+		if err != nil {
+			return
+		}
+
 		state.InstanceId = types.StringValue(instanceId)
+		// 在 ImportState 方法中添加判断逻辑
+		if strings.HasPrefix(instanceId, "ss-") {
+			// 如果以 ss- 开头，可以认为是某种特定类型的资源
+			// 例如设置 resourceType 为 "VM" 或其他适当的类型
+			state.ResourceType = types.StringValue("PM")
+		} else {
+			state.ResourceType = types.StringValue("VM")
+		}
 		state.NetworkInterfaceId = types.StringValue(networkInterfaceId)
 		err = c.getAndMerge(ctx, &state)
 		if err != nil {
