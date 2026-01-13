@@ -141,7 +141,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 						},
 						"read_port": schema.Int32Attribute{
 							Computed:           true,
-							Description:        "读连接端口号，已弃用",
+							Description:        "读连接端口号",
 							DeprecationMessage: "已弃用，请使用port",
 						},
 						"vip": schema.StringAttribute{
@@ -150,7 +150,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 						},
 						"write_port": schema.Int32Attribute{
 							Computed:           true,
-							Description:        "写连接端口号，已弃用",
+							Description:        "写连接端口号",
 							DeprecationMessage: "已弃用，请使用port",
 						},
 						"readonly_instance_ids": schema.StringAttribute{
