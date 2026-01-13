@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -39,6 +41,7 @@ type CtyunExpressConnectConfig struct {
 	Description types.String `tfsdk:"description"`
 	Status      types.Int64  `tfsdk:"status"`
 	CreateTime  types.String `tfsdk:"create_time"`
+	ProjectID   types.String `tfsdk:"project_id"`
 }
 
 func (c *CtyunExpressConnect) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -82,6 +85,18 @@ func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaReq
 				Description: "创建时间，为UTC格式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
 				},
 			},
 		},
@@ -223,7 +238,9 @@ func (c *CtyunExpressConnect) create(ctx context.Context, plan *CtyunExpressConn
 	if !plan.Description.IsNull() {
 		createReq.EcDescription = plan.Description.ValueStringPointer()
 	}
-
+	if !plan.ProjectID.IsNull() {
+		createReq.ProjectID = plan.ProjectID.ValueStringPointer()
+	}
 	tflog.Info(ctx, "创建云间高速实例", map[string]interface{}{
 		"name": plan.Name.ValueString(),
 	})
@@ -260,7 +277,7 @@ func (c *CtyunExpressConnect) getAndMerge(ctx context.Context, plan *CtyunExpres
 	plan.Name = types.StringValue(*result.EcName)
 	plan.Status = types.Int64Value(int64(*result.Status))
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(utils.SecString(result.CreateDate)))
-
+	plan.ProjectID = types.StringValue(*result.Project)
 	if result.EcDescription != nil && *result.EcDescription != "" {
 		plan.Description = types.StringValue(*result.EcDescription)
 	}

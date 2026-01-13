@@ -93,4 +93,5 @@ type EcRegionPeerListReturnObjResultsResponse struct {
 	Rate       *int32  `json:"rate"`
 	Status     *string `json:"status"`
 	UpdateDate *string `json:"updateDate"`
+	RouteLearn *int32  `json:"routeLearn"`
 }
