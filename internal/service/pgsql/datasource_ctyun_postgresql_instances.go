@@ -141,10 +141,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 						},
 						"read_port": schema.Int32Attribute{
 							Computed:    true,
-							Description: "读连接端口号",
-							Validators: []validator.Int32{
-								int32validator.Between(1, 65535),
-							},
+							Description: "读连接端口号，已弃用",
 						},
 						"vip": schema.StringAttribute{
 							Computed:    true,
@@ -152,7 +149,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 						},
 						"write_port": schema.Int32Attribute{
 							Computed:    true,
-							Description: "写连接端口号",
+							Description: "写连接端口号，已弃用",
 						},
 						"readonly_instance_ids": schema.StringAttribute{
 							Computed:    true,
@@ -168,6 +165,10 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 							Validators: []validator.Int32{
 								int32validator.Between(1, 3),
 							},
+						},
+						"port": schema.Int32Attribute{
+							Computed:    true,
+							Description: "读写端口号",
 						},
 					},
 				},
@@ -252,6 +253,7 @@ func (c *ctyunPgsqlInstances) Read(ctx context.Context, request datasource.ReadR
 		pgsqlInstance.ProdOrderStatus = types.Int32Value(instance.ProdOrderStatus)
 		pgsqlInstance.ProdType = types.Int32Value(instance.ProdType)
 		pgsqlInstance.ReadPort = types.Int32Value(instance.ReadPort)
+		pgsqlInstance.Port = types.Int32Value(instance.Port)
 		pgsqlInstance.Vip = types.StringValue(instance.Vip)
 		pgsqlInstance.WritePort = types.Int32Value(instance.WritePort)
 		pgsqlInstance.InstanceType = types.StringValue(instance.InstanceType)
@@ -298,4 +300,5 @@ type CtyunPgsqlInstanceInfoModel struct {
 	ReadonlyInstanceIds types.String `tfsdk:"readonly_instance_ids"` // 只读实例ID列表,用逗号分割
 	InstanceType        types.String `tfsdk:"instance_type"`         // 实例类型
 	ToolType            types.Int32  `tfsdk:"tool_type"`             // 备份工具类型
+	Port                types.Int32  `tfsdk:"port"`                  // 端口
 }
