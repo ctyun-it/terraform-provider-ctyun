@@ -35,7 +35,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 	flavorName := "c7.xlarge.2"
 	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
-	appointVip := fmt.Sprintf(`vip=%s`, vip)
+	appointVip := fmt.Sprintf(`vip="%s"`, vip)
 	updatedFlavorName := "c7.xlarge.4"
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
