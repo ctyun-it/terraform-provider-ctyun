@@ -33,7 +33,8 @@ var (
 )
 
 type ctyunPrivateNat struct {
-	meta *common.CtyunMetadata
+	meta        *common.CtyunMetadata
+	orderLooper *business.OrderLooper
 }
 
 func NewCtyunPrivateNatResource() resource.Resource {
@@ -236,10 +237,6 @@ func (c *ctyunPrivateNat) Create(ctx context.Context, request resource.CreateReq
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -419,6 +416,10 @@ func (c *ctyunPrivateNat) create(ctx context.Context, plan *CtyunPrivateNatConfi
 	masterOrderId := returnObj.MasterOrderID
 	plan.MasterOrderID = types.StringValue(masterOrderId)
 
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderId)
+	if err != nil {
+		return
+	}
 	loopResponse, err := c.OrderLoop(ctx, createParams, 600)
 
 	if err != nil {
@@ -486,6 +487,7 @@ func (c *ctyunPrivateNat) createNat(ctx context.Context, plan *CtyunPrivateNatCo
 	}
 	returnObj = *resp.ReturnObj
 	createParams = params
+
 	return
 }
 
@@ -588,7 +590,6 @@ func (c *ctyunPrivateNat) modifyNatSpec(ctx context.Context, state CtyunPrivateN
 	if err != nil {
 		return
 	}
-
 	return nil
 }
 
@@ -611,11 +612,13 @@ func (c *ctyunPrivateNat) updateNatInfo(ctx context.Context, state CtyunPrivateN
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	}
+
 	// 轮询详情接口，确认是否修改
 	err = c.updateLoop(ctx, state, params, 30)
 	if err != nil {
 		return err
 	}
+
 	return
 }
 
