@@ -353,6 +353,8 @@ func (c *ctyunPrivateNat) Configure(_ context.Context, request resource.Configur
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
+
 }
 
 func (c *ctyunPrivateNat) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
