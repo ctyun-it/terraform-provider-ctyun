@@ -86,6 +86,39 @@ func TestAccCtyunEcs(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
 				),
 			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"default_security_group_id",
+					"flavor_id",
+					"master_order_id",
+					"security_group_ids",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["project_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"default_security_group_id",
+					"flavor_id",
+					"master_order_id",
+					"security_group_ids",
+				},
+			},
 			// 2.节省关机
 			{
 				Config: utils.LoadTestCase(
@@ -202,58 +235,7 @@ func TestAccCtyunEcs(t *testing.T) {
 					resource.TestCheckResourceAttr(datasourceName, "instances.0.affinity_group.id", dependence.affinityGroupID),
 				),
 			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"auto_renew",
-					"az_name",
-					"bandwidth",
-					"cycle_count",
-					"cycle_type",
-					"default_security_group_id",
-					"flavor_id",
-					"image_id",
-					"is_destroy_instance",
-					"master_order_id",
-					"pay_voucher_price",
-					"project_id",
-					"security_group_ids",
-					"user_data",
-				},
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["region_id"],
-					), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"auto_renew",
-					"az_name",
-					"bandwidth",
-					"cycle_count",
-					"cycle_type",
-					"default_security_group_id",
-					"flavor_id",
-					"image_id",
-					"is_destroy_instance",
-					"master_order_id",
-					"pay_voucher_price",
-					"project_id",
-					"security_group_ids",
-					"user_data",
-				},
-			},
+
 			// 7.解绑主机组
 			{
 				Config: utils.LoadTestCase(

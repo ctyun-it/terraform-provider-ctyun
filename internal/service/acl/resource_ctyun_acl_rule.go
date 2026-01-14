@@ -35,11 +35,13 @@ var (
 
 type CtyunAclRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunAclRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_acl_rule"
+	c.name = response.TypeName
 }
 
 func (c *CtyunAclRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -60,58 +62,58 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID], [aclId], [direction],[projectId],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[acl_id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAclRuleConfig
-	var ID, aclId, direction, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	var ID, aclId, projectId, regionId string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("id和acl_id必须输入")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId)
+		err = terraform_extend.Split(request.ID, &ID, &aclId)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 3 {
+	case 2:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId, &projectId)
+		err = terraform_extend.Split(request.ID, &ID, &aclId, &projectId)
 		if err != nil {
 			return
 		}
-	} else {
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId, &projectId, &regionId)
+	default:
+		err = terraform_extend.Split(request.ID, &ID, &aclId, &projectId, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if aclId == "" {
+		err = fmt.Errorf("acl_id不能为空")
+		return
+	}
+	if projectId == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
-		return
-	}
-
-	if aclId == "" {
-		err = fmt.Errorf("aclId不能为空")
-		return
-	}
-	if direction == "" {
-		err = fmt.Errorf("direction不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
 	config.AclID = types.StringValue(aclId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
-	config.Direction = types.StringValue(direction)
+	config.ProjectID = types.StringValue(projectId)
 
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -427,7 +429,6 @@ func (c *CtyunAclRule) create(ctx context.Context, config *CtyunAclRuleConfig) e
 	err = c.getRuleID(ctx, config)
 	if err != nil {
 		return err
-
 	}
 	return nil
 }
@@ -573,23 +574,17 @@ func (c *CtyunAclRule) getRuleDetail(ctx context.Context, config *CtyunAclRuleCo
 	if err != nil {
 		return nil, nil, err
 	}
-	if config.Direction.ValueString() == business.AclDirectionIngress {
-		ingressList := ruleList.InRules
-		for _, ingressRule := range ingressList {
-			if *ingressRule.AclRuleID == config.ID.ValueString() {
-				return ingressRule, nil, nil
-			}
+	ingressList := ruleList.InRules
+	for _, ingressRule := range ingressList {
+		if *ingressRule.AclRuleID == config.ID.ValueString() {
+			return ingressRule, nil, nil
 		}
-	} else if config.Direction.ValueString() == business.AclDirectionEgress {
-		egressList := ruleList.OutRules
-		for _, egressRule := range egressList {
-			if *egressRule.AclRuleID == config.ID.ValueString() {
-				return nil, egressRule, nil
-			}
+	}
+	egressList := ruleList.OutRules
+	for _, egressRule := range egressList {
+		if *egressRule.AclRuleID == config.ID.ValueString() {
+			return nil, egressRule, nil
 		}
-	} else {
-		err = fmt.Errorf("direction 取值有误！当前值为%s", config.Direction.ValueString())
-		return nil, nil, err
 	}
 	return nil, nil, common.ResourceNotExistError
 }

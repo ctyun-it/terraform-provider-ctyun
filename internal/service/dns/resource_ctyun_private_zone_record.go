@@ -376,6 +376,7 @@ func (c *CtyunPrivateZoneRecord) getAndMerge(ctx context.Context, config *CtyunP
 	config.TTL = types.Int32Value(resp.ReturnObj.TTL)
 	config.CreatedTime = types.StringValue(*resp.ReturnObj.CreatedAt)
 	config.UpdatedTime = types.StringValue(*resp.ReturnObj.UpdatedAt)
+	config.Enabled = types.BoolValue(resp.ReturnObj.Enabled == 1)
 	// 处理value
 	var values []string
 	for _, value := range resp.ReturnObj.Value {

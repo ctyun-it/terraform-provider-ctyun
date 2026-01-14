@@ -29,6 +29,7 @@ var (
 
 type ctyunVpceServiceTransitIP struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceServiceTransitIP() resource.Resource {
@@ -37,6 +38,7 @@ func NewCtyunVpceServiceTransitIP() resource.Resource {
 
 func (c *ctyunVpceServiceTransitIP) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service_transit_ip"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceTransitIPConfig struct {
@@ -204,8 +206,8 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ip],[endpoint_service_id],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [transit_ip],[endpoint_service_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -214,7 +216,7 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		err = fmt.Errorf("至少需要输入ip和endpoint_service_id")
+		err = fmt.Errorf("至少需要输入transit_ip和endpoint_service_id")
 		return
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
@@ -229,7 +231,7 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 		}
 	}
 	if ip == "" {
-		err = fmt.Errorf("ip不能为空")
+		err = fmt.Errorf("transit_ip不能为空")
 		return
 	}
 	if endpointServiceID == "" {

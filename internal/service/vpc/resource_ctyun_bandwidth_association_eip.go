@@ -29,6 +29,7 @@ var (
 
 type ctyunBandwidthAssociationEip struct {
 	meta             *common.CtyunMetadata
+	name             string
 	bandwidthService *business.BandwidthService
 	eipService       *business.EipService
 }
@@ -39,6 +40,7 @@ func NewCtyunBandwidthAssociationEip() resource.Resource {
 
 func (c *ctyunBandwidthAssociationEip) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_bandwidth_association_eip"
+	c.name = response.TypeName
 }
 
 func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -73,7 +75,7 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				Computed:           true,
-				DeprecationMessage: "本字段即将在新版本废弃，请不要指定本字段",
+				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.Project(),
@@ -189,7 +191,7 @@ func (c *ctyunBandwidthAssociationEip) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
+			title := c.name + "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bandwidth_id],[eip_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}

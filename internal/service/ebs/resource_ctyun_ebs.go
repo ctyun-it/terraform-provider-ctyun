@@ -283,7 +283,6 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 	// 构建标签请求
 	var labels []*ctebs2.EbsNewEbsLabelsRequest
 	if plan.Labels != nil {
-		var labels []*ctebs2.EbsNewEbsLabelsRequest
 		for _, label := range plan.Labels {
 			labels = append(labels, &ctebs2.EbsNewEbsLabelsRequest{
 				Key:   label.Key.ValueString(),
@@ -292,31 +291,32 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		}
 	}
 
-	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, &ctebs2.EbsNewEbsRequest{
-		ClientToken:       uuid.NewString(),
-		RegionID:          regionId,
-		MultiAttach:       plan.MultiAttach.ValueBoolPointer(),
-		IsEncrypt:         plan.Encrypted.ValueBoolPointer(),
-		KmsUUID:           plan.KmsUuid.ValueString(),
-		ProjectID:         projectId,
-		DiskMode:          diskMode.(string),
-		DiskType:          diskType.(string),
-		DiskName:          plan.Name.ValueString(),
-		DiskSize:          plan.Size.ValueInt64(),
-		OnDemand:          &onDemand,
-		CycleType:         plan.CycleType.ValueString(),
-		CycleCount:        int32(plan.CycleCount.ValueInt64()),
-		ImageID:           plan.ImageId.ValueString(),
-		AzName:            azName,
-		ProvisionedIops:   plan.ProvisionedIops.ValueInt64(),
-		DeleteSnapWithEbs: plan.DeleteSnapWithEbs.ValueBoolPointer(),
-		Labels:            labels,
-		BackupID:          plan.BackupId.ValueString(),
-	})
-
+	params := &ctebs2.EbsNewEbsRequest{
+		ClientToken:     uuid.NewString(),
+		RegionID:        regionId,
+		MultiAttach:     plan.MultiAttach.ValueBoolPointer(),
+		IsEncrypt:       plan.Encrypted.ValueBoolPointer(),
+		KmsUUID:         plan.KmsUuid.ValueString(),
+		ProjectID:       projectId,
+		DiskMode:        diskMode.(string),
+		DiskType:        diskType.(string),
+		DiskName:        plan.Name.ValueString(),
+		DiskSize:        plan.Size.ValueInt64(),
+		OnDemand:        &onDemand,
+		CycleType:       plan.CycleType.ValueString(),
+		CycleCount:      int32(plan.CycleCount.ValueInt64()),
+		ImageID:         plan.ImageId.ValueString(),
+		AzName:          azName,
+		ProvisionedIops: plan.ProvisionedIops.ValueInt64(),
+		Labels:          labels,
+		BackupID:        plan.BackupId.ValueString(),
+	}
+	if !plan.DeleteSnapWithEbs.IsUnknown() && !plan.DeleteSnapWithEbs.IsNull() {
+		params.DeleteSnapWithEbs = plan.DeleteSnapWithEbs.ValueBoolPointer()
+	}
+	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, params)
 	var id, masterOrderId string
 	if err2 == nil {
-
 		if resp.StatusCode == common.ErrorStatusCode && resp.ErrorCode != common.EbsOrderInProgress {
 			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 			response.Diagnostics.AddError(err.Error(), err.Error())
@@ -525,34 +525,20 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[project_id],[az_name],[region_id]"
+			//$ terraform import ctyun_ebs.test <ID>,[region_id]
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbsConfig
 
-	var ID, projectId, azName, regionId string
+	var ID, regionId string
 	// 根据分隔符数量判断是否输入了regionId,projectId,azName
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &azName)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -568,9 +554,6 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-	config.ProjectId = types.StringValue(projectId)
-	config.AzName = types.StringValue(azName)
-
 	instance, err := c.getAndMergeEbs(ctx, config)
 	if err != nil {
 		return
@@ -617,6 +600,8 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	cfg.Status = types.StringValue(obj.DiskStatus)
 	cfg.ExpireTime = types.StringValue(utils.FromUnixToUTC(obj.ExpireTime))
 	cfg.CreateTime = types.StringValue(utils.FromUnixToUTC(obj.CreateTime))
+	cfg.AzName = types.StringValue(obj.AzName)
+	cfg.ProjectId = types.StringValue(obj.ProjectID)
 
 	// 处理可选的布尔字段
 	if obj.MultiAttach != nil {
@@ -648,7 +633,12 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	}
 
 	// 处理IOPS字段
-	cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	//如果ProvisionedIops为0，那么就不设置ProvisionedIops
+	if obj.ProvisionedIops > 0 {
+		cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	} else {
+		cfg.ProvisionedIops = types.Int64Null()
+	}
 
 	// 处理删除快照策略字段
 	if obj.DeleteSnapWithEbs == "true" {

@@ -343,6 +343,7 @@ func (c *CtyunExpressConnectRegionPeer) getAndMerge(ctx context.Context, config 
 			config.DstRegionID = types.StringValue(*regionPeer.DstDcID)
 			config.PeerType = types.Int32Value(*regionPeer.PeerType)
 			config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
+			config.RouteLearn = types.Int32Value(*regionPeer.RouteLearn)
 			return nil
 		}
 	}

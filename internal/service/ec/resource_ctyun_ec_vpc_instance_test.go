@@ -29,6 +29,7 @@ func TestAccCtyunExpressConnectVpcInstance(t *testing.T) {
 	updatedSubnets := fmt.Sprintf(`"%s", "%s"`, dependence.subnetID, dependence.subnetID2)
 	routeLearn := 1
 	routeSync := 1
+	//id = "a503821a-129b-427a-9ab4-3ba74393f489,f077dd4d-61ad-4d38-ba87-bf8a8b4456aa,f5e6cf8e-1584-4264-b206-ab1d1c9cd53a"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
@@ -55,6 +56,25 @@ func TestAccCtyunExpressConnectVpcInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			// 3. 导入测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.ID,
+						rs.Primary.Attributes["ec_id"],
+						rs.Primary.Attributes["cgw_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}, // 子网列表可能变化
+
+			},
 			// 2. 更新子网列表测试
 			{
 				Config: utils.LoadTestCase(
@@ -75,25 +95,7 @@ func TestAccCtyunExpressConnectVpcInstance(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(datasourceName, "vpc_instances.#")),
 			},
-			// 3. 导入测试
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.ID,
-						rs.Primary.Attributes["ec_id"],
-						rs.Primary.Attributes["cgw_id"],
-					), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"exclusive_id", "project_id"}, // 子网列表可能变化
 
-			},
 			// 4. 清理资源
 			{
 				Config: utils.LoadTestCase(

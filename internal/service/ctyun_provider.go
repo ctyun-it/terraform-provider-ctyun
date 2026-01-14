@@ -40,6 +40,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
 	sdk_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/sdk"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/acl"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/ccse"
 	common2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/common"
@@ -133,6 +134,9 @@ func (c *CtyunProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 		"project_id": schema.StringAttribute{
 			Optional:    true,
 			Description: "企业项目ID，不填则使用用户默认的企业项目",
+			Validators: []validator.String{
+				validator2.Project(),
+			},
 		},
 		"console_url": schema.StringAttribute{
 			Optional:    true,

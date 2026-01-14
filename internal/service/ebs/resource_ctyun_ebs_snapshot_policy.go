@@ -9,6 +9,7 @@ import (
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -37,10 +38,12 @@ func NewCtyunEbsSnapshotPolicy() resource.Resource {
 type ctyunEbsSnapshotPolicy struct {
 	meta       *common.CtyunMetadata
 	ebsService *business.EbsService
+	name       string
 }
 
 func (c *ctyunEbsSnapshotPolicy) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_snapshot_policy"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -96,7 +99,7 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -126,6 +129,9 @@ func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequ
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "策略创建时间",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -503,35 +509,46 @@ func (c *ctyunEbsSnapshotPolicy) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotPolicyConfig
-
-	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var ID, regionId, projectID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		projectID = c.meta.GetExtraIfEmpty(regionId, common.ExtraProjectId)
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
-	} else {
-		err = terraform_extend.Split(request.ID, &ID, &regionId)
+	case 1:
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
 		if err != nil {
 			return
 		}
 	}
-
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if projectID == "" {
+		err = fmt.Errorf("project_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionId = types.StringValue(regionId)
+	cfg.ProjectId = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

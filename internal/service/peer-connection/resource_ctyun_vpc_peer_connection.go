@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -95,9 +96,8 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
+	config.ProjectID = types.StringValue(projectId)
+
 	if instanceId != "" {
 		config.InstanceID = types.StringValue(instanceId)
 	}
@@ -140,7 +140,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -467,7 +467,6 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 	config.AcceptVpcName = types.StringValue(returnObj.AcceptVpcName)
 	config.UserType = types.StringValue(returnObj.UserType)
 	config.Status = types.StringValue(returnObj.Status)
-
 	// 处理tags的id
 	tagList := make([]CtyunVpcPeerConnectionTagsModel, 0)
 	tags, err := c.getTags(ctx, config)
@@ -481,7 +480,7 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 		tag.ID = types.StringValue(*tagItem.LabelID)
 		tagList = append(tagList, tag)
 	}
-	if config.Tags.IsNull() {
+	if config.Tags.IsNull() && len(tagList) == 0 {
 		tagList = nil
 	}
 	tagListTmp, diags := types.SetValueFrom(ctx, utils.StructToTFObjectTypes(CtyunVpcPeerConnectionTagsModel{}), tagList)
@@ -522,7 +521,7 @@ func (c *CtyunVpcPeerConnection) getPeerConnectionDetail(ctx context.Context, co
 		err = fmt.Errorf("获取vpc对等连接详情失败(instance_id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("detail, API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

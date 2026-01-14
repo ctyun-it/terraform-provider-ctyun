@@ -50,19 +50,6 @@ func TestAccCtyunImageFromEcs_basic(t *testing.T) {
 				),
 			},
 			{
-				// 测试更新
-				Config: utils.LoadTestCase(
-					resourceFile, rnd,
-					updatedImageName,
-					updatedDescription,
-					dependence.instanceID,
-				),
-				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "image_name", updatedImageName),
-					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
-				),
-			},
-			{
 				// 测试导入
 				ResourceName: resourceName,
 				ImportState:  true,
@@ -108,6 +95,20 @@ func TestAccCtyunImageFromEcs_basic(t *testing.T) {
 					"labels",
 				},
 			},
+			{
+				// 测试更新
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					updatedImageName,
+					updatedDescription,
+					dependence.instanceID,
+				),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "image_name", updatedImageName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+				),
+			},
+
 			{
 				// 测试销毁
 				Config: utils.LoadTestCase(

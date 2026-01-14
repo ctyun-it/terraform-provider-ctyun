@@ -784,6 +784,8 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	cfg.MaximumRAM = types.Int64Value(int64(resp.MaximumRAM))
 	cfg.MinimumRAM = types.Int64Value(int64(resp.MinimumRAM))
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
+	cfg.ImageType = types.StringValue(resp.ImageType)
+	cfg.InstanceId = types.StringValue(resp.SourceServerID)
 	// 如果有标签信息，也需要设置
 	// 注意：根据API文档，详情接口可能不返回标签信息，需要根据实际情况调整
 

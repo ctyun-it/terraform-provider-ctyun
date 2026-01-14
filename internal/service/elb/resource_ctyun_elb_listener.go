@@ -561,18 +561,33 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbListenerConfig
-	var ID, projectID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var ID, projectID, azName, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
 		if err != nil {
 			return
 		}
@@ -588,6 +603,7 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
+	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeListener(ctx, &config)
 	if err != nil {
 		return
@@ -795,10 +811,7 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.Status = types.StringValue(respObj.Status)
 	plan.CreatedTime = types.StringValue(respObj.CreatedTime)
 	plan.UpdatedTime = types.StringValue(respObj.UpdatedTime)
-	plan.ListenerQps = types.Int32Value(respObj.Qps)
-	plan.ResponseTimeout = types.Int32Value(respObj.ResponseTimeout)
-	plan.EstablishTimeout = types.Int32Value(respObj.EstablishTimeout)
-	plan.IdleTimeout = types.Int32Value(respObj.IdleTimeout)
+
 	plan.ListenerCps = types.Int32Value(respObj.Cps)
 	plan.Name = types.StringValue(respObj.Name)
 	plan.CertificateID = types.StringValue(respObj.CertificateID)
@@ -810,6 +823,34 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.LoadBalancerID = types.StringValue(respObj.LoadBalancerID)
 	plan.Protocol = types.StringValue(respObj.Protocol)
 	plan.ProtocolPort = types.Int32Value(respObj.ProtocolPort)
+	if plan.Protocol.ValueString() == business.ListenerProtocolTCP {
+		plan.EstablishTimeout = types.Int32Value(respObj.EstablishTimeout)
+		plan.IdleTimeout = types.Int32Null()
+		plan.ListenerQps = types.Int32Null()
+		plan.ResponseTimeout = types.Int32Null()
+		plan.ListenerCps = types.Int32Value(respObj.Cps)
+	}
+	if plan.Protocol.ValueString() == business.ListenerProtocolUDP {
+		plan.EstablishTimeout = types.Int32Null()
+		plan.IdleTimeout = types.Int32Null()
+		plan.ListenerQps = types.Int32Null()
+		plan.ResponseTimeout = types.Int32Null()
+		plan.ListenerCps = types.Int32Value(respObj.Cps)
+	}
+	if plan.Protocol.ValueString() == business.ListenerProtocolHTTP {
+		plan.EstablishTimeout = types.Int32Null()
+		plan.IdleTimeout = types.Int32Value(respObj.IdleTimeout)
+		plan.ListenerQps = types.Int32Value(respObj.Qps)
+		plan.ResponseTimeout = types.Int32Value(respObj.ResponseTimeout)
+		plan.ListenerCps = types.Int32Null()
+	}
+	if plan.Protocol.ValueString() == business.ListenerProtocolHTTPS {
+		plan.EstablishTimeout = types.Int32Null()
+		plan.IdleTimeout = types.Int32Value(respObj.IdleTimeout)
+		plan.ListenerQps = types.Int32Value(respObj.Qps)
+		plan.ResponseTimeout = types.Int32Value(respObj.ResponseTimeout)
+		plan.ListenerCps = types.Int32Null()
+	}
 	if respObj.Nat64 == 0 {
 		plan.EnableNat64 = types.BoolValue(false)
 	} else if respObj.Nat64 == 1 {

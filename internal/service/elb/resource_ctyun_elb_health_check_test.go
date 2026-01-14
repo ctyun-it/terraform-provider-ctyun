@@ -74,6 +74,29 @@ func TestAccCtyunElbHealthCheck(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "protocol", protocol),
 				),
 			},
+			// import state 1
+			{ResourceName: resourceName,
+				ImportState: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}},
+			// import state 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
 			// 1.2 验证更新健康检查
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, protocol, "", "", "", "", "", "", ""),

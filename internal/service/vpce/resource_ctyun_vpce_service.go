@@ -9,7 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -36,6 +36,7 @@ var (
 
 type ctyunVpceService struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceService() resource.Resource {
@@ -44,6 +45,7 @@ func NewCtyunVpceService() resource.Resource {
 
 func (c *ctyunVpceService) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceConfig struct {
@@ -152,7 +154,7 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:    true,
 				Description: "子网ID，创建反向终端节点服务时必填",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.NullIgnoreString(),
+					planmodifier2.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -349,7 +351,7 @@ func (c *ctyunVpceService) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-	if plan.SubnetID.IsUnknown() && state.SubnetID.IsNull() {
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
 		state.SubnetID = plan.SubnetID
 		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
@@ -388,8 +390,8 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointServiceID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -407,11 +409,11 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

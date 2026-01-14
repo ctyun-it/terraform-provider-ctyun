@@ -27,7 +27,10 @@ func (c ZosService) GetZosBucketInfo(ctx context.Context, bucket, regionID strin
 	resp, err := c.meta.Apis.SdkCtZosApis.ZosGetBucketInfoApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp.ErrorCode == common.OpenapiOssNoSuchBucket {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

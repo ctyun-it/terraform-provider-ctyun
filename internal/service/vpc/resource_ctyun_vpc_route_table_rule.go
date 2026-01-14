@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -28,6 +29,7 @@ var (
 
 type ctyunVpcRouteTableRule struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpcRouteTableRule() resource.Resource {
@@ -36,6 +38,7 @@ func NewCtyunVpcRouteTableRule() resource.Resource {
 
 func (c *ctyunVpcRouteTableRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_route_table_rule"
+	c.name = response.TypeName
 }
 
 type CtyunVpcRouteTableRuleConfig struct {
@@ -180,7 +183,7 @@ func (c *ctyunVpcRouteTableRule) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -254,20 +257,25 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ruleID],[routeTableID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [rule_id],[route_table_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpcRouteTableRuleConfig
 	var ruleID, routeTableID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("rule_id和route_table_id必须输入")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID, &regionID)
 		if err != nil {
 			return
@@ -275,15 +283,15 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	}
 
 	if ruleID == "" {
-		err = fmt.Errorf("ruleID不能为空")
+		err = fmt.Errorf("rule_id不能为空")
 		return
 	}
 	if routeTableID == "" {
-		err = fmt.Errorf("routeTableID不能为空")
+		err = fmt.Errorf("route_table_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -355,7 +363,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		pageNo++
 	}
 	if len(rules) == 0 {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 	var exist bool
@@ -371,7 +379,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		}
 	}
 	if !exist {
-		err = fmt.Errorf("未找到路由表 %s 下的规则 %s", routeTableID, ruleID)
+		err = common.ResourceNotExistError
 	}
 	return
 }

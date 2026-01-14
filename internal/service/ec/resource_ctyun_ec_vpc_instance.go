@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -54,7 +52,7 @@ func (c *CtyunExpressConnectVpcInstance) ImportState(ctx context.Context, reques
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecID],[cgwID],[projectID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecID],[cgwID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -194,18 +192,6 @@ func (c *CtyunExpressConnectVpcInstance) Schema(ctx context.Context, request res
 				Description: "vpc网络实例id",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
 				},
 			},
 		},
@@ -449,9 +435,16 @@ func (c *CtyunExpressConnectVpcInstance) getAndMerge(ctx context.Context, config
 	config.RouteSync = types.Int32Value(*result.RouteSync)
 
 	// 更新subnet
+	// 更新subnet - 修改后的代码
 	var subnets []string
+	subnetMap := make(map[string]bool) // 用于去重的map
 	for _, subnet := range result.SubnetList {
-		subnets = append(subnets, *subnet.SubnetID)
+		subnetID := *subnet.SubnetID
+		// 检查是否已经存在，避免重复添加
+		if !subnetMap[subnetID] {
+			subnetMap[subnetID] = true
+			subnets = append(subnets, subnetID)
+		}
 	}
 	subnetTmp, diags := types.SetValueFrom(ctx, types.StringType, subnets)
 	if diags.HasError() {
@@ -459,6 +452,7 @@ func (c *CtyunExpressConnectVpcInstance) getAndMerge(ctx context.Context, config
 		return err
 	}
 	config.Subnets = subnetTmp
+
 	return nil
 
 }
@@ -536,24 +530,29 @@ func (c *CtyunExpressConnectVpcInstance) delete(ctx context.Context, config Ctyu
 }
 
 func (c *CtyunExpressConnectVpcInstance) getSubnetInfoByID(ctx context.Context, subnetId string, config *CtyunExpressConnectVpcInstanceConfig) (string, string, string, error) {
-	params := &ctvpc.SubnetQueryRequest{
-		RegionId:    config.RegionID.ValueString(),
-		ProjectId:   config.ProjectID.ValueString(),
-		ClientToken: uuid.NewString(),
-		SubnetId:    subnetId,
+
+	params := &ctvpc.CtvpcListSubnetRequest{
+		RegionID: config.RegionID.ValueString(),
+		VpcID:    config.VpcID.ValueStringPointer(),
+		SubnetID: &subnetId,
 	}
-	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListSubnetApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
-		if err.ErrorCode() == common.OpenapiSubnetNotFound {
-			return "", "", "", err
-		}
 		return "", "", "", err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+
+		return "", "", "", fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Subnets) != 1 {
+
+		return "", "", "", common.InvalidReturnObjError
 	}
-	ipVersion, err2 := c.checkIpVersion(resp.Cidr)
+	subnet := resp.ReturnObj.Subnets[0] // Use the first result
+
+	ipVersion, err2 := c.checkIpVersion(*subnet.CIDR)
 	if err2 != nil {
 		return "", "", "", err
 	}
-	return resp.Name, strings.ToUpper(ipVersion), resp.Cidr, nil
+	return *subnet.Name, strings.ToUpper(ipVersion), *subnet.CIDR, nil // Changed from subnet.CIDR to *subnet.CIDR
 }
 
 func (c *CtyunExpressConnectVpcInstance) checkIpVersion(cidr string) (string, error) {
@@ -702,11 +701,11 @@ func (c *CtyunExpressConnectVpcInstance) updateLoop(ctx context.Context, config 
 }
 
 type CtyunExpressConnectVpcInstanceConfig struct {
-	EcID        types.String `tfsdk:"ec_id"`
-	CgwID       types.String `tfsdk:"cgw_id"`
-	RtbID       types.String `tfsdk:"rtb_id"`
-	RegionID    types.String `tfsdk:"region_id"`
-	ProjectID   types.String `tfsdk:"project_id"`
+	EcID     types.String `tfsdk:"ec_id"`
+	CgwID    types.String `tfsdk:"cgw_id"`
+	RtbID    types.String `tfsdk:"rtb_id"`
+	RegionID types.String `tfsdk:"region_id"`
+
 	VpcID       types.String `tfsdk:"vpc_id"`
 	ExclusiveID types.String `tfsdk:"exclusive_id"`
 	RouteLearn  types.Int32  `tfsdk:"route_learn"`

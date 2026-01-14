@@ -254,6 +254,7 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	plan.Name = types.StringValue(keypairResponse.KeyPairName)
 	plan.FingerPrint = types.StringValue(keypairResponse.FingerPrint)
 	plan.Id = types.StringValue(keypairResponse.KeyPairID)
+	plan.ProjectId = types.StringValue(keypairResponse.ProjectID)
 	return
 }
 

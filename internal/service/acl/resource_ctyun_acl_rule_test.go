@@ -15,7 +15,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 	resourceName := "ctyun_acl_rule." + rnd
 	resourceFile := "resource_ctyun_acl_rule.tf"
 
-	projectID := ""
+	projectID := "0"
 	aclID := dependence.aclID
 
 	// 测试数据
@@ -131,9 +131,8 @@ func TestAccCtyunAclRule(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
 						rs.Primary.Attributes["acl_id"],
 						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
@@ -150,9 +149,8 @@ func TestAccCtyunAclRule(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
 						rs.Primary.Attributes["acl_id"],
 						rs.Primary.Attributes["project_id"],
 					), nil
@@ -168,9 +166,8 @@ func TestAccCtyunAclRule(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
 						rs.Primary.Attributes["acl_id"],
 					), nil
 				},

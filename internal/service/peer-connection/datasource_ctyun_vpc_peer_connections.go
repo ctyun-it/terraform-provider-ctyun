@@ -132,12 +132,18 @@ func (c *CtyunVpcPeerConnections) Read(ctx context.Context, request datasource.R
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
+	if config.PageSize.IsNull() {
+		config.PageSize = types.Int32Value(10)
+	}
+	if config.PageNo.IsNull() {
+		config.PageNo = types.Int32Value(1)
+	}
 	params := &ctvpc.CtvpcListVpcPeerConnectionRequest{
 		RegionID:   regionId,
 		PageSize:   config.PageSize.ValueInt32(),
+		PageNo:     config.PageNo.ValueInt32(),
 		PageNumber: config.PageNo.ValueInt32(),
 	}
-
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListVpcPeerConnectionApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return

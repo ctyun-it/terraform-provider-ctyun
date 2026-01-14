@@ -336,7 +336,7 @@ func (c *CtyunOceanfsPermissionRule) getRuleDetail(ctx context.Context, config *
 		PageNo:              pageNo,
 	}
 	if ruleType == "detail" {
-		params.PermissionGroupFuid = config.PermissionGroupFuid.ValueString()
+		params.PermissionRuleFuid = config.ID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkOceanfsApis.OceanfsListPermissionRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

@@ -34,6 +34,7 @@ var (
 
 type ctyunVpce struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpce() resource.Resource {
@@ -42,6 +43,7 @@ func NewCtyunVpce() resource.Resource {
 
 func (c *ctyunVpce) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce"
+	c.name = response.TypeName
 }
 
 type CtyunVpceConfig struct {
@@ -295,14 +297,13 @@ func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStat
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceConfig
 	var endpointID, regionID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		endpointID = request.ID
@@ -314,11 +315,11 @@ func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStat
 	}
 
 	if endpointID == "" {
-		err = fmt.Errorf("endpointID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

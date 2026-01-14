@@ -8,6 +8,7 @@ import (
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebsbackup"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -41,10 +42,12 @@ func NewCtyunEbsBackupPolicy() resource.Resource {
 
 type ctyunEbsBackupPolicy struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEbsBackupPolicy) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup_policy"
+	c.name = response.TypeName
 }
 
 type CtyunEbsBackupPolicyConfig struct {
@@ -98,9 +101,9 @@ func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为\"0\"",
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -610,35 +613,35 @@ func (c *ctyunEbsBackupPolicy) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsBackupPolicyConfig
 
-	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var ID, regionId, projectID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		projectID = c.meta.GetExtraIfEmpty(regionId, common.ExtraProjectId)
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
-	} else {
-		err = terraform_extend.Split(request.ID, &ID, &regionId)
+	case 1:
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
 		if err != nil {
 			return
 		}
 	}
-
-	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
-		return
-	}
-	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
-		return
-	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionID = types.StringValue(regionId)
+	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

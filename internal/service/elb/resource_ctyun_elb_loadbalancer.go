@@ -192,6 +192,10 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
+			"expired_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式",
+			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
 				Description: "订购周期类型，取值范围：year：按年，month：按月，on_demand：按需。当此值为month或year时，cycle_count为必填",
@@ -422,18 +426,33 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbLoadBalancerConfig
-	var ID, projectID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var ID, projectID, azName, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &ID, &projectID)
+		if err != nil {
+			return
+		}
+	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
+		if err != nil {
+			return
+		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
 		if err != nil {
 			return
 		}
@@ -449,6 +468,7 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
+	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeElb(ctx, &config)
 	if err != nil {
 		return
@@ -587,6 +607,8 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	config.ResourceType = types.StringValue(elbObj.ResourceType)
 	config.CreatedTime = types.StringValue(elbObj.CreatedTime)
 	config.UpdatedTime = types.StringValue(elbObj.UpdatedTime)
+	config.ExpiredTime = types.StringValue(elbObj.ExpiredTime)
+	config.ProjectID = types.StringValue(elbObj.ProjectID)
 	EipInfoList := elbObj.EipInfo
 	var eipInfos []EipInfoModel
 	for _, eipItem := range EipInfoList {
@@ -599,6 +621,23 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 
 	eipInfoType := utils.StructToTFObjectTypes(EipInfoModel{})
 	config.EipInfo, _ = types.ListValueFrom(ctx, eipInfoType, eipInfos)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreatedTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleType == business.YearCycleType || cycleCount == 100 {
+		config.CycleType = types.StringValue(business.OnDemandCycleType)
+		config.CycleCount = types.Int64Null()
+		return
+	} else {
+		config.CycleType = types.StringValue(cycleType)
+		if cycleCount > 0 {
+			config.CycleCount = types.Int64Value(int64(cycleCount))
+		} else {
+			config.CycleCount = types.Int64Null()
+		}
+	}
 	return
 }
 
@@ -830,6 +869,7 @@ type CtyunElbLoadBalancerConfig struct {
 	Status           types.String `tfsdk:"status"`             //负载均衡状态: DOWN / ACTIVE
 	CreatedTime      types.String `tfsdk:"create_time"`        //创建时间，为UTC格式
 	UpdatedTime      types.String `tfsdk:"update_time"`        //更新时间，为UTC格式
+	ExpiredTime      types.String `tfsdk:"expired_time"`       //到期时间，为UTC格式
 	// 升级保障型负载均衡字段
 	CycleType       types.String `tfsdk:"cycle_type"`        //订购类型：month（包月） / year（包年）
 	CycleCount      types.Int64  `tfsdk:"cycle_count"`       //订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年

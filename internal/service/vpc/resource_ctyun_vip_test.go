@@ -49,11 +49,12 @@ func TestAccCtyunVip_basic(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
+					projectID := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectID, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

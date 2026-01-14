@@ -173,6 +173,27 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 							resource.TestCheckResourceAttrSet(resourceName, "id"),
 						),
 					},
+					// 3. 导入测试
+					{
+						ResourceName: resourceName,
+						ImportState:  true,
+						ImportStateIdFunc: func(s *terraform.State) (string, error) {
+							rs, ok := s.RootModule().Resources[resourceName]
+							if !ok {
+								return "", fmt.Errorf("resource not found: %s", resourceName)
+							}
+							return fmt.Sprintf("%s,%s,%s,%s",
+								rs.Primary.ID,
+								rs.Primary.Attributes["ec_id"],
+								rs.Primary.Attributes["cgw_id"],
+								rs.Primary.Attributes["rtb_id"],
+								//rs.Primary.Attributes["next_hop_id"],
+							), nil
+						},
+						ImportStateVerify:       true,
+						ImportStateVerifyIgnore: []string{"exclusive_id", "next_hop_id"}, // 子网列表可能变化
+
+					},
 					{
 						Config: utils.LoadTestCase(
 							resourceFile, rnd+"_"+nextHopType,
@@ -183,27 +204,7 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 						Check: resource.ComposeAggregateTestCheckFunc(
 							resource.TestCheckResourceAttrSet(datasourceName, "routes.#")),
 					},
-					// 3. 导入测试
-					{
-						ResourceName: resourceName,
-						ImportState:  true,
-						ImportStateIdFunc: func(s *terraform.State) (string, error) {
-							rs, ok := s.RootModule().Resources[resourceName]
-							if !ok {
-								return "", fmt.Errorf("resource not found: %s", resourceName)
-							}
-							return fmt.Sprintf("%s,%s,%s,%s,%s",
-								rs.Primary.ID,
-								rs.Primary.Attributes["ec_id"],
-								rs.Primary.Attributes["cgw_id"],
-								rs.Primary.Attributes["rtb_id"],
-								rs.Primary.Attributes["next_hop_id"],
-							), nil
-						},
-						ImportStateVerify:       true,
-						ImportStateVerifyIgnore: []string{"exclusive_id", "is_black_hole_route"}, // 子网列表可能变化
 
-					},
 					// 2. 清理资源
 					{
 						Config: utils.LoadTestCase(

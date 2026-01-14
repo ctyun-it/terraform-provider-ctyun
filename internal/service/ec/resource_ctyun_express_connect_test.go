@@ -39,12 +39,6 @@ func TestAccExpressConnect_update(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 				),
 			},
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, name, updatedDescription),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
-				),
-			},
 
 			{
 				// 测试导入
@@ -63,12 +57,16 @@ func TestAccExpressConnect_update(t *testing.T) {
 
 					return fmt.Sprintf("%s", ID), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"resource_id",
-					"region_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, name, updatedDescription),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+				),
+			},
+
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, name, updatedDescription),
 				Destroy: true,

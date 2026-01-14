@@ -7,6 +7,7 @@ import (
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -98,7 +99,7 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 				Description: "企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为\"0\"",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -612,6 +613,8 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 	if err != nil {
 		return
 	}
+
+	cfg.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectID.ValueString(), common.ExtraProjectId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }

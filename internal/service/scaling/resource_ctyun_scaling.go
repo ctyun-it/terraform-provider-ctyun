@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -51,7 +50,6 @@ func (c *ctyunScaling) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
 }
 
 func NewCtyunScaling() resource.Resource {
@@ -357,9 +355,8 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 			//	},
 			//},
 			"is_destroy": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				Optional: true,
+				//Default:     booldefault.StaticBool(false),
 				Description: "移除时是否销毁，仅当移除云主机时生效（对手动添加的机器做处理），true-ecs移出伸缩组时销毁， false-ecs移出伸缩组时不销毁，支持更新",
 			},
 			"real_count": schema.Int32Attribute{
@@ -666,6 +663,7 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 	config.HealthPeriod = types.Int32Value(scalingDetail.HealthPeriod)
 	var diags diag.Diagnostics
 	config.SecurityGroupIDList, diags = types.SetValueFrom(ctx, types.StringType, scalingDetail.SecurityGroupIDList)
+	config.ProjectID = types.StringValue(scalingDetail.ProjectIDEcs)
 	if diags.HasError() {
 		return errors.New(diags[0].Detail())
 	}
