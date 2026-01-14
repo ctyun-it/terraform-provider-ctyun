@@ -414,13 +414,17 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.State = utils.SecStringValue(dnat.State)
 	cfg.ExternalPort = types.Int32Value(dnat.ExternalPort)
 	cfg.InternalPort = types.Int32Value(dnat.InternalPort)
+	if dnat.VirtualMachineID != nil && *dnat.VirtualMachineID != "" {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCloud)
+	} else {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCustom)
+	}
 	switch cfg.DnatType.ValueString() {
 	case business.VirtualMachineTypeCloud:
 		cfg.InstanceID = utils.SecStringValue(dnat.VirtualMachineID)
 	case business.VirtualMachineTypeCustom:
 		cfg.InternalIP = utils.SecStringValue(dnat.InternalIp)
 	}
-
 	return nil
 }
 
