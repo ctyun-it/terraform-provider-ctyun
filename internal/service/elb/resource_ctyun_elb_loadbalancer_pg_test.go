@@ -67,7 +67,6 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
-				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
 			},
 			// importState 2
 			{
@@ -78,11 +77,9 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
 					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectID, regionID), nil
 				},
 				ImportStateVerify: true,
-				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
 			},
 			// 保障型elb变配测试
 			{

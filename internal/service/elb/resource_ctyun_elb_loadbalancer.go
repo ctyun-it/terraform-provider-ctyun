@@ -155,19 +155,6 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				Computed:      true,
 				Description:   "负载均衡Id",
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
 			"port_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡实例默认创建port ID",
@@ -426,33 +413,24 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbLoadBalancerConfig
-	var ID, projectID, azName, regionID string
+	var ID, projectID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
 	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		err = terraform_extend.Split(request.ID, &ID, &projectID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
 		if err != nil {
 			return
 		}
@@ -468,7 +446,6 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeElb(ctx, &config)
 	if err != nil {
 		return
@@ -861,7 +838,6 @@ type CtyunElbLoadBalancerConfig struct {
 	ResourceType     types.String `tfsdk:"resource_type"`      //资源类型。internal：内网负载均衡，external：公网负载均衡
 	PrivateIpAddress types.String `tfsdk:"private_ip_address"` //负载均衡的私有IP地址，不指定则自动分配
 	ID               types.String `tfsdk:"id"`                 //负载均衡ID
-	AzName           types.String `tfsdk:"az_name"`            //可用区名称
 	PortID           types.String `tfsdk:"port_id"`            //负载均衡实例默认创建port ID
 	Ipv6Address      types.String `tfsdk:"ipv6_address"`       //负载均衡实例的IPv6地址
 	EipInfo          types.List   `tfsdk:"eip_info"`           //弹性公网IP信息

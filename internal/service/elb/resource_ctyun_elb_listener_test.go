@@ -82,9 +82,8 @@ func TestAccCtyunElbListener1(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+
+					return fmt.Sprintf("%s,%s", id, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
@@ -195,22 +194,8 @@ func TestAccCtyunElbListener2(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"}},
+				ImportStateVerifyIgnore: []string{}},
 			// import state 2
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionID := ds.Attributes["region_id"]
-					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
 			// 1.2 update验证
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, protocolTCP, protocolPort, defaultActionType, updatedTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE"),
@@ -267,59 +252,6 @@ func TestAccCtyunElbListener2(t *testing.T) {
 			// 2.3 destroy
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, ProtocolHTTP, protocolPort, defaultActionType, updatedTargetGroupID, "", tfQPS, "", "", tfIdleTimeout, tfResponseTimeout, "ACTIVE"),
-				Destroy: true,
-			},
-		},
-	})
-}
-
-func TestAccCtyunElbListenerImportState(t *testing.T) {
-
-	rnd := utils.GenerateRandomString()
-
-	resourceName := "ctyun_elb_listener." + rnd
-	resourceFile := "resource_ctyun_elb_listener.tf"
-
-	loadbalanceID := dependence.loadBalanceID2
-	name := "listener-" + utils.GenerateRandomString()
-
-	protocolTCP := "TCP"
-	//protocolUDP := "UDP"
-
-	//ProtocolHTTPS := "HTTPS"
-	//
-	protocolPort := utils.GenerateRandomPort(1, 65535)
-	defaultActionType := "forward"
-	targetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID2)
-	tfTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, targetGroupIds)
-
-	resource.Test(t, resource.TestCase{
-		CheckDestroy: func(s *terraform.State) error {
-			_, exists := s.RootModule().Resources[resourceName]
-			if exists {
-				return fmt.Errorf("resource destroy failed")
-			}
-			return nil
-		},
-		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			// 1. protocol=TCP， defaultActionType=forward, targetGroupID必填
-			// 1.1 Create验证
-			{
-				//Create验证
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, "", "", "", "", "", "", "ACTIVE"),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "protocol", protocolTCP),
-					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
-					resource.TestCheckResourceAttr(resourceName, "default_action_type", defaultActionType),
-				),
-			},
-
-			// 1.4 destroy验证
-			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, "", "", "", "", "", "", "ACTIVE"),
 				Destroy: true,
 			},
 		},
