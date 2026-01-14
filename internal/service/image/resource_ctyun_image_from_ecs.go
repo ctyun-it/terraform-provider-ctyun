@@ -789,6 +789,11 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	// 如果有标签信息，也需要设置
 	// 注意：根据API文档，详情接口可能不返回标签信息，需要根据实际情况调整
 
+	imageType, err := business.ImageTypeMap.ToOriginalScene(resp.ImageType, business.ImageTypeMapScene1)
+	if err != nil {
+		return
+	}
+	cfg.ImageType = types.StringValue(imageType.(string))
 	return
 }
 
