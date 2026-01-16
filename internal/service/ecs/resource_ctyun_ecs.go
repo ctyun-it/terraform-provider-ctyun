@@ -1415,7 +1415,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
 	if instance_details_resp.ExpiredTime != nil {
-		cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(*instance_details_resp.ExpiredTime))
+		cfg.ExpireTime = types.StringValue(*instance_details_resp.ExpiredTime)
 	} else {
 		// 当ExpiredTime为nil时，设置为空字符串
 		cfg.ExpireTime = types.StringValue("")
