@@ -185,18 +185,7 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:      true,
 				Description:   "健康检查ID",
 			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
+
 			"status": schema.Int32Attribute{
 				Computed:    true,
 				Description: "状态 1 - UP, 0 - DOWN",
@@ -334,18 +323,17 @@ func (c *CtyunElbHealthCheck) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbHealthCheckConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -360,7 +348,6 @@ func (c *CtyunElbHealthCheck) ImportState(ctx context.Context, request resource.
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeHealthCheck(ctx, &config)
 	if err != nil {
 		return
@@ -516,7 +503,6 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	plan.MaxRetry = types.Int32Value(resp.ReturnObj.MaxRetry)
 	plan.HttpMethod = types.StringValue(resp.ReturnObj.HttpMethod)
 	plan.HttpUrlPath = types.StringValue(resp.ReturnObj.HttpUrlPath)
-	plan.ProjectID = types.StringValue(resp.ReturnObj.ProjectID)
 	// HttpExpectedCodes解析
 	var HttpExpectedCodesList []string
 	HttpExpectedCodesList = strings.Split(resp.ReturnObj.HttpExpectedCodes, " ")
@@ -546,7 +532,6 @@ type CtyunElbHealthCheckConfig struct {
 	HttpExpectedCodes types.Set    `tfsdk:"http_expected_codes"` //仅当protocol为HTTP时必填且生效,支持http_2xx/http_3xx/http_4xx/http_5xx，一个或者多个的列表, 当 protocol 为 HTTP 时, 不填默认为 http_2xx
 	ProtocolPort      types.Int32  `tfsdk:"protocol_port"`       //健康检查端口 1 - 65535
 	ID                types.String `tfsdk:"id"`                  //健康检查ID
-	ProjectID         types.String `tfsdk:"project_id"`          //	项目ID
 	Status            types.Int32  `tfsdk:"status"`              //状态 1 表示 UP, 0 表示 DOWN
 	CreateTime        types.String `tfsdk:"create_time"`         //	创建时间，为UTC格式
 }

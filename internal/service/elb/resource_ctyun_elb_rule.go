@@ -44,41 +44,23 @@ func (c *CtyunElbRule) ImportState(ctx context.Context, request resource.ImportS
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbRuleConfig
-	var ID, projectID, azName, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeRule(ctx, &config)
 	if err != nil {
 		return
@@ -240,31 +222,7 @@ func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaReques
 				Computed:      true,
 				Description:   "转发规则 ID",
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
+
 			"load_balancer_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡Id",
@@ -708,8 +666,6 @@ type CtyunElbRuleConfig struct {
 	ActionTargetGroups       types.List   `tfsdk:"action_target_groups"`        //后端服务组
 	ActionRedirectListenerID types.String `tfsdk:"action_redirect_listener_id"` //重定向监听器ID，当type为redirect时，此字段必填
 	ID                       types.String `tfsdk:"id"`                          //转发规则 ID
-	AzName                   types.String `tfsdk:"az_name"`                     //可用区名称
-	ProjectID                types.String `tfsdk:"project_id"`                  //	项目ID
 	LoadBalancerID           types.String `tfsdk:"load_balancer_id"`            //负载均衡ID
 	Status                   types.String `tfsdk:"status"`                      //状态: ACTIVE / DOWN
 	CreatedTime              types.String `tfsdk:"create_time"`                 //创建时间，为UTC格式

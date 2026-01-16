@@ -43,33 +43,17 @@ func (c *CtyunElbAcl) ImportState(ctx context.Context, request resource.ImportSt
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbAclConfig
-	var ID, projectID, azName, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -84,8 +68,7 @@ func (c *CtyunElbAcl) ImportState(ctx context.Context, request resource.ImportSt
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
+
 	err = c.getAndMergeAcl(ctx, &config)
 	if err != nil {
 		return
@@ -144,31 +127,6 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
 				Description:   "访问控制ID",
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -363,7 +321,6 @@ func (c *CtyunElbAcl) getAndMergeAcl(ctx context.Context, config *CtyunElbAclCon
 		sourceIps = append(sourceIps, types.StringValue(sourceIp))
 	}
 	config.SourceIps, _ = types.SetValueFrom(ctx, types.StringType, sourceIps)
-	config.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 
@@ -438,7 +395,5 @@ type CtyunElbAclConfig struct {
 	Description types.String `tfsdk:"description"` //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_+= <>?:,.,/;'[]·！@#￥%……&*（） ——+={}
 	SourceIps   types.Set    `tfsdk:"source_ips"`  //IP地址的集合或者CIDR, 单次最多添加 10 条数据
 	ID          types.String `tfsdk:"id"`          //访问控制ID
-	AzName      types.String `tfsdk:"az_name"`     //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
 	CreateTime  types.String `tfsdk:"create_time"` //创建时间，为UTC格式
 }

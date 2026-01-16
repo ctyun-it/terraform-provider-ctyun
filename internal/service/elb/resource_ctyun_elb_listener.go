@@ -198,31 +198,6 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 					),
 				},
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
 			"status": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -561,33 +536,18 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbListenerConfig
-	var ID, projectID, azName, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
+		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -602,8 +562,6 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeListener(ctx, &config)
 	if err != nil {
 		return
@@ -1112,8 +1070,6 @@ type CtyunElbListenerConfig struct {
 	AccessControlType   types.String `tfsdk:"access_control_type"`   //访问控制类型。取值范围：Close（未启用）、White（白名单）、Black（黑名单）
 	ForwardedForEnabled types.Bool   `tfsdk:"forwarded_for_enabled"` //x forward for功能。false（未开启）、true（开启）
 	ID                  types.String `tfsdk:"id"`                    //监听器 ID
-	AzName              types.String `tfsdk:"az_name"`               //可用区名称
-	ProjectID           types.String `tfsdk:"project_id"`            //项目ID
 	Status              types.String `tfsdk:"status"`                //监听器状态: DOWN / ACTIVE
 	CreatedTime         types.String `tfsdk:"create_time"`           //创建时间，为UTC格式
 	UpdatedTime         types.String `tfsdk:"update_time"`           //更新时间，为UTC格式

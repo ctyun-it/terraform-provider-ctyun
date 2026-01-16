@@ -324,10 +324,8 @@ func (c *CtyunSdwanAclRule) getAndMerge(ctx context.Context, plan *CtyunSdwanAcl
 			if rule.AclRuleID != nil && plan.ID == types.StringValue(*rule.AclRuleID) {
 				plan.Direction = types.StringValue(*rule.Direction)
 				plan.Protocol = types.StringValue(*rule.Protocol)
+				plan.IpVersion = types.StringValue(*rule.IpVersion)
 
-				//if rule.IpVersion != nil {
-				//	plan.IpVersion = types.StringValue(*rule.IpVersion)
-				//}
 				plan.DstCidr = types.StringValue(*rule.DstCidr)
 				if rule.DstPortRange != nil {
 					plan.DstPortRange = types.StringValue(*rule.DstPortRange)
@@ -348,10 +346,7 @@ func (c *CtyunSdwanAclRule) getAndMerge(ctx context.Context, plan *CtyunSdwanAcl
 			if plan.DstCidr == types.StringValue(*rule.DstCidr) && plan.SrcCidr == types.StringValue(*rule.SrcCidr) && plan.Protocol == types.StringValue(*rule.Protocol) {
 				plan.Direction = types.StringValue(*rule.Direction)
 				plan.Protocol = types.StringValue(*rule.Protocol)
-
-				//if rule.IpVersion != nil {
-				//	plan.IpVersion = types.StringValue(*rule.IpVersion)
-				//}
+				plan.IpVersion = types.StringValue(*rule.IpVersion)
 				plan.DstCidr = types.StringValue(*rule.DstCidr)
 				if rule.DstPortRange != nil {
 					plan.DstPortRange = types.StringValue(*rule.DstPortRange)

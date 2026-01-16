@@ -74,8 +74,7 @@ func TestAccCtyunElbCertificate(t *testing.T) {
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
 					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectID, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"private_key"},

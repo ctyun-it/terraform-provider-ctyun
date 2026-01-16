@@ -89,14 +89,10 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{
-					"az_name",
-					"cycle_type",
 					"master_order_id",
-					"project_id",
 				},
 			},
 			{
@@ -109,10 +105,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerifyIgnore: []string{
-					"az_name",
-					"cycle_type",
 					"master_order_id",
-					"project_id",
 				},
 			},
 			// 1.5  销毁
