@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
@@ -116,7 +117,6 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -286,6 +286,20 @@ func (c *CtyunEcCloudGateway) checkBeforeCreate(ctx context.Context, c2 *CtyunEc
 	return nil
 }
 func (c *CtyunEcCloudGateway) create(ctx context.Context, plan *CtyunEcCloudGatewayConfig) (err error) {
+	responseRegion, err := c.meta.Apis.CtEcsApis.RegionListApi.Do(ctx, c.meta.Credential, &ctecs.RegionListRequest{
+		RegionName: plan.DcName.ValueString(),
+	})
+	if err != nil {
+		return
+	}
+	//添加验证 该dcname 是不是 与 region_id 匹配
+	if len(responseRegion.RegionList) == 0 {
+		return fmt.Errorf("资源池名称 %s 不存在", plan.DcName.ValueString())
+	}
+	if responseRegion.RegionList[0].RegionId != plan.RegionID.ValueString() {
+		return fmt.Errorf("资源池名称 %s 与 资源池ID %s 不匹配", plan.DcName.ValueString(), plan.RegionID.ValueString())
+	}
+
 	// 创建云网关实例
 	createReq := &ec.EcEcCreateGatewayRequest{
 		CgwName: plan.Name.ValueString(),

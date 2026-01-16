@@ -524,6 +524,7 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.ExpiredTime = types.StringValue(natObj.ExpiredTime)
 	cfg.AzName = types.StringValue(natObj.AzName)
 	cfg.SubnetID = types.StringValue(natObj.SubnetID)
+	//cfg.AutoRenew= types.BoolValue(natObj.AutoRenew)
 	// 确保创建时间和到期时间是RFC3339的
 	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
 	if err != nil {
