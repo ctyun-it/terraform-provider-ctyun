@@ -396,26 +396,19 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id],[project_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketConfig
-	var bucket, projectID, regionID string
+	var bucket, regionID string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		projectID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		bucket = request.ID
-	case 1:
-		projectID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &bucket, &regionID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &bucket, &regionID, &projectID)
+		err = terraform_extend.Split(request.ID, &bucket, &regionID)
 		if err != nil {
 			return
 		}
@@ -428,13 +421,8 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.Bucket = types.StringValue(bucket)
-	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
@@ -824,6 +812,7 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	plan.AzPolicy = types.StringValue(b.AZPolicy)
 	plan.StorageType = types.StringValue(b.StorageType)
 	plan.CmkUUID = utils.SecStringValue(b.CmkUUID)
+	plan.ProjectID = types.StringValue(b.ProjectID)
 	plan.CreateTime = types.StringValue(utils.ConvertToUTCZ(utils.Layout4, b.Ctime))
 	if b.CmkUUID != nil {
 		plan.IsEncrypted = types.BoolValue(true)

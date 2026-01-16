@@ -1085,8 +1085,8 @@ func (c *ctyunCcseCluster) Configure(_ context.Context, request resource.Configu
 // checkBeforeCreate 创建前检查
 func (c *ctyunCcseCluster) checkBeforeCreate(ctx context.Context, plan CtyunCcseClusterConfig) (err error) {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
-	vpc, regionID, projectID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString(), plan.BaseInfo.ProjectID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	vpc, regionID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString()
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}

@@ -299,7 +299,7 @@ func (c *ctyunSfsPermissionGroupAssociation) Delete(ctx context.Context, request
 
 func (c *ctyunSfsPermissionGroupAssociation) checkBeforeBind(ctx context.Context, plan CtyunSfsPermissionGroupAssociationConfig) error {
 	vpc, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, "")
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}

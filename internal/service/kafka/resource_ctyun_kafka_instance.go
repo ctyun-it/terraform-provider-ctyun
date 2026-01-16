@@ -572,9 +572,9 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunKafkaInstance) checkBeforeCreate(ctx context.Context, plan CtyunKafkaInstanceConfig) (err error) {
-	regionID, projectID := plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}

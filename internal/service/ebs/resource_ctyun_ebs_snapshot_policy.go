@@ -11,6 +11,7 @@ import (
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -319,6 +320,7 @@ func (c *ctyunEbsSnapshotPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsS
 	policy := resp.ReturnObj.SnapshotPolicyList[0]
 
 	// 设置字段值
+	cfg.ProjectId = utils.SecStringValue(policy.ProjectID)
 	cfg.SnapshotPolicyStatus = types.StringValue(*policy.SnapshotPolicyStatus)
 	cfg.RetentionTime = types.Int64Value(int64(policy.RetentionTime))
 	cfg.Name = types.StringValue(*policy.SnapshotPolicyName)
@@ -510,26 +512,19 @@ func (c *ctyunEbsSnapshotPolicy) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotPolicyConfig
-	var ID, regionId, projectID string
+	var ID, regionId string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		projectID = c.meta.GetExtraIfEmpty(regionId, common.ExtraProjectId)
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
-	case 1:
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -542,13 +537,8 @@ func (c *ctyunEbsSnapshotPolicy) ImportState(ctx context.Context, request resour
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

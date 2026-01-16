@@ -306,7 +306,7 @@ func (c *ctyunSecurityGroup) getAndMergeSecurityGroup(ctx context.Context, cfg C
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSecurityGroup) checkCreate(ctx context.Context, plan CtyunSecurityGroupConfig) error {
-	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
 }
 
 type CtyunSecurityGroupConfig struct {
