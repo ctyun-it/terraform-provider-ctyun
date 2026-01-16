@@ -287,7 +287,6 @@ func (c *ctyunBandwidth) Delete(ctx context.Context, request resource.DeleteRequ
 	resp, err := c.meta.Apis.CtVpcApis.BandwidthDeleteApi.Do(ctx, c.meta.Credential, &ctvpc.BandwidthDeleteRequest{
 		BandwidthId: state.Id.ValueString(),
 		RegionId:    state.RegionId.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 	})
 	if err != nil {
@@ -315,26 +314,19 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunBandwidthConfig
-	var bandwidthID, regionID, projectID string
+	var bandwidthID, regionID string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		bandwidthID = request.ID
-	case 1:
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &bandwidthID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &bandwidthID, &regionID)
 		if err != nil {
 			return
 		}
@@ -347,12 +339,10 @@ func (c *ctyunBandwidth) ImportState(ctx context.Context, request resource.Impor
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	cfg.Id = types.StringValue(bandwidthID)
 	cfg.RegionId = types.StringValue(regionID)
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 	cfg.ProjectId = types.StringValue(projectID)
 
 	instance, err := c.getAndMergeBandwidth(ctx, cfg)
@@ -398,7 +388,6 @@ func (c *ctyunBandwidth) getAndMergeBandwidth(ctx context.Context, cfg CtyunBand
 	resp, err := c.meta.Apis.CtVpcApis.BandwidthDescribeApi.Do(ctx, c.meta.Credential, &ctvpc.BandwidthDescribeRequest{
 		RegionId:    cfg.RegionId.ValueString(),
 		BandwidthId: cfg.Id.ValueString(),
-		ProjectId:   cfg.ProjectId.ValueString(),
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSharedbandwidthNotFound {
