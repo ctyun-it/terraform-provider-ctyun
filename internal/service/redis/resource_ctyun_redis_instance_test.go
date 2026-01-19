@@ -83,6 +83,14 @@ func TestAccCtyunRedisInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "protection_status", initProtectionStatus),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, expireTime := ds.Attributes["create_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新属性，同时绑定eip

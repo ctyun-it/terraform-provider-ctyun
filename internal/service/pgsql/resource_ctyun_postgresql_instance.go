@@ -1964,6 +1964,8 @@ func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.
 			}
 		}
 	}
+	// 预留时间供pgsql详情信息表更新
+	time.Sleep(time.Second * 10)
 	return nil
 }
 

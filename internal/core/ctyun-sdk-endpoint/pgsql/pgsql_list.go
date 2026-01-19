@@ -54,6 +54,7 @@ type PgsqlListResponsePageInfo struct {
 	ReadonlyInstnaceIds []string `json:"readonlyInstnaceIds"` // 只读实例id列表
 	InstanceType        string   `json:"instanceType"`        // 实例类型，primary:主实例，readonly:只读实例
 	ToolType            int32    `json:"toolType"`            // 备份工具类型，1：pg_baseback，2：pgbackrest，3：s3
+	Port                int32    `json:"port"`
 }
 
 type PgsqlListResponseReturnObj struct {
