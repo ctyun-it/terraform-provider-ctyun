@@ -793,7 +793,7 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 	plan.DiskSize = types.Int32Value(utils.StringToInt32Must(instance.Space))
 	plan.VpcID = types.StringValue(instance.VpcId)
 	plan.SubnetID = types.StringValue(instance.SubnetId)
-	cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, instance.CreateTime), utils.ConvertToUTCZ(time.RFC3339, instance.ExpireTime)
+	cTime, eTime := utils.FromBJTimeToUTCZ(instance.CreateTime), utils.FromBJTimeToUTCZ(instance.ExpireTime)
 	plan.CreateTime = types.StringValue(cTime)
 	plan.ExpireTime = types.StringValue(eTime)
 	plan.ActualCycleType = types.StringValue(map[string]string{"1": business.OrderCycleTypeMonth, "2": business.OrderCycleTypeOnDemand}[instance.BillMode])
