@@ -83,7 +83,6 @@ func (c *ctyunEbsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.Sche
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-
 			"repository_id": schema.StringAttribute{
 				Required:    true,
 				Description: "云硬盘备份存储库ID",
@@ -415,7 +414,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [policy_id],[repository_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -423,13 +422,18 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 
 	var repositoryID, policyID, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("policy_id和repository_id必须输入")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &policyID, &repositoryID)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &policyID, &repositoryID, &regionId)
 		if err != nil {
 			return
@@ -437,15 +441,15 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if repositoryID == "" {
-		err = fmt.Errorf("repositoryID不能为空")
+		err = fmt.Errorf("repository_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RepositoryID = types.StringValue(repositoryID)

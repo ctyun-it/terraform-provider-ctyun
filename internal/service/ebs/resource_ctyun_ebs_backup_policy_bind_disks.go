@@ -410,7 +410,7 @@ func (c *ctyunEcsBackupPolicyBindDisks) ImportState(ctx context.Context, request
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policy_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [policy_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

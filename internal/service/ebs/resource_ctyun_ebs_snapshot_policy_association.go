@@ -415,7 +415,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) ImportState(ctx context.Context, req
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [snapshot_policy_id],[disk_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [snapshot_policy_id],[disk_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
