@@ -260,7 +260,7 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 		err = fmt.Errorf("natGateWayID不能为空")
 	}
 	if address == "" {
-		err = fmt.Errorf("address 不能为空")
+		err = fmt.Errorf("address不能为空")
 	}
 	config.RegionID = types.StringValue(regionID)
 	config.NatGatewayID = types.StringValue(natGateWayID)

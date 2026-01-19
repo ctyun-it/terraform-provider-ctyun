@@ -2,6 +2,7 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -255,7 +256,7 @@ func (c *CtyunElbHealthCheck) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeHealthCheck(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -488,6 +489,9 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbShowHealthCheckApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
+	} else if resp.ErrorCode == common.OpenapiHealthCheckNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return

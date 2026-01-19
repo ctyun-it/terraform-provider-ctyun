@@ -203,7 +203,6 @@ func (c *ctyunEbsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEbsSnapsho
 	}
 	// 调用API
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
-
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
@@ -213,7 +212,7 @@ func (c *ctyunEbsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEbsSnapsho
 		err = common.InvalidReturnObjError
 		return
 	} else if resp.ReturnObj.SnapshotTotal == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
+		err = common.ResourceNotExistError
 		return
 	}
 	status := resp.ReturnObj.SnapshotList[0].SnapshotStatus
@@ -240,7 +239,7 @@ func (c *ctyunEbsSnapshot) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "no snapshot details found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -394,7 +393,8 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 				SnapshotID: &snapshotId,
 			}
 			// 调用API
-			resp, err := c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
+			var resp *ctebs2.EbsListEbsSnapResponse
+			resp, err = c.meta.Apis.SdkCtEbsApis.EbsListEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
 			if err != nil {
 				return false
 			} else if resp.StatusCode == common.ErrorStatusCode {
@@ -404,7 +404,7 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 				err = common.InvalidReturnObjError
 				return false
 			} else if resp.ReturnObj.SnapshotTotal == 0 {
-				err = fmt.Errorf("no snapshot details found for snapshot ID: %s", state.Id.ValueString())
+				err = common.ResourceNotExistError
 				return false
 			}
 
@@ -415,6 +415,9 @@ func (c *ctyunEbsSnapshot) StartedLoop(ctx context.Context, state *CtyunEbsSnaps
 			return true
 		},
 	)
+	if err != nil {
+		return
+	}
 	if result.ReturnReason == business.ReachMaxLoopTime {
 		return errors.New("轮询已达最大次数，资源仍未到达启动状态！")
 	}

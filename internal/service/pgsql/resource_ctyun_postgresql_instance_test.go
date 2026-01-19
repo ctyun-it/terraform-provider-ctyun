@@ -21,7 +21,7 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 	storageType := "SSD"
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	caseCensitive := true
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
@@ -97,7 +97,7 @@ func TestAccCtyunPgsqlInstanceProjectId(t *testing.T) {
 	storageType := "SSD"
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	updatedPassword := "Kyk123==" + utils.GenerateRandomString()
 	caseCensitive := true
 	vpcID := dependence.vpcID
@@ -157,7 +157,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 	StorageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
 	//password := "VqOcfgJ6Nf2houSe5C9sxgM4ycExVK+F0bBZwBGdiy8DCVXoSyck0lPxw9XMRgHur2lQYenOJ5K/FxZ30qlwbKG3NfgNoPq+AXDeSDdycGTqa1TzLdGnYwAeC/hEa8pyUKS9LdlW7nnM1nGUvGCXkGdzJP8lbHCwonzazEnF3RI="
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	caseCensitive := true
 	flavorName := "c7.xlarge.2"
 	updatedFlavorName := "c7.xlarge.4"
@@ -311,7 +311,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	backupStorageType := `backup_storage_type = "SATA"`
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -406,7 +406,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 	backupStorageType := `backup_storage_type="SAS"`
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID

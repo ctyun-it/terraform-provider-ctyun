@@ -2,13 +2,16 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -54,57 +57,44 @@ func (c *CtyunSubnetAssociationAcl) ImportState(ctx context.Context, request res
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[subnetId],[aclId],[projectId],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [subnet_id],[acl_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunSubnetAssociationAclConfig
-	var ID, subnetId, aclId, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	var subnetId, aclId, regionId string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("subnet_id和acl_id必填")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &subnetId, &aclId)
+		err = terraform_extend.Split(request.ID, &subnetId, &aclId)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 3 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &subnetId, &aclId, &projectId)
-		if err != nil {
-			return
-		}
-	} else {
-		err = terraform_extend.Split(request.ID, &ID, &subnetId, &aclId, &projectId, &regionId)
+	default:
+		err = terraform_extend.Split(request.ID, &subnetId, &aclId, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
-	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
-		return
-	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
 	if subnetId == "" {
-		err = fmt.Errorf("subnetId不能为空")
+		err = fmt.Errorf("subnet_id不能为空")
 		return
 	}
 	if aclId == "" {
-		err = fmt.Errorf("aclId不能为空")
+		err = fmt.Errorf("acl_id不能为空")
 		return
 	}
-
-	config.ID = types.StringValue(ID)
 	config.SubnetID = types.StringValue(subnetId)
 	config.AclID = types.StringValue(aclId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
 	config.RegionID = types.StringValue(regionId)
 
 	err = c.getAndMerge(ctx, &config)
@@ -131,27 +121,30 @@ func (c *CtyunSubnetAssociationAcl) Schema(ctx context.Context, request resource
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "本字段即将在新版本废弃，请不要指定本字段",
+				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
 					validator2.Project(),
 				},
 			},
 			"acl_id": schema.StringAttribute{
 				Required:    true,
-				Description: "acl_id，支持更新。acl列表可以通过data.ctyun_acls查询",
+				Description: "acl_id。acl列表可以通过data.ctyun_acls查询",
 				Validators: []validator.String{
 					validator2.AclID(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"subnet_id": schema.StringAttribute{
 				Required:    true,
-				Description: "subnet_id，subnet列表可能通过data.ctyun_subnets查询，不支持更新",
+				Description: "subnet_id，subnet列表可能通过data.ctyun_subnets查询",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -213,8 +206,10 @@ func (c *CtyunSubnetAssociationAcl) Read(ctx context.Context, request resource.R
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -290,9 +285,6 @@ func (c *CtyunSubnetAssociationAcl) create(ctx context.Context, config *CtyunSub
 		SubnetID:    config.SubnetID.ValueString(),
 		AclID:       config.AclID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetAclApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
@@ -313,22 +305,23 @@ func (c *CtyunSubnetAssociationAcl) getAndMerge(ctx context.Context, config *Cty
 	if err != nil {
 		return err
 	}
+	if config.ProjectID.IsUnknown() {
+		config.ProjectID = types.StringNull()
+	}
 	subnetIds := resp.ReturnObj.SubnetIDs
 	for _, subnetId := range subnetIds {
 		if config.SubnetID.ValueString() == *subnetId {
+			config.ID = types.StringValue(fmt.Sprintf("%s,%s", *subnetId, config.AclID.ValueString()))
 			return nil
 		}
 	}
-	return fmt.Errorf("subnet 和 acl未绑定")
+	return common.ResourceNotExistError
 }
 
 func (c *CtyunSubnetAssociationAcl) getAclDetail(ctx context.Context, config *CtyunSubnetAssociationAclConfig) (*ctvpc.CtvpcShowAclResponse, error) {
 	params := &ctvpc.CtvpcShowAclRequest{
 		RegionID: config.RegionID.ValueString(),
 		AclID:    config.AclID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowAclApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -337,7 +330,12 @@ func (c *CtyunSubnetAssociationAcl) getAclDetail(ctx context.Context, config *Ct
 		err = fmt.Errorf("获取acl详情失败，接口返回nil，请联系研发确认问题原因！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -351,9 +349,6 @@ func (c *CtyunSubnetAssociationAcl) delete(ctx context.Context, config CtyunSubn
 		RegionID: config.RegionID.ValueString(),
 		SubnetID: config.SubnetID.ValueString(),
 		AclID:    config.AclID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcDisassociateSubnetAclApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

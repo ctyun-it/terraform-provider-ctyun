@@ -30,7 +30,7 @@ func TestAccCtyunEbmAssociationEbs(t *testing.T) {
 					resourceFile, rnd,
 					dependence.ebsID,
 					dependence.ebmID,
-					dependence.az2,
+					dependence.az3,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -64,7 +64,7 @@ func TestAccCtyunEbmAssociationEbs(t *testing.T) {
 					resourceFile, rnd,
 					dependence.ebsID,
 					dependence.ebmID,
-					dependence.az2,
+					dependence.az3,
 				),
 				Destroy: true,
 			},

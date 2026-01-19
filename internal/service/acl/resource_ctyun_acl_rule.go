@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -313,8 +315,10 @@ func (c *CtyunAclRule) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -513,7 +517,12 @@ func (c *CtyunAclRule) getRuleList(ctx context.Context, config *CtyunAclRuleConf
 		err = fmt.Errorf("获取acl规则列表失败（acl id=%s），接口返回nil，请联系研发确认问题原因！", config.AclID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -582,7 +591,7 @@ func (c *CtyunAclRule) getRuleDetail(ctx context.Context, config *CtyunAclRuleCo
 		err = fmt.Errorf("direction 取值有误！当前值为%s", config.Direction.ValueString())
 		return nil, nil, err
 	}
-	return nil, nil, nil
+	return nil, nil, common.ResourceNotExistError
 }
 
 func (c *CtyunAclRule) update(ctx context.Context, state *CtyunAclRuleConfig, plan *CtyunAclRuleConfig) error {

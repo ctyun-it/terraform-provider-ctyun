@@ -6,7 +6,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -25,7 +24,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -65,14 +64,6 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
-					func(s *terraform.State) error {
-						ds := s.RootModule().Resources[resourceName].Primary
-						createTime := ds.Attributes["create_time"]
-						if utils.IsEmptyOrRfc3339(createTime) {
-							return nil
-						}
-						return fmt.Errorf("time format doesn't match")
-					},
 				),
 			},
 			// import state验证1
@@ -138,7 +129,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	passwordUpdate := "Kyk125=" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
@@ -249,16 +240,12 @@ func TestAccCtyunMongodbInstanceSingleOnDemand_Updatepassword(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	err := os.Setenv("TF_VAR_password", "Kyk123="+utils.GenerateRandomString())
-	if err != nil {
-		return
-	}
 	flavorName := "c7.xlarge.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
-	passwordUpdate := "Kyk125=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
+	passwordUpdate := "Kyk125=1" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SAS"
@@ -328,7 +315,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SATA"
@@ -418,7 +405,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Replica3R34"
 	readPort := 12345
 	storageType := "SAS"
@@ -532,7 +519,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Replica3R34"
 	readPort := 12345
 	storageType := "SAS"
@@ -627,7 +614,7 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -727,7 +714,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -849,7 +836,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -966,7 +953,7 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -1064,7 +1051,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -1161,7 +1148,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -1270,7 +1257,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"

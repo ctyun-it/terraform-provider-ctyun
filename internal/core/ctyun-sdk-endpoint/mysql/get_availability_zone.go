@@ -57,7 +57,7 @@ func (this *TeledbGetAvailabilityZone) Do(ctx context.Context, credential ctyuns
 		builder.AddHeader("project-id", *header.ProjectID)
 	}
 	if req.RegionId == "" {
-		err = errors.New("region id 不能为空")
+		err = errors.New("region id不能为空")
 	}
 	builder.AddParam("regionId", req.RegionId)
 	resp, err := this.client.RequestToEndpoint(ctx, EndpointNameCtdas, builder)

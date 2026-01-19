@@ -38,6 +38,14 @@ output "ebm_id" {
   value = ctyun_ebm.ebm_test.id
 }
 
+output "az1" {
+  value = local.az1
+}
+
 output "az2" {
   value = local.az2
+}
+
+output "az3" {
+  value = local.az3
 }

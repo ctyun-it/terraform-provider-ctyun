@@ -102,7 +102,7 @@ func TestAccCtyunRedisMigrationTask(t *testing.T) {
 					return fmt.Sprintf("%s,%s", taskId, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"operate_type", "source_db_info.password", "target_db_info.password"},
+				ImportStateVerifyIgnore: []string{"operate_type", "source_db_info.password", "target_db_info.password", "source_db_info.ip_addr", "target_db_info.ip_addr"},
 			},
 			{
 				ResourceName: resourceName,
@@ -116,7 +116,7 @@ func TestAccCtyunRedisMigrationTask(t *testing.T) {
 					return fmt.Sprintf("%s", taskId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"operate_type", "source_db_info.password", "target_db_info.password"},
+				ImportStateVerifyIgnore: []string{"operate_type", "source_db_info.password", "target_db_info.password", "source_db_info.ip_addr", "target_db_info.ip_addr"},
 			},
 			// 销毁测试
 			{

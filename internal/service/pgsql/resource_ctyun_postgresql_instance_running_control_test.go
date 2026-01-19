@@ -6,7 +6,9 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"math/rand"
 	"testing"
+	"time"
 )
 
 func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
@@ -23,16 +25,17 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	StorageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
 	//password := "VqOcfgJ6Nf2houSe5C9sxgM4ycExVK+F0bBZwBGdiy8DCVXoSyck0lPxw9XMRgHur2lQYenOJ5K/FxZ30qlwbKG3NfgNoPq+AXDeSDdycGTqa1TzLdGnYwAeC/hEa8pyUKS9LdlW7nnM1nGUvGCXkGdzJP8lbHCwonzazEnF3RI="
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	caseCensitive := true
 
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	//azInfo := `availability_zone_info = [{"availability_zone_name":"cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count":1, "node_type":"master"}]`
-
+	rand.Seed(time.Now().UnixNano())
 	flavorName := "c7.xlarge.2"
-	appointVip := `vip="192.168.1.111"`
+	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
+	appointVip := fmt.Sprintf(`vip="%s"`, vip)
 	updatedFlavorName := "c7.xlarge.4"
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
@@ -57,7 +60,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
-					resource.TestCheckResourceAttr(resourceName, "vip", "192.168.1.111"),
+					resource.TestCheckResourceAttr(resourceName, "vip", vip),
 				),
 			},
 			// 关机 + 主磁盘升配 + 备用磁盘升配 + sepc + prodid升配

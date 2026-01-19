@@ -193,9 +193,12 @@ func (c *CtyunMysqlBackupCancel) cancelLoop(ctx context.Context, config *CtyunBa
 			case business.MysqlBackupTaskStatusSuccess:
 				err = fmt.Errorf("备份任务状态为成功，取消备份失败，mysql实例id=%s，record_id=%d", config.InstID.ValueString(), config.BackupRecordId.ValueInt64())
 				return false
-			default:
+			case business.MysqlBackupTaskStatusFailed:
 				err = fmt.Errorf("备份任务状态为失败，取消备份失败，mysql实例id=%s，record_id=%d", config.InstID.ValueString(), config.BackupRecordId.ValueInt64())
 				return false
+			default:
+				// 中间态，默认成功
+				return true
 			}
 		},
 	)
