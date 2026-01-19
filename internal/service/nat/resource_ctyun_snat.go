@@ -397,7 +397,7 @@ func (c *ctyunSnatResource) checkBeforeCreateSnat(ctx context.Context, plan Ctyu
 		err = fmt.Errorf("校验nat网关失败" + err.Error())
 		return
 	}
-	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, *nat.VpcID, plan.RegionID.ValueString(), "")
+	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, *nat.VpcID, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}

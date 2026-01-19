@@ -66,14 +66,13 @@ func TestAccCtyunAcl(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled", "project_id"}, // 可选忽略
 			},
 			{
 				ResourceName: resourceName,
@@ -89,22 +88,6 @@ func TestAccCtyunAcl(t *testing.T) {
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled", "project_id"}, // 可选忽略
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["project_id"],
-					), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled"}, // 可选忽略
 			},
 			// 4. 清理资源
 			{

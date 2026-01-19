@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -292,7 +293,6 @@ func (c *ctyunEbsBackupPolicy) Create(ctx context.Context, request resource.Crea
 		return
 	}
 	plan.Id = types.StringValue(id)
-	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 
 	// 查询信息
 	err = c.getAndMerge(ctx, &plan)
@@ -337,6 +337,7 @@ func (c *ctyunEbsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsBac
 		// 回退到名称查询（仅用于创建场景）
 		params.PolicyName = cfg.Name.ValueString()
 	}
+	params.ProjectID = cfg.ProjectID.ValueString()
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -346,6 +347,9 @@ func (c *ctyunEbsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsBac
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
+	} else if resp.ReturnObj.CurrentCount == 0 {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.ReturnObj.CurrentCount != 1 {
 		err = common.InvalidReturnObjResultsError
@@ -457,6 +461,10 @@ func (c *ctyunEbsBackupPolicy) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 
@@ -614,33 +622,28 @@ func (c *ctyunEbsBackupPolicy) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsBackupPolicyConfig
 
-	var ID, regionId, projectID string
+	var ID, regionId string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		projectID = c.meta.GetExtraIfEmpty(regionId, common.ExtraProjectId)
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
-	case 1:
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionID = types.StringValue(regionId)
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)

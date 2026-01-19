@@ -252,7 +252,7 @@ func (c *ctyunCrsVpcAttach) attach(ctx context.Context, plan CtyunCrsVpcAttachCo
 // checkBeforeAttach 接入前检查
 func (c *ctyunCrsVpcAttach) checkBeforeAttach(ctx context.Context, plan CtyunCrsVpcAttachConfig) error {
 	vpcID, subnetID := plan.VpcID.ValueString(), plan.SubnetID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, plan.RegionID.ValueString(), "")
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}

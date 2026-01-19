@@ -415,7 +415,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSubnet) checkCreate(ctx context.Context, plan CtyunSubnetConfig) error {
-	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
 }
 
 type CtyunSubnetConfig struct {

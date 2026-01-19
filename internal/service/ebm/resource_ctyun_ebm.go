@@ -646,35 +646,27 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[az_name],[region_id],[project_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [instance_id],[az_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbmConfig
 
-	var instanceID, azName, regionID, projectID string
+	var instanceID, azName, regionID string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		instanceID = request.ID
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &azName)
 		if err != nil {
 			return
 		}
-	case 2:
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID, &projectID)
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
 		if err != nil {
 			return
 		}
@@ -694,7 +686,6 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	config.InstanceID = types.StringValue(instanceID)
 	config.RegionID = types.StringValue(regionID)
 	config.AzName = types.StringValue(azName)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -805,7 +796,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 func (c *ctyunEbm) checkBeforeCreateInstance(ctx context.Context, plan CtyunEbmConfig) error {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
 	vpc := plan.VpcID.ValueString()
-	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString(), plan.ProjectID.ValueString())
+	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -1068,6 +1059,7 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 		return
 	}
 	cfg.InstanceID = utils.SecStringValue(instance.InstanceUUID)
+	cfg.ProjectID = utils.SecStringValue(instance.ProjectID)
 	cfg.RegionID = utils.SecStringValue(instance.RegionID)
 	cfg.AzName = utils.SecStringValue(instance.AzName)
 	cfg.DeviceType = utils.SecStringValue(instance.DeviceType)

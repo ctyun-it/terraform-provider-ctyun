@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -44,18 +45,17 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunHpfsConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -68,13 +68,8 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeHpfs(ctx, &config)
 	if err != nil {
 		return
@@ -121,7 +116,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -436,15 +431,13 @@ func (c *CtyunHpfs) createHpfs(ctx context.Context, config *CtyunHpfsConfig) (*h
 		SfsName:     config.Name.ValueString(),
 		SfsSize:     config.SfsSize.ValueInt32(),
 		AzName:      config.AzName.ValueString(),
+		ProjectID:   config.ProjectID.ValueString(),
 	}
 	if config.CycleType.ValueString() == business.HpfsCycleTypeOnDemand {
 		onDemand := true
 		params.OnDemand = &onDemand
 	} else {
 		params.CycleCount = config.CycleCount.ValueInt32()
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueString()
 	}
 	if !config.ClusterName.IsNull() && !config.ClusterName.IsUnknown() {
 		params.ClusterName = config.ClusterName.ValueString()
@@ -480,6 +473,7 @@ func (c *CtyunHpfs) getAndMergeHpfs(ctx context.Context, config *CtyunHpfsConfig
 		return err
 	}
 	hpfsDetail := hpfsResp.ReturnObj
+	config.ProjectID = types.StringValue(hpfsDetail.ProjectID)
 	config.Name = types.StringValue(hpfsDetail.SfsName)
 	config.SfsSize = types.Int32Value(hpfsDetail.SfsSize)
 	config.SfsStatus = types.StringValue(hpfsDetail.SfsStatus)

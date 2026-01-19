@@ -239,7 +239,7 @@ func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -264,6 +264,9 @@ func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.I
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	cfg.ProjectID = types.StringValue(projectID)
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.RouteTableID = types.StringValue(routeTableID)
 	// 查询远端
@@ -276,22 +279,20 @@ func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.I
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunVpcRouteTable) checkBeforeCreate(ctx context.Context, plan CtyunVpcRouteTableConfig) (err error) {
-	vpcID, regionID, projectID := plan.VpcID.ValueString(), plan.RegionID.ValueString(), plan.ProjectID.ValueString()
-	err = business.NewVpcService(c.meta).MustExist(ctx, vpcID, regionID, projectID)
+	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
+	err = business.NewVpcService(c.meta).MustExist(ctx, vpcID, regionID)
 	return
 }
 
 // create 创建路由表
 func (c *ctyunVpcRouteTable) create(ctx context.Context, plan CtyunVpcRouteTableConfig) (routeTableID string, err error) {
-	vpcID, regionID, projectID := plan.VpcID.ValueString(), plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
 	params := &ctvpc.CtvpcCreateRouteTableRequest{
 		ClientToken: uuid.NewString(),
 		RegionID:    regionID,
 		VpcID:       vpcID,
 		Name:        plan.Name.ValueString(),
-	}
-	if projectID != "" {
-		params.ProjectID = &projectID
+		ProjectID:   plan.ProjectID.ValueStringPointer(),
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
