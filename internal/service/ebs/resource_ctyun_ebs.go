@@ -533,7 +533,7 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	var config CtyunEbsConfig
 
 	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionId,projectId,azName
+	// 根据分隔符数量判断是否输入了regionId,azName
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID

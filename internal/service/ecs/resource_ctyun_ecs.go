@@ -2025,25 +2025,18 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcsConfig
-	var ID, regionId, projectID string
+	var ID, regionId string
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -2059,7 +2052,6 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-	config.ProjectId = types.StringValue(projectID)
 	cfg, err := c.getAndMergeEcs(ctx, config)
 	if err != nil {
 		return
@@ -2068,6 +2060,5 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	cfg.ImageId = cfg.ActualImageID
 	cfg.PayVoucherPrice = types.Float64Value(0)
 	cfg.IsDestroyInstance = types.BoolValue(false)
-
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }

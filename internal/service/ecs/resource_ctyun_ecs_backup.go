@@ -39,10 +39,12 @@ func NewCtyunEcsBackup() resource.Resource {
 type ctyunEcsBackup struct {
 	meta       *common.CtyunMetadata
 	ecsService *business.EcsService
+	name       string
 }
 
 func (c *ctyunEcsBackup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_backup"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupConfig struct {
@@ -465,8 +467,8 @@ func (c *ctyunEcsBackup) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectId],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
