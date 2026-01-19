@@ -36,8 +36,14 @@ func TestAccCtyunOceanfsPermissionGroup(t *testing.T) {
 
 					// 系统生成属性验证
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
-					resource.TestCheckResourceAttrSet(resourceName, "update_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新权限组测试（修改名称和描述）

@@ -55,6 +55,14 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 升配至1主2备

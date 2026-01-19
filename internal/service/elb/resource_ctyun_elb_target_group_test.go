@@ -82,6 +82,14 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcId),
 					resource.TestCheckResourceAttr(resourceName, "algorithm", algorithm),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 1.2 update 验证

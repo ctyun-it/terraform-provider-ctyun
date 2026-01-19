@@ -41,6 +41,14 @@ func TestAccCtyunAcl(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "apply_to_public_lb", "false"),
 					resource.TestCheckResourceAttr(resourceName, "enabled", "true"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新ACL测试（修改名称、描述和启用状态）

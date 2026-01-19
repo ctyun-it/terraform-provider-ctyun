@@ -201,6 +201,14 @@ func TestAccCtyunClusterManaged(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "base_info.cluster_series", clusterSeries),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{

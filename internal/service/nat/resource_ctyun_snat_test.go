@@ -52,6 +52,14 @@ func TestAccCtyunSNat1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "snat_ips.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "snat_id"),
 					resource.TestCheckResourceAttr(resourceName, "description", "我是一条description"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{

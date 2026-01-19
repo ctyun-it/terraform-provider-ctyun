@@ -65,6 +65,14 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// import state验证1

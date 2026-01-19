@@ -63,3 +63,14 @@ func FromBJTimeToUTCZ(input string) string {
 	}
 	return t.UTC().Format(time.RFC3339)
 }
+
+func IsEmptyOrRfc3339(input string) bool {
+	if input == "" {
+		return true
+	}
+	_, err := time.Parse("2006-01-02T15:04:05Z", input)
+	if err != nil {
+		return false
+	}
+	return true
+}

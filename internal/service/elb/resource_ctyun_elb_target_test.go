@@ -52,6 +52,14 @@ func TestAccCtyunElbTarget(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
 					resource.TestCheckResourceAttr(resourceName, "target_group_id", targetGroupID),
 					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 1.2 update验证，更新protocolPort和weight

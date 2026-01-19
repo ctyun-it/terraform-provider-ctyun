@@ -55,6 +55,14 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 保障型elb变配测试

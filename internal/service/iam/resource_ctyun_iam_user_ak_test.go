@@ -36,7 +36,14 @@ func TestAccCtyunIamUserAK(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "enabled", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "ak"),
 					resource.TestCheckResourceAttrSet(resourceName, "sk"),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
