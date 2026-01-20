@@ -30,6 +30,7 @@ var (
 
 type ctyunScalingEcsProtection struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	imageService  *business.ImageService
 }
@@ -40,6 +41,7 @@ func NewCtyunScalingEcsProtection() resource.Resource {
 
 func (c *ctyunScalingEcsProtection) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_scaling_ecs_protection"
+	c.name = response.TypeName
 }
 
 func (c *ctyunScalingEcsProtection) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
