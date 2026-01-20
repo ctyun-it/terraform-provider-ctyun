@@ -32,6 +32,7 @@ var (
 
 type ctyunElbTarget struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbTarget() resource.Resource {
@@ -40,6 +41,7 @@ func NewCtyunElbTarget() resource.Resource {
 
 func (c *ctyunElbTarget) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_target"
+	c.name = response.TypeName
 }
 func (c *ctyunElbTarget) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
@@ -53,8 +55,8 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
