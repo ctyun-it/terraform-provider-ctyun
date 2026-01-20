@@ -9,7 +9,6 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
-	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -425,13 +424,13 @@ func (c *CtyunEcPacket) upgrade(ctx context.Context, plan, state *CtyunEcPacketC
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行升配操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	upgradeReq := &ec.EcEcOrderPacketUpgradeRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
-		ResourceID:  state.ResourceID.ValueString(),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   plan.RegionID.ValueString(),
+		Bandwidth:  int32(plan.Bandwidth.ValueInt64()),
+		ResourceID: state.ResourceID.ValueString(),
+		//ClientToken: &clientToken,
 	}
 
 	tflog.Info(ctx, "升配云间高速带宽包", map[string]interface{}{
@@ -469,14 +468,14 @@ func (c *CtyunEcPacket) renew(ctx context.Context, plan, state *CtyunEcPacketCon
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行续订操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	renewReq := &ec.EcEcOrderPacketRenewRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		ResourceID:  state.ResourceID.ValueString(),
-		CycleType:   plan.CycleType.ValueString(),
-		CycleCount:  int32(plan.CycleCount.ValueInt64()),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   plan.RegionID.ValueString(),
+		ResourceID: state.ResourceID.ValueString(),
+		CycleType:  plan.CycleType.ValueString(),
+		CycleCount: int32(plan.CycleCount.ValueInt64()),
+		//ClientToken: &clientToken,
 	}
 
 	tflog.Info(ctx, "续订云间高速带宽包", map[string]interface{}{
@@ -516,12 +515,12 @@ func (c *CtyunEcPacket) refund(ctx context.Context, state *CtyunEcPacketConfig) 
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行退订操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	refundReq := &ec.EcEcOrderPacketRefundRequest{
-		EcID:        state.EcID.ValueString(),
-		RegionID:    state.RegionID.ValueString(),
-		ResourceID:  state.ResourceID.ValueString(),
-		ClientToken: &clientToken,
+		EcID:       state.EcID.ValueString(),
+		RegionID:   state.RegionID.ValueString(),
+		ResourceID: state.ResourceID.ValueString(),
+		//ClientToken: &clientToken,
 	}
 	tflog.Info(ctx, "退订云间高速带宽包", map[string]interface{}{
 		"ec_id":       state.EcID.ValueString(),
@@ -553,17 +552,17 @@ func (c *CtyunEcPacket) refund(ctx context.Context, state *CtyunEcPacketConfig) 
 
 func (c *CtyunEcPacket) create(ctx context.Context, plan *CtyunEcPacketConfig) (err error) {
 	// 创建云间高速带宽包订购订单
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	newReq := &ec.EcEcOrderPacketNewRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		PacketName:  plan.Name.ValueString(),
-		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
-		AreaA:       plan.AreaA.ValueStringPointer(),
-		CycleType:   strings.ToUpper(plan.CycleType.ValueString()),
-		CycleCount:  int32(plan.CycleCount.ValueInt64()),
-		AreaB:       plan.AreaB.ValueStringPointer(),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   plan.RegionID.ValueString(),
+		PacketName: plan.Name.ValueString(),
+		Bandwidth:  int32(plan.Bandwidth.ValueInt64()),
+		AreaA:      plan.AreaA.ValueStringPointer(),
+		CycleType:  strings.ToUpper(plan.CycleType.ValueString()),
+		CycleCount: int32(plan.CycleCount.ValueInt64()),
+		AreaB:      plan.AreaB.ValueStringPointer(),
+		//ClientToken: &clientToken,
 	}
 
 	if !plan.AreaA.IsNull() {
