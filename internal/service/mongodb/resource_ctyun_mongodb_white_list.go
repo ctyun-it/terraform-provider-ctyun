@@ -38,6 +38,7 @@ func NewCtyunMongodbWhiteList() resource.Resource {
 
 type CtyunMongodbWhiteList struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunMongodbWhiteListConfig struct {
@@ -247,7 +248,9 @@ func (c *CtyunMongodbWhiteList) ImportState(ctx context.Context, req resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			resp.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[group_name],<region_id>", c.name)
+			resp.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunMongodbWhiteListConfig
