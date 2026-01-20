@@ -165,7 +165,7 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 				Computed:    true,
 				Description: "字符串排序规则，charset_name为utf8不传，其他的字符集必须传入",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					validator2.ConflictsWithEqualString(
@@ -179,7 +179,7 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 				Computed:    true,
 				Description: "字符分类，charset_name为utf8不传，其他的字符集必须传入",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					validator2.ConflictsWithEqualString(
@@ -193,7 +193,7 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 				Computed:    true,
 				Description: "数据库所有者",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),

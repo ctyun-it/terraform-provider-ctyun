@@ -361,7 +361,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 					stringvalidator.OneOf(business.StorageTypeSATA, business.StorageTypeSAS, business.StorageTypeSSD, business.BackupStorageTypeOS),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"upgrade_node_type": schema.StringAttribute{
