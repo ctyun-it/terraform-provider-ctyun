@@ -123,7 +123,7 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"name": schema.StringAttribute{

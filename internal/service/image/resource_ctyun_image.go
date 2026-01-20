@@ -97,7 +97,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像系统架构，aarch64：AArch64架构，仅支持UEFI启动方式、x86_64：x86_64架构，支持BIOS和UEFI启动方式，注意：所指定的镜像系统架构应受所指定的资源池支持",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageArchitectures...),

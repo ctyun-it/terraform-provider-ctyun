@@ -266,7 +266,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID",
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					setplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),

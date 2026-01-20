@@ -82,7 +82,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Computed:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					validator2.VpcValidate(),
