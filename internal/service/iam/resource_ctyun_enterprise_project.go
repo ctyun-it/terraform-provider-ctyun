@@ -2,6 +2,7 @@ package iam
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
@@ -28,10 +29,12 @@ func NewCtyunEnterpriseProject() resource.Resource {
 
 type ctyunEnterpriseProject struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEnterpriseProject) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_enterprise_project"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -189,8 +192,8 @@ func (c *ctyunEnterpriseProject) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [enterpriseProjectId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
