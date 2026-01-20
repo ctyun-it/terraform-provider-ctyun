@@ -63,7 +63,7 @@ func (u EipService) GetEipAddressByEipID(ctx context.Context, eipID, regionId st
 	} else if resp.ReturnObj == nil {
 		return nil, common.InvalidReturnObjError
 	} else if len(resp.ReturnObj.Eips) == 0 {
-		return nil, fmt.Errorf("eipID %s 不存在", eipID)
+		return nil, common.ResourceNotExistError
 	}
 	ip := resp.ReturnObj.Eips[0]
 	return ip, nil

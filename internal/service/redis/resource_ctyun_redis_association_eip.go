@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -148,7 +149,7 @@ func (c *ctyunRedisAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "can't find") || strings.Contains(err.Error(), "已退订") {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "未绑定") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}

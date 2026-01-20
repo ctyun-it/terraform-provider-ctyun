@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -139,6 +140,10 @@ func (c *ctyunRedisInstanceWhitelist) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -356,7 +361,12 @@ func (c *ctyunRedisInstanceWhitelist) getAndMerge(ctx context.Context, state *Ct
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

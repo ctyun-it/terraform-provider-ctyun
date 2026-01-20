@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
@@ -162,6 +163,10 @@ func (c *ctyunRedisAccount) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -404,7 +409,12 @@ func (c *ctyunRedisAccount) getAndMerge(ctx context.Context, plan *CtyunRedisAcc
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Rows == nil {
 		err = common.InvalidReturnObjError
@@ -421,7 +431,7 @@ func (c *ctyunRedisAccount) getAndMerge(ctx context.Context, plan *CtyunRedisAcc
 	}
 
 	if accountData == nil {
-		err = fmt.Errorf("account %s not found", plan.Name.ValueString())
+		err = common.ResourceNotExistError
 		return
 	}
 
