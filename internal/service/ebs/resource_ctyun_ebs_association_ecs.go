@@ -192,8 +192,8 @@ func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [ebs_id],[instance_id],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [disk_id],[ebs_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
