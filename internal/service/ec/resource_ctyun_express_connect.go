@@ -33,6 +33,7 @@ func NewCtyunExpressConnect() resource.Resource {
 
 type CtyunExpressConnect struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunExpressConnectConfig struct {
@@ -46,6 +47,7 @@ type CtyunExpressConnectConfig struct {
 
 func (c *CtyunExpressConnect) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_express_connect"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -210,8 +212,8 @@ func (c *CtyunExpressConnect) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
