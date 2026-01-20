@@ -28,10 +28,12 @@ import (
 
 type CtyunExpressConnectVpcInstance struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunExpressConnectVpcInstance) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ec_vpc_instance"
+	c.name = response.TypeName
 }
 
 func (c *CtyunExpressConnectVpcInstance) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -51,8 +53,8 @@ func (c *CtyunExpressConnectVpcInstance) ImportState(ctx context.Context, reques
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecID],[cgwID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id],[cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

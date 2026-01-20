@@ -38,6 +38,7 @@ func NewCtyunEcPacket() resource.Resource {
 
 type CtyunEcPacket struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEcPacketConfig struct {
@@ -61,6 +62,7 @@ type CtyunEcPacketConfig struct {
 
 func (c *CtyunEcPacket) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ec_packet"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -327,8 +329,8 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[packetId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [ec_id],[packet_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

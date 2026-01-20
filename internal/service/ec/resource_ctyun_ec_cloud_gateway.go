@@ -35,6 +35,7 @@ func NewCtyunEcCloudGateway() resource.Resource {
 
 type CtyunEcCloudGateway struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEcCloudGatewayConfig struct {
@@ -51,6 +52,7 @@ type CtyunEcCloudGatewayConfig struct {
 
 func (c *CtyunEcCloudGateway) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ec_cloud_gateway"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -249,8 +251,8 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[cgwID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [ec_id],[cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
