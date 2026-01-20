@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -154,7 +155,7 @@ func (c *ctyunEcsBackupPolicyBindDisks) Read(ctx context.Context, request resour
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -375,6 +376,9 @@ func (c *ctyunEcsBackupPolicyBindDisks) getBindingDisks(ctx context.Context, pla
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListEbsBackupPolicyDisksApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if resp.ErrorCode == common.OpenapiEbsBackupPolicyNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)

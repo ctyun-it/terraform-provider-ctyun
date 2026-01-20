@@ -2,6 +2,7 @@ package ebm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -156,7 +157,7 @@ func (c *ctyunEbmAssociationEbs) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -443,5 +444,5 @@ func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbm
 			return
 		}
 	}
-	return fmt.Errorf("物理机 %s 和云硬盘 %s 未关联", instanceID, ebsID)
+	return common.ResourceNotExistError
 }

@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -150,7 +151,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) Read(ctx context.Context, request resourc
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -365,6 +366,9 @@ func (c *ctyunEbsBackupPolicyBindRepo) getBindingRepos(ctx context.Context, plan
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if resp.ErrorCode == common.OpenapiEbsBackupPolicyNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
@@ -402,7 +406,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *Ct
 		return
 	}
 	if !hasBind {
-		err = fmt.Errorf("云硬盘备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, repositoryID, regionID))

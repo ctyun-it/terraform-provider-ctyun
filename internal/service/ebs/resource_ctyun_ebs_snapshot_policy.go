@@ -313,7 +313,7 @@ func (c *ctyunEbsSnapshotPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsS
 		err = common.InvalidReturnObjError
 		return
 	} else if resp.ReturnObj.SnapshotPolicyTotalCount == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
+		err = common.ResourceNotExistError
 		return
 	}
 	// 处理返回的数据
@@ -354,6 +354,10 @@ func (c *ctyunEbsSnapshotPolicy) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 

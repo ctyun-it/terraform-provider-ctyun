@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -156,9 +157,9 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Read(ctx context.Context, request re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -385,6 +386,9 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context,
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsQueryEbsByIDApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return "", err
+	} else if resp.ErrorCode == common.EbsEbsInfoNotExists {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return "", err
@@ -403,7 +407,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getAndMerge(ctx context.Context, pla
 		return
 	}
 	if snapshotPolicyID != plan.SnapshotPolicyID.ValueString() {
-		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联  regionID： %s", policyId, diskID, regionID)
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskID, regionID))

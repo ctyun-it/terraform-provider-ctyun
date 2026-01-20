@@ -267,7 +267,10 @@ func (c *ctyunEbsBackup) getAndMerge(ctx context.Context, cfg *CtyunEbsBackupCon
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupShowBackupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp.ErrorCode == common.OpenapiEbsBackupNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -330,6 +333,10 @@ func (c *ctyunEbsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 
