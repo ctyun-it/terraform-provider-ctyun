@@ -22,11 +22,13 @@ import (
 
 type CtyunOceanfsPermissionGroupAssociation struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_oceanfs_permission_group_association"
+	c.name = response.TypeName
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,8 +49,8 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [oceanfsID],[vpcID],[permissionGroupID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [oceanfs_id],[vpc_id],[permission_group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
