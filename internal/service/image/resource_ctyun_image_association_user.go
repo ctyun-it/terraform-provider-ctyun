@@ -32,11 +32,13 @@ func NewCtyunImageAssociationUser() resource.Resource {
 
 type ctyunImageAssociationUser struct {
 	meta         *common.CtyunMetadata
+	name         string
 	imageService *business.ImageService
 }
 
 func (c *ctyunImageAssociationUser) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_image_association_user"
+	c.name = response.TypeName
 }
 
 func (c *ctyunImageAssociationUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -242,8 +244,8 @@ func (c *ctyunImageAssociationUser) ImportState(ctx context.Context, request res
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [imageId],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
