@@ -33,10 +33,12 @@ func NewCtyunVip() resource.Resource {
 
 type CtyunVip struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunVip) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vip"
+	c.name = response.TypeName
 }
 
 func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -197,25 +199,18 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var state CtyunVipConfig
-	var vipId, projectID, regionId string
+	var vipId, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		vipId = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &vipId, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &vipId, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &vipId, &regionId)
 		if err != nil {
 			return
 		}
@@ -232,11 +227,12 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 
 	state.Id = types.StringValue(vipId)
 	state.RegionId = types.StringValue(regionId)
-	state.ProjectId = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
 	}
+	state.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(state.ProjectId.ValueString(), common.ExtraProjectId))
+
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 

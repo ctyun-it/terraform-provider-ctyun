@@ -35,11 +35,13 @@ func NewCtyunSecurityGroup() resource.Resource {
 
 type ctyunSecurityGroup struct {
 	meta       *common.CtyunMetadata
+	name       string
 	vpcService *business.VpcService
 }
 
 func (c *ctyunSecurityGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_security_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -231,24 +233,18 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [security_group_id],[project_id],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSecurityGroupConfig
-	var securityGroupId, regionId, projectId string
+	var securityGroupId, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		securityGroupId = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		err = terraform_extend.Split(request.ID, &securityGroupId, &projectId)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &securityGroupId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &securityGroupId, &regionId)
 		if err != nil {
 			return
 		}
@@ -265,12 +261,13 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 
 	cfg.Id = types.StringValue(securityGroupId)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectId)
 	instance, err := c.getAndMergeSecurityGroup(ctx, cfg)
 	if err != nil {
 		//response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
+
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 

@@ -40,10 +40,12 @@ func NewCtyunSubnet() resource.Resource {
 type ctyunSubnet struct {
 	meta       *common.CtyunMetadata
 	vpcService *business.VpcService
+	name       string
 }
 
 func (c *ctyunSubnet) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_subnet"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -310,29 +312,19 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[vpcId],[project_id][region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[regionId]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSubnetConfig
-	var subnetId, vpcId, projectID, regionId string
+	var subnetId, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &subnetId, &vpcId)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID)
-		if err != nil {
-			return
-		}
+		subnetId = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &subnetId, &vpcId, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &subnetId, &regionId)
 		if err != nil {
 			return
 		}
@@ -341,23 +333,17 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 		err = fmt.Errorf("subnetId不能为空")
 		return
 	}
-	if vpcId == "" {
-		err = fmt.Errorf("vpcId不能为空")
-		return
-	}
 	if regionId == "" {
 		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(subnetId)
-	cfg.VpcId = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectID)
 	err = c.getAndMergeSubnet(ctx, &cfg)
 	if err != nil {
 		return
 	}
-
+	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -372,13 +358,15 @@ func (c *ctyunSubnet) Configure(_ context.Context, request resource.ConfigureReq
 
 // getAndMergeSubnet 查询子网
 func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetConfig) error {
-
-	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, &ctvpc.SubnetQueryRequest{
+	params := &ctvpc.SubnetQueryRequest{
 		RegionId:    cfg.RegionId.ValueString(),
-		ProjectId:   cfg.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 		SubnetId:    cfg.Id.ValueString(),
-	})
+	}
+	if !cfg.ProjectId.IsNull() {
+		params.ProjectId = cfg.ProjectId.ValueString()
+	}
+	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSubnetNotFound {
 			return common.ResourceNotExistError
