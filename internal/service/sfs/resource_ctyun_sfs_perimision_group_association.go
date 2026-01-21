@@ -28,12 +28,14 @@ var (
 
 type ctyunSfsPermissionGroupAssociation struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	vpcService    *business.VpcService
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs_permission_group_association"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -55,8 +57,8 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vpcID],[sfsUid],[regionId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vpc_id],[sfs_uid],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
