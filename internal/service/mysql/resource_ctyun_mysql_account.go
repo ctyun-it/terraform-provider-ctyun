@@ -102,93 +102,93 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133363"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "MySQL实例ID",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-		PlanModifiers: []planmodifier.String{
-		explanmodifier.Project(),
-	},
-		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-		Validators: []validator.String{
-		validator2.Project(),
-	},
-	},
-		"name": schema.StringAttribute{
-		Required:    true,
-		Description: "数据库账号名称",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(1, 32),
-	},
-	},
-		"password": schema.StringAttribute{
-		Required:    true,
-		Sensitive:   true,
-		Description: "数据库账号密码，支持更新。不建议使用弱密码，长度[8,20]位",
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(8, 20),
-	},
-	},
-		"description": schema.StringAttribute{
-		Optional:    true,
-		Description: "备注，支持更新",
-		Validators: []validator.String{
-		validator2.Desc(),
-	},
-	},
-		"schema_privilege_list": schema.SetNestedAttribute{
-		Optional:    true,
-		Description: "数据库权限配置列表，支持更新。",
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"grant_schema": schema.StringAttribute{
-		Required:    true,
-		Description: "授权数据库名称，支持更新。",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"privilege": schema.StringAttribute{
-		Required:    true,
-		Description: "数据库权限，支持更新。取值范围：read_only, ddl, dml, rw",
-		Validators: []validator.String{
-		stringvalidator.OneOf(business.MysqlSchemaPrivileges...),
-	},
-	},
-	},
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "mysql用户id",
-	},
-	},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "MySQL实例ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "数据库账号名称",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(1, 32),
+				},
+			},
+			"password": schema.StringAttribute{
+				Required:    true,
+				Sensitive:   true,
+				Description: "数据库账号密码，支持更新。不建议使用弱密码，长度[8,20]位",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(8, 20),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "备注，支持更新",
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+			},
+			"schema_privilege_list": schema.SetNestedAttribute{
+				Optional:    true,
+				Description: "数据库权限配置列表，支持更新。",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"grant_schema": schema.StringAttribute{
+							Required:    true,
+							Description: "授权数据库名称，支持更新。",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
+						},
+						"privilege": schema.StringAttribute{
+							Required:    true,
+							Description: "数据库权限，支持更新。取值范围：read_only, ddl, dml, rw",
+							Validators: []validator.String{
+								stringvalidator.OneOf(business.MysqlSchemaPrivileges...),
+							},
+						},
+					},
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "mysql用户id",
+			},
+		},
 	}
 }
 

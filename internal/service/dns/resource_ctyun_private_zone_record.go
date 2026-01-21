@@ -96,103 +96,103 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10224466"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"zone_id": schema.StringAttribute{
-		Required:    true,
-		Description: "内网DNS id",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"type": schema.StringAttribute{
-		Required: true,
-		Description: "内网DNS记录类型，支持: A / CNAME / MX / AAAA / TXT, 大小写不敏感。" +
-		"A-将域名指向一个IPv4地址；" +
-		"CNAME-将域名指向另一个域名；MX-邮件交换记录，用于指定接收电子邮件的服务器；" +
-		"MX-邮件交换记录，用于指定接收电子邮件的服务器；" +
-		"AAAA-将域名指向一个IPv6地址；" +
-		"TXT-文本记录，可以包含任意文本信息；",
-		//"SRV-记录提供特定服务的服务器",
-		Validators: []validator.String{
-		stringvalidator.OneOf("A", "CNAME", "MX", "AAAA", "TXT"),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"value_list": schema.SetAttribute{
-		Required:    true,
-		ElementType: types.StringType,
-		Description: "支持更新。当type=A，value_list必须是 IPv4 地址；" +
-		"当type=CNAME，value_list填写您要指向的别名，只能写一个域名；" +
-		"当type=MX，value_list 填写邮箱服务器地址，最多可以输入8个不重复地址；" +
-		"当type=AAAA，valueList 填写IPv6地址，最多可以输入8个不重复地址；" +
-		"当type= TXT 时，valueList 填写文本记录值(合法字符包含大小写字母、数字、空格，文本记录)",
-		//"当type=SRV时，valueList填写指定服务的服务器地址，最多可以输入8个不重复地址。 数组中元素格式要求如下：_服务名._协议名.主机名:端口号；",
-		Validators: []validator.Set{
-		setvalidator.SizeBetween(1, 8),
-	},
-	},
-		"ttl": schema.Int32Attribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "zone ttl，支持更新。TTL指解析记录在本地DNS服务器的缓存时间。如果您的服务地址经常更换，建议TTL值设置相对小些，反之，建议设置相对大些。",
-		Default:     int32default.StaticInt32(300),
-		Validators: []validator.Int32{
-		int32validator.Between(300, 2147483647),
-	},
-	},
-		"name": schema.StringAttribute{
-		Required:    true,
-		Description: "DNS记录集的 name",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"description": schema.StringAttribute{
-		Optional:    true,
-		Description: "DNS记录集描述，支持更新",
-		Validators: []validator.String{
-		validator2.Desc(),
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "内网DNS记录id",
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-		"update_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "更新时间，为UTC格式",
-	},
-		"enabled": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "是否开启解析记录，默认启用，支持更新。",
-		Default:     booldefault.StaticBool(true),
-	},
-	},
+		Attributes: map[string]schema.Attribute{
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"zone_id": schema.StringAttribute{
+				Required:    true,
+				Description: "内网DNS id",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"type": schema.StringAttribute{
+				Required: true,
+				Description: "内网DNS记录类型，支持: A / CNAME / MX / AAAA / TXT, 大小写不敏感。" +
+					"A-将域名指向一个IPv4地址；" +
+					"CNAME-将域名指向另一个域名；MX-邮件交换记录，用于指定接收电子邮件的服务器；" +
+					"MX-邮件交换记录，用于指定接收电子邮件的服务器；" +
+					"AAAA-将域名指向一个IPv6地址；" +
+					"TXT-文本记录，可以包含任意文本信息；",
+				//"SRV-记录提供特定服务的服务器",
+				Validators: []validator.String{
+					stringvalidator.OneOf("A", "CNAME", "MX", "AAAA", "TXT"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"value_list": schema.SetAttribute{
+				Required:    true,
+				ElementType: types.StringType,
+				Description: "支持更新。当type=A，value_list必须是 IPv4 地址；" +
+					"当type=CNAME，value_list填写您要指向的别名，只能写一个域名；" +
+					"当type=MX，value_list 填写邮箱服务器地址，最多可以输入8个不重复地址；" +
+					"当type=AAAA，valueList 填写IPv6地址，最多可以输入8个不重复地址；" +
+					"当type= TXT 时，valueList 填写文本记录值(合法字符包含大小写字母、数字、空格，文本记录)",
+				//"当type=SRV时，valueList填写指定服务的服务器地址，最多可以输入8个不重复地址。 数组中元素格式要求如下：_服务名._协议名.主机名:端口号；",
+				Validators: []validator.Set{
+					setvalidator.SizeBetween(1, 8),
+				},
+			},
+			"ttl": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "zone ttl，支持更新。TTL指解析记录在本地DNS服务器的缓存时间。如果您的服务地址经常更换，建议TTL值设置相对小些，反之，建议设置相对大些。",
+				Default:     int32default.StaticInt32(300),
+				Validators: []validator.Int32{
+					int32validator.Between(300, 2147483647),
+				},
+			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "DNS记录集的 name",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "DNS记录集描述，支持更新",
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "内网DNS记录id",
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+			},
+			"update_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "更新时间，为UTC格式",
+			},
+			"enabled": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否开启解析记录，默认启用，支持更新。",
+				Default:     booldefault.StaticBool(true),
+			},
+		},
 	}
 }
 

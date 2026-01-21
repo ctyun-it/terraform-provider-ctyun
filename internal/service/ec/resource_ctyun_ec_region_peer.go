@@ -90,97 +90,97 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038250"),
-			Attributes : map[string]schema.Attribute{
-		"name": schema.StringAttribute{
-		Required:    true,
-		Description: "连接名称",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"ec_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云间高速ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"src_cgw_id": schema.StringAttribute{
-		Required:    true,
-		Description: "本端网关ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"dst_cgw_id": schema.StringAttribute{
-		Required:    true,
-		Description: "对端网关ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"packet_id": schema.StringAttribute{
-		Required:    true,
-		Description: "带宽包ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"rate": schema.Int32Attribute{
-		Required:    true,
-		Description: "带宽值（MB） 支持更新",
-		Validators: []validator.Int32{
-		int32validator.AtLeast(1),
-	},
-	},
-		"route_learn": schema.Int32Attribute{
-		Optional:    true,
-		Computed:    true,
-		Default:     int32default.StaticInt32(1),
-		Description: "是否开启两端云网关路由自动学习，0：不开启，1：开启。默认开启",
-		Validators: []validator.Int32{
-		int32validator.OneOf(0, 1),
-	},
-		PlanModifiers: []planmodifier.Int32{
-		int32planmodifier.RequiresReplace(),
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "跨域连接ID",
-	},
-		"src_region_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "本端资源池ID",
-	},
-		"dst_region_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "对端资源池ID",
-	},
-		"peer_type": schema.Int32Attribute{
-		Computed:    true,
-		Description: "互通类型，1：境内，2: 跨境（中国大陆-亚太），3: 境外（亚太），4: 定制",
-	},
-		"update_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "更新时间，为UTC格式",
-	},
-	},
+		Attributes: map[string]schema.Attribute{
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "连接名称",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"ec_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云间高速ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"src_cgw_id": schema.StringAttribute{
+				Required:    true,
+				Description: "本端网关ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"dst_cgw_id": schema.StringAttribute{
+				Required:    true,
+				Description: "对端网关ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"packet_id": schema.StringAttribute{
+				Required:    true,
+				Description: "带宽包ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"rate": schema.Int32Attribute{
+				Required:    true,
+				Description: "带宽值（MB） 支持更新",
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+				},
+			},
+			"route_learn": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Default:     int32default.StaticInt32(1),
+				Description: "是否开启两端云网关路由自动学习，0：不开启，1：开启。默认开启",
+				Validators: []validator.Int32{
+					int32validator.OneOf(0, 1),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "跨域连接ID",
+			},
+			"src_region_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "本端资源池ID",
+			},
+			"dst_region_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "对端资源池ID",
+			},
+			"peer_type": schema.Int32Attribute{
+				Computed:    true,
+				Description: "互通类型，1：境内，2: 跨境（中国大陆-亚太），3: 境外（亚太），4: 定制",
+			},
+			"update_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "更新时间，为UTC格式",
+			},
+		},
 	}
 }
 

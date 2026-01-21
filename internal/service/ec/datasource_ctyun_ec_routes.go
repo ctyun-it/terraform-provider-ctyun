@@ -41,117 +41,117 @@ func (c *CtyunExpressConnectionRoutes) Metadata(ctx context.Context, request dat
 func (c *CtyunExpressConnectionRoutes) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10132372"),
-			Attributes : map[string]schema.Attribute{
-		"ec_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云间高速实例ID",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"cgw_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云网关ID",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"rtb_id": schema.StringAttribute{
-		Required:    true,
-		Description: "路由表ID",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"id": schema.StringAttribute{
-		Optional:    true,
-		Description: "路由ID，精确查询",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"query_content": schema.StringAttribute{
-		Optional:    true,
-		Description: "模糊匹配CIDR",
-	},
-		"status": schema.StringAttribute{
-		Optional:    true,
-		Description: "运行状态（运行中-running，未启用-stop）",
-		Validators: []validator.String{
-		stringvalidator.OneOf(business.EcRouteStatusRunning, business.EcRouteStatusStop),
-	},
-	},
-		"route_type": schema.StringAttribute{
-		Optional:    true,
-		Description: "路由类型（auto-自动学习，default-自定义（默认））",
-		Validators: []validator.String{
-		stringvalidator.OneOf("auto", "default"),
-	},
-	},
-		"next_hop_type": schema.StringAttribute{
-		Optional:    true,
-		Description: "下一跳实例类型（取值范围：vpc-虚拟私有云，cda-云专线，vpn-vpn网关，cross-跨域连接）",
-		Validators: []validator.String{
-		stringvalidator.OneOf(business.EcNextHopTypeVPC, business.EcNextHopCDA, business.EcNextHopVPN, business.EcNextHopBlackCross),
-	},
-	},
-		"routes": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"ec_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "云间高速实例ID",
-	},
-		"cgw_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "云网关ID",
-	},
-		"rtb_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由表ID",
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由ID",
-	},
-		"route_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由类型（1：自动学习，2：自定义）",
-	},
-		"cidr": schema.StringAttribute{
-		Computed:    true,
-		Description: "子网信息（CIDR格式）",
-	},
-		"next_hop_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "下一跳实例类型",
-	},
-		"next_hop_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "目的实例ID",
-	},
-		"ip_version": schema.StringAttribute{
-		Computed:    true,
-		Description: "子网类型（1：IPv4，2：IPv6）",
-	},
-		"description": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由描述信息",
-	},
-		"status": schema.StringAttribute{
-		Computed:    true,
-		Description: "运行状态（1：正常，2：异常）",
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-	},
-	},
-		Description: "云专线路由列表",
-	},
-	},
+			"ec_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云间高速实例ID",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"cgw_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云网关ID",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"rtb_id": schema.StringAttribute{
+				Required:    true,
+				Description: "路由表ID",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"id": schema.StringAttribute{
+				Optional:    true,
+				Description: "路由ID，精确查询",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"query_content": schema.StringAttribute{
+				Optional:    true,
+				Description: "模糊匹配CIDR",
+			},
+			"status": schema.StringAttribute{
+				Optional:    true,
+				Description: "运行状态（运行中-running，未启用-stop）",
+				Validators: []validator.String{
+					stringvalidator.OneOf(business.EcRouteStatusRunning, business.EcRouteStatusStop),
+				},
+			},
+			"route_type": schema.StringAttribute{
+				Optional:    true,
+				Description: "路由类型（auto-自动学习，default-自定义（默认））",
+				Validators: []validator.String{
+					stringvalidator.OneOf("auto", "default"),
+				},
+			},
+			"next_hop_type": schema.StringAttribute{
+				Optional:    true,
+				Description: "下一跳实例类型（取值范围：vpc-虚拟私有云，cda-云专线，vpn-vpn网关，cross-跨域连接）",
+				Validators: []validator.String{
+					stringvalidator.OneOf(business.EcNextHopTypeVPC, business.EcNextHopCDA, business.EcNextHopVPN, business.EcNextHopBlackCross),
+				},
+			},
+			"routes": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"ec_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "云间高速实例ID",
+						},
+						"cgw_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "云网关ID",
+						},
+						"rtb_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由表ID",
+						},
+						"id": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由ID",
+						},
+						"route_type": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由类型（1：自动学习，2：自定义）",
+						},
+						"cidr": schema.StringAttribute{
+							Computed:    true,
+							Description: "子网信息（CIDR格式）",
+						},
+						"next_hop_type": schema.StringAttribute{
+							Computed:    true,
+							Description: "下一跳实例类型",
+						},
+						"next_hop_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "目的实例ID",
+						},
+						"ip_version": schema.StringAttribute{
+							Computed:    true,
+							Description: "子网类型（1：IPv4，2：IPv6）",
+						},
+						"description": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由描述信息",
+						},
+						"status": schema.StringAttribute{
+							Computed:    true,
+							Description: "运行状态（1：正常，2：异常）",
+						},
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
+						},
+					},
+				},
+				Description: "云专线路由列表",
+			},
+		},
 	}
 }
 

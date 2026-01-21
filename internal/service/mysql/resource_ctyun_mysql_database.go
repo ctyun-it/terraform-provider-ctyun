@@ -100,98 +100,98 @@ func (c *CtyunMysqlDatabase) ImportState(ctx context.Context, request resource.I
 func (c *CtyunMysqlDatabase) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10140487"),
-			Attributes : map[string]schema.Attribute{
-		"instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "mysql实例id",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(32, 32),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-		PlanModifiers: []planmodifier.String{
-		explanmodifier.Project(),
-	},
-		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-		Validators: []validator.String{
-		validator2.Project(),
-	},
-	},
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		//todo validator
-		"name": schema.StringAttribute{
-		Required:    true,
-		Description: "数据库名称,mysql库名限制建议:以小写字母开头，且以小写字母或数字结尾，可包含数字或下划线，不含其他特殊字符",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-		validator2.MysqlDatabaseName(),
-	},
-	},
-		"description": schema.StringAttribute{
-		Optional:    true,
-		Description: "备注，支持更新",
-		Validators: []validator.String{
-		validator2.Desc(),
-	},
-	},
-		"charset_name": schema.StringAttribute{
-		Required:    true,
-		Description: "字符集",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"user_grant_privilege": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"account_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "数据库用户名",
-	},
-		"read_only": schema.BoolAttribute{
-		Computed:    true,
-		Description: "用户读写权限",
-	},
-		"select_priv": schema.BoolAttribute{
-		Computed:    true,
-		Description: "查询权限",
-	},
-		"insert_priv": schema.BoolAttribute{
-		Computed:    true,
-		Description: "写入权限",
-	},
-	},
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "数据库id",
-	},
-	},
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "mysql实例id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(32, 32),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			//todo validator
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "数据库名称,mysql库名限制建议:以小写字母开头，且以小写字母或数字结尾，可包含数字或下划线，不含其他特殊字符",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+					validator2.MysqlDatabaseName(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "备注，支持更新",
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+			},
+			"charset_name": schema.StringAttribute{
+				Required:    true,
+				Description: "字符集",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"user_grant_privilege": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"account_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "数据库用户名",
+						},
+						"read_only": schema.BoolAttribute{
+							Computed:    true,
+							Description: "用户读写权限",
+						},
+						"select_priv": schema.BoolAttribute{
+							Computed:    true,
+							Description: "查询权限",
+						},
+						"insert_priv": schema.BoolAttribute{
+							Computed:    true,
+							Description: "写入权限",
+						},
+					},
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "数据库id",
+			},
+		},
 	}
 }
 

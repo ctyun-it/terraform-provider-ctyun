@@ -51,92 +51,92 @@ func (c *CtyunMysqlBackupRecovery) Configure(ctx context.Context, request resour
 func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
-			Attributes : map[string]schema.Attribute{
-		"instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "mysql实例id",
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(32, 32),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-		PlanModifiers: []planmodifier.String{
-		explanmodifier.Project(),
-	},
-		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-		Validators: []validator.String{
-		validator2.Project(),
-	},
-	},
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"src_instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "恢复的源mysql实例id",
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(32, 32),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"dst_instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "恢复的目标mysql实例id",
-		Validators: []validator.String{
-		stringvalidator.LengthBetween(32, 32),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"to_timepoint": schema.StringAttribute{
-		Optional:    true,
-		Description: "恢复到的时间点，格式为：YYYY-MM-DDTHH:MM:SSZ【taskId和to_timepoint不能同时为空，优先取to_timepoint】",
-		Validators: []validator.String{
-		stringvalidator.RegexMatches(
-		regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`),
-		"必须符合格式：YYYY-MM-DDTHH:MM:SSZ",
-	),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"task_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "用来恢复的备份任务集【task_id和to_timepoint不能同时为空，优先取to_timepoint】",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "备份任务id",
-		PlanModifiers: []planmodifier.Int64{
-		int64planmodifier.UseStateForUnknown(),
-	},
-	},
-	},
+		Attributes: map[string]schema.Attribute{
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "mysql实例id",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(32, 32),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"src_instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "恢复的源mysql实例id",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(32, 32),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"dst_instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "恢复的目标mysql实例id",
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(32, 32),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"to_timepoint": schema.StringAttribute{
+				Optional:    true,
+				Description: "恢复到的时间点，格式为：YYYY-MM-DDTHH:MM:SSZ【taskId和to_timepoint不能同时为空，优先取to_timepoint】",
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`),
+						"必须符合格式：YYYY-MM-DDTHH:MM:SSZ",
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"task_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "用来恢复的备份任务集【task_id和to_timepoint不能同时为空，优先取to_timepoint】",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"id": schema.Int64Attribute{
+				Computed:    true,
+				Description: "备份任务id",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
+			},
+		},
 	}
 }
 

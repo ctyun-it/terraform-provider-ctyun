@@ -42,142 +42,142 @@ func (c *ctyunMysqlBackups) Metadata(ctx context.Context, request datasource.Met
 func (c *ctyunMysqlBackups) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，默认使用provider配置",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"instance_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "MySQL实例ID",
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "项目ID",
-	},
-		"instance_name": schema.StringAttribute{
-		Optional:    true,
-		Description: "MySQL实例名称",
-	},
-		"name": schema.StringAttribute{
-		Optional:    true,
-		Description: "备份名称",
-	},
-		"id": schema.Int64Attribute{
-		Optional:    true,
-		Description: "备份集ID",
-	},
-		"page_size": schema.Int32Attribute{
-		Optional:    true,
-		Description: "每页记录数，默认10",
-		Validators: []validator.Int32{
-		int32validator.Between(1, 100),
-	},
-	},
-		"page_no": schema.Int32Attribute{
-		Optional:    true,
-		Description: "页码，默认1",
-		Validators: []validator.Int32{
-		int32validator.AtLeast(1),
-	},
-	},
-		"backups": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"instance_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "实例ID",
-	},
-		"id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "备份ID",
-	},
-		"instance_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "实例名称",
-	},
-		"records": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-		"backup_record_id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "备份记录ID",
-	},
-		"backup_task_id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "备份任务ID",
-	},
-		"task_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "任务ID",
-	},
-		"backup_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "备份名称",
-	},
-		"outer_prod_inst_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "外部产品实例ID",
-	},
-		"prod_inst_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "产品实例名称",
-	},
-		"description": schema.StringAttribute{
-		Computed:    true,
-		Description: "备份描述",
-	},
-		"storage_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "存储类型",
-	},
-		"op_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "操作类型（auto/manual）",
-	},
-		"task_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "任务类型（full/incr）",
-	},
-		"task_status": schema.Int32Attribute{
-		Computed:    true,
-		Description: "任务状态",
-	},
-		"backed_up_data_size": schema.Int64Attribute{
-		Computed:    true,
-		Description: "备份数据大小（字节）",
-	},
-		"backed_up_data_size_human": schema.StringAttribute{
-		Computed:    true,
-		Description: "备份数据大小（格式化）",
-	},
-		"backup_start_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "备份开始时间",
-	},
-		"backup_end_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "备份结束时间",
-	},
-		"disabled": schema.BoolAttribute{
-		Computed:    true,
-		Description: "是否禁用",
-	},
-	},
-	},
-		Description: "备份记录列表",
-	},
-	},
-	},
-		Description: "备份列表",
-	},
-	},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，默认使用provider配置",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"instance_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "MySQL实例ID",
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "项目ID",
+			},
+			"instance_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "MySQL实例名称",
+			},
+			"name": schema.StringAttribute{
+				Optional:    true,
+				Description: "备份名称",
+			},
+			"id": schema.Int64Attribute{
+				Optional:    true,
+				Description: "备份集ID",
+			},
+			"page_size": schema.Int32Attribute{
+				Optional:    true,
+				Description: "每页记录数，默认10",
+				Validators: []validator.Int32{
+					int32validator.Between(1, 100),
+				},
+			},
+			"page_no": schema.Int32Attribute{
+				Optional:    true,
+				Description: "页码，默认1",
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+				},
+			},
+			"backups": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"instance_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "实例ID",
+						},
+						"id": schema.Int64Attribute{
+							Computed:    true,
+							Description: "备份ID",
+						},
+						"instance_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "实例名称",
+						},
+						"records": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"backup_record_id": schema.Int64Attribute{
+										Computed:    true,
+										Description: "备份记录ID",
+									},
+									"backup_task_id": schema.Int64Attribute{
+										Computed:    true,
+										Description: "备份任务ID",
+									},
+									"task_id": schema.StringAttribute{
+										Computed:    true,
+										Description: "任务ID",
+									},
+									"backup_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "备份名称",
+									},
+									"outer_prod_inst_id": schema.StringAttribute{
+										Computed:    true,
+										Description: "外部产品实例ID",
+									},
+									"prod_inst_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "产品实例名称",
+									},
+									"description": schema.StringAttribute{
+										Computed:    true,
+										Description: "备份描述",
+									},
+									"storage_type": schema.StringAttribute{
+										Computed:    true,
+										Description: "存储类型",
+									},
+									"op_type": schema.StringAttribute{
+										Computed:    true,
+										Description: "操作类型（auto/manual）",
+									},
+									"task_type": schema.StringAttribute{
+										Computed:    true,
+										Description: "任务类型（full/incr）",
+									},
+									"task_status": schema.Int32Attribute{
+										Computed:    true,
+										Description: "任务状态",
+									},
+									"backed_up_data_size": schema.Int64Attribute{
+										Computed:    true,
+										Description: "备份数据大小（字节）",
+									},
+									"backed_up_data_size_human": schema.StringAttribute{
+										Computed:    true,
+										Description: "备份数据大小（格式化）",
+									},
+									"backup_start_time": schema.StringAttribute{
+										Computed:    true,
+										Description: "备份开始时间",
+									},
+									"backup_end_time": schema.StringAttribute{
+										Computed:    true,
+										Description: "备份结束时间",
+									},
+									"disabled": schema.BoolAttribute{
+										Computed:    true,
+										Description: "是否禁用",
+									},
+								},
+							},
+							Description: "备份记录列表",
+						},
+					},
+				},
+				Description: "备份列表",
+			},
+		},
 	}
 }
 

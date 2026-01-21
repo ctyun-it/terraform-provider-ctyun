@@ -42,117 +42,117 @@ func (c *CtyunMysqlParamTemplates) Metadata(ctx context.Context, request datasou
 func (c *CtyunMysqlParamTemplates) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098794"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，默认使用provider配置",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "项目ID",
-	},
-		"name": schema.StringAttribute{
-		Optional:    true,
-		Description: "参数模板名称",
-	},
-		"engine": schema.StringAttribute{
-		Optional:    true,
-		Description: "mysql版本",
-		Validators: []validator.String{
-		stringvalidator.OneOf("5.7", "8.0"),
-	},
-	},
-		"page_no": schema.Int32Attribute{
-		Optional:    true,
-		Description: "页码，默认1",
-		Validators: []validator.Int32{
-		int32validator.AtLeast(1),
-	},
-	},
-		"page_size": schema.Int32Attribute{
-		Optional:    true,
-		Description: "每页记录数，默认10",
-		Validators: []validator.Int32{
-		int32validator.Between(1, 100),
-	},
-	},
-		"param_templates": schema.ListNestedAttribute{
-		Computed:    true,
-		Description: "参数实例列表",
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"name": schema.StringAttribute{
-		Computed:    true,
-		Description: "参数模板名称",
-	},
-		"engine": schema.StringAttribute{
-		Computed:    true,
-		Description: "mysql实例版本",
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-		"restart": schema.BoolAttribute{
-		Computed:    true,
-		Description: "修改该参数是否需要重启",
-	},
-		"description": schema.StringAttribute{
-		Computed:    true,
-		Description: "参数模板描述",
-	},
-		"id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "参数模板id",
-	},
-		"is_default": schema.Int32Attribute{
-		Computed:    true,
-		Description: "属否是默认参参数组",
-	},
-		"user_id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "用户id",
-	},
-		"parameters": schema.ListNestedAttribute{
-		Computed:    true,
-		Description: "参数信息",
-		NestedObject: schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-		"parameter_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "参数名",
-	},
-		"restart": schema.BoolAttribute{
-		Computed:    true,
-		Description: "修改配置是否需要重启",
-	},
-		"parameter_value": schema.StringAttribute{
-		Computed:    true,
-		Description: "参数值，支持更新",
-	},
-		"permit_value": schema.StringAttribute{
-		Computed:    true,
-		Description: "允许取值范围",
-	},
-		"description": schema.StringAttribute{
-		Computed:    true,
-		Description: "参数描述",
-	},
-		"parameter_id": schema.Int64Attribute{
-		Computed:    true,
-		Description: "参数id",
-	},
-	},
-	},
-	},
-	},
-	},
-	},
-	},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，默认使用provider配置",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "项目ID",
+			},
+			"name": schema.StringAttribute{
+				Optional:    true,
+				Description: "参数模板名称",
+			},
+			"engine": schema.StringAttribute{
+				Optional:    true,
+				Description: "mysql版本",
+				Validators: []validator.String{
+					stringvalidator.OneOf("5.7", "8.0"),
+				},
+			},
+			"page_no": schema.Int32Attribute{
+				Optional:    true,
+				Description: "页码，默认1",
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+				},
+			},
+			"page_size": schema.Int32Attribute{
+				Optional:    true,
+				Description: "每页记录数，默认10",
+				Validators: []validator.Int32{
+					int32validator.Between(1, 100),
+				},
+			},
+			"param_templates": schema.ListNestedAttribute{
+				Computed:    true,
+				Description: "参数实例列表",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"name": schema.StringAttribute{
+							Computed:    true,
+							Description: "参数模板名称",
+						},
+						"engine": schema.StringAttribute{
+							Computed:    true,
+							Description: "mysql实例版本",
+						},
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
+						},
+						"restart": schema.BoolAttribute{
+							Computed:    true,
+							Description: "修改该参数是否需要重启",
+						},
+						"description": schema.StringAttribute{
+							Computed:    true,
+							Description: "参数模板描述",
+						},
+						"id": schema.Int64Attribute{
+							Computed:    true,
+							Description: "参数模板id",
+						},
+						"is_default": schema.Int32Attribute{
+							Computed:    true,
+							Description: "属否是默认参参数组",
+						},
+						"user_id": schema.Int64Attribute{
+							Computed:    true,
+							Description: "用户id",
+						},
+						"parameters": schema.ListNestedAttribute{
+							Computed:    true,
+							Description: "参数信息",
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"parameter_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "参数名",
+									},
+									"restart": schema.BoolAttribute{
+										Computed:    true,
+										Description: "修改配置是否需要重启",
+									},
+									"parameter_value": schema.StringAttribute{
+										Computed:    true,
+										Description: "参数值，支持更新",
+									},
+									"permit_value": schema.StringAttribute{
+										Computed:    true,
+										Description: "允许取值范围",
+									},
+									"description": schema.StringAttribute{
+										Computed:    true,
+										Description: "参数描述",
+									},
+									"parameter_id": schema.Int64Attribute{
+										Computed:    true,
+										Description: "参数id",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

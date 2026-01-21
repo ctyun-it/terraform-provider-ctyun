@@ -94,135 +94,135 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 func (c *CtyunExpressConnectRoute) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10132372"),
-			Attributes : map[string]schema.Attribute{
-		"ec_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云间高速id",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"cgw_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云网关id",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"rtb_id": schema.StringAttribute{
-		Required:    true,
-		Description: "路由表id",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		//"route_type": schema.StringAttribute{
-		//	Optional:    true,
-		//	Computed:    true,
-		//	Default:     stringdefault.StaticString(business.ECRouteTypeCustom),
-		//	Description: "路由类型，取值范围：auto-自动学习，custom-自定义",
-		//	Validators: []validator.String{
-		//		stringvalidator.OneOf(business.ECRouteTypeAuto, business.ECRouteTypeCustom),
-		//	},
-		//	PlanModifiers: []planmodifier.String{
-		//		stringplanmodifier.RequiresReplace(),
-		//	},
-		//},
-		"cidr": schema.StringAttribute{
-		Required:    true,
-		Description: "子网信息",
-		Validators: []validator.String{
-		validator2.Cidr(),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"next_hop_type": schema.StringAttribute{
-		Optional:    true,
-		Description: "下一跳实例的类型，如不是黑洞路由则必填。取值范围：vpc-虚拟私有云，cda-云专线，vpn-vpn网关，cross-跨域连接",
-		Validators: []validator.String{
-		stringvalidator.OneOf(business.EcNextHopTypeVPC, business.EcNextHopCDA, business.EcNextHopVPN, business.EcNextHopBlackCross),
-		validator2.ConflictsWithEqualString(
-		path.MatchRoot("is_black_hole_route"),
-		types.BoolValue(true),
-	),
-		validator2.AlsoRequiresEqualString(
-		path.MatchRoot("is_black_hole_route"),
-		types.BoolValue(false),
-	),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"next_hop_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "目的实例ID/跨域连接ID，如不是黑洞路由则必填",
-		Validators: []validator.String{
-		validator2.ConflictsWithEqualString(
-		path.MatchRoot("is_black_hole_route"),
-		types.BoolValue(true),
-	),
-		validator2.AlsoRequiresEqualString(
-		path.MatchRoot("is_black_hole_route"),
-		types.BoolValue(false),
-	),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"description": schema.StringAttribute{
-		Optional:    true,
-		Description: "路由描述信息",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		validator2.Desc(),
-	},
-	},
-		"ip_version": schema.StringAttribute{
-		Required:    true,
-		Description: "子网类型。取值范围:ipv4和ipv6",
-		Validators: []validator.String{
-		stringvalidator.OneOf(business.EcIpVersionIpv4, business.EcIpVersionIpv6),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"is_black_hole_route": schema.BoolAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "是否是黑洞路由, 如果选择true，next_hop_type、next_hop_id字段可不填写",
-		Default:     booldefault.StaticBool(false),
-		PlanModifiers: []planmodifier.Bool{
-		boolplanmodifier.RequiresReplace(),
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由规则id",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-	},
+		Attributes: map[string]schema.Attribute{
+			"ec_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云间高速id",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"cgw_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云网关id",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"rtb_id": schema.StringAttribute{
+				Required:    true,
+				Description: "路由表id",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			//"route_type": schema.StringAttribute{
+			//	Optional:    true,
+			//	Computed:    true,
+			//	Default:     stringdefault.StaticString(business.ECRouteTypeCustom),
+			//	Description: "路由类型，取值范围：auto-自动学习，custom-自定义",
+			//	Validators: []validator.String{
+			//		stringvalidator.OneOf(business.ECRouteTypeAuto, business.ECRouteTypeCustom),
+			//	},
+			//	PlanModifiers: []planmodifier.String{
+			//		stringplanmodifier.RequiresReplace(),
+			//	},
+			//},
+			"cidr": schema.StringAttribute{
+				Required:    true,
+				Description: "子网信息",
+				Validators: []validator.String{
+					validator2.Cidr(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"next_hop_type": schema.StringAttribute{
+				Optional:    true,
+				Description: "下一跳实例的类型，如不是黑洞路由则必填。取值范围：vpc-虚拟私有云，cda-云专线，vpn-vpn网关，cross-跨域连接",
+				Validators: []validator.String{
+					stringvalidator.OneOf(business.EcNextHopTypeVPC, business.EcNextHopCDA, business.EcNextHopVPN, business.EcNextHopBlackCross),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("is_black_hole_route"),
+						types.BoolValue(true),
+					),
+					validator2.AlsoRequiresEqualString(
+						path.MatchRoot("is_black_hole_route"),
+						types.BoolValue(false),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"next_hop_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "目的实例ID/跨域连接ID，如不是黑洞路由则必填",
+				Validators: []validator.String{
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("is_black_hole_route"),
+						types.BoolValue(true),
+					),
+					validator2.AlsoRequiresEqualString(
+						path.MatchRoot("is_black_hole_route"),
+						types.BoolValue(false),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "路由描述信息",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+			},
+			"ip_version": schema.StringAttribute{
+				Required:    true,
+				Description: "子网类型。取值范围:ipv4和ipv6",
+				Validators: []validator.String{
+					stringvalidator.OneOf(business.EcIpVersionIpv4, business.EcIpVersionIpv6),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"is_black_hole_route": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否是黑洞路由, 如果选择true，next_hop_type、next_hop_id字段可不填写",
+				Default:     booldefault.StaticBool(false),
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "路由规则id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+			},
+		},
 	}
 }
 

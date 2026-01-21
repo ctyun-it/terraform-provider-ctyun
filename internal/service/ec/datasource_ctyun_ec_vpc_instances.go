@@ -41,176 +41,176 @@ func (c *CtyunExpressConnectionVpcInstances) Metadata(ctx context.Context, reque
 func (c *CtyunExpressConnectionVpcInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038256"),
-			Attributes : map[string]schema.Attribute{
-		"ec_id": schema.StringAttribute{
-		Required:    true,
-		Description: "云间高速实例ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(36, 36),
-	},
-	},
-		"cgw_id": schema.StringAttribute{
-		Optional:    true,
-		Description: "云网关ID",
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"id": schema.StringAttribute{
-		Optional:    true,
-		Description: "VPC实例ID，精确查询",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"query_content": schema.StringAttribute{
-		Optional:    true,
-		Description: "模糊匹配（支持VPCID、VPCName、dcName）",
-	},
-		"status": schema.StringAttribute{
-		Optional:    true,
-		Description: "状态（creating：加载中，running：已连接，removing：卸载中，flushing：路由待更新，error：失败）",
-		Validators: []validator.String{
-		stringvalidator.OneOf("creating", "running", "removing", "flushing", "error"),
-	},
-	},
-		"is_auth": schema.Int32Attribute{
-		Optional:    true,
-		Description: "是否跨账号实例（0：本账号，1：跨账号）",
-		Validators: []validator.Int32{
-		int32validator.OneOf(0, 1),
-	},
-	},
-		"is_exclusive": schema.Int32Attribute{
-		Optional:    true,
-		Description: "是否专属云实例（0：公有云，1：专属云）",
-		Validators: []validator.Int32{
-		int32validator.OneOf(0, 1),
-	},
-	},
-		"page_no": schema.Int32Attribute{
-		Optional:    true,
-		Description: "分页页码，默认为1",
-		Validators: []validator.Int32{
-		int32validator.AtLeast(1),
-	},
-	},
-		"page_size": schema.Int32Attribute{
-		Optional:    true,
-		Description: "每页记录数，默认为10",
-		Validators: []validator.Int32{
-		int32validator.Between(1, 100),
-	},
-	},
-		"vpc_instances": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"ec_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "云间高速实例ID",
-	},
-		"cgw_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "云网关ID",
-	},
-		"cgw_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "云网关名称",
-	},
-		"status": schema.StringAttribute{
-		Computed:    true,
-		Description: "状态",
-	},
-		"vpc_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC名称",
-	},
-		"vpc_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC ID",
-	},
-		"vpc_cidr": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC CIDR",
-	},
-		"region_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "资源池ID",
-	},
-		"region_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "资源池名称",
-	},
-		"region_type": schema.StringAttribute{
-		Computed:    true,
-		Description: "资源池类型（CNP/MAZ/OS/CS/PRVT）",
-	},
-		"rtb_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由表名称",
-	},
-		"rtb_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "路由表ID",
-	},
-		"exclusive_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "专属云资源池ID",
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC实例ID",
-	},
-		"is_auth": schema.Int32Attribute{
-		Computed:    true,
-		Description: "是否跨账号实例（0：本账号，1：跨账号）",
-	},
-		"is_exclusive": schema.Int32Attribute{
-		Computed:    true,
-		Description: "是否专属云实例（0：公有云，1：专属云）",
-	},
-		"route_learn": schema.Int32Attribute{
-		Computed:    true,
-		Description: "路由学习开关（1：学习，0：不学习）",
-	},
-		"route_sync": schema.Int32Attribute{
-		Computed:    true,
-		Description: "路由同步开关（1：同步，0：不同步）",
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-		"subnets": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-		"subnet_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "子网ID",
-	},
-		"ip_version": schema.StringAttribute{
-		Computed:    true,
-		Description: "ip版本，ipv4或ipv6",
-	},
-		"subnet_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "子网名称",
-	},
-		"cidr": schema.StringAttribute{
-		Computed:    true,
-		Description: "子网CIDR",
-	},
-	},
-	},
-		Description: "子网列表",
-	},
-	},
-	},
-		Description: "VPC实例列表",
-	},
-	},
+			"ec_id": schema.StringAttribute{
+				Required:    true,
+				Description: "云间高速实例ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(36, 36),
+				},
+			},
+			"cgw_id": schema.StringAttribute{
+				Optional:    true,
+				Description: "云网关ID",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"id": schema.StringAttribute{
+				Optional:    true,
+				Description: "VPC实例ID，精确查询",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"query_content": schema.StringAttribute{
+				Optional:    true,
+				Description: "模糊匹配（支持VPCID、VPCName、dcName）",
+			},
+			"status": schema.StringAttribute{
+				Optional:    true,
+				Description: "状态（creating：加载中，running：已连接，removing：卸载中，flushing：路由待更新，error：失败）",
+				Validators: []validator.String{
+					stringvalidator.OneOf("creating", "running", "removing", "flushing", "error"),
+				},
+			},
+			"is_auth": schema.Int32Attribute{
+				Optional:    true,
+				Description: "是否跨账号实例（0：本账号，1：跨账号）",
+				Validators: []validator.Int32{
+					int32validator.OneOf(0, 1),
+				},
+			},
+			"is_exclusive": schema.Int32Attribute{
+				Optional:    true,
+				Description: "是否专属云实例（0：公有云，1：专属云）",
+				Validators: []validator.Int32{
+					int32validator.OneOf(0, 1),
+				},
+			},
+			"page_no": schema.Int32Attribute{
+				Optional:    true,
+				Description: "分页页码，默认为1",
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+				},
+			},
+			"page_size": schema.Int32Attribute{
+				Optional:    true,
+				Description: "每页记录数，默认为10",
+				Validators: []validator.Int32{
+					int32validator.Between(1, 100),
+				},
+			},
+			"vpc_instances": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"ec_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "云间高速实例ID",
+						},
+						"cgw_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "云网关ID",
+						},
+						"cgw_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "云网关名称",
+						},
+						"status": schema.StringAttribute{
+							Computed:    true,
+							Description: "状态",
+						},
+						"vpc_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "VPC名称",
+						},
+						"vpc_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "VPC ID",
+						},
+						"vpc_cidr": schema.StringAttribute{
+							Computed:    true,
+							Description: "VPC CIDR",
+						},
+						"region_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "资源池ID",
+						},
+						"region_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "资源池名称",
+						},
+						"region_type": schema.StringAttribute{
+							Computed:    true,
+							Description: "资源池类型（CNP/MAZ/OS/CS/PRVT）",
+						},
+						"rtb_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由表名称",
+						},
+						"rtb_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "路由表ID",
+						},
+						"exclusive_id": schema.StringAttribute{
+							Computed:    true,
+							Description: "专属云资源池ID",
+						},
+						"id": schema.StringAttribute{
+							Computed:    true,
+							Description: "VPC实例ID",
+						},
+						"is_auth": schema.Int32Attribute{
+							Computed:    true,
+							Description: "是否跨账号实例（0：本账号，1：跨账号）",
+						},
+						"is_exclusive": schema.Int32Attribute{
+							Computed:    true,
+							Description: "是否专属云实例（0：公有云，1：专属云）",
+						},
+						"route_learn": schema.Int32Attribute{
+							Computed:    true,
+							Description: "路由学习开关（1：学习，0：不学习）",
+						},
+						"route_sync": schema.Int32Attribute{
+							Computed:    true,
+							Description: "路由同步开关（1：同步，0：不同步）",
+						},
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
+						},
+						"subnets": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"subnet_id": schema.StringAttribute{
+										Computed:    true,
+										Description: "子网ID",
+									},
+									"ip_version": schema.StringAttribute{
+										Computed:    true,
+										Description: "ip版本，ipv4或ipv6",
+									},
+									"subnet_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "子网名称",
+									},
+									"cidr": schema.StringAttribute{
+										Computed:    true,
+										Description: "子网CIDR",
+									},
+								},
+							},
+							Description: "子网列表",
+						},
+					},
+				},
+				Description: "VPC实例列表",
+			},
+		},
 	}
 }
 

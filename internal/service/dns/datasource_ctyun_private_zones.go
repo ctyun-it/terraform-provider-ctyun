@@ -42,93 +42,93 @@ func (c *CtyunPrivateZones) Metadata(ctx context.Context, request datasource.Met
 func (c *CtyunPrivateZones) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10033667"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，默认使用provider配置",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"id": schema.StringAttribute{
-		Optional:    true,
-		Description: "内网DNS ID，精确查询",
-		Validators: []validator.String{
-		stringvalidator.LengthAtLeast(1),
-	},
-	},
-		"name": schema.StringAttribute{
-		Optional:    true,
-		Description: "内网DNS名称，精确匹配",
-	},
-		"page_no": schema.Int32Attribute{
-		Optional:    true,
-		Description: "分页页码，默认为1",
-		Validators: []validator.Int32{
-		int32validator.AtLeast(1),
-	},
-	},
-		"page_size": schema.Int32Attribute{
-		Optional:    true,
-		Description: "每页记录数，默认为10，最大50",
-		Validators: []validator.Int32{
-		int32validator.Between(1, 50),
-	},
-	},
-		"zones": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "内网DNS ID",
-	},
-		"name": schema.StringAttribute{
-		Computed:    true,
-		Description: "内网DNS名称",
-	},
-		"description": schema.StringAttribute{
-		Computed:    true,
-		Description: "内网DNS描述",
-	},
-		"proxy_pattern": schema.StringAttribute{
-		Computed:    true,
-		Description: "代理模式，zone：当前可用区不进行递归解析。 record：不完全劫持，进行递归解析代理",
-	},
-		"ttl": schema.Int64Attribute{
-		Computed:    true,
-		Description: "TTL值（秒）",
-	},
-		"create_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "创建时间，为UTC格式",
-	},
-		"update_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "更新时间，为UTC格式",
-	},
-		"vpc_associations": schema.ListNestedAttribute{
-		Computed: true,
-		NestedObject: schema.NestedAttributeObject{
-		Attributes: map[string]schema.Attribute{
-		"vpc_id": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC ID",
-	},
-		"vpc_name": schema.StringAttribute{
-		Computed:    true,
-		Description: "VPC名称",
-	},
-	},
-	},
-		Description: "关联的VPC列表",
-	},
-	},
-	},
-		Description: "私有域列表",
-	},
-	},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，默认使用provider配置",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"id": schema.StringAttribute{
+				Optional:    true,
+				Description: "内网DNS ID，精确查询",
+				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
+				},
+			},
+			"name": schema.StringAttribute{
+				Optional:    true,
+				Description: "内网DNS名称，精确匹配",
+			},
+			"page_no": schema.Int32Attribute{
+				Optional:    true,
+				Description: "分页页码，默认为1",
+				Validators: []validator.Int32{
+					int32validator.AtLeast(1),
+				},
+			},
+			"page_size": schema.Int32Attribute{
+				Optional:    true,
+				Description: "每页记录数，默认为10，最大50",
+				Validators: []validator.Int32{
+					int32validator.Between(1, 50),
+				},
+			},
+			"zones": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"id": schema.StringAttribute{
+							Computed:    true,
+							Description: "内网DNS ID",
+						},
+						"name": schema.StringAttribute{
+							Computed:    true,
+							Description: "内网DNS名称",
+						},
+						"description": schema.StringAttribute{
+							Computed:    true,
+							Description: "内网DNS描述",
+						},
+						"proxy_pattern": schema.StringAttribute{
+							Computed:    true,
+							Description: "代理模式，zone：当前可用区不进行递归解析。 record：不完全劫持，进行递归解析代理",
+						},
+						"ttl": schema.Int64Attribute{
+							Computed:    true,
+							Description: "TTL值（秒）",
+						},
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
+						},
+						"update_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "更新时间，为UTC格式",
+						},
+						"vpc_associations": schema.ListNestedAttribute{
+							Computed: true,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"vpc_id": schema.StringAttribute{
+										Computed:    true,
+										Description: "VPC ID",
+									},
+									"vpc_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "VPC名称",
+									},
+								},
+							},
+							Description: "关联的VPC列表",
+						},
+					},
+				},
+				Description: "私有域列表",
+			},
+		},
 	}
 }
 

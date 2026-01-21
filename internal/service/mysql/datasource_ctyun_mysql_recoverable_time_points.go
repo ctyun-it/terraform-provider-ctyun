@@ -39,38 +39,38 @@ func (c *ctyunMysqlRecoverableTimePoints) Metadata(ctx context.Context, request 
 func (c *ctyunMysqlRecoverableTimePoints) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
-			Attributes : map[string]schema.Attribute{
-		"instance_id": schema.StringAttribute{
-		Required:    true,
-		Description: "mysql 实例id",
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "项目ID",
-	},
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "区域ID",
-	},
-		"backup_time_points": schema.ListNestedAttribute{
-		Computed:    true,
-		Description: "可恢复时间点",
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"start_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "开始时间",
-	},
-		"end_time": schema.StringAttribute{
-		Computed:    true,
-		Description: "结束时间",
-	},
-	},
-	},
-	},
-	},
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "mysql 实例id",
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "项目ID",
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "区域ID",
+			},
+			"backup_time_points": schema.ListNestedAttribute{
+				Computed:    true,
+				Description: "可恢复时间点",
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"start_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "开始时间",
+						},
+						"end_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "结束时间",
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
