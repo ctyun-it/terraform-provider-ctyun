@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_kafka_acls"
+subcategory: "KAFKA"
+---
+
 # ctyun_kafka_acls (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145597
 

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_vip"
+subcategory: "VIP"
+---
+
 # ctyun_vip (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10224288
 

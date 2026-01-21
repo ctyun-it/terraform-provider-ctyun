@@ -99,69 +99,69 @@ func (c *CtyunPgsqlParamTemplate) ImportState(ctx context.Context, request resou
 
 func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10166169",
-		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "数据库参数模板名称",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(1, 32),
-				},
-			},
-			"source_template_id": schema.Int64Attribute{
-				Required:    true,
-				Description: "参考的参数模板ID，可以根据data.ctyun_postgresql_param_templates查询",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
-				},
-			},
-			"description": schema.StringAttribute{
-				Optional:    true,
-				Description: "参数模板的描述，支持更新，若不为空，则长度限制：1-1024",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthBetween(1, 1024),
-				},
-			},
-			"id": schema.Int64Attribute{
-				Computed:    true,
-				Description: "参数模板id",
-			},
-			"template_parameters": schema.MapAttribute{
-				Optional:    true,
-				Description: "postgresql模板参数列表，创建参数模板时不可传，更新阶段可传，支持更新。可修改每个参数值，无法新增参数或删除",
-				ElementType: types.StringType,
-			},
-		},
+		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10166169"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"project_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+		PlanModifiers: []planmodifier.String{
+		explanmodifier.Project(),
+	},
+		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+		Validators: []validator.String{
+		validator2.Project(),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "数据库参数模板名称",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.LengthBetween(1, 32),
+	},
+	},
+		"source_template_id": schema.Int64Attribute{
+		Required:    true,
+		Description: "参考的参数模板ID，可以根据data.ctyun_postgresql_param_templates查询",
+		PlanModifiers: []planmodifier.Int64{
+		int64planmodifier.RequiresReplace(),
+	},
+		Validators: []validator.Int64{
+		int64validator.AtLeast(1),
+	},
+	},
+		"description": schema.StringAttribute{
+		Optional:    true,
+		Description: "参数模板的描述，支持更新，若不为空，则长度限制：1-1024",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthBetween(1, 1024),
+	},
+	},
+		"id": schema.Int64Attribute{
+		Computed:    true,
+		Description: "参数模板id",
+	},
+		"template_parameters": schema.MapAttribute{
+		Optional:    true,
+		Description: "postgresql模板参数列表，创建参数模板时不可传，更新阶段可传，支持更新。可修改每个参数值，无法新增参数或删除",
+		ElementType: types.StringType,
+	},
+	},
 	}
 }
 

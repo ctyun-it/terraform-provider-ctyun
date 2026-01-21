@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_express_connects"
+subcategory: "EXPRESS_CONNECT"
+---
+
 # ctyun_express_connects (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
 

@@ -3,6 +3,7 @@ package vpc
 import (
 	"context"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -43,7 +44,7 @@ func (c *ctyunNetTags) Metadata(_ context.Context, request resource.MetadataRequ
 
 func (c *ctyunNetTags) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975`,
+		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,

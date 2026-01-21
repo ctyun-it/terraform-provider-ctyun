@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_elb_health_check"
+subcategory: "ELB"
+---
+
 # ctyun_elb_health_check (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101
 
@@ -48,7 +53,6 @@ resource "ctyun_elb_health_check" "health_check_test" {
 - `http_url_path` (String) 仅当protocol为HTTP时必填且生效,支持的最大字符长度：80，支持更新
 - `interval` (Number) 负载均衡进行健康检查的时间间隔，取值范围：1-20940秒，默认为5秒，支持更新
 - `max_retry` (Number) 最大重试次数，取值范围：1-10次，默认为2次，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `protocol_port` (Number) 健康检查端口 1 - 65535，支持更新
 - `region_id` (String) 资源池ID
 - `timeout` (Number) 健康检查响应的最大超时时间，取值范围：2-60秒，默认为2秒，支持更新

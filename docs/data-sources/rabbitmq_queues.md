@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_rabbitmq_queues"
+subcategory: "RABBITMQ"
+---
+
 # ctyun_rabbitmq_queues (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967
 

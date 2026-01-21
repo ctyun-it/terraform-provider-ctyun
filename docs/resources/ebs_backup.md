@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ebs_backup"
+subcategory: "EBS"
+---
+
 # ctyun_ebs_backup (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428
 
@@ -39,7 +44,7 @@ resource "ctyun_ebs_backup" "test" {
 ### Optional
 
 - `description` (String) 云硬盘备份描述
-- `full_backup` (Boolean) 是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。
+- `full_backup` (Boolean) 是否启用全量备份，如您是第一次备份，或者切换了存储库，则本次备份为全量备份，不受该参数影响。
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

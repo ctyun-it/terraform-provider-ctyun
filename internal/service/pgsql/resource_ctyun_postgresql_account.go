@@ -99,140 +99,140 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 
 func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161317",
+		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10161317"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"instance_id": schema.StringAttribute{
+		Required:    true,
+		Description: "MySQL实例ID",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"project_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+		PlanModifiers: []planmodifier.String{
+		explanmodifier.Project(),
+	},
+		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+		Validators: []validator.String{
+		validator2.Project(),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "数据库账号名称，,格式限制: 1.名称唯一；2. 以字母开头，以字母或数字结尾；3.由小写字母、数字或下划线组成；4. 长度：2~63个字符",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.LengthBetween(2, 63),
+	},
+	},
+		"password": schema.StringAttribute{
+		Required:    true,
+		Sensitive:   true,
+		Description: "数据库账号密码，支持更新。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)",
+		Validators: []validator.String{
+		stringvalidator.LengthBetween(8, 32),
+	},
+	},
+		"description": schema.StringAttribute{
+		Optional:    true,
+		Description: "备注，支持更新",
+		Validators: []validator.String{
+		validator2.Desc(),
+	},
+	},
+		"user_type": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     stringdefault.StaticString(business.PgsqlAccountTypeNormal),
+		Description: "账号类型，取值范围：normal-普通账号，advanced-高权限账号。默认为普通账号",
+		Validators: []validator.String{
+		stringvalidator.OneOf(business.PgsqlAccountTypes...),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"is_lock": schema.BoolAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     booldefault.StaticBool(false),
+		Description: "判断账号是否需要锁定，取值范围：true-锁定账号，false-解锁账号。默认为false。支持更新",
+	},
+		"schema_privilege_list": schema.SetNestedAttribute{
+		Optional:    true,
+		Description: "账号需要授权的数据库列表",
+		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"instance_id": schema.StringAttribute{
-				Required:    true,
-				Description: "MySQL实例ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "数据库账号名称，,格式限制: 1.名称唯一；2. 以字母开头，以字母或数字结尾；3.由小写字母、数字或下划线组成；4. 长度：2~63个字符",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(2, 63),
-				},
-			},
-			"password": schema.StringAttribute{
-				Required:    true,
-				Sensitive:   true,
-				Description: "数据库账号密码，支持更新。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(8, 32),
-				},
-			},
-			"description": schema.StringAttribute{
-				Optional:    true,
-				Description: "备注，支持更新",
-				Validators: []validator.String{
-					validator2.Desc(),
-				},
-			},
-			"user_type": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString(business.PgsqlAccountTypeNormal),
-				Description: "账号类型，取值范围：normal-普通账号，advanced-高权限账号。默认为普通账号",
-				Validators: []validator.String{
-					stringvalidator.OneOf(business.PgsqlAccountTypes...),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"is_lock": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "判断账号是否需要锁定，取值范围：true-锁定账号，false-解锁账号。默认为false。支持更新",
-			},
-			"schema_privilege_list": schema.SetNestedAttribute{
-				Optional:    true,
-				Description: "账号需要授权的数据库列表",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"grant_schema": schema.StringAttribute{
-							Required:    true,
-							Description: "需要授权的数据库名称，支持更新",
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-						"privilege": schema.StringAttribute{
-							Required:    true,
-							Description: "授权数据库的权限，取值范围：readwrite-读写，readonly-只读，支持更新",
-							Validators: []validator.String{
-								stringvalidator.OneOf("readwrite", "readonly"),
-							},
-						},
-					},
-				},
-			},
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "实例账户id",
-			},
-			"rol_super": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否具有超级用户权限",
-			},
-			"rol_inherit": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否自动继承其所属角色的权限",
-			},
-			"rol_create_role": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否支持创建其他子用户",
-			},
-			"rol_create_db": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否可以创建数据库",
-			},
-			"rol_can_login": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否可以登录数据库",
-			},
-			"rol_conn_limit": schema.Int32Attribute{
-				Computed:    true,
-				Description: "用户连接实例的最大并发连接数。-1表示没有限制",
-			},
-			"rol_by_pass_rls": schema.BoolAttribute{
-				Computed:    true,
-				Description: "用户是否绕过每个行级安全策略",
-			},
-		},
+		"grant_schema": schema.StringAttribute{
+		Required:    true,
+		Description: "需要授权的数据库名称，支持更新",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"privilege": schema.StringAttribute{
+		Required:    true,
+		Description: "授权数据库的权限，取值范围：readwrite-读写，readonly-只读，支持更新",
+		Validators: []validator.String{
+		stringvalidator.OneOf("readwrite", "readonly"),
+	},
+	},
+	},
+	},
+	},
+		"id": schema.StringAttribute{
+		Computed:    true,
+		Description: "实例账户id",
+	},
+		"rol_super": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否具有超级用户权限",
+	},
+		"rol_inherit": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否自动继承其所属角色的权限",
+	},
+		"rol_create_role": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否支持创建其他子用户",
+	},
+		"rol_create_db": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否可以创建数据库",
+	},
+		"rol_can_login": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否可以登录数据库",
+	},
+		"rol_conn_limit": schema.Int32Attribute{
+		Computed:    true,
+		Description: "用户连接实例的最大并发连接数。-1表示没有限制",
+	},
+		"rol_by_pass_rls": schema.BoolAttribute{
+		Computed:    true,
+		Description: "用户是否绕过每个行级安全策略",
+	},
+	},
 	}
 }
 

@@ -98,7 +98,7 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 
 func (c *CtyunPrefix) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321",
+		MarkdownDescription: utils.FormatDesc("PREFIXLIST", "https://www.ctyun.cn/document/10026755/10298321"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,

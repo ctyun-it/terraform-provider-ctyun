@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_iam_policy"
+subcategory: "IAM"
+---
+
 # ctyun_iam_policy (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484
 

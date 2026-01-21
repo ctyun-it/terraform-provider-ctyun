@@ -92,204 +92,204 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906",
+		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10115906"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"project_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+		Validators: []validator.String{
+		validator2.Project(),
+	},
+	},
+		"protocol": schema.StringAttribute{
+		Required:    true,
+		Description: "协议类型，nfs/cifs。nfs 适用于 Linux；cifs 适用于 Windows",
+		Validators: []validator.String{
+		stringvalidator.OneOf([]string{"nfs", "cifs"}...),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "文件系统名称；单账户单资源池下，命名需唯一，只能由数字、“-”、字母组成，不能以数字和“-”开头、且不能以“-”结尾，2~255字符",
+		Validators: []validator.String{
+		stringvalidator.LengthBetween(2, 255),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"size": schema.Int32Attribute{
+		Required:    true,
+		Description: "文件系统大小（GB），支持更新。取值范围默认为[100,1048576]，实际取值受限于用户剩余容量配额大小。为避免资源浪费，单用户单资源池默认分配500TB容量配额，可提交工单提升配额。",
+		Validators: []validator.Int32{
+		int32validator.Between(100, 1048576),
+	},
+	},
+		"cycle_type": schema.StringAttribute{
+		Required:    true,
+		Description: "计费类型，year/month/on_demand。不支持更新",
+		Validators: []validator.String{
+		stringvalidator.OneOf(business.SfsCycleType...),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"cycle_count": schema.Int64Attribute{
+		Optional:    true,
+		Description: "包周期数，cycle_type是year或month时必须指定，周期最大长度不能超过3年",
+		Validators: []validator.Int64{
+		validator2.AlsoRequiresEqualInt64(
+		path.MatchRoot("cycle_type"),
+		types.StringValue(business.OrderCycleTypeMonth),
+		types.StringValue(business.OrderCycleTypeYear),
+	),
+		validator2.ConflictsWithEqualInt64(
+		path.MatchRoot("cycle_type"),
+		types.StringValue(business.OrderCycleTypeOnDemand),
+	),
+		validator2.CycleCount(1, 11, 1, 3),
+	},
+		PlanModifiers: []planmodifier.Int64{
+		int64planmodifier.RequiresReplace(),
+	},
+	},
+		"az_name": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "可用区名称，若未填写，默认从环境变量中读取。",
+		// az有必要设定默认值
+		Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"vpc_id": schema.StringAttribute{
+		Description: "VPC ID",
+		Required:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		validator2.VpcValidate(),
+	},
+	},
+		"subnet_id": schema.StringAttribute{
+		Description: "子网ID，当isVpce为true时必填",
+		Required:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		validator2.SubnetValidate(),
+	},
+	},
+		"is_vpce": schema.BoolAttribute{
+		Description: "创建文件系统时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须",
+		Optional:    true,
+		PlanModifiers: []planmodifier.Bool{
+		boolplanmodifier.RequiresReplace(),
+	},
+	},
+		"tags": schema.SetNestedAttribute{
+		Description: "标签列表",
+		Optional:    true,
+		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
-			"protocol": schema.StringAttribute{
-				Required:    true,
-				Description: "协议类型，nfs/cifs。nfs 适用于 Linux；cifs 适用于 Windows",
-				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"nfs", "cifs"}...),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "文件系统名称；单账户单资源池下，命名需唯一，只能由数字、“-”、字母组成，不能以数字和“-”开头、且不能以“-”结尾，2~255字符",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(2, 255),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"size": schema.Int32Attribute{
-				Required:    true,
-				Description: "文件系统大小（GB），支持更新。取值范围默认为[100,1048576]，实际取值受限于用户剩余容量配额大小。为避免资源浪费，单用户单资源池默认分配500TB容量配额，可提交工单提升配额。",
-				Validators: []validator.Int32{
-					int32validator.Between(100, 1048576),
-				},
-			},
-			"cycle_type": schema.StringAttribute{
-				Required:    true,
-				Description: "计费类型，year/month/on_demand。不支持更新",
-				Validators: []validator.String{
-					stringvalidator.OneOf(business.SfsCycleType...),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"cycle_count": schema.Int64Attribute{
-				Optional:    true,
-				Description: "包周期数，cycle_type是year或month时必须指定，周期最大长度不能超过3年",
-				Validators: []validator.Int64{
-					validator2.AlsoRequiresEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeMonth),
-						types.StringValue(business.OrderCycleTypeYear),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
-					validator2.CycleCount(1, 11, 1, 3),
-				},
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，若未填写，默认从环境变量中读取。",
-				// az有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"vpc_id": schema.StringAttribute{
-				Description: "VPC ID",
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.VpcValidate(),
-				},
-			},
-			"subnet_id": schema.StringAttribute{
-				Description: "子网ID，当isVpce为true时必填",
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.SubnetValidate(),
-				},
-			},
-			"is_vpce": schema.BoolAttribute{
-				Description: "创建文件系统时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须",
-				Optional:    true,
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
-			},
-			"tags": schema.SetNestedAttribute{
-				Description: "标签列表",
-				Optional:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"key": schema.StringAttribute{
-							Description: "标签键",
-							Required:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-						"value": schema.StringAttribute{
-							Description: "标签值",
-							Required:    true,
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-					},
-				},
-				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.StringAttribute{
-				Description: "资源ID",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"status": schema.StringAttribute{
-				Description: "文件系统状态",
-				Computed:    true,
-			},
-			"used_size": schema.Int32Attribute{
-				Description: "已使用大小（GB）",
-				Computed:    true,
-			},
-			"create_time": schema.StringAttribute{
-				Description: "创建时间，为UTC格式",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"update_time": schema.StringAttribute{
-				Description: "更新时间，为UTC格式",
-				Computed:    true,
-			},
-			"expire_time": schema.StringAttribute{
-				Description: "到期时间，为UTC格式，按需时为空",
-				Computed:    true,
-			},
-			"share_path": schema.StringAttribute{
-				Computed:    true,
-				Description: "挂载路径",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"share_path_windows": schema.StringAttribute{
-				Computed:    true,
-				Description: "挂载路径（windows）",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-		},
+		"key": schema.StringAttribute{
+		Description: "标签键",
+		Required:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"value": schema.StringAttribute{
+		Description: "标签值",
+		Required:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+	},
+	},
+		PlanModifiers: []planmodifier.Set{
+		setplanmodifier.RequiresReplace(),
+	},
+	},
+		"id": schema.StringAttribute{
+		Description: "资源ID",
+		Computed:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+		"status": schema.StringAttribute{
+		Description: "文件系统状态",
+		Computed:    true,
+	},
+		"used_size": schema.Int32Attribute{
+		Description: "已使用大小（GB）",
+		Computed:    true,
+	},
+		"create_time": schema.StringAttribute{
+		Description: "创建时间，为UTC格式",
+		Computed:    true,
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+		"update_time": schema.StringAttribute{
+		Description: "更新时间，为UTC格式",
+		Computed:    true,
+	},
+		"expire_time": schema.StringAttribute{
+		Description: "到期时间，为UTC格式，按需时为空",
+		Computed:    true,
+	},
+		"share_path": schema.StringAttribute{
+		Computed:    true,
+		Description: "挂载路径",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+		"share_path_windows": schema.StringAttribute{
+		Computed:    true,
+		Description: "挂载路径（windows）",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+	},
 	}
 }
 

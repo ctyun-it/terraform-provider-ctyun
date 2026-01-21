@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_scalings"
+subcategory: "SCALING"
+---
+
 # ctyun_scalings (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027725
 

@@ -39,106 +39,106 @@ func (c *CtyunExpressConnectionRegionPeer) Metadata(ctx context.Context, request
 
 func (c *CtyunExpressConnectionRegionPeer) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038250",
+		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038250"),
+			Attributes : map[string]schema.Attribute{
+		"ec_id": schema.StringAttribute{
+		Required:    true,
+		Description: "云间高速ID",
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"packet_id": schema.StringAttribute{
+		Optional:    true,
+		Description: "带宽包ID",
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"cgw_id": schema.StringAttribute{
+		Optional:    true,
+		Description: "云网关ID",
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"region_peers": schema.ListNestedAttribute{
+		Computed: true,
+		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"ec_id": schema.StringAttribute{
-				Required:    true,
-				Description: "云间高速ID",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"packet_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "带宽包ID",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"cgw_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "云网关ID",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"region_peers": schema.ListNestedAttribute{
-				Computed: true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							Computed:    true,
-							Description: "跨域连接ID",
-						},
-						"ec_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "云间高速ID",
-						},
-						"packet_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "带宽包ID",
-						},
-						"packet_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "带宽包名称",
-						},
-						"peer_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "跨域连接名称",
-						},
-						"src_cgw_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "本端网关ID",
-						},
-						"dst_cgw_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "对端网关ID",
-						},
-						"src_cgw_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "本端网关名称",
-						},
-						"dst_cgw_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "对端网关名称",
-						},
-						"src_region_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "本端资源池ID",
-						},
-						"dst_region_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "对端资源池ID",
-						},
-						"src_region_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "本端资源池名称",
-						},
-						"dst_region_name": schema.StringAttribute{
-							Computed:    true,
-							Description: "对端资源池名称",
-						},
-						"peer_type": schema.Int32Attribute{
-							Computed:    true,
-							Description: "互通类型（1：境内，2：跨境（中国大陆-亚太），3：境外（亚太），4：定制）",
-						},
-						"rate": schema.Int32Attribute{
-							Computed:    true,
-							Description: "带宽值（MB）",
-						},
-						"status": schema.StringAttribute{
-							Computed:    true,
-							Description: "状态（creating：加载中，running：已连接， removing：卸载中，expired：过期）",
-						},
-						"update_time": schema.StringAttribute{
-							Computed:    true,
-							Description: "更新时间，为UTC格式",
-						},
-					},
-				},
-				Description: "跨域连接列表",
-			},
-		},
+		"id": schema.StringAttribute{
+		Computed:    true,
+		Description: "跨域连接ID",
+	},
+		"ec_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "云间高速ID",
+	},
+		"packet_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "带宽包ID",
+	},
+		"packet_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "带宽包名称",
+	},
+		"peer_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "跨域连接名称",
+	},
+		"src_cgw_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "本端网关ID",
+	},
+		"dst_cgw_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "对端网关ID",
+	},
+		"src_cgw_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "本端网关名称",
+	},
+		"dst_cgw_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "对端网关名称",
+	},
+		"src_region_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "本端资源池ID",
+	},
+		"dst_region_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "对端资源池ID",
+	},
+		"src_region_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "本端资源池名称",
+	},
+		"dst_region_name": schema.StringAttribute{
+		Computed:    true,
+		Description: "对端资源池名称",
+	},
+		"peer_type": schema.Int32Attribute{
+		Computed:    true,
+		Description: "互通类型（1：境内，2：跨境（中国大陆-亚太），3：境外（亚太），4：定制）",
+	},
+		"rate": schema.Int32Attribute{
+		Computed:    true,
+		Description: "带宽值（MB）",
+	},
+		"status": schema.StringAttribute{
+		Computed:    true,
+		Description: "状态（creating：加载中，running：已连接， removing：卸载中，expired：过期）",
+	},
+		"update_time": schema.StringAttribute{
+		Computed:    true,
+		Description: "更新时间，为UTC格式",
+	},
+	},
+	},
+		Description: "跨域连接列表",
+	},
+	},
 	}
 }
 

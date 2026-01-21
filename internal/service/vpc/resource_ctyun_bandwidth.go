@@ -65,7 +65,7 @@ func (c *ctyunBandwidth) Metadata(_ context.Context, request resource.MetadataRe
 
 func (c *ctyunBandwidth) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10225205`,
+		MarkdownDescription: utils.FormatDesc("BANDWIDTH", "https://www.ctyun.cn/document/10026761/10225205"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

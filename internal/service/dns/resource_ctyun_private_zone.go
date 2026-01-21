@@ -97,114 +97,114 @@ func (c *CtyunPrivateZone) ImportState(ctx context.Context, request resource.Imp
 
 func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10033657",
+		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10033657"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"vpc_id_list": schema.SetAttribute{
+		Required:    true,
+		ElementType: types.StringType,
+		Description: "关联的vpc，最多同时支持5个VPC。支持更新",
+		Validators: []validator.Set{
+		setvalidator.SizeBetween(1, 5),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "内网DNS名称。要求：由多个以点分隔的字符串组成，可包含字母、数字中划线、中划线不能在开头或末尾，单个字符串不超过63个字符，域名总长度不超过254个字符",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthBetween(1, 254),
+		validator2.DnsName(),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"description": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "内网DNS描述，支持更新",
+		Validators: []validator.String{
+		validator2.Desc(),
+	},
+	},
+		"proxy_pattern": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     stringdefault.StaticString("zone"),
+		Description: "可选值：zone：当前可用区不进行递归解析，record：不完全劫持，进行递归解析代理，大小写不敏感。默认值zone，支持更新。",
+		Validators: []validator.String{
+		stringvalidator.OneOf("zone", "record"),
+	},
+	},
+		"ttl": schema.Int32Attribute{
+		Optional:    true,
+		Computed:    true,
+		Default:     int32default.StaticInt32(300),
+		Description: "zone ttl, 单位秒。默认300，取值范围300-2147483647。支持更新",
+		Validators: []validator.Int32{
+		int32validator.Between(300, 2147483647),
+	},
+	},
+		"id": schema.StringAttribute{
+		Computed:    true,
+		Description: "zone id",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+		"create_time": schema.StringAttribute{
+		Computed:    true,
+		Description: "创建时间，为UTC格式",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.UseStateForUnknown(),
+	},
+	},
+		"update_time": schema.StringAttribute{
+		Computed:    true,
+		Description: "更新时间，为UTC格式",
+	},
+		"tags": schema.SetNestedAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "标签",
+		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"vpc_id_list": schema.SetAttribute{
-				Required:    true,
-				ElementType: types.StringType,
-				Description: "关联的vpc，最多同时支持5个VPC。支持更新",
-				Validators: []validator.Set{
-					setvalidator.SizeBetween(1, 5),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "内网DNS名称。要求：由多个以点分隔的字符串组成，可包含字母、数字中划线、中划线不能在开头或末尾，单个字符串不超过63个字符，域名总长度不超过254个字符",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthBetween(1, 254),
-					validator2.DnsName(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"description": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "内网DNS描述，支持更新",
-				Validators: []validator.String{
-					validator2.Desc(),
-				},
-			},
-			"proxy_pattern": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString("zone"),
-				Description: "可选值：zone：当前可用区不进行递归解析，record：不完全劫持，进行递归解析代理，大小写不敏感。默认值zone，支持更新。",
-				Validators: []validator.String{
-					stringvalidator.OneOf("zone", "record"),
-				},
-			},
-			"ttl": schema.Int32Attribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     int32default.StaticInt32(300),
-				Description: "zone ttl, 单位秒。默认300，取值范围300-2147483647。支持更新",
-				Validators: []validator.Int32{
-					int32validator.Between(300, 2147483647),
-				},
-			},
-			"id": schema.StringAttribute{
-				Computed:    true,
-				Description: "zone id",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"create_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "创建时间，为UTC格式",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-			},
-			"update_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "更新时间，为UTC格式",
-			},
-			"tags": schema.SetNestedAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "标签",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"tag_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "标签id",
-						},
-						"key": schema.StringAttribute{
-							Required:    true,
-							Description: "标签key，支持更新。",
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-						"value": schema.StringAttribute{
-							Required:    true,
-							Description: "标签value，支持更新。",
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-					},
-				},
-				Validators: []validator.Set{
-					setvalidator.SizeAtMost(10),
-				},
-			},
-		},
+		"tag_id": schema.StringAttribute{
+		Computed:    true,
+		Description: "标签id",
+	},
+		"key": schema.StringAttribute{
+		Required:    true,
+		Description: "标签key，支持更新。",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"value": schema.StringAttribute{
+		Required:    true,
+		Description: "标签value，支持更新。",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+	},
+	},
+		Validators: []validator.Set{
+		setvalidator.SizeAtMost(10),
+	},
+	},
+	},
 	}
 }
 

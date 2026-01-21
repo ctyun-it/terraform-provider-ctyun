@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_vpce_service"
+subcategory: "VPCE"
+---
+
 # ctyun_vpce_service (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013
 
@@ -62,7 +67,6 @@ resource "ctyun_vpce_service" "test" {
 
 - `auto_connection` (Boolean) 是否自动连接，true表示自动链接，false表示非自动链接，支持更新
 - `name` (String) 支持拉丁字母、数字，下划线，连字符，中文/英文字母开头，不能以http:/https:开头，长度2-32，支持更新
-- `subnet_id` (String) 服务后端子网id
 - `type` (String) 接口还是反向，interface:接口，reverse:反向
 - `vpc_id` (String) 虚拟私有云ID
 
@@ -72,6 +76,7 @@ resource "ctyun_vpce_service" "test" {
 - `instance_type` (String) 服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,当type为interface时必填。支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `rules` (Attributes Set) 节点服务规则，当type为interface时必填，支持更新 (see [below for nested schema](#nestedatt--rules))
+- `subnet_id` (String) 子网ID，创建反向终端节点服务时必填
 - `whitelist_email` (Set of String) 白名单邮箱，最多支持10个，支持更新
 
 ### Read-Only

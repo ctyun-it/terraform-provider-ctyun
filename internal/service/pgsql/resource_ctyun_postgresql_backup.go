@@ -99,84 +99,84 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 
 func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10160072",
-		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"instance_id": schema.StringAttribute{
-				Required:    true,
-				Description: "MySQL实例ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "备份集名称，不可重复",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"description": schema.StringAttribute{
-				Optional:    true,
-				Description: "备份描述",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-					validator2.Desc(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"id": schema.Int64Attribute{
-				Computed:    true,
-				Description: "备份集ID",
-			},
-			"backup_type": schema.StringAttribute{
-				Computed:    true,
-				Description: "备份集类型，auto：自动备份，manual：手动备份，recovery：恢复备份",
-			},
-			"backup_result": schema.StringAttribute{
-				Computed:    true,
-				Description: "备份结果，ing：运行中，success：备份成功，fail：备份失败",
-			},
-			"start_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "备份开始时间，时间格式为utc",
-			},
-			"end_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "备份结束时间，时间格式为utc",
-			},
-		},
+		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10160072"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"instance_id": schema.StringAttribute{
+		Required:    true,
+		Description: "MySQL实例ID",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"project_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+		PlanModifiers: []planmodifier.String{
+		explanmodifier.Project(),
+	},
+		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+		Validators: []validator.String{
+		validator2.Project(),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "备份集名称，不可重复",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"description": schema.StringAttribute{
+		Optional:    true,
+		Description: "备份描述",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+		validator2.Desc(),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"id": schema.Int64Attribute{
+		Computed:    true,
+		Description: "备份集ID",
+	},
+		"backup_type": schema.StringAttribute{
+		Computed:    true,
+		Description: "备份集类型，auto：自动备份，manual：手动备份，recovery：恢复备份",
+	},
+		"backup_result": schema.StringAttribute{
+		Computed:    true,
+		Description: "备份结果，ing：运行中，success：备份成功，fail：备份失败",
+	},
+		"start_time": schema.StringAttribute{
+		Computed:    true,
+		Description: "备份开始时间，时间格式为utc",
+	},
+		"end_time": schema.StringAttribute{
+		Computed:    true,
+		Description: "备份结束时间，时间格式为utc",
+	},
+	},
 	}
 }
 

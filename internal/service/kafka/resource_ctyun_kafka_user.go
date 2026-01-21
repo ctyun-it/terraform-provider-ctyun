@@ -64,7 +64,7 @@ type CtyunKafkaAclPermissionInfo struct {
 
 func (c *ctyunKafkaUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145597`,
+		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10145597"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int32Attribute{
 				Computed:      true,

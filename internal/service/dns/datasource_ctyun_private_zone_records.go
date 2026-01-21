@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -40,92 +41,92 @@ func (c *CtyunPrivateZoneRecords) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunPrivateZoneRecords) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10033663",
+		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10033663"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，默认使用provider配置",
+		Validators: []validator.String{
+		stringvalidator.LengthAtLeast(1),
+	},
+	},
+		"name": schema.StringAttribute{
+		Description: "dns 记录名称",
+		Optional:    true,
+	},
+		"zone_id": schema.StringAttribute{
+		Description: "内网DNS ID",
+		Required:    true,
+	},
+		"id": schema.StringAttribute{
+		Description: "dns record ID",
+		Optional:    true,
+	},
+		"page_no": schema.Int32Attribute{
+		Description: "页码，默认为1",
+		Optional:    true,
+		Validators: []validator.Int32{
+		int32validator.AtLeast(1),
+	},
+	},
+		"page_size": schema.Int32Attribute{
+		Optional:    true,
+		Description: "每页记录数，默认为10，最大50",
+		Validators: []validator.Int32{
+		int32validator.Between(1, 50),
+	},
+	},
+		"records": schema.ListNestedAttribute{
+		Description: "解析记录列表",
+		Computed:    true,
+		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，默认使用provider配置",
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-			},
-			"name": schema.StringAttribute{
-				Description: "dns 记录名称",
-				Optional:    true,
-			},
-			"zone_id": schema.StringAttribute{
-				Description: "内网DNS ID",
-				Required:    true,
-			},
-			"id": schema.StringAttribute{
-				Description: "dns record ID",
-				Optional:    true,
-			},
-			"page_no": schema.Int32Attribute{
-				Description: "页码，默认为1",
-				Optional:    true,
-				Validators: []validator.Int32{
-					int32validator.AtLeast(1),
-				},
-			},
-			"page_size": schema.Int32Attribute{
-				Optional:    true,
-				Description: "每页记录数，默认为10，最大50",
-				Validators: []validator.Int32{
-					int32validator.Between(1, 50),
-				},
-			},
-			"records": schema.ListNestedAttribute{
-				Description: "解析记录列表",
-				Computed:    true,
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"id": schema.StringAttribute{
-							Description: "record ID",
-							Computed:    true,
-						},
-						"name": schema.StringAttribute{
-							Description: "DNS record名称",
-							Computed:    true,
-						},
-						"zone_id": schema.StringAttribute{
-							Description: "内网DNS ID",
-							Computed:    true,
-						},
-						"zone_name": schema.StringAttribute{
-							Description: "内网DNS名称",
-							Computed:    true,
-						},
-						"description": schema.StringAttribute{
-							Description: "record描述",
-							Computed:    true,
-						},
-						"ttl": schema.Int64Attribute{
-							Description: "TTL缓存时间",
-							Computed:    true,
-						},
-						"type": schema.StringAttribute{
-							Description: "record 类型（A、AAAA、CNAME、MX、TXT等）",
-							Computed:    true,
-						},
-						"value": schema.ListAttribute{
-							Description: "record 值列表",
-							ElementType: types.StringType,
-							Computed:    true,
-						},
-						"create_time": schema.StringAttribute{
-							Description: "创建时间，为UTC格式",
-							Computed:    true,
-						},
-						"update_time": schema.StringAttribute{
-							Description: "更新时间，为UTC格式",
-							Computed:    true,
-						},
-					},
-				},
-			},
-		},
+		"id": schema.StringAttribute{
+		Description: "record ID",
+		Computed:    true,
+	},
+		"name": schema.StringAttribute{
+		Description: "DNS record名称",
+		Computed:    true,
+	},
+		"zone_id": schema.StringAttribute{
+		Description: "内网DNS ID",
+		Computed:    true,
+	},
+		"zone_name": schema.StringAttribute{
+		Description: "内网DNS名称",
+		Computed:    true,
+	},
+		"description": schema.StringAttribute{
+		Description: "record描述",
+		Computed:    true,
+	},
+		"ttl": schema.Int64Attribute{
+		Description: "TTL缓存时间",
+		Computed:    true,
+	},
+		"type": schema.StringAttribute{
+		Description: "record 类型（A、AAAA、CNAME、MX、TXT等）",
+		Computed:    true,
+	},
+		"value": schema.ListAttribute{
+		Description: "record 值列表",
+		ElementType: types.StringType,
+		Computed:    true,
+	},
+		"create_time": schema.StringAttribute{
+		Description: "创建时间，为UTC格式",
+		Computed:    true,
+	},
+		"update_time": schema.StringAttribute{
+		Description: "更新时间，为UTC格式",
+		Computed:    true,
+	},
+	},
+	},
+	},
+	},
 	}
 }
 

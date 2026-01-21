@@ -25,7 +25,7 @@ func (c *CtyunIamUserAks) Metadata(_ context.Context, req datasource.MetadataReq
 
 func (c *CtyunIamUserAks) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289`,
+		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10355289"),
 		Attributes: map[string]schema.Attribute{
 			"user_id": schema.StringAttribute{
 				Required:    true,

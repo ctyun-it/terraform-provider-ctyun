@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_mongodb_restart_db"
+subcategory: "MONGODB"
+---
+
 # ctyun_mongodb_restart_db (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
 

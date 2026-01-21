@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_dhcpoptionset_association_vpc"
+subcategory: "DHCP"
+---
+
 # ctyun_dhcpoptionset_association_vpc (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10381274
 
@@ -35,7 +40,7 @@ resource "ctyun_dhcpoptionset_association_vpc" "example" {
 ### Required
 
 - `dhcp_option_sets_id` (String) DHCP选项集ID
-- `vpc_ids` (Set of String) VPC ID列表 支持更新
+- `vpc_ids` (Set of String) VPC ID列表 支持更新，至少输入一个，最大支持10个
 
 ### Optional
 
@@ -43,4 +48,4 @@ resource "ctyun_dhcpoptionset_association_vpc" "example" {
 
 ### Read-Only
 
-- `id` (String) 资源唯一标识，格式为 region_id:dhcp_option_sets_id
+- `id` (String) 资源唯一标识，格式为dhcp_option_sets_id,region_id

@@ -98,78 +98,78 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 
 func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098794",
-		Attributes: map[string]schema.Attribute{
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
-			"name": schema.StringAttribute{
-				Required:    true,
-				Description: "模板参数名",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"engine": schema.StringAttribute{
-				Required:    true,
-				Description: "数据库版本，取值：5.7, 8.0",
-				Validators: []validator.String{
-					stringvalidator.OneOf("5.7", "8.0"),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"description": schema.StringAttribute{
-				Optional:    true,
-				Description: "参数模板描述",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.Desc(),
-				},
-			},
-			"id": schema.Int64Attribute{
-				Computed:    true,
-				Description: "参数模板id",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.UseStateForUnknown(),
-				},
-			},
-			"template_parameters": schema.MapAttribute{
-				Optional:    true,
-				Description: "mysql模板参数列表，创建参数模板时不可传，更新阶段可传，支持更新。可修改每个参数值，无法新增参数或删除",
-				ElementType: types.StringType,
-				Validators: []validator.Map{
-					mapvalidator.SizeAtLeast(1),
-				},
-			},
-		},
+		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098794"),
+			Attributes : map[string]schema.Attribute{
+		"region_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+	},
+		"project_id": schema.StringAttribute{
+		Optional:    true,
+		Computed:    true,
+		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+		PlanModifiers: []planmodifier.String{
+		explanmodifier.Project(),
+	},
+		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+		Validators: []validator.String{
+		validator2.Project(),
+	},
+	},
+		"name": schema.StringAttribute{
+		Required:    true,
+		Description: "模板参数名",
+		Validators: []validator.String{
+		stringvalidator.UTF8LengthAtLeast(1),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"engine": schema.StringAttribute{
+		Required:    true,
+		Description: "数据库版本，取值：5.7, 8.0",
+		Validators: []validator.String{
+		stringvalidator.OneOf("5.7", "8.0"),
+	},
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+	},
+		"description": schema.StringAttribute{
+		Optional:    true,
+		Description: "参数模板描述",
+		PlanModifiers: []planmodifier.String{
+		stringplanmodifier.RequiresReplace(),
+	},
+		Validators: []validator.String{
+		validator2.Desc(),
+	},
+	},
+		"id": schema.Int64Attribute{
+		Computed:    true,
+		Description: "参数模板id",
+		PlanModifiers: []planmodifier.Int64{
+		int64planmodifier.UseStateForUnknown(),
+	},
+	},
+		"template_parameters": schema.MapAttribute{
+		Optional:    true,
+		Description: "mysql模板参数列表，创建参数模板时不可传，更新阶段可传，支持更新。可修改每个参数值，无法新增参数或删除",
+		ElementType: types.StringType,
+		Validators: []validator.Map{
+		mapvalidator.SizeAtLeast(1),
+	},
+	},
+	},
 	}
 }
 
