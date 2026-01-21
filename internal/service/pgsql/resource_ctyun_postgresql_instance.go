@@ -1308,11 +1308,11 @@ func (c *CtyunPostgresqlInstance) checkSpec(ctx context.Context, plan *CtyunPost
 		return errors.New("flavor_name 输入规格有误")
 	}
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S, M , C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
-
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	//  获取 flavor
 	flavor, err := c.pgsqlService.GetPgsqlFlavorByProdIdAndFlavorName(ctx, plan.ProdID.ValueString(), plan.FlavorName.ValueString(), plan.RegionID.ValueString(), plan.instanceSeries)
 	if err != nil {

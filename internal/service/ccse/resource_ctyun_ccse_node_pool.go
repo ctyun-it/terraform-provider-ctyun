@@ -303,7 +303,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true,
 				Description: "最大pod数, 默认110",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.AtLeast(1),

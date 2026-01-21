@@ -559,10 +559,11 @@ func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInst
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
 		ctx,

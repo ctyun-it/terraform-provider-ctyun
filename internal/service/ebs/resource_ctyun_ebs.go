@@ -559,7 +559,7 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 		return
 	}
 	if instance == nil {
-		response.State.RemoveResource(ctx)
+		err = common.ResourceNotExistError
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

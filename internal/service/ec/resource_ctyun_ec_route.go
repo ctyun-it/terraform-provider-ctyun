@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -381,8 +382,7 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			}
 			config.IPVersion = types.StringValue(business.EcIpVersionRevMap[*routeObj.IPVersion])
 			config.Description = types.StringValue(*routeObj.RouteDescription)
-			config.CreateTime = types.StringValue(*routeObj.CreateDate)
-
+			config.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(*routeObj.CreateDate))
 		}
 	}
 	return nil
