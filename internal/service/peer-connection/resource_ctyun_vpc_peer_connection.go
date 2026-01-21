@@ -111,144 +111,144 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("PEER_CONNECTION", "https://www.ctyun.cn/document/10026760/10037873"),
-			Attributes : map[string]schema.Attribute{
-		"id": schema.StringAttribute{
-		Description: "对等连接id",
-		Computed:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-	},
-		"instance_id": schema.StringAttribute{
-		Description: "对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
-		Computed:    true,
-	},
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-		PlanModifiers: []planmodifier.String{
-		explanmodifier.Project(),
-	},
-		Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-		Validators: []validator.String{
-		validator2.Project(),
-	},
-	},
-		"name": schema.StringAttribute{
-		Description: "对等连接名称，支持更新。要求：支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32。注：当status=pending时，在控制台上修改name会导致资源state丢失！",
-		Required:    true,
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthBetween(2, 32),
-	},
-	},
-		"request_vpc_id": schema.StringAttribute{
-		Description: "本端vpc id",
-		Required:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		validator2.VpcValidate(),
-	},
-	},
-		"accept_vpc_id": schema.StringAttribute{
-		Description: "对端的vpc id",
-		Required:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		validator2.VpcValidate(),
-	},
-	},
-		"accept_email": schema.StringAttribute{
-		Description: "对端vpc账户的邮箱，当建立跨帐号的对等连接，需要对端同意。可调用ctyun_vpc_peer_connection_attch实现",
-		Optional:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-		Validators: []validator.String{
-		validator2.Email(),
-	},
-	},
-		"description": schema.StringAttribute{
-		Description: "对等连接描述，支持更新",
-		Optional:    true,
-		Validators: []validator.String{
-		validator2.Desc(),
-	},
-	},
-		"request_vpc_name": schema.StringAttribute{
-		Description: "本端的vpc名称",
-		Computed:    true,
-	},
-		"request_vpc_cidr": schema.StringAttribute{
-		Description: "本端的vpc cidr",
-		Computed:    true,
-	},
-		"accept_vpc_name": schema.StringAttribute{
-		Description: "对端的vpc名称",
-		Computed:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-	},
-		"accept_vpc_cidr": schema.StringAttribute{
-		Description: "对端的vpc cidr",
-		Computed:    true,
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-	},
-		"status": schema.StringAttribute{
-		Description: "对等连接状态，agree(已连接)/pending(等待审核)",
-		//Description: "对等连接类型：current(同一个租户) / other(不同租户)",
-		Computed: true,
-	},
-		"user_type": schema.StringAttribute{
-		Description: "对等连接类型：current(同一个租户) / other(不同租户)",
-		Computed:    true,
-	},
-		"tags": schema.SetNestedAttribute{
-		Description: "标签，支持更新",
-		Optional:    true,
-		NestedObject: schema.NestedAttributeObject{
 		Attributes: map[string]schema.Attribute{
-		"key": schema.StringAttribute{
-		Description: "key，支持更新",
-		Required:    true,
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"value": schema.StringAttribute{
-		Description: "value，支持更新",
-		Required:    true,
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"id": schema.StringAttribute{
-		Description: "标签id",
-		Computed:    true,
-	},
-	},
-	},
-	},
-	},
+			"id": schema.StringAttribute{
+				Description: "对等连接id",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"instance_id": schema.StringAttribute{
+				Description: "对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
+				Computed:    true,
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
+			"name": schema.StringAttribute{
+				Description: "对等连接名称，支持更新。要求：支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32。注：当status=pending时，在控制台上修改name会导致资源state丢失！",
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthBetween(2, 32),
+				},
+			},
+			"request_vpc_id": schema.StringAttribute{
+				Description: "本端vpc id",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validator2.VpcValidate(),
+				},
+			},
+			"accept_vpc_id": schema.StringAttribute{
+				Description: "对端的vpc id",
+				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validator2.VpcValidate(),
+				},
+			},
+			"accept_email": schema.StringAttribute{
+				Description: "对端vpc账户的邮箱，当建立跨帐号的对等连接，需要对端同意。可调用ctyun_vpc_peer_connection_attch实现",
+				Optional:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					validator2.Email(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Description: "对等连接描述，支持更新",
+				Optional:    true,
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+			},
+			"request_vpc_name": schema.StringAttribute{
+				Description: "本端的vpc名称",
+				Computed:    true,
+			},
+			"request_vpc_cidr": schema.StringAttribute{
+				Description: "本端的vpc cidr",
+				Computed:    true,
+			},
+			"accept_vpc_name": schema.StringAttribute{
+				Description: "对端的vpc名称",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"accept_vpc_cidr": schema.StringAttribute{
+				Description: "对端的vpc cidr",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"status": schema.StringAttribute{
+				Description: "对等连接状态，agree(已连接)/pending(等待审核)",
+				//Description: "对等连接类型：current(同一个租户) / other(不同租户)",
+				Computed: true,
+			},
+			"user_type": schema.StringAttribute{
+				Description: "对等连接类型：current(同一个租户) / other(不同租户)",
+				Computed:    true,
+			},
+			"tags": schema.SetNestedAttribute{
+				Description: "标签，支持更新",
+				Optional:    true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"key": schema.StringAttribute{
+							Description: "key，支持更新",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
+						},
+						"value": schema.StringAttribute{
+							Description: "value，支持更新",
+							Required:    true,
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
+						},
+						"id": schema.StringAttribute{
+							Description: "标签id",
+							Computed:    true,
+						},
+					},
+				},
+			},
+		},
 	}
 }
 

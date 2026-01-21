@@ -107,59 +107,59 @@ func (c *CtyunSubnetAssociationAcl) ImportState(ctx context.Context, request res
 func (c *CtyunSubnetAssociationAcl) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
 		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028591"),
-			Attributes : map[string]schema.Attribute{
-		"region_id": schema.StringAttribute{
-		Optional:    true,
-		Computed:    true,
-		Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-		Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		stringvalidator.UTF8LengthAtLeast(1),
-	},
-	},
-		"project_id": schema.StringAttribute{
-		Optional:           true,
-		Computed:           true,
-		DeprecationMessage: "废弃字段，请不要指定",
-		Description:        "企业项目ID",
-		PlanModifiers: []planmodifier.String{
-		planmodifier2.Project(),
-	},
-		Validators: []validator.String{
-		validator2.Project(),
-	},
-	},
-		"acl_id": schema.StringAttribute{
-		Required:    true,
-		Description: "acl_id。acl列表可以通过data.ctyun_acls查询",
-		Validators: []validator.String{
-		validator2.AclID(),
-	},
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-	},
-		"subnet_id": schema.StringAttribute{
-		Required:    true,
-		Description: "subnet_id，subnet列表可能通过data.ctyun_subnets查询",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.RequiresReplace(),
-	},
-		Validators: []validator.String{
-		validator2.SubnetValidate(),
-	},
-	},
-		"id": schema.StringAttribute{
-		Computed:    true,
-		Description: "id",
-		PlanModifiers: []planmodifier.String{
-		stringplanmodifier.UseStateForUnknown(),
-	},
-	},
-	},
+		Attributes: map[string]schema.Attribute{
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.Project(),
+				},
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
+			"acl_id": schema.StringAttribute{
+				Required:    true,
+				Description: "acl_id。acl列表可以通过data.ctyun_acls查询",
+				Validators: []validator.String{
+					validator2.AclID(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"subnet_id": schema.StringAttribute{
+				Required:    true,
+				Description: "subnet_id，subnet列表可能通过data.ctyun_subnets查询",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validator2.SubnetValidate(),
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+		},
 	}
 }
 
