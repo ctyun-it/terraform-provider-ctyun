@@ -20,7 +20,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s8e.large.2"
+	flavorName := "c8.large.4"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
