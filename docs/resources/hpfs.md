@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_hpfs"
+subcategory: "HPFS"
+---
+
 # ctyun_hpfs (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
 
@@ -41,12 +46,12 @@ resource "ctyun_hpfs" "test" {
 - `az_name` (String) 可用区名称
 - `baseline` (String) 性能基线（MB/s/TB），仅资源池支持性能基线时可传入该参数。可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
 - `cluster_name` (String) 集群名称，仅资源池支持指定集群时可传入该参数。可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
-- `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
+- `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持
 - `cycle_type` (String) 订购周期类型，只支持on_demand
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID
-- `subnet_id` (String) 子网 ID
-- `vpc_id` (String) 虚拟网 ID
+- `subnet_id` (String, Deprecated) 子网 ID
+- `vpc_id` (String, Deprecated) 虚拟网 ID
 
 ### Read-Only
 

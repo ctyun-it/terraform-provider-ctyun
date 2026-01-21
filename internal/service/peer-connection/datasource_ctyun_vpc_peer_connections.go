@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -35,7 +36,7 @@ func (c *CtyunVpcPeerConnections) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunVpcPeerConnections) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873",
+		MarkdownDescription: utils.FormatDesc("PEER_CONNECTION", "https://www.ctyun.cn/document/10026760/10037873"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Description: "资源池id",

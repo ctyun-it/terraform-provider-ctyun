@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_mysql_audit"
+subcategory: "MYSQL"
+---
+
 # ctyun_mysql_audit (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133568
 

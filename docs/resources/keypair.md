@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_keypair"
+subcategory: "ECS"
+---
+
 # ctyun_keypair (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10230554
 

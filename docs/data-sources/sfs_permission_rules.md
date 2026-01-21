@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_sfs_permission_rules"
+subcategory: "SFS"
+---
+
 # ctyun_sfs_permission_rules (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
 

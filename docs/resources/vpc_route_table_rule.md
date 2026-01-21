@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_vpc_route_table_rule"
+subcategory: "VPC"
+---
+
 # ctyun_vpc_route_table_rule (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000
 

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ecs_affinity_group"
+subcategory: "ECS"
+---
+
 # ctyun_ecs_affinity_group (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597693
 

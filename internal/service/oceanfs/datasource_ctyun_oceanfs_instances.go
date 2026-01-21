@@ -34,7 +34,7 @@ func (c *CtyunOceanfsInstances) Metadata(ctx context.Context, request datasource
 
 func (c *CtyunOceanfsInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906",
+		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10115906"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:            true,

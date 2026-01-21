@@ -51,7 +51,7 @@ type CtyunCrsOpensourceImagesConfig struct {
 
 func (c *ctyunCrsOpensourceImages) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10007018/10007025`,
+		MarkdownDescription: utils.FormatDesc("CRS", "https://www.ctyun.cn/document/10007018/10007025"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

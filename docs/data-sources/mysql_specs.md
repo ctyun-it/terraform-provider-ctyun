@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_mysql_specs"
+subcategory: "MYSQL"
+---
+
 # ctyun_mysql_specs (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10157109
 

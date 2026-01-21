@@ -93,7 +93,7 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 
 func (c *CtyunExpressConnectRoute) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10132372",
+		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10132372"),
 		Attributes: map[string]schema.Attribute{
 			"ec_id": schema.StringAttribute{
 				Required:    true,

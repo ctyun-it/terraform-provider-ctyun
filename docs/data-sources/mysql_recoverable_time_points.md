@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_mysql_recoverable_time_points"
+subcategory: "MYSQL"
+---
+
 # ctyun_mysql_recoverable_time_points (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797
 

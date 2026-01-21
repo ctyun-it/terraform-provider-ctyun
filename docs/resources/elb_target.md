@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_elb_target"
+subcategory: "ELB"
+---
+
 # ctyun_elb_target (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10196689
 
@@ -97,10 +102,8 @@ resource "ctyun_elb_target" "elb_target_test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `description` (String) 描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},，支持更新
 - `instance_ip` (String) 后端实例ip
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
 - `weight` (Number) 后端实例权重。取值范围：1-256，默认为100，支持更新
 

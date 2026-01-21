@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_elb_target_group"
+subcategory: "ELB"
+---
+
 # ctyun_elb_target_group (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289
 
@@ -56,7 +61,6 @@ resource "ctyun_elb_target_group" "target_group_test" {
 - `cookie_expire` (Number) cookie过期时间。session_sticky_mode = INSERT模式必填，支持更新
 - `description` (String) 描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·！@#￥%……&*（） —— -+={},，支持更新
 - `health_check_id` (String) 需要关联的健康检查Id，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `protocol` (String) 支持 TCP / UDP / HTTP / HTTPS, 该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE
 - `proxy_protocol` (Number) 1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。不支持更改
 - `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量

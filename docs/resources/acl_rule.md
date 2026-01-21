@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_acl_rule"
+subcategory: "ACL"
+---
+
 # ctyun_acl_rule (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028588
 
@@ -61,7 +66,7 @@ resource "ctyun_acl_rule" "example" {
 - `destination_port` (String) 目的地址端口范围，支持更新。示例 8080:8085
 - `enabled` (Boolean) acl 规则是否启用，支持更新。默认启用
 - `priority` (Number) 优先级，支持更新。取值范围： 1 - 32766，不填默认100
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `source_port` (String) 源地址端口范围，支持更新。示例： 8080:8085
 

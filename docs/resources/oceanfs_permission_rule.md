@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_oceanfs_permission_rule"
+subcategory: "OCEANFS"
+---
+
 # ctyun_oceanfs_permission_rule (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853
 

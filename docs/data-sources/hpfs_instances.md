@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_hpfs_instances"
+subcategory: "HPFS"
+---
+
 # ctyun_hpfs_instances (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
 

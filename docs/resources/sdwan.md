@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_sdwan"
+subcategory: "SDWAN"
+---
+
 # ctyun_sdwan (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10035786/10035852
 
