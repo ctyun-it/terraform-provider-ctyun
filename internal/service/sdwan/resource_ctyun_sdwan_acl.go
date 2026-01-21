@@ -33,6 +33,7 @@ func NewCtyunSdwanAcl() resource.Resource {
 
 type CtyunSdwanAcl struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunSdwanAclConfig struct {
@@ -56,6 +57,7 @@ type SdwanAclRule struct {
 
 func (c *CtyunSdwanAcl) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_sdwan_acl"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -294,8 +296,8 @@ func (c *CtyunSdwanAcl) ImportState(ctx context.Context, req resource.ImportStat
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id]", c.name)
 			resp.Diagnostics.AddError(title, detail)
 		}
 	}()
