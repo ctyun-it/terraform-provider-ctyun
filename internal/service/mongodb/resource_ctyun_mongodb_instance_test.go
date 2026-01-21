@@ -20,14 +20,14 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := "s8e.large.2"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
 	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
-	storageType := "SAS"
+	storageType := "XSSD-0"
 	storageSpace := 100
 	backupStorageType := "OS"
 	//azName := dependence.azName

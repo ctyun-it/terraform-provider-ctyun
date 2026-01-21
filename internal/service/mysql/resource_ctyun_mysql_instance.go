@@ -235,7 +235,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"storage_type": schema.StringAttribute{
 				Required:    true,
-				Description: "存储类型: SSD=超高IO、SATA=普通IO、SAS=高IO、SSD-genric=通用型SSD、FAST-SSD=极速型SSD",
+				Description: "存储类型: SSD=超高IO、SATA=普通IO，SAS=高IO，SSD-genric=通用型SSD，FAST-SSD=极速型SSD，XSSD-0，XSSD-1，XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageType...),
 				},
@@ -253,7 +253,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"backup_storage_type": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "备份空间磁盘存储类型：SSD=超高IO、SATA=普通IO、SAS=高IO",
+				Description: "备份空间磁盘存储类型：SSD=超高IO，SATA=普通IO，SAS=高IO",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSATA, business.StorageTypeSAS),
 				},

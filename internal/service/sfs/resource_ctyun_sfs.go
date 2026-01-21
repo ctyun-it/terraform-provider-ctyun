@@ -182,8 +182,8 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Required:    true,
-				Description: "子网ID",
+				Optional:    true,
+				Description: "子网ID，当",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -374,9 +374,10 @@ func (c *ctyunSfs) createSfs(ctx context.Context, config *CtyunSfsConfig) error 
 		SfsName:     config.Name.ValueString(),
 		SfsSize:     config.SfsSize.ValueInt32(),
 		Vpc:         config.VpcID.ValueString(),
-		Subnet:      config.SubnetID.ValueString(),
 	}
-
+	if !config.SubnetID.IsNull() && !config.SubnetID.IsUnknown() {
+		params.Subnet = config.SubnetID.ValueString()
+	}
 	if config.CycleType.ValueString() == business.SfsOnDemandCycleType {
 		onDemand := true
 		params.OnDemand = &onDemand

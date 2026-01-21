@@ -93,6 +93,9 @@ const (
 	StorageTypeSAS       = "SAS"        //高IO
 	StorageTypeSSDGenric = "SSD-genric" //通用型SSD
 	StorageTypeFASTSSD   = "FAST-SSD"   //极速型SSD
+	StorageTypeXSSD0     = "XSSD-0"
+	StorageTypeXSSD1     = "XSSD-1"
+	StorageTypeXSSD2     = "XSSD-2"
 	BackupStorageTypeOS  = "OS"
 
 	MysqlSchemaPrivilegeRw       = "rw"
@@ -366,6 +369,9 @@ var StorageType = []string{
 	StorageTypeSAS,
 	StorageTypeSSDGenric,
 	StorageTypeFASTSSD,
+	StorageTypeXSSD0,
+	StorageTypeXSSD1,
+	StorageTypeXSSD2,
 }
 
 var MysqlSchemaPrivileges = []string{

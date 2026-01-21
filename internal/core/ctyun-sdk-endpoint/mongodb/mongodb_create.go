@@ -65,6 +65,7 @@ type MongodbCreateRequest struct {
 	ProdPerformanceSpecs []string                     `json:"prodPerformanceSpeces,omitempty"`
 	MysqlNodeInfoList    []MongodbNodeInfoListRequest `json:"nodeInfoList,omitempty"`
 	BackupStorageType    *string                      `json:"backupStorageType,omitempty"`
+	CpuType              int32                        `json:"cpuType"`
 }
 type MongodbCreateRequestHeader struct {
 	ProjectID *string `json:"project_id"`

@@ -285,7 +285,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("SSD"),
-				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD",
+				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD，XSSD-0，XSSD-1，XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.MongodbStorageType...),
 				},
@@ -354,9 +354,8 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Description: "backup节点磁盘空间，当前不支持指定。默认与存储空间相同",
 			},
 			"backup_storage_type": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）。若不填写，默认为云硬盘（SSD）",
+				Required:    true,
+				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSATA, business.StorageTypeSAS, business.StorageTypeSSD, business.BackupStorageTypeOS),
 				},
@@ -594,6 +593,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 		Count:             1,
 		ProdId:            business.MongodbProdIDDict[config.ProdID.ValueString()],
 		MysqlNodeInfoList: nil,
+		CpuType:           business.MongodbCpuTypeDict[config.cpuType],
 	}
 	if config.BackupStorageType.ValueString() == business.BackupStorageTypeOS {
 		osStr := strings.ToLower(config.BackupStorageType.ValueString())
