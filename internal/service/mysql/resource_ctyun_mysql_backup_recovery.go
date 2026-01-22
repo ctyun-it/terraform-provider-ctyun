@@ -31,10 +31,12 @@ var (
 
 type CtyunMysqlBackupRecovery struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlBackupRecovery) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_backup_recovery"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlBackupRecovery() resource.Resource {
 	return &CtyunMysqlBackupRecovery{}

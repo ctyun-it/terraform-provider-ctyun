@@ -29,10 +29,12 @@ var (
 
 type CtyunMysqlBackupCancel struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlBackupCancel) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_backup_cancel"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlBackupCancel() resource.Resource {
 	return &CtyunMysqlBackupCancel{}

@@ -28,11 +28,13 @@ var (
 
 type CtyunMysqlAudit struct {
 	meta         *common.CtyunMetadata
+	name         string
 	mysqlService *business.MysqlService
 }
 
 func (c *CtyunMysqlAudit) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_audit"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlAudit() resource.Resource {
 	return &CtyunMysqlAudit{}
