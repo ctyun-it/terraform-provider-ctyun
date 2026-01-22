@@ -135,6 +135,11 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
 		},
 	}
 }
@@ -399,4 +404,5 @@ type CtyunElbAclConfig struct {
 	SourceIps   types.Set    `tfsdk:"source_ips"`  //IP地址的集合或者CIDR, 单次最多添加 10 条数据
 	ID          types.String `tfsdk:"id"`          //访问控制ID
 	CreateTime  types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	ProjectId   types.String `tfsdk:"project_id"`  //企业项目ID
 }

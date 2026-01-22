@@ -360,7 +360,47 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	if err != nil {
 		return
 	}
+	// 在调用CalculateMonthOnlyDiff之前添加时间格式验证
+	createTimeStr := config.CreateTime.ValueString()
+	expireTimeStr := config.ExpireTime.ValueString()
 
+	// 确保时间格式是RFC3339
+	if createTimeStr != "" && expireTimeStr != "" {
+		// 验证是否已经是RFC3339格式，如果不是则转换
+		_, err1 := time.Parse(time.RFC3339, createTimeStr)
+		if err1 != nil {
+			// 尝试解析其他常见格式并转换为RFC3339
+			parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", createTimeStr)
+			if parseErr != nil {
+				err = fmt.Errorf("无法解析创建时间: %v", parseErr.Error())
+				return
+			}
+			createTimeStr = parsedTime.Format(time.RFC3339)
+		}
+
+		_, err = time.Parse(time.RFC3339, expireTimeStr)
+		if err != nil {
+			// 尝试解析其他常见格式并转换为RFC3339
+			parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", expireTimeStr)
+			if parseErr != nil {
+				err = fmt.Errorf("无法解析到期时间: %v", parseErr)
+				return
+			}
+			expireTimeStr = parsedTime.Format(time.RFC3339)
+		}
+		var cycleType string
+		var cycleCount int32
+		cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(createTimeStr, expireTimeStr)
+		if err != nil {
+			return
+		}
+		config.CycleType = types.StringValue(cycleType)
+		if cycleCount > 0 {
+			config.CycleCount = types.Int64Value(int64(cycleCount))
+		} else {
+			config.CycleCount = types.Int64Null()
+		}
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -440,44 +480,6 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		}
 		if result.DeleteDate != nil {
 			state.ExpireTime = types.StringValue(*result.DeleteDate)
-		}
-		// 在调用CalculateMonthOnlyDiff之前添加时间格式验证
-		createTimeStr := state.CreateTime.ValueString()
-		expireTimeStr := state.ExpireTime.ValueString()
-
-		// 确保时间格式是RFC3339
-		if createTimeStr != "" && expireTimeStr != "" {
-			// 验证是否已经是RFC3339格式，如果不是则转换
-			_, err1 := time.Parse(time.RFC3339, createTimeStr)
-			if err1 != nil {
-				// 尝试解析其他常见格式并转换为RFC3339
-				parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", createTimeStr)
-				if parseErr != nil {
-					return fmt.Errorf("无法解析创建时间: %v", parseErr)
-				}
-				createTimeStr = parsedTime.Format(time.RFC3339)
-			}
-
-			_, err2 := time.Parse(time.RFC3339, expireTimeStr)
-			if err2 != nil {
-				// 尝试解析其他常见格式并转换为RFC3339
-				parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", expireTimeStr)
-				if parseErr != nil {
-					return fmt.Errorf("无法解析到期时间: %v", parseErr)
-				}
-				expireTimeStr = parsedTime.Format(time.RFC3339)
-			}
-
-			cycleType, cycleCount, err1 := utils.CalculateMonthOnlyDiff(createTimeStr, expireTimeStr)
-			if err1 != nil {
-				return err1
-			}
-			state.CycleType = types.StringValue(cycleType)
-			if cycleCount > 0 {
-				state.CycleCount = types.Int64Value(int64(cycleCount))
-			} else {
-				state.CycleCount = types.Int64Null()
-			}
 		}
 
 	}

@@ -445,7 +445,23 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 		return
 	}
 	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
-
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreatedTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleType == business.YearCycleType || cycleCount == 100 {
+		config.CycleType = types.StringValue(business.OnDemandCycleType)
+		config.CycleCount = types.Int64Null()
+		return
+	} else {
+		config.CycleType = types.StringValue(cycleType)
+		if cycleCount > 0 {
+			config.CycleCount = types.Int64Value(int64(cycleCount))
+		} else {
+			config.CycleCount = types.Int64Null()
+		}
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -594,23 +610,7 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 
 	eipInfoType := utils.StructToTFObjectTypes(EipInfoModel{})
 	config.EipInfo, _ = types.ListValueFrom(ctx, eipInfoType, eipInfos)
-	// 确保创建时间和到期时间是RFC3339的
-	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreatedTime.ValueString(), config.ExpiredTime.ValueString())
-	if err != nil {
-		return
-	}
-	if cycleType == business.YearCycleType || cycleCount == 100 {
-		config.CycleType = types.StringValue(business.OnDemandCycleType)
-		config.CycleCount = types.Int64Null()
-		return
-	} else {
-		config.CycleType = types.StringValue(cycleType)
-		if cycleCount > 0 {
-			config.CycleCount = types.Int64Value(int64(cycleCount))
-		} else {
-			config.CycleCount = types.Int64Null()
-		}
-	}
+
 	return
 }
 

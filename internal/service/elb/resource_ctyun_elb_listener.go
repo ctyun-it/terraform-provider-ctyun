@@ -217,6 +217,12 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
+
 			"enable_nat_64": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -1081,6 +1087,7 @@ type CtyunElbListenerConfig struct {
 	IdleTimeout         types.Int32  `tfsdk:"idle_timeout"`          //链接空闲断开超时时间，单位秒，取值范围：1 - 300
 	ResponseTimeout     types.Int32  `tfsdk:"response_timeout"`      //响应超时，单位秒，取值范围：1 - 300
 	ListenerCps         types.Int32  `tfsdk:"listener_cps"`          //cps 大小
+	ProjectId           types.String `tfsdk:"project_id"`            //企业项目ID
 }
 
 type TargetGroupsModel struct {

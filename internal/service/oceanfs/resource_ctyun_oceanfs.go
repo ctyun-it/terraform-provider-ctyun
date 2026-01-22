@@ -89,6 +89,19 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	var cycleType string
+	var cycleCount int32
+	cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -555,17 +568,6 @@ func (c *CtyunOceanfs) getAndMerge(ctx context.Context, config *CtyunOceanfsConf
 		})
 	}
 
-	// 确保创建时间和到期时间是RFC3339的
-	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
-	if err != nil {
-		return err
-	}
-	config.CycleType = types.StringValue(cycleType)
-	if cycleCount > 0 {
-		config.CycleCount = types.Int64Value(int64(cycleCount))
-	} else {
-		config.CycleCount = types.Int64Null()
-	}
 	return nil
 }
 

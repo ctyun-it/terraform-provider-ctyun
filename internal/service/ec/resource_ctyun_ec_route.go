@@ -379,9 +379,9 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 		RtbID: config.RtbID.ValueString(),
 		//RouteID: config.ID.ValueStringPointer(),
 	}
-	if !config.ID.IsNull() {
-		params.RouteID = config.ID.ValueStringPointer()
-	}
+	//if !config.ID.IsNull() {
+	//	params.RouteID = config.ID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkEcApis.EcEcListRouteApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err

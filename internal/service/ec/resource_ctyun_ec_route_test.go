@@ -19,7 +19,7 @@ func TestAccCtyunExpressConnectRoute(t *testing.T) {
 	ecID := dependence.expressConnectID
 	cgwID := dependence.cloudGatewayId
 	rtbID := dependence.rtbID
-	cidr := "192.168.1.3/32"
+	cidr := "192.168.1.113/32"
 	ipVersion := "ipv4"
 	nextHopID := dependence.vpcInstanceVpcID
 	nextHopType := "vpc"
@@ -161,7 +161,7 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 	for nextHopType, nextHopID := range nextHopTypesAndIDMap {
 		t.Run(nextHopType, func(t *testing.T) {
 			resourceName := "ctyun_ec_route." + rnd + "_" + nextHopType
-			cidr := fmt.Sprintf("192.168.1.%d/32", i+10)
+			cidr := fmt.Sprintf("192.168.1.%d/32", i+100)
 			ipVersion := "ipv4"
 			description := fmt.Sprintf("Route with %s next hop", nextHopType)
 

@@ -195,6 +195,11 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
 		},
 	}
 }
@@ -455,4 +460,5 @@ type CtyunElbTargetConfig struct {
 	Status                types.String `tfsdk:"status"`
 	CreatedTime           types.String `tfsdk:"create_time"` //创建时间，为UTC格式
 	UpdatedTime           types.String `tfsdk:"update_time"` //更新时间，为UTC格式
+	ProjectId             types.String `tfsdk:"project_id"`  //企业项目ID
 }

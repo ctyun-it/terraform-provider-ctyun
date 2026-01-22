@@ -197,6 +197,11 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
 		},
 	}
 }
@@ -538,4 +543,5 @@ type CtyunElbHealthCheckConfig struct {
 	ID                types.String `tfsdk:"id"`                  //健康检查ID
 	Status            types.Int32  `tfsdk:"status"`              //状态 1 表示 UP, 0 表示 DOWN
 	CreateTime        types.String `tfsdk:"create_time"`         //	创建时间，为UTC格式
+	ProjectId         types.String `tfsdk:"project_id"`          //企业项目ID
 }

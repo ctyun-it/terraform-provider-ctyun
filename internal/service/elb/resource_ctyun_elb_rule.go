@@ -108,6 +108,12 @@ func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaReques
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
+
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Description: "支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={}，支持更新",
@@ -672,6 +678,7 @@ type CtyunElbRuleConfig struct {
 	Status                   types.String `tfsdk:"status"`                      //状态: ACTIVE / DOWN
 	CreatedTime              types.String `tfsdk:"create_time"`                 //创建时间，为UTC格式
 	UpdatedTime              types.String `tfsdk:"update_time"`                 //更新时间，为UTC格式
+	ProjectId                types.String `tfsdk:"project_id"`                  //企业项目ID
 }
 
 type ConditionsModel struct {

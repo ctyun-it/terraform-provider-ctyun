@@ -423,6 +423,17 @@ func (c *ctyunNat) ImportState(ctx context.Context, request resource.ImportState
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreationTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -521,17 +532,7 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	cfg.ExpiredTime = utils.SecStringValue(natObj.ExpiredTime)
 	cfg.AzName = utils.SecStringValue(natObj.ZoneID)
 	cfg.ProjectID = utils.SecStringValue(natObj.ProjectID)
-	// 确保创建时间和到期时间是RFC3339的
-	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
-	if err != nil {
-		return
-	}
-	cfg.CycleType = types.StringValue(cycleType)
-	if cycleCount > 0 {
-		cfg.CycleCount = types.Int64Value(int64(cycleCount))
-	} else {
-		cfg.CycleCount = types.Int64Null()
-	}
+
 	return nil
 }
 

@@ -400,6 +400,17 @@ func (c *ctyunPrivateNat) ImportState(ctx context.Context, request resource.Impo
 		return
 	}
 	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreationTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -527,17 +538,7 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.AzName = types.StringValue(natObj.AzName)
 	cfg.SubnetID = types.StringValue(natObj.SubnetID)
 	//cfg.AutoRenew= types.BoolValue(natObj.AutoRenew)
-	// 确保创建时间和到期时间是RFC3339的
-	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
-	if err != nil {
-		return
-	}
-	cfg.CycleType = types.StringValue(cycleType)
-	if cycleCount > 0 {
-		cfg.CycleCount = types.Int64Value(int64(cycleCount))
-	} else {
-		cfg.CycleCount = types.Int64Null()
-	}
+
 	return nil
 }
 

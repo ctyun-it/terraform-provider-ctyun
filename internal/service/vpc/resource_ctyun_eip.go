@@ -384,6 +384,18 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 		return
 	}
 	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
+	var cycleType string
+	var cycleCount int32
+	cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -449,16 +461,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 			cfg.DemandBillingType = types.StringValue(resp.BandwidthType)
 		}
 	}
-	var cycleType, cycleCount, err3 = utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
-	if err3 != nil {
-		return err3
-	}
-	cfg.CycleType = types.StringValue(cycleType)
-	if cycleCount > 0 {
-		cfg.CycleCount = types.Int64Value(int64(cycleCount))
-	} else {
-		cfg.CycleCount = types.Int64Null()
-	}
+
 	return nil
 }
 

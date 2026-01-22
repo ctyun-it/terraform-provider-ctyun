@@ -1437,17 +1437,6 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		// 当ExpiredTime为nil时，设置为空字符串
 		cfg.ExpireTime = types.StringValue("")
 	}
-	// 确保创建时间和到期时间是RFC3339的
-	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
-	if err != nil {
-		return nil, err
-	}
-	cfg.CycleType = types.StringValue(cycleType)
-	if cycleCount > 0 {
-		cfg.CycleCount = types.Int64Value(int64(cycleCount))
-	} else {
-		cfg.CycleCount = types.Int64Null()
-	}
 
 	// 填充安全组信息
 	sgs := []types.String{}
@@ -2062,5 +2051,16 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	cfg.ImageId = cfg.ActualImageID
 	cfg.PayVoucherPrice = types.Float64Value(0)
 	cfg.IsDestroyInstance = types.BoolValue(false)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
