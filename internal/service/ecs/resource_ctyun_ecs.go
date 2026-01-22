@@ -397,6 +397,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "云主机组ID，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
@@ -1788,7 +1789,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 		}
 	}
 
-	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.String() != "" {
+	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.ValueString() != "" {
 		err := c.associate(ctx, plan, state)
 		if err != nil {
 			return err
