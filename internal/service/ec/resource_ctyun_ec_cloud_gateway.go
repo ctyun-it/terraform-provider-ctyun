@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -110,8 +109,7 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"region_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "资源池名称",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -121,16 +119,14 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Required:    true,
+				Description: "资源池ID，必填,需要与资源池名称一致,验证用",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -462,8 +458,10 @@ func (c *CtyunEcCloudGateway) createCgwBill(ctx context.Context, plan *CtyunEcCl
 		return fmt.Errorf("API return error. Message: %s", *queryResp.Message)
 	} else if queryResp.ReturnObj == nil || len(queryResp.ReturnObj.Results) == 0 {
 		// 构造请求参数（这里需要根据实际业务需求进行调整）
+		regionID := "bb9fdb42056f11eda1610242ac110002"
 		req := &ec.EcEcCgwBillNewRequest{
-			EcID: plan.EcID.ValueString(),
+			EcID:     plan.EcID.ValueString(),
+			RegionID: &regionID,
 		}
 
 		tflog.Info(ctx, "创建云网关计费", map[string]interface{}{

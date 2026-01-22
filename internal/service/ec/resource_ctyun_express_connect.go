@@ -353,9 +353,12 @@ func (c *CtyunExpressConnect) deleteCgwBill(ctx context.Context, state *CtyunExp
 	} else {
 		resourceID := queryResp.ReturnObj.Results[0].ResourceID
 		// 构造请求参数（这里需要根据实际业务需求进行调整）
+		regionID := "bb9fdb42056f11eda1610242ac110002"
+
 		req := &ec.EcEcCgwBillRefundRequest{
 			EcID:       state.ID.ValueString(),
 			ResourceID: *resourceID, // 使用实际的ResourceID
+			RegionID:   regionID,
 			// ClientToken 参数根据实际需求添加
 		}
 
