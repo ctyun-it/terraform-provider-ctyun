@@ -179,7 +179,8 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"security_group_ids": schema.SetAttribute{
