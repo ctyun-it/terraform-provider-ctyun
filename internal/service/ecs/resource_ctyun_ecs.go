@@ -190,7 +190,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"key_pair_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "密钥对名称，支持更新",
+				Description: "密钥对名称，与password字段互斥，支持更新",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
 						path.MatchRoot("password"),
@@ -202,7 +202,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"password": schema.StringAttribute{
 				Optional:    true,
-				Description: "用户密码，满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头 支持更新",
+				Description: "用户密码，与key_pair_name字段互斥，满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头 支持更新",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
 						path.MatchRoot("key_pair_name"),
@@ -339,7 +339,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, false),
+				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"is_destroy_instance": schema.BoolAttribute{
 				Optional:    true,
@@ -397,6 +397,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "云主机组ID，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
@@ -1527,11 +1528,10 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	}
 
 	// 设置云主机组信息
-	if cfg.AffinityGroupId != types.StringNull() && instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
+	if instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
 		cfg.AffinityGroupId = types.StringValue(*instance_details_resp.AffinityGroup.AffinityGroupID)
 	} else {
 		cfg.AffinityGroupId = types.StringNull()
-
 	}
 
 	return &cfg, nil
@@ -1777,8 +1777,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 	if plan.AffinityGroupId == state.AffinityGroupId {
 		return nil
 	}
-	//state有plan有 先解绑再绑定; state无plan有 只绑定；state有plan无 只解绑
-	if !state.AffinityGroupId.IsNull() && state.AffinityGroupId.String() != "" {
+	if state.AffinityGroupId.ValueString() != "" {
 		err := c.dissociate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1789,7 +1788,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 		}
 	}
 
-	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.String() != "" {
+	if plan.AffinityGroupId.ValueString() != "" {
 		err := c.associate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1807,7 +1806,7 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 	params := &ctecs2.CtecsAffinityGroupbindInstanceV41Request{
 		RegionID:        plan.RegionId.ValueString(),
 		InstanceID:      plan.Id.ValueString(),
-		AffinityGroupID: state.AffinityGroupId.ValueString(),
+		AffinityGroupID: plan.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -1816,7 +1815,6 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	}
-
 	return
 }
 
@@ -1849,8 +1847,8 @@ func (c *ctyunEcs) checkAfterAssociation(ctx context.Context, plan CtyunEcsConfi
 // dissociate 解绑云主机组
 func (c *ctyunEcs) dissociate(ctx context.Context, plan, state CtyunEcsConfig) (err error) {
 	params := &ctecs2.CtecsAffinityGroupUnbindInstanceV41Request{
-		RegionID:        plan.RegionId.ValueString(),
-		InstanceID:      plan.Id.ValueString(),
+		RegionID:        state.RegionId.ValueString(),
+		InstanceID:      state.Id.ValueString(),
 		AffinityGroupID: state.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupUnbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
