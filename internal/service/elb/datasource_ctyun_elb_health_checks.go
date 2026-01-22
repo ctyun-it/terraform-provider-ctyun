@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -43,7 +44,7 @@ func (c *ctyunElbHealthChecks) Metadata(ctx context.Context, request datasource.
 
 func (c *ctyunElbHealthChecks) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101`,
+		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10032101"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

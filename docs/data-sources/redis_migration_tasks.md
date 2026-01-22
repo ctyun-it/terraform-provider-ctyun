@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_redis_migration_tasks"
+subcategory: "REDIS"
+---
+
 # ctyun_redis_migration_tasks (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10518385
 

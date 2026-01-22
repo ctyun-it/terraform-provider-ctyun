@@ -90,7 +90,7 @@ type CtyunKafkaInstanceConfig struct {
 
 func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10030700`,
+		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10030700"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -795,7 +795,7 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 	plan.DiskSize = types.Int32Value(utils.StringToInt32Must(instance.Space))
 	plan.VpcID = types.StringValue(instance.VpcId)
 	plan.SubnetID = types.StringValue(instance.SubnetId)
-	cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, instance.CreateTime), utils.ConvertToUTCZ(time.RFC3339, instance.ExpireTime)
+	cTime, eTime := utils.FromBJTimeToUTCZ(instance.CreateTime), utils.FromBJTimeToUTCZ(instance.ExpireTime)
 	plan.CreateTime = types.StringValue(cTime)
 	plan.ExpireTime = types.StringValue(eTime)
 	plan.ActualCycleType = types.StringValue(map[string]string{"1": business.OrderCycleTypeMonth, "2": business.OrderCycleTypeOnDemand}[instance.BillMode])

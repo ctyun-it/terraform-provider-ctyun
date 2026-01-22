@@ -39,6 +39,14 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "group_name", groupName),
 					resource.TestCheckResourceAttr(resourceName, "group_white_list_count", "2"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新白名单

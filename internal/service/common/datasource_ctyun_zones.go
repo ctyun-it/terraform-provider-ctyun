@@ -24,7 +24,8 @@ func (c *ctyunZones) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (c *ctyunZones) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**资源池可用区`,
+		MarkdownDescription: `COMMON
+资源池可用区`,
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

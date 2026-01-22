@@ -42,6 +42,14 @@ func TestAccCtyunHpfs(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "protocol", sfsProtocol),
 					resource.TestCheckResourceAttr(resourceName, "name", sfsName),
 					resource.TestCheckResourceAttr(resourceName, "size", strconv.Itoa(sfsSize)),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 变配sfs name 和 SIZE规格 512->1024

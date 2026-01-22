@@ -41,7 +41,7 @@ func (c *CtyunMysqlParamTemplates) Metadata(ctx context.Context, request datasou
 
 func (c *CtyunMysqlParamTemplates) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098794",
+		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098794"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

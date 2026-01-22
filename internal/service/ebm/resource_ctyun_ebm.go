@@ -96,7 +96,7 @@ type CtyunEbmConfig struct {
 
 func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724`,
+		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -267,7 +267,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID",
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					setplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
@@ -523,7 +523,7 @@ func (c *ctyunEbm) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "instance is not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			// 查下主网卡是否存在
 			var exist bool
 			portID := state.PortID.ValueString()
@@ -1155,7 +1155,10 @@ func (c *ctyunEbm) getEbm(ctx context.Context, cfg CtyunEbmConfig) (instance *ct
 	})
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiEbmNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

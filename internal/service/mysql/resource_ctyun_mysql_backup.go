@@ -11,6 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -102,7 +103,7 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 
 func (c *CtyunMysqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797",
+		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

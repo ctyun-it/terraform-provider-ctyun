@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_prefix_list"
+subcategory: "PREFIXLIST"
+---
+
 # ctyun_prefix_list (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321
 

@@ -43,8 +43,14 @@ func TestAccCtyunPrivateZone_Basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "ttl", "300"),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id_list.#", "1"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "vpc_id_list.*", dependence.vpcID),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
-					resource.TestCheckResourceAttrSet(resourceName, "update_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新测试 - 修改TTL和描述

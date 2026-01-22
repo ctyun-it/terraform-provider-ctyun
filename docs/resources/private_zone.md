@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_private_zone"
+subcategory: "DNS"
+---
+
 # ctyun_private_zone (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10033657
 

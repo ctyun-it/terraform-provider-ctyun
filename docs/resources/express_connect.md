@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_express_connect"
+subcategory: "EXPRESS_CONNECT"
+---
+
 # ctyun_express_connect (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
 
@@ -34,7 +39,7 @@ resource "ctyun_express_connect" "example" {
 ### Optional
 
 - `description` (String) 描述信息 支持更新
-- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 
 ### Read-Only
 

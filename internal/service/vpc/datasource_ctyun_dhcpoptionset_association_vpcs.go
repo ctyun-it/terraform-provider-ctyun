@@ -52,7 +52,7 @@ type CtyunDhcpOptionSetAssociationVpcsConfig struct {
 
 func (c *ctyunDhcpOptionSetAssociationVpcs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310`,
+		MarkdownDescription: utils.FormatDesc("DHCP", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

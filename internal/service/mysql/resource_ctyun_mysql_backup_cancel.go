@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -50,7 +51,7 @@ func (c *CtyunMysqlBackupCancel) Configure(ctx context.Context, request resource
 
 func (c *CtyunMysqlBackupCancel) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797",
+		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -196,9 +197,12 @@ func (c *CtyunMysqlBackupCancel) cancelLoop(ctx context.Context, config *CtyunBa
 			case business.MysqlBackupTaskStatusSuccess:
 				err = fmt.Errorf("备份任务状态为成功，取消备份失败，mysql实例id=%s，record_id=%d", config.InstID.ValueString(), config.BackupRecordId.ValueInt64())
 				return false
-			default:
+			case business.MysqlBackupTaskStatusFailed:
 				err = fmt.Errorf("备份任务状态为失败，取消备份失败，mysql实例id=%s，record_id=%d", config.InstID.ValueString(), config.BackupRecordId.ValueInt64())
 				return false
+			default:
+				// 中间态，默认成功
+				return true
 			}
 		},
 	)

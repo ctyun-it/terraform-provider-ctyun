@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -54,7 +56,7 @@ type CtyunEcsBackupPolicyBindDisksConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindDisks) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037452`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10037452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -154,7 +156,7 @@ func (c *ctyunEcsBackupPolicyBindDisks) Read(ctx context.Context, request resour
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -375,6 +377,9 @@ func (c *ctyunEcsBackupPolicyBindDisks) getBindingDisks(ctx context.Context, pla
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListEbsBackupPolicyDisksApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if resp.ErrorCode == common.OpenapiEbsBackupPolicyNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)

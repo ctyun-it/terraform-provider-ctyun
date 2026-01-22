@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_image_from_ecs"
+subcategory: "IMAGE"
+---
+
 # ctyun_image_from_ecs (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027726/10031013
 

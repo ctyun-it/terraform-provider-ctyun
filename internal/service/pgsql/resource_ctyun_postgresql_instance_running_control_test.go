@@ -34,7 +34,8 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	//azInfo := `availability_zone_info = [{"availability_zone_name":"cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count":1, "node_type":"master"}]`
 	rand.Seed(time.Now().UnixNano())
 	flavorName := "c7.xlarge.2"
-	appointVip := fmt.Sprintf(`vip="192.168.1.%d"`, rand.Intn(101)+100)
+	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
+	appointVip := fmt.Sprintf(`vip="%s"`, vip)
 	updatedFlavorName := "c7.xlarge.4"
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
@@ -59,7 +60,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
-					resource.TestCheckResourceAttr(resourceName, "vip", "192.168.1.111"),
+					resource.TestCheckResourceAttr(resourceName, "vip", vip),
 				),
 			},
 			// 关机 + 主磁盘升配 + 备用磁盘升配 + sepc + prodid升配

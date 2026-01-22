@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -97,7 +98,7 @@ type CtyunRedisInstanceBackupPolicy struct {
 
 func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10029727`,
+		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10029727"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -589,7 +590,7 @@ func (c *ctyunRedisInstance) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "can't find") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -1171,7 +1172,12 @@ func (c *ctyunRedisInstance) getByID(ctx context.Context, plan CtyunRedisInstanc
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

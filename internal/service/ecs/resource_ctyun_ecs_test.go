@@ -232,6 +232,14 @@ func TestAccCtyunEcs(t *testing.T) {
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "instances.0.affinity_group.id", dependence.affinityGroupID),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 

@@ -49,8 +49,14 @@ func TestAccCtyunPrivateZoneRecord_A(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "value_list.#", "2"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "value_list.*", "192.168.1.1"),
 					resource.TestCheckTypeSetElemAttr(resourceName, "value_list.*", "192.168.1.2"),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
-					resource.TestCheckResourceAttrSet(resourceName, "update_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新测试 - 修改值和描述

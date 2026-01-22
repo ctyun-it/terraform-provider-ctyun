@@ -107,7 +107,7 @@ func (c *CtyunPostgresqlInstance) Metadata(ctx context.Context, request resource
 
 func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165`,
+		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10153165"),
 		Attributes: map[string]schema.Attribute{
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -1310,11 +1310,11 @@ func (c *CtyunPostgresqlInstance) checkSpec(ctx context.Context, plan *CtyunPost
 		return errors.New("flavor_name 输入规格有误")
 	}
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S, M , C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
-
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	//  获取 flavor
 	flavor, err := c.pgsqlService.GetPgsqlFlavorByProdIdAndFlavorName(ctx, plan.ProdID.ValueString(), plan.FlavorName.ValueString(), plan.RegionID.ValueString(), plan.instanceSeries)
 	if err != nil {
@@ -1966,6 +1966,8 @@ func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.
 			}
 		}
 	}
+	// 预留时间供pgsql详情信息表更新
+	time.Sleep(time.Second * 10)
 	return nil
 }
 

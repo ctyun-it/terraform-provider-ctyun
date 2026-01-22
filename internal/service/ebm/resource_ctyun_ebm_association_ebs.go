@@ -2,6 +2,7 @@ package ebm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -51,7 +52,7 @@ type CtyunEbmAssociationEbsConfig struct {
 
 func (c *ctyunEbmAssociationEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10173867`,
+		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724/10173867"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -156,7 +157,7 @@ func (c *ctyunEbmAssociationEbs) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -443,5 +444,5 @@ func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbm
 			return
 		}
 	}
-	return fmt.Errorf("物理机 %s 和云硬盘 %s 未关联", instanceID, ebsID)
+	return common.ResourceNotExistError
 }

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_zos_bucket_object"
+subcategory: "ZOS"
+---
+
 # ctyun_zos_bucket_object (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181324
 

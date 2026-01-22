@@ -5,6 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -27,7 +28,7 @@ func (c *ctyunImages) Metadata(_ context.Context, req datasource.MetadataRequest
 
 func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
+		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"visibility": schema.StringAttribute{
 				Required:    true,

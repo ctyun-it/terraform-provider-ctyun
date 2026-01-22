@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_private_nat"
+subcategory: "NAT"
+---
+
 # ctyun_private_nat (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378361
 
@@ -81,6 +86,7 @@ resource "ctyun_private_nat" "private_nat" {
 ### Read-Only
 
 - `create_time` (String) NAT网关的创建时间,为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) ID，值与nat_gateway_id相同
 - `master_order_id` (String) 订单id
 - `nat_gateway_id` (String) 网关id

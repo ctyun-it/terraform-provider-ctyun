@@ -45,6 +45,14 @@ func TestAccCtyunVpceServiceReverseRule(t *testing.T) {
 						id = rs.Primary.ID
 						return nil
 					},
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ec_region_peer"
+subcategory: "EXPRESS_CONNECT"
+---
+
 # ctyun_ec_region_peer (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038250
 

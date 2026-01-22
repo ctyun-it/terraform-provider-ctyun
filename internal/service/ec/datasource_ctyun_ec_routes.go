@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -39,7 +40,7 @@ func (c *CtyunExpressConnectionRoutes) Metadata(ctx context.Context, request dat
 
 func (c *CtyunExpressConnectionRoutes) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10132372",
+		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10132372"),
 		Attributes: map[string]schema.Attribute{
 			"ec_id": schema.StringAttribute{
 				Required:    true,

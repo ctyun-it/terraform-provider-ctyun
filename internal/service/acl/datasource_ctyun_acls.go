@@ -43,7 +43,7 @@ func (c *ctyunAcls) Metadata(ctx context.Context, request datasource.MetadataReq
 
 func (c *ctyunAcls) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028583",
+		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028583"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

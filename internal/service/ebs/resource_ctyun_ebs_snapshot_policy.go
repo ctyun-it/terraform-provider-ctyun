@@ -49,7 +49,7 @@ func (c *ctyunEbsSnapshotPolicy) Metadata(_ context.Context, request resource.Me
 
 func (c *ctyunEbsSnapshotPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118840`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10027696/10118840"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -313,7 +313,7 @@ func (c *ctyunEbsSnapshotPolicy) getAndMerge(ctx context.Context, cfg *CtyunEbsS
 		err = common.InvalidReturnObjError
 		return
 	} else if resp.ReturnObj.SnapshotPolicyTotalCount == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
+		err = common.ResourceNotExistError
 		return
 	}
 	// 处理返回的数据
@@ -354,6 +354,10 @@ func (c *ctyunEbsSnapshotPolicy) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 

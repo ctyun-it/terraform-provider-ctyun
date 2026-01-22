@@ -115,7 +115,7 @@ resource "ctyun_postgresql_instance" "test" {
   flavor_name           = "c7.xlarge.2"
   storage_type          = "SSD"
   storage_space         = 100
-  name                  = "pgsql-test-tf2"
+  name                  = "pgsql-test-tf3"
   password              = var.password
   case_sensitive        = true
   vpc_id                = local.real_vpc_id

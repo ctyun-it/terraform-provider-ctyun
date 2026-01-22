@@ -65,8 +65,14 @@ func TestAccCtyunPrefix(t *testing.T) {
 					//resource.TestCheckResourceAttr(resourceName, "prefix_list_rules.1.cidr", "10.0.0.0/16"),
 					//resource.TestCheckResourceAttr(resourceName, "prefix_list_rules.1.description", "Rule 2"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
-					resource.TestCheckResourceAttrSet(resourceName, "update_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新前缀列表测试

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_oceanfs"
+subcategory: "OCEANFS"
+---
+
 # ctyun_oceanfs (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906
 

@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -51,7 +52,7 @@ func (c *ctyunImageFromEcs) Metadata(_ context.Context, request resource.Metadat
 
 func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726/10031013`,
+		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726/10031013"),
 		Attributes: map[string]schema.Attribute{
 			// 新增：资源ID（由API返回，自动生成）
 			"id": schema.StringAttribute{

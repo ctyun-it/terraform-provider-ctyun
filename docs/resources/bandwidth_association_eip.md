@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_bandwidth_association_eip"
+subcategory: "BANDWIDTH"
+---
+
 # ctyun_bandwidth_association_eip (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030
 
@@ -35,7 +40,7 @@ resource "ctyun_bandwidth_association_eip" "bandwidth_association_eip_test" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

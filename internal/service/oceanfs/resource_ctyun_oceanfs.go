@@ -94,7 +94,7 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906",
+		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10115906"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

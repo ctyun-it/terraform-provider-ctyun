@@ -2,6 +2,7 @@ package zos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
@@ -75,7 +76,7 @@ type CtyunZosBucketConfig struct {
 
 func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237`,
+		MarkdownDescription: utils.FormatDesc("ZOS", "https://www.ctyun.cn/document/10026735/10181237"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -323,7 +324,7 @@ func (c *ctyunZosBucket) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found bucket") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}

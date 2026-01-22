@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ebm"
+subcategory: "EBM"
+---
+
 # ctyun_ebm (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027724
 

@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -10,6 +11,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -55,7 +57,7 @@ type CtyunEbsSnapshotPolicyAssociationConfig struct {
 
 func (c *ctyunEbsSnapshotPolicyAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10027696/10118856"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -156,9 +158,9 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Read(ctx context.Context, request re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -385,6 +387,9 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context,
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsQueryEbsByIDApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return "", err
+	} else if resp.ErrorCode == common.EbsEbsInfoNotExists {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return "", err
@@ -403,7 +408,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) getAndMerge(ctx context.Context, pla
 		return
 	}
 	if snapshotPolicyID != plan.SnapshotPolicyID.ValueString() {
-		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联  regionID： %s", policyId, diskID, regionID)
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskID, regionID))

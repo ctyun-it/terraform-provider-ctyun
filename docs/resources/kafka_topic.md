@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_kafka_topic"
+subcategory: "KAFKA"
+---
+
 # ctyun_kafka_topic (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10144604
 
