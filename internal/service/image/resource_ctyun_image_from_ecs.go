@@ -42,10 +42,12 @@ func NewCtyunImageFromEcs() resource.Resource {
 
 type ctyunImageFromEcs struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunImageFromEcs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_image_from_ecs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -374,8 +376,8 @@ func (c *ctyunImageFromEcs) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [imageId],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -785,17 +787,36 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	cfg.MaximumRAM = types.Int64Value(int64(resp.MaximumRAM))
 	cfg.MinimumRAM = types.Int64Value(int64(resp.MinimumRAM))
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
-	cfg.ImageType = types.StringValue(resp.ImageType)
 	cfg.InstanceId = types.StringValue(resp.SourceServerID)
+
+	// 镜像类型。取值范围（值：描述）：
+	// （空，即 null）：系统盘镜像，    system_disk
+	// data_disk_image：数据盘镜像，    data_disk
+	// full_ecs_image：整机镜像，   entire_machine
+	// iso_image：ISO 镜像
 	// 如果有标签信息，也需要设置
 	// 注意：根据API文档，详情接口可能不返回标签信息，需要根据实际情况调整
+	// 在 getAndMergeImage 方法中应用转换
 
-	imageType, err := business.ImageTypeMap.ToOriginalScene(resp.ImageType, business.ImageTypeMapScene1)
-	if err != nil {
-		return
-	}
-	cfg.ImageType = types.StringValue(imageType.(string))
+	// 应用类型转换逻辑
+	convertedType := convertImageType(resp.ImageType)
+	cfg.ImageType = types.StringValue(convertedType)
+
 	return
+}
+
+// 将原始类型转换为规范类型
+func convertImageType(originalType string) string {
+	switch originalType {
+	case "data_disk_image":
+		return "data_disk"
+	case "full_ecs_image":
+		return "entire_machine"
+	case "", "<nil>":
+		return "system_disk"
+	default:
+		return originalType // 保持原有类型不变
+	}
 }
 
 // *CtyunImageFromEcsConfig 映射从云主机/快照创建私有镜像的配置参数，适配四种创建方式：

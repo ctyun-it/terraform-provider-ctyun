@@ -36,6 +36,7 @@ var (
 
 type ctyunEbs struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ebsService *business.EbsService
 }
 
@@ -45,6 +46,7 @@ func NewCtyunEbs() resource.Resource {
 
 func (c *ctyunEbs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -524,16 +526,15 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			//$ terraform import ctyun_ebs.test <ID>,[region_id]
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbsConfig
 
 	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionId,projectId,azName
+	// 根据分隔符数量判断是否输入了regionId
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
@@ -549,7 +550,7 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.Id = types.StringValue(ID)

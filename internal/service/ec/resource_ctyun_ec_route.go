@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -24,10 +25,12 @@ import (
 type CtyunExpressConnectRoute struct {
 	meta       *common.CtyunMetadata
 	vpcService *business.VpcService
+	name       string
 }
 
 func (c *CtyunExpressConnectRoute) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ec_route"
+	c.name = response.TypeName
 }
 
 func (c *CtyunExpressConnectRoute) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,8 +50,8 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecId],[cgwId],[rtbId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id],[cgw_id],[rtb_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -168,18 +171,18 @@ func (c *CtyunExpressConnectRoute) Schema(ctx context.Context, request resource.
 			"next_hop_id": schema.StringAttribute{
 				Optional:    true,
 				Description: "目的实例ID/跨域连接ID，如不是黑洞路由则必填",
-				Validators: []validator.String{
-					validator2.ConflictsWithEqualString(
-						path.MatchRoot("is_black_hole_route"),
-						types.BoolValue(true),
-					),
-					validator2.AlsoRequiresEqualString(
-						path.MatchRoot("is_black_hole_route"),
-						types.BoolValue(false),
-					),
-				},
+				//Validators: []validator.String{
+				//	validator2.ConflictsWithEqualString(
+				//		path.MatchRoot("is_black_hole_route"),
+				//		types.BoolValue(true),
+				//	),
+				//	validator2.AlsoRequiresEqualString(
+				//		path.MatchRoot("is_black_hole_route"),
+				//		types.BoolValue(false),
+				//	),
+				//},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -279,8 +282,33 @@ func (c *CtyunExpressConnectRoute) Read(ctx context.Context, request resource.Re
 	}
 }
 
-func (c *CtyunExpressConnectRoute) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+func (c *CtyunExpressConnectRoute) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var plan, state CtyunExpressConnectRouteConfig
+
+	// 获取计划状态和当前状态
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err = c.getAndMerge(ctx, &plan)
+	if err != nil {
+		return
+	}
+	if !plan.NextHopID.IsUnknown() && !plan.NextHopID.IsNull() && state.NextHopID.IsNull() {
+		state.NextHopID = plan.NextHopID
+		resp.Diagnostics.AddWarning("next_hop_id的更新仅写入状态文件", "在import时，状态文件中next_hop_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+
 }
 
 func (c *CtyunExpressConnectRoute) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -315,6 +343,9 @@ func (c *CtyunExpressConnectRoute) create(ctx context.Context, config *CtyunExpr
 		IsBlackholeRoute: config.IsBlackHoleRoute.ValueBoolPointer(),
 	}
 	if !config.IsBlackHoleRoute.ValueBool() {
+		if config.NextHopID.IsNull() || config.NextHopID.IsUnknown() || config.NextHopID.ValueString() == "" {
+			return fmt.Errorf("next_hop_id 不能为空")
+		}
 		nextHopType := business.EcNextHopTypeMap[config.NextHopType.ValueString()]
 		params.NexthopType = &nextHopType
 		params.NexthopID = config.NextHopID.ValueStringPointer()
@@ -347,6 +378,9 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 		CgwID: config.CgwID.ValueString(),
 		RtbID: config.RtbID.ValueString(),
 		//RouteID: config.ID.ValueStringPointer(),
+	}
+	if !config.ID.IsNull() {
+		params.RouteID = config.ID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkEcApis.EcEcListRouteApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

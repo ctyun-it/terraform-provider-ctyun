@@ -33,11 +33,13 @@ var (
 
 type CtyunMysqlRdsParameterTemplate struct {
 	meta         *common.CtyunMetadata
+	name         string
 	mysqlService *business.MysqlService
 }
 
 func (c *CtyunMysqlRdsParameterTemplate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_rds_parameter_template"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlRdsParameterTemplate() resource.Resource {
 	return &CtyunMysqlRdsParameterTemplate{}

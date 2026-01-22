@@ -2,6 +2,7 @@ package iam
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -30,10 +31,12 @@ func NewCtyunIamUser() resource.Resource {
 
 type ctyunIamUser struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunIamUser) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_iam_user"
+	c.name = response.TypeName
 }
 
 func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -239,8 +242,8 @@ func (c *ctyunIamUser) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [iamUserId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

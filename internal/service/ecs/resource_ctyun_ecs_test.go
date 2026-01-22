@@ -105,9 +105,8 @@ func TestAccCtyunEcs(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},

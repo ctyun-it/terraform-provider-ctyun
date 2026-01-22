@@ -23,11 +23,13 @@ import (
 
 type ctyunSfsPermissionGroupRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *ctyunSfsPermissionGroupRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs_permission_rule"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfsPermissionGroupRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -48,8 +50,8 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permission_group_id],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[permission_group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -72,11 +74,11 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("region_id不能为空")
+		err = fmt.Errorf("regionID不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permission_group_id不能为空")
+		err = fmt.Errorf("permissionGroupID不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)

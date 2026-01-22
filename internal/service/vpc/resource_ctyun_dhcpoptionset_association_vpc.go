@@ -39,8 +39,8 @@ func (c *ctyunDhcpOptionSetAssociationVpc) ImportState(ctx context.Context, requ
 	var err error
 	defer func() {
 		if err != nil {
-			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [dhcp_option_sets_id],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [dhcp_option_sets_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

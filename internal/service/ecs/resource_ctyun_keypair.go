@@ -34,10 +34,12 @@ func NewCtyunKeypair() resource.Resource {
 
 type ctyunKeypair struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunKeypair) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_keypair"
+	c.name = response.TypeName
 }
 
 func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -186,8 +188,8 @@ func (c *ctyunKeypair) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [key_pair_name],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -234,7 +236,7 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	params := ctecs2.CtecsDetailsKeypairV41Request{
 		RegionID:    plan.RegionId.ValueString(),
 		KeyPairName: plan.Name.ValueString(),
-		//ProjectID:   plan.ProjectId.ValueString(),
+		ProjectID:   plan.ProjectId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDetailsKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
 	if err != nil {

@@ -42,6 +42,7 @@ var (
 
 type ctyunCcseCluster struct {
 	meta          *common.CtyunMetadata
+	name          string
 	ccseService   *business.CcseService
 	ecsService    *business.EcsService
 	ebmService    *business.EbmService
@@ -56,6 +57,7 @@ func NewCtyunCcseCluster() resource.Resource {
 
 func (c *ctyunCcseCluster) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ccse_cluster"
+	c.name = response.TypeName
 }
 
 type CtyunCcseClusterConfig struct {
@@ -1029,8 +1031,8 @@ func (c *ctyunCcseCluster) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [clusterID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

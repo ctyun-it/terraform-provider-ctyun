@@ -25,11 +25,13 @@ var (
 
 type CtyunVpcPeerConnectionAttach struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunVpcPeerConnectionAttach) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_peer_connection_attach"
+	c.name = response.TypeName
 }
 
 func (c *CtyunVpcPeerConnectionAttach) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {

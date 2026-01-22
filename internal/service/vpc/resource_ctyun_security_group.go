@@ -37,11 +37,13 @@ func NewCtyunSecurityGroup() resource.Resource {
 
 type ctyunSecurityGroup struct {
 	meta       *common.CtyunMetadata
+	name       string
 	vpcService *business.VpcService
 }
 
 func (c *ctyunSecurityGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_security_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -233,14 +235,14 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [security_group_id],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSecurityGroupConfig
 	var securityGroupId, regionId string
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		securityGroupId = request.ID
 		if err != nil {

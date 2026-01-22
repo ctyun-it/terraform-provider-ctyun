@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -35,6 +36,7 @@ func NewCtyunEipAssociation() resource.Resource {
 
 type ctyunEipAssociation struct {
 	meta       *common.CtyunMetadata
+	name       string
 	eipService *business.EipService
 	ecsService *business.EcsService
 	ebmService *business.EbmService
@@ -42,6 +44,7 @@ type ctyunEipAssociation struct {
 
 func (c *ctyunEipAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_eip_association"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -90,7 +93,7 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -217,26 +220,19 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[projectId],[regionId]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [eip_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEipAssociationConfig
-	var eipId, projectId, regionId string
+	var eipId, regionId string
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		eipId = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &eipId, &projectId)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &eipId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &eipId, &regionId)
 		if err != nil {
 			return
 		}
@@ -250,7 +246,8 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	instance.ProjectId = types.StringValue(projectId)
+	instance.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(instance.ProjectId.ValueString(), common.ExtraProjectId))
+
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 

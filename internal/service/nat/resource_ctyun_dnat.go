@@ -33,6 +33,7 @@ var (
 
 type ctyunDnatResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunDnatResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -345,8 +346,8 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[nat_gateway_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

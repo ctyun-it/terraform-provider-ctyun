@@ -28,10 +28,12 @@ var (
 
 type CtyunMysqlCopyParamTemplate struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_copy_param_template"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlCopyParamTemplate() resource.Resource {
 	return &CtyunMysqlCopyParamTemplate{}
@@ -46,7 +48,15 @@ func (c *CtyunMysqlCopyParamTemplate) Configure(ctx context.Context, request res
 }
 
 func (c *CtyunMysqlCopyParamTemplate) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	return
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	response.Diagnostics.AddError("不支持导入", fmt.Sprintf("%s不支持导入", c.name))
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {

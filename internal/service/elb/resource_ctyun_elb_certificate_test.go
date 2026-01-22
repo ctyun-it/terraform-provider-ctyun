@@ -81,8 +81,7 @@ func TestAccCtyunElbCertificate(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					projectID := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s", id, projectID, regionID), nil
+					return fmt.Sprintf("%s,%s", id, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"private_key"},

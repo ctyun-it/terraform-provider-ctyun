@@ -31,6 +31,7 @@ var (
 
 type ctyunPrivateSnatResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunPrivateSnatResource() resource.Resource {
@@ -41,22 +42,21 @@ func (c *ctyunPrivateSnatResource) ImportState(ctx context.Context, request reso
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[nat_gateway_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunPrivateSnatConfig
-	var ID, projectID, regionID, natGateWayID string
+	var ID, regionID, natGateWayID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &ID, &natGateWayID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &regionID)
 		if err != nil {
 			return
 		}
@@ -80,6 +80,7 @@ func (c *ctyunPrivateSnatResource) ImportState(ctx context.Context, request reso
 	if err != nil {
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 

@@ -49,9 +49,8 @@ func TestAccCtyunEip(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					projectID := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", id, projectID, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

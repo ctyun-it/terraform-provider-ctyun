@@ -33,6 +33,7 @@ var (
 
 type CtyunElbLoadBalancerResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbLoadBalancer() resource.Resource {
@@ -40,6 +41,7 @@ func NewCtyunElbLoadBalancer() resource.Resource {
 }
 func (c *CtyunElbLoadBalancerResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_loadbalancer"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -412,25 +414,18 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbLoadBalancerConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -445,11 +440,12 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeElb(ctx, &config)
 	if err != nil {
 		return
 	}
+	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
