@@ -73,7 +73,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -466,9 +466,6 @@ func (c *ctyunPrivateNat) createNat(ctx context.Context, plan *CtyunPrivateNatCo
 	azName := plan.AzName.ValueString()
 	payVoucherPrice := plan.PayVoucherPrice.ValueString()
 	projectID := plan.ProjectID.ValueString()
-	if projectID == "" {
-		projectID = "0"
-	}
 	// 获取autoRenew参数，如果未设置则默认为true
 	autoRenew := plan.AutoRenew.ValueBool()
 
@@ -537,6 +534,7 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.ExpiredTime = types.StringValue(natObj.ExpiredTime)
 	cfg.AzName = types.StringValue(natObj.AzName)
 	cfg.SubnetID = types.StringValue(natObj.SubnetID)
+	cfg.ProjectID = types.StringValue(natObj.ProjectID)
 	//cfg.AutoRenew= types.BoolValue(natObj.AutoRenew)
 
 	return nil
