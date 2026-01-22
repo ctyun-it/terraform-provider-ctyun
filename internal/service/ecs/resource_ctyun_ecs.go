@@ -179,7 +179,8 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"security_group_ids": schema.SetAttribute{
@@ -398,6 +399,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "云主机组ID，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
@@ -1544,11 +1546,10 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	}
 
 	// 设置云主机组信息
-	if cfg.AffinityGroupId != types.StringNull() && instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
+	if instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
 		cfg.AffinityGroupId = types.StringValue(*instance_details_resp.AffinityGroup.AffinityGroupID)
 	} else {
 		cfg.AffinityGroupId = types.StringNull()
-
 	}
 	cfg.AzName = types.StringValue(*instance_details_resp.AzName)
 	cfg.KeyPairName = types.StringValue(*instance_details_resp.KeypairName)
@@ -1795,8 +1796,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 	if plan.AffinityGroupId == state.AffinityGroupId {
 		return nil
 	}
-	//state有plan有 先解绑再绑定; state无plan有 只绑定；state有plan无 只解绑
-	if !state.AffinityGroupId.IsNull() && state.AffinityGroupId.String() != "" {
+	if state.AffinityGroupId.ValueString() != "" {
 		err := c.dissociate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1807,7 +1807,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 		}
 	}
 
-	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.String() != "" {
+	if plan.AffinityGroupId.ValueString() != "" {
 		err := c.associate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1825,7 +1825,7 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 	params := &ctecs2.CtecsAffinityGroupbindInstanceV41Request{
 		RegionID:        plan.RegionId.ValueString(),
 		InstanceID:      plan.Id.ValueString(),
-		AffinityGroupID: state.AffinityGroupId.ValueString(),
+		AffinityGroupID: plan.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -1834,7 +1834,6 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	}
-
 	return
 }
 
@@ -1867,8 +1866,8 @@ func (c *ctyunEcs) checkAfterAssociation(ctx context.Context, plan CtyunEcsConfi
 // dissociate 解绑云主机组
 func (c *ctyunEcs) dissociate(ctx context.Context, plan, state CtyunEcsConfig) (err error) {
 	params := &ctecs2.CtecsAffinityGroupUnbindInstanceV41Request{
-		RegionID:        plan.RegionId.ValueString(),
-		InstanceID:      plan.Id.ValueString(),
+		RegionID:        state.RegionId.ValueString(),
+		InstanceID:      state.Id.ValueString(),
 		AffinityGroupID: state.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupUnbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)

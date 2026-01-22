@@ -953,7 +953,8 @@ func (c *CtyunPostgresqlInstance) ListLoop(ctx context.Context, config *CtyunPos
 }
 
 func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *CtyunPostgresqlInstanceConfig, runningStatus int32, orderStatus int32, loopCount ...int) (err error) {
-
+	currentRunningStatus := int32(-1)
+	currentOrderStatus := int32(-1)
 	count := 60
 	if len(loopCount) > 0 {
 		count = loopCount[0]
@@ -964,7 +965,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 	if err != nil {
 		return
 	}
-	// 因为pgsql console和openapi有一个同步误差时间，需要多轮询几轮，目前暂定4轮
+	// 因为pgsql console和openapi有一个同步误差时间，需要多轮询几轮，目前暂定2轮
 	syncCount := 2
 	result := retryer.Start(
 		func(currentTime int) bool {
@@ -1000,17 +1001,17 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 				}
 				return true
 			}
-			detailRunningStatus := resp.ReturnObj.ProdRunningStatus
-			detailOrderStatus := resp.ReturnObj.ProdOrderStatus
+			currentRunningStatus = resp.ReturnObj.ProdRunningStatus
+			currentOrderStatus = resp.ReturnObj.ProdOrderStatus
 			// 判断是否被停用，如果被停用需要恢复使用
-			if detailRunningStatus == business.PgsqlProdRunningStatusStopped && runningStatus != business.PgsqlProdRunningStatusStopped {
+			if currentRunningStatus == business.PgsqlProdRunningStatusStopped && runningStatus != business.PgsqlProdRunningStatusStopped {
 				err = c.startInstance(ctx, state, nil)
 				if err != nil {
 					return false
 				}
 				return true
 			}
-			if detailRunningStatus == runningStatus && detailOrderStatus == orderStatus {
+			if currentRunningStatus == runningStatus && currentOrderStatus == orderStatus {
 				if syncCount <= 0 {
 					return false
 				} else {
@@ -1020,7 +1021,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未启动成功！")
+		return fmt.Errorf("轮询已达最大次数，资源仍状态仍不符合预期，预期运行状态为：%d，预期订单状态为：%d，当前运行状态为：%d，当前订单状态为：%d！", runningStatus, orderStatus, currentRunningStatus, currentOrderStatus)
 	}
 	return
 }
@@ -1966,8 +1967,6 @@ func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.
 			}
 		}
 	}
-	// 预留时间供pgsql详情信息表更新
-	time.Sleep(time.Second * 10)
 	return nil
 }
 

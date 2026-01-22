@@ -68,23 +68,16 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 		}
 	}()
 	var config CtyunScalingConfig
-	var ID, vpcId, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	var ID, vpcId, regionId string
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &ID, &vpcId)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &vpcId, &regionId)
 		if err != nil {
 			return
 		}
@@ -111,10 +104,6 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	config.ID = types.Int64Value(id)
 	config.RegionID = types.StringValue(regionId)
 	config.VpcID = types.StringValue(vpcId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
-
 	config.AddInstanceUUIDList = types.SetNull(types.StringType)
 	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
 
@@ -691,6 +680,8 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 		if diags.HasError() {
 			return errors.New(diags[0].Detail())
 		}
+	} else {
+		config.LbList = types.ListNull(utils.StructToTFObjectTypes(CtyunLbInfoModel{}))
 	}
 
 	// 处理subnetIDList
@@ -732,6 +723,10 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 	}
 	if len(resp.ReturnObj.ScalingGroups) > 1 {
 		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回多个实例。具体如下:%#v\n", config.ID.ValueInt64(), resp.ReturnObj.ScalingGroups)
+		return nil, err
+	}
+	if len(resp.ReturnObj.ScalingGroups) == 0 {
+		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回为空。", config.ID.ValueInt64())
 		return nil, err
 	}
 	return resp, nil

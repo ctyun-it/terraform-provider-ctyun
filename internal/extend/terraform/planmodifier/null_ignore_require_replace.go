@@ -89,3 +89,31 @@ func (m nullModifierInt32) PlanModifyInt32(ctx context.Context, req planmodifier
 	}
 	resp.RequiresReplace = true
 }
+
+func NullIgnoreSet() planmodifier.Set {
+	return nullModifierSet{}
+}
+
+type nullModifierSet struct{}
+
+func (m nullModifierSet) Description(_ context.Context) string {
+	return "旧值为null，忽略更新"
+}
+
+func (m nullModifierSet) MarkdownDescription(_ context.Context) string {
+	return "旧值为null，忽略更新"
+}
+
+func (m nullModifierSet) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
+	if req.State.Raw.IsNull() {
+		return
+	}
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	if req.StateValue.IsNull() {
+		resp.RequiresReplace = false
+		return
+	}
+	resp.RequiresReplace = true
+}

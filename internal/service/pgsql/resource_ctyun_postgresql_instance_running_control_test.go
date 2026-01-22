@@ -6,9 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"math/rand"
 	"testing"
-	"time"
 )
 
 func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {

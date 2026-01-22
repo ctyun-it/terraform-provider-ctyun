@@ -7,7 +7,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"testing"
-	"time"
 )
 
 func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
@@ -28,11 +27,6 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 
 	updatedName := "peer-conn-updated-" + utils.GenerateRandomString()
 	updatedDescription := "updated test peer connection"
-	// 等待函数
-	wait10Seconds := func() {
-		t.Logf("等待10秒...")
-		time.Sleep(10 * time.Second)
-	}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -64,6 +58,24 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "accept_vpc_cidr"),
 				),
 			},
+			// 2. 资源更新测试（更新名称和描述）
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "request_vpc_id", requestVpcID),
+					resource.TestCheckResourceAttr(resourceName, "accept_vpc_id", acceptVpcID),
+				),
+			},
+			// 3. datasource验证
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
+					utils.LoadTestCase(datasourceFile, dnd),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(datasourceName, "peer_connections.#")),
+			},
 			// 4. import state验证
 			{
 				ResourceName: resourceName,
@@ -73,10 +85,8 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -91,10 +101,8 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
@@ -108,34 +116,12 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s",
+					return fmt.Sprintf("%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["instance_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"accept_email", "description", "project_id"},
-			},
-			// 2. 资源更新测试（更新名称和描述）
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
-					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
-					resource.TestCheckResourceAttr(resourceName, "request_vpc_id", requestVpcID),
-					resource.TestCheckResourceAttr(resourceName, "accept_vpc_id", acceptVpcID),
-				),
-			},
-			// 3. datasource验证
-			{
-				PreConfig: func() {
-					wait10Seconds()
-				},
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
-					utils.LoadTestCase(datasourceFile, dnd),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "peer_connections.#")),
+				ImportStateVerifyIgnore: []string{"accept_email", "description"},
 			},
 
 			// 5. 销毁资源

@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -70,21 +69,20 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 		}
 	}()
 	var config CtyunScalingPolicyConfig
-	var ID, groupId, policyType, regionId string
+	var ID, groupId, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType)
+		err = terraform_extend.Split(request.ID, &ID, &groupId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &groupId, &regionId)
 		if err != nil {
 			return
 		}
 	}
-
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
 		err = fmt.Errorf("ID必须是有效数字")
@@ -102,10 +100,6 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 		err = fmt.Errorf("groupId不能为空")
 		return
 	}
-	if policyType == "" {
-		err = fmt.Errorf("policyType不能为空")
-		return
-	}
 
 	groupID, err := strconv.ParseInt(groupId, 10, 64)
 	if err != nil {
@@ -114,7 +108,6 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	config.ID = types.Int64Value(id)
 	config.RegionID = types.StringValue(regionId)
 	config.GroupID = types.Int64Value(groupID)
-	config.PolicyType = types.StringValue(policyType)
 	err = c.getAndMergeScalingPolicy(ctx, &config)
 	if err != nil {
 		return
@@ -412,8 +405,6 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 			},
 			"target_disable_scale_in": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
 				Description: "是否禁用缩容，当status=disable时，支持更新。默认为false。",
 				Validators: []validator.Bool{
 					validator2.AlsoRequiresEqualBool(
@@ -424,7 +415,6 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 			},
 			"is_execute": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "控制是否需要执行弹性伸缩策略，true表示执行，false表示不执行。默认为false，支持更新",
 			},
 			"id": schema.Int64Attribute{
@@ -651,7 +641,11 @@ func (c *ctyunScalingPolicy) createScalingPolicy(ctx context.Context, config *Ct
 			ScaleOutEvaluationCount: config.TargetScaleOutEvaluationCount.ValueInt32(),
 			ScaleInEvaluationCount:  config.TargetScaleInEvaluationCount.ValueInt32(),
 			OperateRange:            config.TargetOperateRange.ValueInt32(),
-			DisableScaleIn:          config.TargetDisableScaleIn.ValueBool(),
+		}
+		if !config.TargetDisableScaleIn.IsNull() && !config.TargetDisableScaleIn.IsUnknown() && config.TargetDisableScaleIn.ValueBool() {
+			targetObj.DisableScaleIn = true
+		} else {
+			targetObj.DisableScaleIn = false
 		}
 		params.TargetObj = &targetObj
 	} else {
@@ -681,13 +675,13 @@ func (c *ctyunScalingPolicy) getAndMergeScalingPolicy(ctx context.Context, confi
 	if err != nil {
 		return err
 	}
-	if business.ScalingPolicyTypeDictRev[rule.RuleType] != config.PolicyType.ValueString() {
-		err = fmt.Errorf("伸缩策略详情有误，id为：%d，本地和控制台上策略类型不一致。本地策略类型为：%s，但是控制台上策略类型为：%s", config.ID.ValueInt64(), config.PolicyType.ValueString(), business.ScalingPolicyTypeDictRev[rule.RuleType])
-		return err
-	}
+	//if business.ScalingPolicyTypeDictRev[rule.RuleType] != config.PolicyType.ValueString() {
+	//	err = fmt.Errorf("伸缩策略详情有误，id为：%d，本地和控制台上策略类型不一致。本地策略类型为：%s，但是控制台上策略类型为：%s", config.ID.ValueInt64(), config.PolicyType.ValueString(), business.ScalingPolicyTypeDictRev[rule.RuleType])
+	//	return err
+	//}
 	config.Name = types.StringValue(rule.Name)
 	config.Status = types.StringValue(business.ScalingPolicyStatusDictRev[rule.Status])
-
+	config.PolicyType = types.StringValue(business.ScalingPolicyTypeDictRev[rule.RuleType])
 	if config.PolicyType.ValueString() == business.ScalingPolicyAlertStr {
 		// 告警策略
 		// 触发字段
@@ -1009,6 +1003,10 @@ func (c *ctyunScalingPolicy) updatePolicyStatus(ctx context.Context, state *Ctyu
 }
 
 func (c *ctyunScalingPolicy) executePolicy(ctx context.Context, state *CtyunScalingPolicyConfig, plan *CtyunScalingPolicyConfig) error {
+	// 若is_execute不填，默认为false，不执行
+	if plan.IsExecute.IsNull() || plan.IsExecute.IsUnknown() {
+		return nil
+	}
 	if plan.IsExecute.ValueBool() {
 		params := &scaling.ScalingRuleExecuteRequest{
 			RegionID: state.RegionID.ValueString(),

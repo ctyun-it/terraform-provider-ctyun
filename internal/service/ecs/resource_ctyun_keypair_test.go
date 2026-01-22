@@ -45,13 +45,12 @@ func TestAccCtyunKeyPairImport(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					name := ds.Attributes["name"]
+					projectId := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", name, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", name, projectId, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				ResourceName: resourceName,
@@ -61,10 +60,8 @@ func TestAccCtyunKeyPairImport(t *testing.T) {
 					name := ds.Attributes["name"]
 					return fmt.Sprintf("%s", name), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, keyName, publicKey),
@@ -114,7 +111,6 @@ func TestAccCtyunKeyPairCreate(t *testing.T) {
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"project_id",
 					"private_key",
 				},
 			},

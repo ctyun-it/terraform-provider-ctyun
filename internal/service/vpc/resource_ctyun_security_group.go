@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	vpcSdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
@@ -244,6 +245,9 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		securityGroupId = request.ID
+		if err != nil {
+			return
+		}
 	} else {
 		err = terraform_extend.Split(request.ID, &securityGroupId, &regionId)
 		if err != nil {
@@ -252,7 +256,7 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	}
 
 	if securityGroupId == "" {
-		err = fmt.Errorf("securityGroupId不能为空")
+		err = fmt.Errorf("security_group_id不能为空")
 		return
 	}
 	if regionId == "" {
@@ -264,11 +268,9 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 	cfg.RegionId = types.StringValue(regionId)
 	instance, err := c.getAndMergeSecurityGroup(ctx, cfg)
 	if err != nil {
-		//response.Diagnostics.AddError(err.Error(), err.Error())
+		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
-
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
@@ -299,12 +301,44 @@ func (c *ctyunSecurityGroup) getAndMergeSecurityGroup(ctx context.Context, cfg C
 	cfg.Name = types.StringValue(resp.SecurityGroupName)
 	cfg.CreateTime = types.StringValue(resp.CreationTime)
 	cfg.Description = types.StringValue(resp.Description)
+
+	// 获取project id
+	err2 := c.getProjectIdByName(ctx, &cfg)
+	if err2 != nil {
+		return nil, err2
+	}
 	return &cfg, nil
 }
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSecurityGroup) checkCreate(ctx context.Context, plan CtyunSecurityGroupConfig) error {
 	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
+}
+
+func (c *ctyunSecurityGroup) getProjectIdByName(ctx context.Context, cfg *CtyunSecurityGroupConfig) error {
+	params := &vpcSdk.CtvpcListSecurityGroupsRequest{
+		RegionID: cfg.RegionId.ValueString(),
+		VpcID:    cfg.VpcId.ValueStringPointer(),
+		//InstanceID:   cfg.Id.ValueStringPointer(),
+		QueryContent: cfg.Name.ValueStringPointer(),
+		PageNo:       1,
+		PageSize:     10,
+	}
+	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListSecurityGroupsApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("查询安全组失败，resp为空！")
+		return err
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		return err
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
+		err = common.InvalidReturnObjError
+		return err
+	}
+	cfg.ProjectId = types.StringValue(*resp.ReturnObj[0].ProjectID)
+	return nil
 }
 
 type CtyunSecurityGroupConfig struct {

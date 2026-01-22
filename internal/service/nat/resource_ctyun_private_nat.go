@@ -276,7 +276,7 @@ func (c *ctyunPrivateNat) Read(ctx context.Context, request resource.ReadRequest
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -521,7 +521,7 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if len(resp.ReturnObj) == 0 {
-		err = common.InvalidReturnObjError
+		err = common.ResourceNotExistError
 		return
 	}
 
