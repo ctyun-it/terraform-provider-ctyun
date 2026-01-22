@@ -1777,8 +1777,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 	if plan.AffinityGroupId == state.AffinityGroupId {
 		return nil
 	}
-	//state有plan有 先解绑再绑定; state无plan有 只绑定；state有plan无 只解绑
-	if !state.AffinityGroupId.IsNull() && state.AffinityGroupId.String() != "" {
+	if state.AffinityGroupId.ValueString() != "" {
 		err := c.dissociate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1789,7 +1788,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 		}
 	}
 
-	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.ValueString() != "" {
+	if plan.AffinityGroupId.ValueString() != "" {
 		err := c.associate(ctx, plan, state)
 		if err != nil {
 			return err
