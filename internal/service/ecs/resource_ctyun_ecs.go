@@ -1527,11 +1527,10 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	}
 
 	// 设置云主机组信息
-	if cfg.AffinityGroupId != types.StringNull() && instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
+	if instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
 		cfg.AffinityGroupId = types.StringValue(*instance_details_resp.AffinityGroup.AffinityGroupID)
 	} else {
 		cfg.AffinityGroupId = types.StringNull()
-
 	}
 
 	return &cfg, nil
@@ -1807,7 +1806,7 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 	params := &ctecs2.CtecsAffinityGroupbindInstanceV41Request{
 		RegionID:        plan.RegionId.ValueString(),
 		InstanceID:      plan.Id.ValueString(),
-		AffinityGroupID: state.AffinityGroupId.ValueString(),
+		AffinityGroupID: plan.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -1816,7 +1815,6 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	}
-
 	return
 }
 
@@ -1849,8 +1847,8 @@ func (c *ctyunEcs) checkAfterAssociation(ctx context.Context, plan CtyunEcsConfi
 // dissociate 解绑云主机组
 func (c *ctyunEcs) dissociate(ctx context.Context, plan, state CtyunEcsConfig) (err error) {
 	params := &ctecs2.CtecsAffinityGroupUnbindInstanceV41Request{
-		RegionID:        plan.RegionId.ValueString(),
-		InstanceID:      plan.Id.ValueString(),
+		RegionID:        state.RegionId.ValueString(),
+		InstanceID:      state.Id.ValueString(),
 		AffinityGroupID: state.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupUnbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
