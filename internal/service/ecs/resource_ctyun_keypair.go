@@ -8,6 +8,7 @@ import (
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -89,7 +90,7 @@ func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, respo
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -186,7 +187,7 @@ func (c *ctyunKeypair) ImportState(ctx context.Context, request resource.ImportS
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [keyPairName],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [key_pair_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -196,18 +197,17 @@ func (c *ctyunKeypair) ImportState(ctx context.Context, request resource.ImportS
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		keyPairName = request.ID
 	} else {
-
 		err = terraform_extend.Split(request.ID, &keyPairName, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	if keyPairName == "" {
-		err = fmt.Errorf("keyPairName不能为空")
+		err = fmt.Errorf("key_pair_name不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -234,7 +234,7 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	params := ctecs2.CtecsDetailsKeypairV41Request{
 		RegionID:    plan.RegionId.ValueString(),
 		KeyPairName: plan.Name.ValueString(),
-		ProjectID:   plan.ProjectId.ValueString(),
+		//ProjectID:   plan.ProjectId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDetailsKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
 	if err != nil {

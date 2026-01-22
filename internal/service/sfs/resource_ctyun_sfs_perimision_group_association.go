@@ -57,7 +57,7 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vpcID],[sfsUid],[regionId]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [sfsUid],[vpcID],[regionId]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -66,12 +66,12 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid)
+		err = terraform_extend.Split(request.ID, &sfsUid, &vpcID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid, &regionId)
+		err = terraform_extend.Split(request.ID, &sfsUid, &vpcID, &regionId)
 		if err != nil {
 			return
 		}

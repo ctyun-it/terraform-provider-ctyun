@@ -74,17 +74,14 @@ func TestAccCtyunSecurityGroup(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					projectId := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
 					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id, project_id, region_id is required")
+						return "", fmt.Errorf("id, region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 
@@ -93,7 +90,6 @@ func TestAccCtyunSecurityGroup(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify:       true,

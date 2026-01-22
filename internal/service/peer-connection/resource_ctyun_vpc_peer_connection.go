@@ -58,28 +58,28 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[instanceId],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunVpcPeerConnectionConfig
-	var ID, regionId, projectId, instanceId string
+	var ID, regionId, projectId string
 	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &instanceId)
+		err = terraform_extend.Split(request.ID, &ID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &instanceId, &projectId)
+		err = terraform_extend.Split(request.ID, &ID, &projectId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &instanceId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
 		if err != nil {
 			return
 		}
@@ -93,14 +93,16 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 		err = fmt.Errorf("regionID不能为空")
 		return
 	}
-
+	// id需要分析下，传入的uuid还是vpr-xxx格式
+	// 如果是vpr格式，instance_id和id都赋值
+	// 如果是uuid，仅给id赋值
+	if strings.HasPrefix(ID, "vpr-") {
+		config.InstanceID = types.StringValue(ID)
+	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
 	config.ProjectID = types.StringValue(projectId)
 
-	if instanceId != "" {
-		config.InstanceID = types.StringValue(instanceId)
-	}
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -521,7 +523,7 @@ func (c *CtyunVpcPeerConnection) getPeerConnectionDetail(ctx context.Context, co
 		err = fmt.Errorf("获取vpc对等连接详情失败(instance_id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("detail, API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -542,7 +544,9 @@ func (c *CtyunVpcPeerConnection) update(ctx context.Context, state *CtyunVpcPeer
 	} else {
 		params.InstanceID = state.ID.ValueString()
 	}
-
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
+	}
 	err := c.reqModifyPeerConnection(ctx, params)
 	if err != nil {
 		return err

@@ -49,7 +49,7 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permissionGroupID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permission_group_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -72,11 +72,11 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)

@@ -90,7 +90,7 @@ resource "ctyun_scaling_group" "group_test" {
 
 # 告警策略
 resource "ctyun_scaling_policy" "policy_alert_example" {
-  group_id                    = ctyun_security_group.sg_test.id
+  group_id                    = ctyun_scaling_group.group_test.id
   name                        = "alert-policy-example"
   policy_type                 = "alert"
   operate_unit                = "percent"
