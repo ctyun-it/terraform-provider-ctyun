@@ -35,6 +35,7 @@ var (
 
 type ctyunRabbitmqExchange struct {
 	meta            *common.CtyunMetadata
+	name            string
 	rabbitmqService *business.RabbitmqService
 }
 
@@ -44,6 +45,7 @@ func NewCtyunRabbitmqExchange() resource.Resource {
 
 func (c *ctyunRabbitmqExchange) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_rabbitmq_exchange"
+	c.name = response.TypeName
 }
 
 type CtyunRabbitmqExchangeConfig struct {
