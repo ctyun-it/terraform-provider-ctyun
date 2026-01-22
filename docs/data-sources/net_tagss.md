@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_net_tagss"
+subcategory: "VPC"
+---
+
 # ctyun_net_tagss (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
 
@@ -46,7 +51,7 @@ output "ctyun_net_tagss_example" {
 
 ### Read-Only
 
-- `id` (String) ID，值
+- `id` (String) ID值
 
 <a id="nestedatt--tags"></a>
 ### Nested Schema for `tags`

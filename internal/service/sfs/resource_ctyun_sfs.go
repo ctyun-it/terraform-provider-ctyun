@@ -54,7 +54,7 @@ func NewCtyunSfs() resource.Resource {
 
 func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350`,
+		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

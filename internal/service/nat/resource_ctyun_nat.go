@@ -46,7 +46,7 @@ func (c *ctyunNat) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166493`,
+		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166493"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -82,7 +82,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Computed:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					validator2.VpcValidate(),
@@ -399,33 +399,17 @@ func (c *ctyunNat) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunNatConfig
-	var ID, projectID, azName, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -433,8 +417,6 @@ func (c *ctyunNat) ImportState(ctx context.Context, request resource.ImportState
 	config.ID = types.StringValue(ID)
 	config.NatGatewayID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeNat(ctx, &config)
 	if err != nil {
 		return
@@ -535,6 +517,8 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	cfg.VpcCidr = utils.SecStringValue(natObj.VpcCidr)
 	cfg.CreationTime = utils.SecStringValue(natObj.CreationTime)
 	cfg.ExpiredTime = utils.SecStringValue(natObj.ExpiredTime)
+	cfg.AzName = utils.SecStringValue(natObj.ZoneID)
+	cfg.ProjectID = utils.SecStringValue(natObj.ProjectID)
 	// 确保创建时间和到期时间是RFC3339的
 	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(cfg.CreationTime.ValueString(), cfg.ExpiredTime.ValueString())
 	if err != nil {

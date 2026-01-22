@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_elb_listener"
+subcategory: "ELB"
+---
+
 # ctyun_elb_listener (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276
 
@@ -80,7 +85,6 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 
 - `access_control_id` (String) 访问控制ID，当access_control_type=white或者black，必填。支持更新
 - `access_control_type` (String) 访问控制类型。取值范围：Close（未启用）、White（白名单）、Black（黑名单），支持更新
-- `az_name` (String) 可用区名称
 - `ca_enabled` (Boolean) 是否开启双向认证。true（开启），false（不开启），支持更新
 - `certificate_id` (String) 证书ID。当protocol为HTTPS时，此参数必填，支持更新
 - `client_certificate_id` (String) 双向认证的证书ID，当ca_enabled=ture，必填。支持更新
@@ -91,7 +95,6 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 - `idle_timeout` (Number) 链接空闲断开超时时间，单位秒，取值范围：1 - 300,不支持协议为 TCP / UDP 的监听器，支持更新
 - `listener_cps` (Number) cps大小，仅支持协议为 TCP / UDP 的监听器。支持更新
 - `listener_qps` (Number) qps 大小，仅支持协议为 HTTP / HTTPS，的监听器，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `redirect_listener_id` (String) 重定向监听器ID，当default_action_type为redirect时，此字段必填。支持更新
 - `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
 - `response_timeout` (Number) 响应超时，单位秒，取值范围：1 - 300。不支持协议为 TCP / UDP 的监听器，支持更新

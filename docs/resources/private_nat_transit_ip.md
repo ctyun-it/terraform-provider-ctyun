@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_private_nat_transit_ip"
+subcategory: "NAT"
+---
+
 # ctyun_private_nat_transit_ip (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378390
 

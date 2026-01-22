@@ -41,6 +41,14 @@ func TestAccCtyunAcl(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "apply_to_public_lb", "false"),
 					resource.TestCheckResourceAttr(resourceName, "enabled", "true"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 更新ACL测试（修改名称、描述和启用状态）
@@ -66,14 +74,13 @@ func TestAccCtyunAcl(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled", "project_id"}, // 可选忽略
 			},
 			{
 				ResourceName: resourceName,
@@ -89,22 +96,6 @@ func TestAccCtyunAcl(t *testing.T) {
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled", "project_id"}, // 可选忽略
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["project_id"],
-					), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"apply_to_public_lb", "enabled"}, // 可选忽略
 			},
 			// 4. 清理资源
 			{

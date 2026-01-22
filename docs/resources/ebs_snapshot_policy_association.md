@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ebs_snapshot_policy_association"
+subcategory: "EBS"
+---
+
 # ctyun_ebs_snapshot_policy_association (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856
 
@@ -30,7 +35,7 @@ resource "ctyun_ebs_snapshot_policy_association" "test" {
 
 ### Required
 
-- `disk_id_list` (String) 云硬盘ID列表，多台使用英文逗号分割
+- `disk_id` (String) 云硬盘ID
 - `snapshot_policy_id` (String) 云硬盘自动快照策略id
 
 ### Optional

@@ -9,6 +9,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -94,7 +95,7 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 
 func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10224466",
+		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10224466"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

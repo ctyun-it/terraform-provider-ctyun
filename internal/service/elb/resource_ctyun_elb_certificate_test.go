@@ -50,6 +50,14 @@ func TestAccCtyunElbCertificate(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "type", serverCertificateType),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 					//resource.TestCheckResourceAttr(resourceName, "certificate", certificate),
 					//resource.TestCheckResourceAttr(resourceName, "private_key", privateKey),
 				),
@@ -74,8 +82,7 @@ func TestAccCtyunElbCertificate(t *testing.T) {
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
 					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectID, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"private_key"},

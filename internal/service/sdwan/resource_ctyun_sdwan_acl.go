@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -60,7 +61,7 @@ func (c *CtyunSdwanAcl) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10035786/10035852`,
+		MarkdownDescription: utils.FormatDesc("SDWAN", "https://www.ctyun.cn/document/10035786/10035852"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -358,11 +359,9 @@ func (c *CtyunSdwanAcl) create(ctx context.Context, plan *CtyunSdwanAclConfig) (
 		AclName: plan.Name.ValueString(),
 		Rules:   rules,
 	}
-	if plan.ProjectID.IsNull() || plan.ProjectID.IsUnknown() || plan.ProjectID.ValueString() == "" {
-		createReq.ProjectID = "0"
-	} else {
-		createReq.ProjectID = plan.ProjectID.ValueString()
-	}
+
+	createReq.ProjectID = plan.ProjectID.ValueString()
+
 	resp, err := c.meta.Apis.SdkSdwanApis.SdwanCreateSdwanAclApi.Do(ctx, c.meta.SdkCredential, createReq)
 	if err != nil {
 		return
@@ -398,6 +397,11 @@ func (c *CtyunSdwanAcl) getAndMerge(ctx context.Context, plan *CtyunSdwanAclConf
 		for _, aclItem := range resp.ReturnObj.Result {
 			if aclItem.AclID != nil && *aclItem.AclID == plan.ID.ValueString() {
 				plan.Name = types.StringValue(*aclItem.Name)
+				plan.ProjectID = types.StringValue(*aclItem.ProjectID)
+				err = c.getAclRules(ctx, plan)
+				if err != nil {
+					return
+				}
 				found = true
 				break
 			}
@@ -411,6 +415,11 @@ func (c *CtyunSdwanAcl) getAndMerge(ctx context.Context, plan *CtyunSdwanAclConf
 		for _, aclItem := range resp.ReturnObj.Result {
 			if aclItem.Name != nil && *aclItem.Name == plan.Name.ValueString() {
 				plan.ID = types.StringValue(*aclItem.AclID)
+				plan.ProjectID = types.StringValue(*aclItem.ProjectID)
+				err = c.getAclRules(ctx, plan)
+				if err != nil {
+					return
+				}
 				found = true
 				break
 			}
@@ -422,6 +431,104 @@ func (c *CtyunSdwanAcl) getAndMerge(ctx context.Context, plan *CtyunSdwanAclConf
 	}
 
 	return
+}
+
+func (c *CtyunSdwanAcl) getAclRules(ctx context.Context, plan *CtyunSdwanAclConfig) (err error) {
+	listReq := &sdwan.SdwanGetSdwanAclRuleRequest{
+		PageNo:   1,
+		PageSize: 1000,
+		AclID:    plan.ID.ValueStringPointer(),
+	}
+
+	resp, err := c.meta.Apis.SdkSdwanApis.SdwanGetSdwanAclRuleApi.Do(ctx, c.meta.SdkCredential, listReq)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", *resp.Message)
+	} else if resp.ReturnObj == nil {
+		return common.InvalidReturnObjError
+	}
+
+	// 直接在当前方法中实现规则转换逻辑
+	if len(resp.ReturnObj.Result) == 0 {
+		plan.Rules = types.ListNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"direction":      types.StringType,
+				"protocol":       types.StringType,
+				"ip_version":     types.StringType,
+				"dst_cidr":       types.StringType,
+				"dst_port_range": types.StringType,
+				"priority":       types.Int32Type,
+				"action":         types.StringType,
+				"src_cidr":       types.StringType,
+				"src_port_range": types.StringType,
+			},
+		})
+		return nil
+	}
+
+	// 创建规则对象切片
+	var ruleObjects []attr.Value
+	for _, rule := range resp.ReturnObj.Result {
+		ruleAttrs := map[string]attr.Value{
+			"direction":      types.StringValue(*rule.Direction),
+			"protocol":       types.StringValue(*rule.Protocol),
+			"ip_version":     types.StringValue(*rule.IpVersion),
+			"dst_cidr":       types.StringValue(*rule.DstCidr),
+			"dst_port_range": types.StringValue(*rule.DstPortRange),
+			"priority":       types.Int32Value(rule.Priority),
+			"action":         types.StringValue(*rule.Action),
+			"src_cidr":       types.StringValue(*rule.SrcCidr),
+			"src_port_range": types.StringValue(*rule.SrcPortRange),
+		}
+
+		object, diags := types.ObjectValue(
+			map[string]attr.Type{
+				"direction":      types.StringType,
+				"protocol":       types.StringType,
+				"ip_version":     types.StringType,
+				"dst_cidr":       types.StringType,
+				"dst_port_range": types.StringType,
+				"priority":       types.Int32Type,
+				"action":         types.StringType,
+				"src_cidr":       types.StringType,
+				"src_port_range": types.StringType,
+			},
+			ruleAttrs,
+		)
+
+		if diags.HasError() {
+			return fmt.Errorf("failed to create rule object: %v", diags.Errors())
+		}
+
+		ruleObjects = append(ruleObjects, object)
+	}
+
+	list, diags := types.ListValue(
+		types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"direction":      types.StringType,
+				"protocol":       types.StringType,
+				"ip_version":     types.StringType,
+				"dst_cidr":       types.StringType,
+				"dst_port_range": types.StringType,
+				"priority":       types.Int32Type,
+				"action":         types.StringType,
+				"src_cidr":       types.StringType,
+				"src_port_range": types.StringType,
+			},
+		},
+		ruleObjects,
+	)
+
+	if diags.HasError() {
+		return fmt.Errorf("failed to create rules list: %v", diags.Errors())
+	}
+
+	// 将转换后的规则列表赋值给plan的Rules字段
+	plan.Rules = list
+
+	return nil
 }
 
 func (c *CtyunSdwanAcl) delete(ctx context.Context, state *CtyunSdwanAclConfig) (err error) {

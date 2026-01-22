@@ -64,6 +64,17 @@ func FromBJTimeToUTCZ(input string) string {
 	return t.UTC().Format(time.RFC3339)
 }
 
+func IsEmptyOrRfc3339(input string) bool {
+	if input == "" {
+		return true
+	}
+	_, err := time.Parse("2006-01-02T15:04:05Z", input)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 // CalculateMonthOnlyDiff 仅计算两个RFC3339时间的年月差值（忽略日时分秒）
 // 参数：createTime、expireTime 为 RFC3339 格式时间字符串（如 2025-09-09T03:42:52Z）
 func CalculateMonthOnlyDiff(createTime, expireTime string) (string, int32, error) {

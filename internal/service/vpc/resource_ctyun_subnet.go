@@ -11,6 +11,7 @@ import (
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -48,7 +49,7 @@ func (c *ctyunSubnet) Metadata(_ context.Context, request resource.MetadataReque
 
 func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10197656`,
+		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10197656"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -415,7 +416,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSubnet) checkCreate(ctx context.Context, plan CtyunSubnetConfig) error {
-	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
 }
 
 type CtyunSubnetConfig struct {

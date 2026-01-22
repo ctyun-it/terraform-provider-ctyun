@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_crs_opensource_images"
+subcategory: "CRS"
+---
+
 # ctyun_crs_opensource_images (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10007018/10007025
 

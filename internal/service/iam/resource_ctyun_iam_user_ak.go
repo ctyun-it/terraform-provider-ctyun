@@ -41,7 +41,7 @@ func (c *CtyunIamUserAk) Metadata(_ context.Context, request resource.MetadataRe
 
 func (c *CtyunIamUserAk) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289`,
+		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10355289"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -142,6 +142,10 @@ func (c *CtyunIamUserAk) Read(ctx context.Context, request resource.ReadRequest,
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)

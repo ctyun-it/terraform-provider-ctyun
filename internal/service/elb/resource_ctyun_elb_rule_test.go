@@ -54,6 +54,14 @@ func TestAccCtyunElbRule(t *testing.T) {
 					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "test"),
 					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_match_type", "PREFIX"),
 					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// importState 1
@@ -76,9 +84,7 @@ func TestAccCtyunElbRule(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+					return fmt.Sprintf("%s,%s", id, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

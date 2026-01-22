@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -51,7 +52,7 @@ type CtyunRedisAssociationEipConfig struct {
 
 func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173`,
+		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10132173"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -148,7 +149,7 @@ func (c *ctyunRedisAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "can't find") || strings.Contains(err.Error(), "已退订") {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "未绑定") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}

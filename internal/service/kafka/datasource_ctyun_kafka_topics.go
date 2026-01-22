@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgkafka "github.com/ctyun-it/terraform-provider-ctyun/internal/core/kafka"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -55,7 +56,7 @@ type CtyunKafkaTopicsConfig struct {
 
 func (c *ctyunKafkaTopics) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10144604`,
+		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10144604"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

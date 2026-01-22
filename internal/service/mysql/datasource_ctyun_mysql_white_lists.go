@@ -23,7 +23,7 @@ type CtyunMysqlWhiteLists struct {
 
 func (c *CtyunMysqlWhiteLists) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794`,
+		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133794"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

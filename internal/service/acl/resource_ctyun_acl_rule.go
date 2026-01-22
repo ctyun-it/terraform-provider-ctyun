@@ -63,12 +63,12 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[acl_id],[project_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[acl_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAclRuleConfig
-	var ID, aclId, projectId, regionId string
+	var ID, aclId, regionId string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
@@ -76,19 +76,12 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 		return
 	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &ID, &aclId)
 		if err != nil {
 			return
 		}
-	case 2:
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &aclId, &projectId)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &ID, &aclId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &aclId, &regionId)
 		if err != nil {
 			return
 		}
@@ -102,10 +95,6 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 		err = fmt.Errorf("acl_id不能为空")
 		return
 	}
-	if projectId == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	if regionId == "" {
 		err = fmt.Errorf("region_id不能为空")
 		return
@@ -113,7 +102,6 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
 	config.AclID = types.StringValue(aclId)
-	config.ProjectID = types.StringValue(projectId)
 
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -124,7 +112,7 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028588",
+		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028588"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -139,16 +127,9 @@ func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaReques
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"acl_id": schema.StringAttribute{
 				Required:    true,
@@ -361,10 +342,8 @@ func (c *CtyunAclRule) Update(ctx context.Context, request resource.UpdateReques
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (c *CtyunAclRule) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -507,9 +486,6 @@ func (c *CtyunAclRule) getRuleList(ctx context.Context, config *CtyunAclRuleConf
 	params := &ctvpc.CtvpcListAclRuleRequest{
 		RegionID: config.RegionID.ValueString(),
 		AclID:    config.AclID.ValueString(),
-	}
-	if !config.ProjectID.IsUnknown() && !config.ProjectID.IsNull() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListAclRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

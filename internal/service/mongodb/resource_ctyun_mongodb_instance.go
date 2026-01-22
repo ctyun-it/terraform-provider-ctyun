@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -107,7 +108,7 @@ func (c *CtyunMongodbInstance) Metadata(ctx context.Context, request resource.Me
 
 func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535`,
+		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -237,7 +238,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -361,7 +362,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 					stringvalidator.OneOf(business.StorageTypeSATA, business.StorageTypeSAS, business.StorageTypeSSD, business.BackupStorageTypeOS),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"upgrade_node_type": schema.StringAttribute{
@@ -1824,10 +1825,11 @@ func (c *CtyunMongodbInstance) checkSpec(ctx context.Context, plan *CtyunMongodb
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mongodbService.GetMongodbFlavorByProdIdAndFlavorName(
 		ctx,

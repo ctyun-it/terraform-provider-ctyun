@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebsbackup"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -65,7 +66,7 @@ type repositoryListModel struct {
 
 func (c *ctyunEbsBackupPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10628749`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10628749"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

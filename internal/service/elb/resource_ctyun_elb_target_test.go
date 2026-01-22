@@ -52,6 +52,14 @@ func TestAccCtyunElbTarget(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
 					resource.TestCheckResourceAttr(resourceName, "target_group_id", targetGroupID),
 					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// importState 1
@@ -74,9 +82,8 @@ func TestAccCtyunElbTarget(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
-					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+
+					return fmt.Sprintf("%s,%s", id, regionID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
@@ -137,74 +144,6 @@ func TestAccCtyunElbTarget(t *testing.T) {
 			// destroy
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight),
-				Destroy: true,
-			},
-		},
-	})
-
-}
-
-func TestAccCtyunElbTargetImportState(t *testing.T) {
-
-	rnd := utils.GenerateRandomString()
-
-	resourceName := "ctyun_elb_target." + rnd
-	resourceFile := "resource_ctyun_elb_target.tf"
-
-	protocolPort := utils.GenerateRandomPort(1, 65535)
-	targetGroupID := dependence.targetGroupID
-	// 代码合并后整合
-	instanceType := "VM"
-	instanceId := dependence.instanceID
-	resource.Test(t, resource.TestCase{
-		CheckDestroy: func(s *terraform.State) error {
-			_, exists := s.RootModule().Resources[resourceName]
-			if exists {
-				return fmt.Errorf("resource destroy failed")
-			}
-			return nil
-		},
-		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
-		Steps: []resource.TestStep{
-			// 1. 基础功能测试
-			// 1.1 Create验证
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, ""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
-					resource.TestCheckResourceAttr(resourceName, "target_group_id", targetGroupID),
-					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
-				),
-			},
-			// importState 1
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
-			// importState 2
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,,%s", id, regionID), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
-			// destroy
-			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, ""),
 				Destroy: true,
 			},
 		},

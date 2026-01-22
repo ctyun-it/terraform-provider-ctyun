@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_postgresql_accounts"
+subcategory: "POSTGRESQL"
+---
+
 # ctyun_postgresql_accounts (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161317
 

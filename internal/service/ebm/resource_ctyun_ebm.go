@@ -96,7 +96,7 @@ type CtyunEbmConfig struct {
 
 func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724`,
+		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -267,7 +267,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID",
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					setplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
@@ -523,7 +523,7 @@ func (c *ctyunEbm) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "instance is not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			// 查下主网卡是否存在
 			var exist bool
 			portID := state.PortID.ValueString()
@@ -646,35 +646,27 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[az_name],[region_id],[project_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [instance_id],[az_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbmConfig
 
-	var instanceID, azName, regionID, projectID string
+	var instanceID, azName, regionID string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		instanceID = request.ID
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &azName)
 		if err != nil {
 			return
 		}
-	case 2:
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID, &projectID)
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
 		if err != nil {
 			return
 		}
@@ -694,7 +686,6 @@ func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportState
 	config.InstanceID = types.StringValue(instanceID)
 	config.RegionID = types.StringValue(regionID)
 	config.AzName = types.StringValue(azName)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -805,7 +796,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 func (c *ctyunEbm) checkBeforeCreateInstance(ctx context.Context, plan CtyunEbmConfig) error {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
 	vpc := plan.VpcID.ValueString()
-	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString(), plan.ProjectID.ValueString())
+	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -1068,6 +1059,7 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 		return
 	}
 	cfg.InstanceID = utils.SecStringValue(instance.InstanceUUID)
+	cfg.ProjectID = utils.SecStringValue(instance.ProjectID)
 	cfg.RegionID = utils.SecStringValue(instance.RegionID)
 	cfg.AzName = utils.SecStringValue(instance.AzName)
 	cfg.DeviceType = utils.SecStringValue(instance.DeviceType)
@@ -1163,7 +1155,10 @@ func (c *ctyunEbm) getEbm(ctx context.Context, cfg CtyunEbmConfig) (instance *ct
 	})
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiEbmNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ccse_plugin_market"
+subcategory: "CCSE"
+---
+
 # ctyun_ccse_plugin_market (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137
 

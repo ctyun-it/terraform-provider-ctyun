@@ -8,7 +8,9 @@ import (
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -40,33 +42,24 @@ func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbCertificateConfig
-	var ID, projectID, azName, regionID string
+	var ID, projectID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
 	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		err = terraform_extend.Split(request.ID, &ID, &projectID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
 		if err != nil {
 			return
 		}
@@ -74,7 +67,6 @@ func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
 	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
 	err = c.getAndMergeCertificate(ctx, &config)
 	if err != nil {
 		return
@@ -96,7 +88,7 @@ func (c *CtyunElbCertificate) Metadata(ctx context.Context, request resource.Met
 
 func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416`,
+		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10155416"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -151,7 +143,7 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 					),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"certificate": schema.StringAttribute{
@@ -180,19 +172,6 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -300,6 +279,11 @@ func (c *CtyunElbCertificate) Update(ctx context.Context, request resource.Updat
 	err = c.getAndMergeCertificate(ctx, &state)
 	if err != nil {
 		return
+	}
+
+	if !plan.PrivateKey.IsUnknown() && !plan.PrivateKey.IsNull() && state.PrivateKey.IsNull() {
+		state.PrivateKey = plan.PrivateKey
+		response.Diagnostics.AddWarning("private_key的更新仅写入状态文件", "在import时，状态文件中private_key为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -509,6 +493,5 @@ type CtyunElbCertificateConfig struct {
 	Status      types.String `tfsdk:"status"`      //状态: ACTIVE / INACTIVE
 	CreatedTime types.String `tfsdk:"create_time"` //创建时间，为UTC格式
 	UpdatedTime types.String `tfsdk:"update_time"` //更新时间，为UTC格式
-	AzName      types.String `tfsdk:"az_name"`     //可用区名称
 	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
 }

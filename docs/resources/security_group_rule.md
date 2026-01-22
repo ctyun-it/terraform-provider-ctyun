@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_security_group_rule"
+subcategory: "VPC"
+---
+
 # ctyun_security_group_rule (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225510
 

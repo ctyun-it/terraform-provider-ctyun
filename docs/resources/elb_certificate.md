@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_elb_certificate"
+subcategory: "ELB"
+---
+
 # ctyun_elb_certificate (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416
 
@@ -38,7 +43,6 @@ resource "ctyun_elb_certificate" "certificate_test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `private_key` (String) 服务器证书私钥，type=Server服务器证书此字段必填
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID

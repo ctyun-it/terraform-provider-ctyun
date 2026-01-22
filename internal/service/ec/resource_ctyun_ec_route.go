@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -92,7 +93,7 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 
 func (c *CtyunExpressConnectRoute) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10132372",
+		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10132372"),
 		Attributes: map[string]schema.Attribute{
 			"ec_id": schema.StringAttribute{
 				Required:    true,
@@ -381,8 +382,7 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			}
 			config.IPVersion = types.StringValue(business.EcIpVersionRevMap[*routeObj.IPVersion])
 			config.Description = types.StringValue(*routeObj.RouteDescription)
-			config.CreateTime = types.StringValue(*routeObj.CreateDate)
-
+			config.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(*routeObj.CreateDate))
 		}
 	}
 	return nil

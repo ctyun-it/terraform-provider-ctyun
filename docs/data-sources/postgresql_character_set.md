@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_postgresql_character_set"
+subcategory: "POSTGRESQL"
+---
+
 # ctyun_postgresql_character_set (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10159978
 

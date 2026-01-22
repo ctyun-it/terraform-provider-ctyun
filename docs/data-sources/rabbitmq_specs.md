@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_rabbitmq_specs"
+subcategory: "RABBITMQ"
+---
+
 # ctyun_rabbitmq_specs (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10029625/10032819
 

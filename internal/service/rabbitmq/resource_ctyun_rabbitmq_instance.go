@@ -3,7 +3,14 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	amqp2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -11,24 +18,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
-	"regexp"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
-
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
-
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -81,7 +77,7 @@ type CtyunRabbitmqInstanceConfig struct {
 
 func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967`,
+		MarkdownDescription: utils.FormatDesc("RABBITMQ", "https://www.ctyun.cn/document/10000118/10001967"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -98,7 +94,7 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -452,9 +448,9 @@ func (c *ctyunRabbitmqInstance) ImportState(ctx context.Context, request resourc
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunRabbitmqInstance) checkBeforeCreate(ctx context.Context, plan *CtyunRabbitmqInstanceConfig) (err error) {
-	regionID, projectID := plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}

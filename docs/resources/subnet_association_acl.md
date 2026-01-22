@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_subnet_association_acl"
+subcategory: "ACL"
+---
+
 # ctyun_subnet_association_acl (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028591
 
@@ -47,12 +52,12 @@ resource "ctyun_subnet_association_acl" "example" {
 
 ### Required
 
-- `acl_id` (String) acl_id，支持更新。acl列表可以通过data.ctyun_acls查询
-- `subnet_id` (String) subnet_id，subnet列表可能通过data.ctyun_subnets查询，不支持更新
+- `acl_id` (String) acl_id。acl列表可以通过data.ctyun_acls查询
+- `subnet_id` (String) subnet_id，subnet列表可能通过data.ctyun_subnets查询
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

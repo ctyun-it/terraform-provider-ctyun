@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -54,33 +55,18 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[azName],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbTargetConfig
-	var ID, projectID, azName, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName)
-		if err != nil {
-			return
-		}
+		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &azName, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -95,8 +81,7 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
-	config.AzName = types.StringValue(azName)
+
 	err = c.getAndMergeElbTarget(ctx, &config)
 	if err != nil {
 		return
@@ -106,7 +91,7 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 
 func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10196689`,
+		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10196689"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -207,31 +192,6 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
 			},
 		},
 	}
@@ -434,7 +394,6 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	plan.InstanceID = types.StringValue(returnObj.InstanceID)
 	plan.InstanceType = types.StringValue(returnObj.InstanceType)
 	plan.TargetGroupID = types.StringValue(returnObj.TargetGroupID)
-	plan.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 
@@ -489,8 +448,6 @@ type CtyunElbTargetConfig struct {
 	ProtocolPort          types.Int32  `tfsdk:"protocol_port"`   //协议端口。取值范围：1-65535
 	Weight                types.Int32  `tfsdk:"weight"`          //权重。取值范围：1-256，默认为100
 	ID                    types.String `tfsdk:"id"`              //后端服务组ID
-	AzName                types.String `tfsdk:"az_name"`
-	ProjectID             types.String `tfsdk:"project_id"`
 	HealthCheckStatus     types.String `tfsdk:"health_check_status"`
 	HealthCheckStatusIpv6 types.String `tfsdk:"health_check_status_ipv6"`
 	Status                types.String `tfsdk:"status"`

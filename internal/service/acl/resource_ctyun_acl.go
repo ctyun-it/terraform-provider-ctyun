@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -59,26 +60,18 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAclConfig
 
-	var ID, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -88,17 +81,15 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 		err = fmt.Errorf("id不能为空")
 		return
 	}
-	if projectId == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	if regionId == "" {
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -108,7 +99,7 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 
 func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028583",
+		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028583"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -137,7 +128,7 @@ func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -365,9 +356,6 @@ func (c *CtyunAcl) getAclDetail(ctx context.Context, config *CtyunAclConfig) (*c
 		RegionID: config.RegionID.ValueString(),
 		AclID:    config.ID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowAclApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return nil, err
@@ -401,9 +389,6 @@ func (c *CtyunAcl) update(ctx context.Context, state *CtyunAclConfig, plan *Ctyu
 		AclID:    state.ID.ValueString(),
 		Name:     plan.Name.ValueString(),
 		Enabled:  &paramEnabled,
-	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		params.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 	if !plan.Description.IsNull() {
 		params.Description = plan.Description.ValueStringPointer()

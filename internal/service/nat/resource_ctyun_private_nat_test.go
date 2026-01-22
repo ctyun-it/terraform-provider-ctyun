@@ -52,6 +52,14 @@ func TestAccNewCtyunPrivateNatResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttrSet(resourceName, "nat_gateway_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 1.2 resource update验证，更新nat name和description

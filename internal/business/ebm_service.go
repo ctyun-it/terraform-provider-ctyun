@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"strings"
 )
 
@@ -24,7 +25,10 @@ func (c EbmService) GetEbmInfo(ctx context.Context, id, regionID, azName string)
 	})
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiEbmNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

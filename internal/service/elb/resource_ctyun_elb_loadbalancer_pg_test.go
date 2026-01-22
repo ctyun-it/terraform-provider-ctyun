@@ -55,6 +55,14 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// importState 1
@@ -67,7 +75,6 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
-				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
 			},
 			// importState 2
 			{
@@ -78,11 +85,9 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 					id := ds.ID
 					regionID := ds.Attributes["region_id"]
 					projectID := ds.Attributes["project_id"]
-					azName := ds.Attributes["az_name"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, projectID, azName, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", id, projectID, regionID), nil
 				},
 				ImportStateVerify: true,
-				//ImportStateVerifyIgnore: []string{"cycle_count", "cycle_type", "az_name", "project_id"},
 			},
 			// 保障型elb变配测试
 			{

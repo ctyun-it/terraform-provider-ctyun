@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -40,6 +41,26 @@ type ctyunEbsSnapshot struct {
 }
 
 func (c *ctyunEbsSnapshot) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// tf文件中的
+	var plan CtyunEbsSnapshotConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// state中的
+	var state CtyunEbsSnapshotConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunEbsSnapshot) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -49,7 +70,7 @@ func (c *ctyunEbsSnapshot) Metadata(_ context.Context, request resource.Metadata
 
 func (c *ctyunEbsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10043223`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10027696/10043223"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -98,20 +119,13 @@ func (c *ctyunEbsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, r
 					int64validator.Between(1, 65535),
 				},
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					int64planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -431,25 +445,18 @@ func (c *ctyunEbsSnapshot) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[project_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotConfig
 
-	var ID, projectID, regionId string
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -463,13 +470,8 @@ func (c *ctyunEbsSnapshot) ImportState(ctx context.Context, request resource.Imp
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	cfg.Id = types.StringValue(ID)
 	cfg.RegionId = types.StringValue(regionId)
-	cfg.ProjectId = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
@@ -485,6 +487,6 @@ type CtyunEbsSnapshotConfig struct {
 	SnapshotStatus  types.String `tfsdk:"snapshot_status"`
 	RetentionPolicy types.String `tfsdk:"retention_policy"`
 	RetentionTime   types.Int64  `tfsdk:"retention_time"`
-	ProjectId       types.String `tfsdk:"project_id"`
+	ProjectID       types.String `tfsdk:"project_id"`
 	RegionId        types.String `tfsdk:"region_id"`
 }

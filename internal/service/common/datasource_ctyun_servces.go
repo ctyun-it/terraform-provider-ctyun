@@ -26,7 +26,8 @@ func (c *ctyunServices) Metadata(_ context.Context, req datasource.MetadataReque
 
 func (c *ctyunServices) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**服务和产品`,
+		MarkdownDescription: `COMMON
+服务和产品`,
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
 				Optional:    true,

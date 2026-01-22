@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_redis_instances"
+subcategory: "REDIS"
+---
+
 # ctyun_redis_instances (Data Source)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280
 

@@ -45,7 +45,7 @@ func NewCtyunDnatResource() resource.Resource {
 
 func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166499`,
+		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166499"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -414,13 +414,17 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.State = utils.SecStringValue(dnat.State)
 	cfg.ExternalPort = types.Int32Value(dnat.ExternalPort)
 	cfg.InternalPort = types.Int32Value(dnat.InternalPort)
+	if dnat.VirtualMachineID != nil && *dnat.VirtualMachineID != "" {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCloud)
+	} else {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCustom)
+	}
 	switch cfg.DnatType.ValueString() {
 	case business.VirtualMachineTypeCloud:
 		cfg.InstanceID = utils.SecStringValue(dnat.VirtualMachineID)
 	case business.VirtualMachineTypeCustom:
 		cfg.InternalIP = utils.SecStringValue(dnat.InternalIp)
 	}
-
 	return nil
 }
 

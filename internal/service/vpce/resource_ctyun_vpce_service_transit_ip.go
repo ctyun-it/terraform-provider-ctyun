@@ -53,7 +53,7 @@ type CtyunVpceServiceTransitIPConfig struct {
 
 func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507`,
+		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10048507"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -100,7 +100,7 @@ func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaR
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"create_time": schema.StringAttribute{
@@ -207,7 +207,7 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [transit_ip],[endpoint_service_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [transit_ip],[endpoint_service_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

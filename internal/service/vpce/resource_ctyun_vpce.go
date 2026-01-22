@@ -64,7 +64,7 @@ type CtyunVpceConfig struct {
 
 func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217121`,
+		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10217121"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -298,7 +298,7 @@ func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStat
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

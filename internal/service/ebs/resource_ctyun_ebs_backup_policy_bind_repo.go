@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -54,7 +56,7 @@ type CtyunEbsBackupPolicyBindRepoConfig struct {
 
 func (c *ctyunEbsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037453`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10037453"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -83,7 +85,6 @@ func (c *ctyunEbsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.Sche
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-
 			"repository_id": schema.StringAttribute{
 				Required:    true,
 				Description: "云硬盘备份存储库ID",
@@ -151,7 +152,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) Read(ctx context.Context, request resourc
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -366,6 +367,9 @@ func (c *ctyunEbsBackupPolicyBindRepo) getBindingRepos(ctx context.Context, plan
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if resp.ErrorCode == common.OpenapiEbsBackupPolicyNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
@@ -403,7 +407,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *Ct
 		return
 	}
 	if !hasBind {
-		err = fmt.Errorf("云硬盘备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, repositoryID, regionID))
@@ -415,7 +419,7 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [policy_id],[repository_id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -423,13 +427,18 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 
 	var repositoryID, policyID, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("policy_id和repository_id必须输入")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &policyID, &repositoryID)
 		if err != nil {
 			return
 		}
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &policyID, &repositoryID, &regionId)
 		if err != nil {
 			return
@@ -437,15 +446,15 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if repositoryID == "" {
-		err = fmt.Errorf("repositoryID不能为空")
+		err = fmt.Errorf("repository_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RepositoryID = types.StringValue(repositoryID)

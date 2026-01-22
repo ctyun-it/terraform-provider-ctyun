@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -138,7 +139,7 @@ type CtyunCcseClusterDisk struct {
 
 func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137`,
+		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10656137"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -211,7 +212,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 						Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							explanmodifier.Project(),
 						},
 						Validators: []validator.String{
 							validator2.Project(),
@@ -1085,8 +1086,8 @@ func (c *ctyunCcseCluster) Configure(_ context.Context, request resource.Configu
 // checkBeforeCreate 创建前检查
 func (c *ctyunCcseCluster) checkBeforeCreate(ctx context.Context, plan CtyunCcseClusterConfig) (err error) {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
-	vpc, regionID, projectID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString(), plan.BaseInfo.ProjectID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	vpc, regionID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString()
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}

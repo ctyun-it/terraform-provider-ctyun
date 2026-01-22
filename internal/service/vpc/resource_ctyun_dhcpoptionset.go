@@ -43,7 +43,7 @@ func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -82,7 +82,7 @@ func (c *ctyunDhcpOptionSet) Metadata(_ context.Context, request resource.Metada
 
 func (c *ctyunDhcpOptionSet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310`,
+		MarkdownDescription: utils.FormatDesc("DHCP", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

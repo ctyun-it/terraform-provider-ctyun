@@ -61,7 +61,7 @@ type InstanceDbInfo struct {
 
 func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10518385`,
+		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10518385"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -85,7 +85,7 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:    true,
 				Description: "同步模式 1：全量同步+增量同步 2：全量同步",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.OneOf(1, 2),
@@ -96,7 +96,7 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:    true,
 				Description: "数据冲突时的处理办法 1：中断迁移 2：跳过目标key，继续执行 3：覆盖目标key，继续执行",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.OneOf(1, 2, 3),

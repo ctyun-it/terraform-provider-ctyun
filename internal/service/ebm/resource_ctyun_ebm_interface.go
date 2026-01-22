@@ -2,6 +2,7 @@ package ebm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -57,7 +58,7 @@ type CtyunEbmInterfaceConfig struct {
 
 func (c *ctyunEbmInterface) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040142`,
+		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724/10040142"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -197,6 +198,10 @@ func (c *ctyunEbmInterface) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -286,7 +291,7 @@ func (c *ctyunEbmInterface) ImportState(ctx context.Context, request resource.Im
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[interface_id],[az_name],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [instance_id],[interface_id],[az_name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -462,8 +467,7 @@ func (c *ctyunEbmInterface) getAndMerge(ctx context.Context, plan *CtyunEbmInter
 			return
 		}
 	}
-	err = fmt.Errorf("未找到目标网卡 %s", plan.InterfaceID.ValueString())
-	return
+	return common.ResourceNotExistError
 }
 
 // updateInterface 更新网卡的安全组

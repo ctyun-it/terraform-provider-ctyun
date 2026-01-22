@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -76,7 +77,7 @@ type CtyunEbsBackupConfig struct {
 
 func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428`,
+		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10037428"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -267,7 +268,10 @@ func (c *ctyunEbsBackup) getAndMerge(ctx context.Context, cfg *CtyunEbsBackupCon
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupShowBackupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp.ErrorCode == common.OpenapiEbsBackupNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -330,6 +334,10 @@ func (c *ctyunEbsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 
@@ -481,7 +489,7 @@ func (c *ctyunEbsBackup) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

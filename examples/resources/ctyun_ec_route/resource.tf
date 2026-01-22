@@ -63,6 +63,6 @@ resource "ctyun_ec_route" "example" {
   description         = "examples"
   is_black_hole_route = false
   next_hop_type       = "vpc"
-  next_hop_id         = ctyun_ec_vpc_instance.instance_test.id
+  next_hop_id         = ctyun_ec_vpc_instance.instance_test.vpc_id
 }
 

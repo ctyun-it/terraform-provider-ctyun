@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ebs_snapshot"
+subcategory: "EBS"
+---
+
 # ctyun_ebs_snapshot (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10043223
 
@@ -45,7 +50,7 @@ resource "ctyun_ebs_snapshot" "test" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `retention_time` (Number) 自定义快照保留天数。取值范围：1-65535。当快照保留策略为custom时该参数为必填，当快照保留策略为forever时，自动设置为65535
 

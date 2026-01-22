@@ -72,7 +72,7 @@ func (c *ctyunEcs) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730`,
+		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -295,7 +295,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -581,11 +581,6 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if !plan.PayVoucherPrice.IsUnknown() && !plan.PayVoucherPrice.IsNull() && state.PayVoucherPrice.IsNull() {
 		state.PayVoucherPrice = plan.PayVoucherPrice
 		response.Diagnostics.AddWarning("pay_voucher_price的更新仅写入状态文件", "在import时，状态文件中pay_voucher_price为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
-	}
-
-	if !plan.ProjectId.IsUnknown() && !plan.ProjectId.IsNull() && state.ProjectId.IsNull() {
-		state.ProjectId = plan.ProjectId
-		response.Diagnostics.AddWarning("project_id的更新仅写入状态文件", "在import时，状态文件中project_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 
 	if !plan.UserData.IsUnknown() && !plan.UserData.IsNull() && state.UserData.IsNull() {
@@ -1433,6 +1428,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.ActualImageID = types.StringValue(*instance_details_resp.Image.ImageID)
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
+	cfg.ProjectId = types.StringValue(*instance_details_resp.ProjectID)
 	if instance_details_resp.ExpiredTime != nil {
 		cfg.ExpireTime = types.StringValue(*instance_details_resp.ExpiredTime)
 	} else {
@@ -1601,7 +1597,7 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	}
 
 	// vpc必须存在
-	err = c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	err = c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
 	if err != nil {
 		return err
 	}
@@ -2047,7 +2043,6 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 			return
 		}
 	} else {
-
 		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionId)
 		if err != nil {
 			return

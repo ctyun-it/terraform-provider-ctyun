@@ -17,10 +17,9 @@ func NewVpcService(meta *common.CtyunMetadata) *VpcService {
 	return &VpcService{meta: meta}
 }
 
-func (v VpcService) MustExist(ctx context.Context, vpcId, regionId, projectId string) error {
+func (v VpcService) MustExist(ctx context.Context, vpcId, regionId string) error {
 	_, err := v.meta.Apis.CtVpcApis.VpcQueryApi.Do(ctx, v.meta.Credential, &ctvpc.VpcQueryRequest{
 		RegionId:    regionId,
-		ProjectId:   projectId,
 		ClientToken: uuid.NewString(),
 		VpcId:       vpcId,
 	})
@@ -57,15 +56,11 @@ func (v VpcService) GetVpcID(ctx context.Context, vpcName, regionId, projectId s
 	return *resp.ReturnObj.Vpcs[0].VpcID, nil
 }
 
-func (v VpcService) GetVpcSubnet(ctx context.Context, vpcId, regionId, projectId string) (map[string]ctvpc.SubnetListSubnetsResponse, error) {
+func (v VpcService) GetVpcSubnet(ctx context.Context, vpcId, regionId string) (map[string]ctvpc.SubnetListSubnetsResponse, error) {
 	params := &ctvpc.VpcQueryRequest{
 		RegionId:    regionId,
-		ProjectId:   projectId,
 		ClientToken: uuid.NewString(),
 		VpcId:       vpcId,
-	}
-	if projectId != "" {
-		params.ProjectId = projectId
 	}
 	resp, err := v.meta.Apis.CtVpcApis.VpcQueryApi.Do(ctx, v.meta.Credential, params)
 	if err != nil {

@@ -90,7 +90,7 @@ func (c *ctyunSnatResource) Metadata(ctx context.Context, request resource.Metad
 
 func (c *ctyunSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166496`,
+		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166496"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -397,7 +397,7 @@ func (c *ctyunSnatResource) checkBeforeCreateSnat(ctx context.Context, plan Ctyu
 		err = fmt.Errorf("校验nat网关失败" + err.Error())
 		return
 	}
-	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, *nat.VpcID, plan.RegionID.ValueString(), "")
+	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, *nat.VpcID, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}

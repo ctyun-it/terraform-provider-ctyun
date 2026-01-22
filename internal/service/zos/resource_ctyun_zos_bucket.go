@@ -2,6 +2,7 @@ package zos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
@@ -75,7 +76,7 @@ type CtyunZosBucketConfig struct {
 
 func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237`,
+		MarkdownDescription: utils.FormatDesc("ZOS", "https://www.ctyun.cn/document/10026735/10181237"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -323,7 +324,7 @@ func (c *ctyunZosBucket) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found bucket") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -396,26 +397,19 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id],[project_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [bucket],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketConfig
-	var bucket, projectID, regionID string
+	var bucket, regionID string
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		projectID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		bucket = request.ID
-	case 1:
-		projectID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &bucket, &regionID)
-		if err != nil {
-			return
-		}
 	default:
-		err = terraform_extend.Split(request.ID, &bucket, &regionID, &projectID)
+		err = terraform_extend.Split(request.ID, &bucket, &regionID)
 		if err != nil {
 			return
 		}
@@ -428,13 +422,8 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-	if projectID == "" {
-		err = fmt.Errorf("project_id不能为空")
-		return
-	}
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.Bucket = types.StringValue(bucket)
-	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
@@ -824,6 +813,7 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	plan.AzPolicy = types.StringValue(b.AZPolicy)
 	plan.StorageType = types.StringValue(b.StorageType)
 	plan.CmkUUID = utils.SecStringValue(b.CmkUUID)
+	plan.ProjectID = types.StringValue(b.ProjectID)
 	plan.CreateTime = types.StringValue(utils.ConvertToUTCZ(utils.Layout4, b.Ctime))
 	if b.CmkUUID != nil {
 		plan.IsEncrypted = types.BoolValue(true)

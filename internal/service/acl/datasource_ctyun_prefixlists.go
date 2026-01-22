@@ -42,7 +42,7 @@ func (c *CtyunPrefixLists) Metadata(ctx context.Context, request datasource.Meta
 
 func (c *CtyunPrefixLists) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321",
+		MarkdownDescription: utils.FormatDesc("PREFIXLIST", "https://www.ctyun.cn/document/10026755/10298321"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

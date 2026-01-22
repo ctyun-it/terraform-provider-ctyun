@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -54,7 +55,7 @@ func (c *CtyunElbTargetGroup) Metadata(ctx context.Context, request resource.Met
 
 func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289`,
+		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10155289"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -217,18 +218,6 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
 		},
 	}
 }
@@ -366,18 +355,17 @@ func (c *CtyunElbTargetGroup) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbTargetGroupConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
@@ -392,7 +380,6 @@ func (c *CtyunElbTargetGroup) ImportState(ctx context.Context, request resource.
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeTargetGroup(ctx, &config)
 	if err != nil {
 		return
@@ -481,7 +468,6 @@ func (c *CtyunElbTargetGroup) updateTargetGroupInfo(ctx context.Context, state *
 	params := &ctelb.CtelbUpdateTargetGroupRequest{
 		ClientToken:   uuid.NewString(),
 		RegionID:      state.RegionID.ValueString(),
-		ProjectID:     state.ProjectID.ValueString(),
 		ID:            state.ID.ValueString(),
 		TargetGroupID: state.ID.ValueString(),
 		Name:          state.Name.ValueString(),
@@ -496,9 +482,6 @@ func (c *CtyunElbTargetGroup) updateTargetGroupInfo(ctx context.Context, state *
 		},
 	}
 
-	if !state.ProjectID.IsNull() {
-		params.ProjectID = plan.ProjectID.ValueString()
-	}
 	if !plan.Name.Equal(state.Name) {
 		params.Name = plan.Name.ValueString()
 	}
@@ -589,7 +572,6 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
-	plan.ProjectID = types.StringValue(returnObj.ProjectID)
 	return
 }
 
@@ -607,7 +589,6 @@ type CtyunElbTargetGroupConfig struct {
 	RewriteCookieName types.String `tfsdk:"rewrite_cookie_name"` //cookie重写名称，REWRITE模式必填
 	SourceIpTimeout   types.Int64  `tfsdk:"source_ip_timeout"`   //源IP会话保持超时时间。SOURCE_IP模式必填
 	ID                types.String `tfsdk:"id"`                  //后端服务组ID
-	ProjectID         types.String `tfsdk:"project_id"`          //项目ID
 	Status            types.String `tfsdk:"status"`              //状态: ACTIVE / DOWN
 	CreatedTime       types.String `tfsdk:"create_time"`         //创建时间，为UTC格式
 	UpdatedTime       types.String `tfsdk:"update_time"`         //更新时间，为UTC格式

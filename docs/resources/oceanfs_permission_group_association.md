@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_oceanfs_permission_group_association"
+subcategory: "OCEANFS"
+---
+
 # ctyun_oceanfs_permission_group_association (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853
 
@@ -68,15 +73,10 @@ resource "ctyun_oceanfs_permission_group_association" "example" {
 
 - `oceanfs_id` (String) 文件系统ID
 - `permission_group_id` (String) oceanfs 权限组ID
-- `subnet_id` (String) 子网ID
 - `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
-- `is_vpce` (Boolean) 文件系统绑定VPC时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。取值：
-true：创建VPC终端节点（推荐）
-false：不创建VPC终端节点
-注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

@@ -1,3 +1,8 @@
+---
+page_title: "CTYUN: ctyun_ecs_backup_policy_bind_repo"
+subcategory: "ECS"
+---
+
 # ctyun_ecs_backup_policy_bind_repo (Resource)
 -> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10235038
 
