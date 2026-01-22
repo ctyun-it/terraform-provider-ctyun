@@ -58,28 +58,21 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunVpcPeerConnectionConfig
-	var ID, regionId, projectId string
+	var ID, regionId string
 	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId)
+		ID = request.ID
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -101,7 +94,10 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
+
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	config.ProjectID = types.StringValue(projectID)
 
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
