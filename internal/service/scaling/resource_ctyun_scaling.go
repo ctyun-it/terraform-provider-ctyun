@@ -70,8 +70,8 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	}()
 	var config CtyunScalingConfig
 	var ID, vpcId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &ID, &vpcId)
 		if err != nil {
