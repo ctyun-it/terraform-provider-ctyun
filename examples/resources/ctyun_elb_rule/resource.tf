@@ -40,6 +40,12 @@ resource "ctyun_elb_loadbalancer" "test" {
   cycle_count   = 1
 }
 
+resource "ctyun_elb_target_group" "test1" {
+  name      = "tf-tg-for-target1_12"
+  vpc_id    = ctyun_vpc.vpc_test.id
+  algorithm = "wrr"
+}
+
 resource "ctyun_elb_target_group" "test2" {
   name      = "tf-tg-for-target2_12"
   vpc_id    = ctyun_vpc.vpc_test.id
@@ -56,7 +62,7 @@ resource "ctyun_elb_listener" "test" {
 }
 
 resource "ctyun_elb_rule" "rule_test" {
-  listener_id = ctyun_elb_loadbalancer.test.id
+  listener_id = ctyun_elb_listener.test.id
   conditions = [
     {
       "condition_type" : "server_name",
@@ -64,6 +70,6 @@ resource "ctyun_elb_rule" "rule_test" {
     }
   ]
   action_type          = "forward"
-  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test2.id }]
+  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test1.id }]
 }
 

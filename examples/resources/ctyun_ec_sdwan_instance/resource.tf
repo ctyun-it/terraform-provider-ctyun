@@ -7,8 +7,12 @@ terraform {
 }
 
 provider "ctyun" {
-  env        = "prod"
   project_id = "0"
+}
+
+resource "ctyun_express_connect" "example" {
+  name        = "express_connect_dependence"
+  description = "云间高速example专用"
 }
 
 resource "ctyun_ec_cloud_gateway" "example" {
@@ -16,12 +20,7 @@ resource "ctyun_ec_cloud_gateway" "example" {
   name        = "cloud_gateway_xinan1"
   description = "云间高速开发测试专用"
   region_id   = "200000002368"
-  region_name = "cn-xinan1-xn1A-public-ctcloud"
-}
-
-resource "ctyun_express_connect" "example" {
-  name        = "express_connect_dependence"
-  description = "云间高速example专用"
+  region_name = "西南1"
 }
 
 resource "ctyun_sdwan" "demo" {
