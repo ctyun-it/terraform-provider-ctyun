@@ -107,6 +107,11 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	if err != nil {
 		return
 	}
+	if config.Priority.ValueInt32() == 32767 {
+		err = fmt.Errorf("仅支持导入自定义规则")
+		return
+	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 

@@ -108,7 +108,7 @@ func (c *ctyunDhcpOptionSet) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "集合名，支持拉丁字母、中文、数字，下划线，连字符，必须以中文/英文字母开头，不能以数字、_和-、http:/https:开头，长度2-32 支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}]+$"), "dhcp名称不符合规则"),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}fa5}-]+$"), "dhcp名称不符合规则"),
 				},
 			},
 			"description": schema.StringAttribute{
