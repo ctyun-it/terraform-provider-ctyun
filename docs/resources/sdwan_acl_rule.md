@@ -1,10 +1,10 @@
 ---
+subcategory: "天翼云SD-WAN"
 page_title: "CTYUN: ctyun_sdwan_acl_rule"
-subcategory: "SDWAN"
 ---
 
 # ctyun_sdwan_acl_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10035786/10035852
+-> 管理SDWAN的访问控制规则
 
 
 
@@ -75,3 +75,15 @@ resource "ctyun_sdwan_acl_rule" "demo" {
 ### Read-Only
 
 - `id` (String) 资源唯一标识
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SD-WAN ACL规则
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sdwan_acl_rule.[导入配置名称] [acl_id],[id]
+# 示例
+terraform import ctyun_sdwan_acl_rule.sdwan_acl_rule_example acl-123456,aclr-789012
+```

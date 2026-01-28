@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
 page_title: "CTYUN: ctyun_elb_target_group"
-subcategory: "ELB"
 ---
 
 # ctyun_elb_target_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289
+-> 管理弹性负载均衡后端服务组
 
 
 
@@ -61,6 +61,7 @@ resource "ctyun_elb_target_group" "target_group_test" {
 - `cookie_expire` (Number) cookie过期时间。session_sticky_mode = INSERT模式必填，支持更新
 - `description` (String) 描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·！@#￥%……&*（） —— -+={},，支持更新
 - `health_check_id` (String) 需要关联的健康检查Id，支持更新
+- `project_id` (String, Deprecated) 企业项目ID
 - `protocol` (String) 支持 TCP / UDP / HTTP / HTTPS, 该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE
 - `proxy_protocol` (Number) 1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。不支持更改
 - `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
@@ -74,3 +75,15 @@ resource "ctyun_elb_target_group" "target_group_test" {
 - `id` (String) 后端服务组ID
 - `status` (String) 状态: ACTIVE / DOWN
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡后端主机组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_target_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_target_group.elb_target_group_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

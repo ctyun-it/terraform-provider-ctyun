@@ -1,10 +1,10 @@
 ---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
 page_title: "CTYUN: ctyun_express_connect"
-subcategory: "EXPRESS_CONNECT"
 ---
 
 # ctyun_express_connect (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
+-> 管理云间高速实例
 
 
 
@@ -46,3 +46,15 @@ resource "ctyun_express_connect" "example" {
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 云间高速实例ID
 - `status` (Number) 运行状态，取值范围: 0:创建中 2:运行中 18:删除中 21:设置中 22:更新带宽中 24:更新中
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云间高速实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_express_connect.[导入配置名称] [id]
+# 示例
+terraform import ctyun_express_connect.express_connect_example ec-12345678
+```

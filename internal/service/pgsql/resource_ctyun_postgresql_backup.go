@@ -101,7 +101,7 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 
 func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10160072"),
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的备份", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10160072"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -49,7 +49,7 @@ func (c *ctyunEipAssociation) Metadata(_ context.Context, request resource.Metad
 
 func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EIP", "https://www.ctyun.cn/document/10026753/10219975"),
+		MarkdownDescription: utils.FormatDesc("管理弹性IP的绑定", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

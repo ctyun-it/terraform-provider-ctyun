@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务RabbitMQ"
 page_title: "CTYUN: ctyun_rabbitmq_vhost"
-subcategory: "RABBITMQ"
 ---
 
 # ctyun_rabbitmq_vhost (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10220893
+-> 管理RabbitMQ实例的虚拟主机
 
 
 
@@ -45,3 +45,15 @@ resource "ctyun_rabbitmq_vhost" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入RabbitMQ虚拟主机
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_rabbitmq_vhost.[导入配置名称] [name],[instance_id],<region_id>
+# 示例
+terraform import ctyun_rabbitmq_vhost.vhost_example myvhost,inst123456,<region_id>
+```

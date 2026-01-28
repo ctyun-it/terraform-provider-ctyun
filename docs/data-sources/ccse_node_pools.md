@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_node_pools"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_node_pools (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452
+-> 查询云容器引擎节点池
 
 
 

@@ -1,10 +1,10 @@
 ---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
 page_title: "CTYUN: ctyun_ebs_backup_policy"
-subcategory: "EBS"
 ---
 
 # ctyun_ebs_backup_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448
+-> 管理云硬盘备份策略
 
 
 
@@ -90,3 +90,15 @@ Read-Only:
 
 - `repository_id` (String) 云硬盘备份库ID
 - `repository_name` (String) 云硬盘备份库名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘备份策略
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_backup_policy.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ebs_backup_policy.example b4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```

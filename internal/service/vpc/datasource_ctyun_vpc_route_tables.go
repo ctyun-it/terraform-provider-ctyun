@@ -57,7 +57,7 @@ type CtyunVpcRouteTablesConfig struct {
 
 func (c *ctyunVpcRouteTables) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10105078"),
+		MarkdownDescription: utils.FormatDesc("查询虚拟私有云路由表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10105078"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

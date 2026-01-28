@@ -64,7 +64,7 @@ type CtyunKafkaAclRule struct {
 
 func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/11078051"),
+		MarkdownDescription: utils.FormatDesc("管理KAFKA的访问控制", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/11078051"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,

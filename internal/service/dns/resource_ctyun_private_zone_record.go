@@ -97,7 +97,7 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 
 func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10224466"),
+		MarkdownDescription: utils.FormatDesc("管理内网DNS记录", "内网DNS（Intranet Domain Name Service，CT-IDNS）", "https://www.ctyun.cn/document/10026757/10224466"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

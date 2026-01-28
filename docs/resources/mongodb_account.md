@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_account"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_account (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 管理MongoDB实例的账户
 
 
 
@@ -113,3 +113,15 @@ Required:
 
 - `db` (String) 数据库名称 支持更新
 - `role` (String) 角色，可选值：read、readWrite、readWriteAnyDatabase等，默认为readWrite 支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb账号
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_account.[导入配置名称] [name],[instance_id],<region_id>
+# 示例
+terraform import ctyun_mongodb_account.mongodb_account_example test_user,inst-12345678,region-11111111
+```

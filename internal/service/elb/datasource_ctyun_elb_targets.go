@@ -41,7 +41,7 @@ func (c *ctyunElbTargets) Metadata(_ context.Context, request datasource.Metadat
 
 func (c *ctyunElbTargets) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10196689"),
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡后端主机列表", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10196689"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

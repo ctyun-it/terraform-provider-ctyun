@@ -69,7 +69,7 @@ type CtyunEipsConfig struct {
 
 func (c *ctyunEips) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EIP", "https://www.ctyun.cn/document/10026753/10026909"),
+		MarkdownDescription: utils.FormatDesc("查询弹性IP", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10026909"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

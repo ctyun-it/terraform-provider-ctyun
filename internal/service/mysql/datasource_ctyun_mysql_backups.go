@@ -41,7 +41,7 @@ func (c *ctyunMysqlBackups) Metadata(ctx context.Context, request datasource.Met
 
 func (c *ctyunMysqlBackups) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的备份", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

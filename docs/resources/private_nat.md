@@ -1,10 +1,10 @@
 ---
+subcategory: "NAT网关（CT-NAT Gateway）"
 page_title: "CTYUN: ctyun_private_nat"
-subcategory: "NAT"
 ---
 
 # ctyun_private_nat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378361
+-> 管理私网NAT网关
 
 
 
@@ -91,3 +91,15 @@ resource "ctyun_private_nat" "private_nat" {
 - `master_order_id` (String) 订单id
 - `nat_gateway_id` (String) 网关id
 - `vpc_name` (String) NAT所属的vpc专有网络名字
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入私网nat网关
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_private_nat.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_private_nat.private_nat_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

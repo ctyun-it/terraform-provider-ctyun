@@ -97,7 +97,7 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 
 func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的备份配置", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

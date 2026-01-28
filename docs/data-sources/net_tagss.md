@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_net_tagss"
-subcategory: "VPC"
 ---
 
 # ctyun_net_tagss (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询网络资源的标签
 
 
 

@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_instance"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10030700
+-> 管理KAFKA实例
 
 
 
@@ -81,3 +81,15 @@ resource "ctyun_kafka_instance" "tbidgqvfbs" {
 - `last_restart_time` (String) 上一次重启时间，UTC格式
 - `master_order_id` (String) 主订单号
 - `name` (String) 名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_kafka_instance.kafka_instance_example 12345678-1234-1234-1234-123456789012,bb9fdb42056f11eda1610242ac110002
+```

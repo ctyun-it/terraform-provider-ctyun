@@ -1,10 +1,10 @@
 ---
-page_title: "CTYUN: ctyun_vips"
 subcategory: "VIP"
+page_title: "CTYUN: ctyun_vips"
 ---
 
 # ctyun_vips (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询虚拟IP
 
 
 

@@ -85,7 +85,7 @@ func (c *ctyunSfsPermissionGroup) ImportState(ctx context.Context, request resou
 
 func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350/10192622"),
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务权限组", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192622"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

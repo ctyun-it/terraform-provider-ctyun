@@ -50,7 +50,7 @@ func (c *CtyunSdwanAclRules) Metadata(ctx context.Context, req datasource.Metada
 
 func (c *CtyunSdwanAclRules) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SDWAN", "https://www.ctyun.cn/document/10035786/10035852"),
+		MarkdownDescription: utils.FormatDesc("查询SDWAN的访问控制规则", "天翼云SD-WAN", "https://www.ctyun.cn/document/10035786/10035852"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed: true,

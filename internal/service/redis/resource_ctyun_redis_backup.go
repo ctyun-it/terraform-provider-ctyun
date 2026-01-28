@@ -53,7 +53,7 @@ type CtyunRedisBackupConfig struct {
 
 func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10142282"),
+		MarkdownDescription: utils.FormatDesc("管理Redis实例的备份", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10142282"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,

@@ -51,7 +51,7 @@ type CtyunKafkaConsumerGroupsConfig struct {
 
 func (c *ctyunKafkaConsumerGroups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10145103"),
+		MarkdownDescription: utils.FormatDesc("查询KAFKA消费组", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10145103"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

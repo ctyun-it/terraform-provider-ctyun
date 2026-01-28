@@ -1,10 +1,10 @@
 ---
+subcategory: "NAT网关（CT-NAT Gateway）"
 page_title: "CTYUN: ctyun_private_nat_snat"
-subcategory: "NAT"
 ---
 
 # ctyun_private_nat_snat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378381
+-> 管理私网NAT网关snat规则
 
 
 
@@ -98,3 +98,15 @@ resource "ctyun_private_nat_snat" "private_nat_snat" {
 - `snat_id` (String) Snat规则的id
 - `source_vpc_name` (String) 源vpc名称
 - `state` (String) SNAT状态: running代表运行中, freeze代表已冻结, expired代表已到期
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入私网SNAT规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_private_nat_snat.[导入配置名称] [id],[nat_gateway_id],<region_id>
+# 示例
+terraform import ctyun_private_nat_snat.snat_example snat-12345,nat-67890,region-bb9fdb42056f11eda1610242ac110002
+```

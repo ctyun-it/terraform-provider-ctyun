@@ -1,10 +1,10 @@
 ---
+subcategory: "容器镜像服务（CRS）"
 page_title: "CTYUN: ctyun_crs_vpc_attach"
-subcategory: "CRS"
 ---
 
 # ctyun_crs_vpc_attach (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10007018/10007025
+-> 将虚拟私有云接入容器镜像服务
 
 
 
@@ -63,3 +63,15 @@ resource "ctyun_crs_vpc_attach" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入CRS VPC接入
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_crs_vpc_attach.[导入配置名称] [vpc_id],<region_id>
+# 示例
+terraform import ctyun_crs_vpc_attach.vpc_attach_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

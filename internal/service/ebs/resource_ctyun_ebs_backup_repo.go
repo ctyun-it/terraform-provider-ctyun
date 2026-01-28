@@ -65,7 +65,7 @@ package ebs
 //
 //func (c *ctyunEbsBackupRepo) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 //	response.Schema = schema.Schema{
-//		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10212971`,
+//		MarkdownDescription: utils.FormatDesc("云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10212971`,
 //		Attributes: map[string]schema.Attribute{
 //			"id": schema.StringAttribute{
 //				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

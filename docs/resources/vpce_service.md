@@ -1,10 +1,10 @@
 ---
+subcategory: "VPC终端节点（VPC Endpoint）"
 page_title: "CTYUN: ctyun_vpce_service"
-subcategory: "VPCE"
 ---
 
 # ctyun_vpce_service (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013
+-> 管理终端节点服务
 
 
 
@@ -93,3 +93,15 @@ Required:
 - `endpoint_port` (Number) 节点端口(用于创建rule传入)(1-65535)，支持更新
 - `protocol` (String) 协议，TCP:TCP协议,UDP:UDP协议，支持更新
 - `server_port` (Number) 服务端口(用于创建backend传入)(1-65535)，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPCE Service
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpce_service.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vpce_service.example 12345678-1234-1234-1234-123456789012,region-123
+```

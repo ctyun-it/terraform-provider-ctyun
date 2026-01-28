@@ -1,10 +1,10 @@
 ---
+subcategory: "通用功能（COMMON）"
 page_title: "CTYUN: ctyun_services"
-subcategory: "COMMON"
 ---
 
 # ctyun_services (Data Source)
-服务和产品
+-> 查询服务和产品
 
 
 

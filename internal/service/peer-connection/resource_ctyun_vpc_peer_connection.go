@@ -109,7 +109,7 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 
 func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PEER_CONNECTION", "https://www.ctyun.cn/document/10026760/10037873"),
+		MarkdownDescription: utils.FormatDesc("管理对等连接", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037873"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "对等连接id",

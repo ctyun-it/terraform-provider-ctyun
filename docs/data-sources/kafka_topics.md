@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_topics"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_topics (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10144604
+-> 查询KAFKA实例的主题
 
 
 

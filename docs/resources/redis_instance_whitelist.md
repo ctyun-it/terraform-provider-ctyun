@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式缓存服务Redis版"
 page_title: "CTYUN: ctyun_redis_instance_whitelist"
-subcategory: "REDIS"
 ---
 
 # ctyun_redis_instance_whitelist (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10398174
+-> 管理Redis实例白名单
 
 
 

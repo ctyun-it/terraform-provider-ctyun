@@ -57,7 +57,7 @@ var NextHopType = []string{"vpcpeering", "havip", "bm", "vm", "natgw", "igw", "i
 
 func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10171000"),
+		MarkdownDescription: utils.FormatDesc("管理虚拟私有云路由表规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10171000"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

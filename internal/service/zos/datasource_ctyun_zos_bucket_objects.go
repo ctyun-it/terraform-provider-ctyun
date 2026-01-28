@@ -56,7 +56,7 @@ type CtyunZosBucketObjectsConfig struct {
 
 func (c *ctyunZosBucketObjects) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ZOS", "https://www.ctyun.cn/document/10026735/10181324"),
+		MarkdownDescription: utils.FormatDesc("查询对象存储桶中的对象", "对象存储（CT-ZOS，Zettabyte Object Storage）", "https://www.ctyun.cn/document/10026735/10181324"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

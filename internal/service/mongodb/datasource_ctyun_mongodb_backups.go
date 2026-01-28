@@ -60,7 +60,7 @@ func (d *CtyunMongodbBackups) Metadata(ctx context.Context, req datasource.Metad
 
 func (d *CtyunMongodbBackups) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10089535"),
+		MarkdownDescription: utils.FormatDesc("查询MongoDB实例的备份", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

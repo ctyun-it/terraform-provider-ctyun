@@ -41,7 +41,7 @@ func (c *ctyunMysqlAccounts) Metadata(ctx context.Context, request datasource.Me
 
 func (c *ctyunMysqlAccounts) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133363"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的账户", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133363"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "海量文件服务OceanFS"
 page_title: "CTYUN: ctyun_oceanfs_instances"
-subcategory: "OCEANFS"
 ---
 
 # ctyun_oceanfs_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906
+-> 查询海量文件服务实例
 
 
 

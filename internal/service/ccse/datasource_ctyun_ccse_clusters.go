@@ -60,7 +60,7 @@ type CtyunCcseClustersConfig struct {
 
 func (c *ctyunCcseClusters) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10656137"),
+		MarkdownDescription: utils.FormatDesc("查询云容器引擎集群", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10656137"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

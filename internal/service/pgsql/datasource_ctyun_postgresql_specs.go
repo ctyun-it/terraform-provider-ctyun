@@ -42,7 +42,7 @@ func (c *CtyunPgsqlSpecs) Metadata(ctx context.Context, request datasource.Metad
 
 func (c *CtyunPgsqlSpecs) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10167295"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL支持的规格", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10167295"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

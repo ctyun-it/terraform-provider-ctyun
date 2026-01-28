@@ -56,7 +56,7 @@ func (c *CtyunMysqlRdsParameterTemplate) Configure(ctx context.Context, request 
 
 func (c *CtyunMysqlRdsParameterTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10035295"),
+		MarkdownDescription: utils.FormatDesc("配置MySQL实例的参数，同时支持应用参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10035295"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

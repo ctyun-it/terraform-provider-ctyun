@@ -102,7 +102,7 @@ func NewCtyunMysqlAssociationEip() resource.Resource {
 
 func (c *CtyunMysqlAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10033927"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例和弹性IP的绑定关系", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10033927"),
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,

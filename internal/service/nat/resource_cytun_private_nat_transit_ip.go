@@ -42,7 +42,7 @@ func (c *ctyunPrivateNatTransitIpResource) Metadata(ctx context.Context, request
 
 func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10378390"),
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关的中转IP", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378390"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

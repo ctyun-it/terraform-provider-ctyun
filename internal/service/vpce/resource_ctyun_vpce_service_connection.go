@@ -50,7 +50,7 @@ type CtyunVpceServiceConnectionConfig struct {
 
 func (c *ctyunVpceServiceConnection) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10043026"),
+		MarkdownDescription: utils.FormatDesc("接受或拒绝终端节点连接申请", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10043026"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

@@ -1,10 +1,10 @@
 ---
+subcategory: "对等连接（VPC peering connection）"
 page_title: "CTYUN: ctyun_vpc_peer_connection"
-subcategory: "PEER_CONNECTION"
 ---
 
 # ctyun_vpc_peer_connection (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873
+-> 管理对等连接
 
 
 
@@ -100,3 +100,15 @@ Required:
 Read-Only:
 
 - `id` (String) 标签id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPC对等连接
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpc_peer_connection.[导入配置名称] [id],[instance_id],<region_id>
+# 示例
+terraform import ctyun_vpc_peer_connection.vpc_peer_connection_example vpr-12345678-1234-5678-9012-123456789012,inst-abcdef-ghij-klmn-opqr-stuvwxyzab,<region-1234567890abcdef>
+```

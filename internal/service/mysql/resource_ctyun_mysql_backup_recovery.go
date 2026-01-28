@@ -52,7 +52,7 @@ func (c *CtyunMysqlBackupRecovery) Configure(ctx context.Context, request resour
 
 func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
+		MarkdownDescription: utils.FormatDesc("根据备份进行MySQL实例恢复", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

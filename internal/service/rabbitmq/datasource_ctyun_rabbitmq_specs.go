@@ -75,7 +75,7 @@ type CtyunRabbitmqSpecsConfig struct {
 
 func (c *ctyunRabbitmqSpecs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("RABBITMQ", "https://www.ctyun.cn/document/10029625/10032819"),
+		MarkdownDescription: utils.FormatDesc("查询RabbitMQ可用的规格", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10029625/10032819"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

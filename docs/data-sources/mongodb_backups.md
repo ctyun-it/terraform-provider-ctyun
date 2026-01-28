@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_backups"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_backups (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 查询MongoDB实例的备份
 
 
 

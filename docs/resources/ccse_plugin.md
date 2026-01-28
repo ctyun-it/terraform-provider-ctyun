@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_plugin"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_plugin (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631
+-> 管理云容器引擎插件
 
 
 
@@ -57,3 +57,15 @@ resource "ctyun_ccse_plugin" "example1" {
 
 - `id` (String) ID
 - `namespace` (String) 命名空间
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入CCSE插件
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ccse_plugin.[导入配置名称] [chart_name],[cluster_id],<region_id>
+# 示例
+terraform import ctyun_ccse_plugin.example my-chart-name,cluster-123,region-456
+```

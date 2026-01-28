@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
 page_title: "CTYUN: ctyun_ecs_affinity_group_association"
-subcategory: "ECS"
 ---
 
 # ctyun_ecs_affinity_group_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10028712
+-> 管理云主机和主机组的绑定关系
 
 
 
@@ -45,3 +45,15 @@ resource "ctyun_ecs_affinity_group_association" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云主机组关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_affinity_group_association.[导入配置名称] [instance_id],[group_id],<region_id>
+# 示例
+terraform import ctyun_ecs_affinity_group_association.ecs_affinity_group_association_example inst-12345678,ag-87654321,region-11111111
+```

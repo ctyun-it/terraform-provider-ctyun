@@ -1,10 +1,10 @@
 ---
+subcategory: "对象存储（CT-ZOS，Zettabyte Object Storage）"
 page_title: "CTYUN: ctyun_zos_bucket_object"
-subcategory: "ZOS"
 ---
 
 # ctyun_zos_bucket_object (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181324
+-> 管理对象存储的对象
 
 
 
@@ -61,3 +61,15 @@ resource "ctyun_zos_bucket_object" "test" {
 - `etag` (String) 该对象生成的实体标签（ETag）（即该对象内容的 MD5 哈希值）
 - `id` (String) ID
 - `version_id` (String) 对象版本号
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ZOS Bucket Object
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_zos_bucket_object.[导入配置名称] [key],[bucket],<region_id>
+# 示例
+terraform import ctyun_zos_bucket_object.example my-object-key,my-bucket-name,region-123
+```

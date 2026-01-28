@@ -113,7 +113,7 @@ func (c *CtyunMongodbAssociationEip) Configure(ctx context.Context, request reso
 
 func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10183412"),
+		MarkdownDescription: utils.FormatDesc("管理MongoDB实例和弹性IP的绑定关系", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10183412"),
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,

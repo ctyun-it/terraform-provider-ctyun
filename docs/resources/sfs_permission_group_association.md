@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
 page_title: "CTYUN: ctyun_sfs_permission_group_association"
-subcategory: "SFS"
 ---
 
 # ctyun_sfs_permission_group_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192625
+-> 管理弹性文件服务和权限组的绑定关系
 
 
 
@@ -96,3 +96,15 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 - `permission_group_name` (String) 权限组名称
 - `vpc_cidr` (String) vpc cidr
 - `vpc_name` (String) vpc名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS权限组关联
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs_permission_group_association.[导入配置名称] [vpc_id],[sfs_uid],<region_id>
+# 示例
+terraform import ctyun_sfs_permission_group_association.permission_group_association_example vpc-123456,sfs-789012,<region-345678>
+```

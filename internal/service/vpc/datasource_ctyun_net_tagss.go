@@ -31,7 +31,7 @@ func (c *ctyunNetTagss) Metadata(_ context.Context, req datasource.MetadataReque
 
 func (c *ctyunNetTagss) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10028310"),
+		MarkdownDescription: utils.FormatDesc("查询网络资源的标签", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

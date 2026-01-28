@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_topic"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_topic (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10144604
+-> 管理KAFKA的主题
 
 
 
@@ -97,3 +97,15 @@ Read-Only:
 - `is_leader` (Boolean) 是否是主副本
 - `lag` (Number) 该副本当前落后hw的消息数
 - `size` (Number) 副本消息大小，单位字节
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka主题
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_topic.[导入配置名称] [instance_id],[topic_name],<region_id>
+# 示例
+terraform import ctyun_kafka_topic.kafka_topic_example instance-123456,kafka-topic-test,region-11111111
+```

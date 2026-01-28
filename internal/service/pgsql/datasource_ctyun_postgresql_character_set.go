@@ -40,7 +40,7 @@ func (c *ctyunPostgresqlCharacterSet) Metadata(ctx context.Context, request data
 
 func (c *ctyunPostgresqlCharacterSet) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10159978"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL支持的字符集", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10159978"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
 page_title: "CTYUN: ctyun_ebm"
-subcategory: "EBM"
 ---
 
 # ctyun_ebm (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724
+-> 管理物理机
 
 
 
@@ -180,3 +180,15 @@ resource "ctyun_ebm" "ebm_test2" {
 - `port_id` (String) 主网卡PORT UUID
 - `system_disk_id` (String) 系统盘的id
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入物理机
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebm.[导入配置名称] [id],<az_name>,<region_id>
+# 示例
+terraform import ctyun_ebm.ebm_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,cn-zj-hgh7-1a-public-ctcloud,200000003329
+```
