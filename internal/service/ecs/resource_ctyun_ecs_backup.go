@@ -125,6 +125,7 @@ func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"full_backup": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
@@ -277,6 +278,13 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	cfg.CreatedTime = types.StringValue(result.CreatedTime)
 	cfg.ProjectID = types.StringValue(result.ProjectID)
 	cfg.BackupType = types.StringValue(result.BackupType)
+	if cfg.FullBackup.IsUnknown() || cfg.FullBackup.IsNull() {
+		if result.BackupType == "FULL" {
+			cfg.FullBackup = types.BoolValue(true)
+		} else {
+			cfg.FullBackup = types.BoolValue(false)
+		}
+	}
 	return
 }
 
@@ -382,7 +390,9 @@ func (c *ctyunEcsBackup) create(ctx context.Context, plan *CtyunEcsBackupConfig)
 		InstanceBackupName:        plan.InstanceBackupName.ValueString(),
 		InstanceBackupDescription: plan.InstanceBackupDescription.ValueString(),
 		RepositoryID:              plan.RepositoryID.ValueString(),
-		FullBackup:                plan.FullBackup.ValueBool(),
+	}
+	if plan.FullBackup.ValueBool() {
+		params.FullBackup = true
 	}
 
 	// 创建实例

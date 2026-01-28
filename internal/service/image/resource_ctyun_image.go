@@ -58,7 +58,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Description:   "id",
 			},
 			"file_source": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.NullIgnoreString(),

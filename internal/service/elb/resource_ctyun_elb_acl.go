@@ -230,6 +230,7 @@ func (c *CtyunElbAcl) Update(ctx context.Context, request resource.UpdateRequest
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

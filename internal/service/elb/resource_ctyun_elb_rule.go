@@ -341,7 +341,7 @@ func (c *CtyunElbRule) Update(ctx context.Context, request resource.UpdateReques
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

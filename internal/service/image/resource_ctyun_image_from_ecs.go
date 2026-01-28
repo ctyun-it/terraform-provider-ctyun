@@ -13,14 +13,13 @@ import (
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -123,11 +122,11 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-			"labels": schema.ListNestedAttribute{
+			"labels": schema.SetNestedAttribute{
 				Optional:    true,
 				Description: "标签列表。最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾。",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(10),
+				Validators: []validator.Set{
+					setvalidator.SizeAtMost(10),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -142,7 +141,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 								//),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"label_value": schema.StringAttribute{
@@ -156,14 +155,14 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 								//),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 					},
 				},
 				// TODO 标签变更需重建（暂无无动态更新标签能力）
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					explanmodifier.NullIgnoreSet(),
 				},
 			},
 			//
@@ -241,7 +240,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 				// 存储库变更需重建
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 		},
@@ -346,6 +345,15 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
+	if !plan.RepositoryId.IsUnknown() && !plan.RepositoryId.IsNull() && state.RepositoryId.IsNull() {
+		state.RepositoryId = plan.RepositoryId
+		response.Diagnostics.AddWarning("repository_id的更新仅写入状态文件", "在import时，状态文件中repository_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
+	if len(plan.Labels) > 0 && len(state.Labels) > 0 {
+		state.Labels = plan.Labels
+		response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -789,7 +797,7 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	cfg.MinimumRAM = types.Int64Value(int64(resp.MinimumRAM))
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	cfg.InstanceId = types.StringValue(resp.SourceServerID)
-
+	cfg.DataDiskId = types.StringValue(resp.DiskID)
 	// 镜像类型。取值范围（值：描述）：
 	// （空，即 null）：系统盘镜像，    system_disk
 	// data_disk_image：数据盘镜像，    data_disk

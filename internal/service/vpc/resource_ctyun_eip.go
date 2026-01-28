@@ -453,6 +453,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
 
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	if resp.BillingMethod == business.OnDemandCycleType {
 		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
 		if resp.BandwidthType == "standalone" {

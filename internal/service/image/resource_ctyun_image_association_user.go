@@ -2,11 +2,9 @@ package image
 
 import (
 	"context"
-	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -18,13 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
-	_ resource.Resource                = &ctyunImageAssociationUser{}
-	_ resource.ResourceWithConfigure   = &ctyunImageAssociationUser{}
-	_ resource.ResourceWithImportState = &ctyunImageAssociationUser{}
+	_ resource.Resource              = &ctyunImageAssociationUser{}
+	_ resource.ResourceWithConfigure = &ctyunImageAssociationUser{}
 )
 
 func NewCtyunImageAssociationUser() resource.Resource {
@@ -241,44 +237,6 @@ func (c *ctyunImageAssociationUser) Configure(_ context.Context, request resourc
 }
 
 // ImportState 用于导入资源
-func (c *ctyunImageAssociationUser) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-	var config CtyunImageAssociationUserConfig
-	var imageId, regionId string
-	// 根据分隔符数量判断是否输入了regionId
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &imageId)
-		if err != nil {
-			return
-		}
-	} else {
-		err = terraform_extend.Split(request.ID, &imageId, &regionId)
-		if err != nil {
-			return
-		}
-	}
-
-	if imageId == "" {
-		err = fmt.Errorf("imageId不能为空")
-		return
-	}
-	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
-		return
-	}
-
-	config.ImageId = types.StringValue(imageId)
-	config.RegionId = types.StringValue(regionId)
-	response.Diagnostics.Append(response.State.Set(ctx, config)...)
-}
 
 // check 校验
 func (c *ctyunImageAssociationUser) check(ctx context.Context, cfg CtyunImageAssociationUserConfig) error {

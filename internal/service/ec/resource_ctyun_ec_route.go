@@ -390,14 +390,18 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			config.EcID.ValueString(), config.CgwID.ValueString(), config.ID)
 		return err
 	} else if *resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf(" API return error. Message: %s", *resp.Message)
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return err
+	} else if len(resp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
+	var exists = false
 	for _, routeObj := range resp.ReturnObj.Results {
 		if *routeObj.RouteID == config.ID.ValueString() {
+			exists = true
 			//config.RouteType = types.StringValue(business.EcRouteTypeRevMap[*routeObj.RouteType])
 			config.CIDR = types.StringValue(*routeObj.RouteCIDR)
 			nexthoptype := *routeObj.NexthopType
@@ -405,7 +409,7 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			if !config.IsBlackHoleRoute.ValueBool() {
 				config.NextHopType = types.StringValue(business.EcNextHopTypeRevMap[*routeObj.NexthopType])
 				//vpcName := *routeObj.NexthopID
-				//vpcid, err2 := c.vpcService.GetVpcID(vpcName)
+				//vpcid, err2 := c.vpcServifce.GetVpcID(vpcName)
 				//if err2 != nil {
 				//	return err2
 				//}
@@ -418,6 +422,9 @@ func (c *CtyunExpressConnectRoute) getAndMerge(ctx context.Context, config *Ctyu
 			config.Description = types.StringValue(*routeObj.RouteDescription)
 			config.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(*routeObj.CreateDate))
 		}
+	}
+	if !exists {
+		return common.ResourceNotExistError
 	}
 	return nil
 }

@@ -292,7 +292,7 @@ func (c *CtyunElbHealthCheck) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

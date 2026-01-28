@@ -825,6 +825,7 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 
 	// 更新defaultAction
 	plan.DefaultActionType = types.StringValue(respObj.DefaultAction.RawType)
+	plan.RedirectListenerID = types.StringValue(respObj.DefaultAction.RedirectListenerID)
 	targetGroupList := respObj.DefaultAction.ForwardConfig.TargetGroups
 	var targetGroups []TargetGroupsModel
 	for _, targetGroupItem := range targetGroupList {

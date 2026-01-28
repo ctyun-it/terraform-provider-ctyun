@@ -261,13 +261,13 @@ func (c *CtyunEcSdwanInstance) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sdwan_id],[cgw_id],[ec_id]", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sdwan_id],[ec_id],[cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcSdwanInstanceConfig
-	var sdwanId, cgwID, ecID string
-	err = terraform_extend.Split(request.ID, &sdwanId, &cgwID, &ecID)
+	var sdwanId, ecID, cgwID string
+	err = terraform_extend.Split(request.ID, &sdwanId, &ecID, &cgwID)
 	if err != nil {
 		return
 	}

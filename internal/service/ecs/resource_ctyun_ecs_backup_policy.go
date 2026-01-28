@@ -325,6 +325,9 @@ func (c *ctyunEcsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEcsBac
 	} else if resp.ReturnObj.CurrentCount != 1 {
 		err = common.InvalidReturnObjResultsError
 		return
+	} else if len(resp.ReturnObj.PolicyList) == 0 {
+		err = common.ResourceNotExistError
+		return
 	}
 
 	//资源返回内容更新

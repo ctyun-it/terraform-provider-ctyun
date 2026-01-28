@@ -7,7 +7,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -109,16 +108,9 @@ func (c *ctyunEcsPortAssociation) Schema(_ context.Context, _ resource.SchemaReq
 				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -169,7 +161,6 @@ func (c *ctyunEcsPortAssociation) create(ctx context.Context, plan *CtyunEcsPort
 	attachRequest := &ctecs.CtecsPortsAttachInstanceV41Request{
 		ClientToken:        uuid.NewString(),
 		RegionID:           plan.RegionID.ValueString(),
-		ProjectID:          plan.ProjectID.ValueString(),
 		AzName:             plan.AzName.ValueString(),
 		NetworkInterfaceID: plan.PortID.ValueString(),
 		InstanceID:         plan.InstanceID.ValueString(),
@@ -231,7 +222,6 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 			if networkCard != nil && utils.SecString(networkCard.NetworkCardID) == state.PortID.ValueString() {
 				state.PortID = types.StringValue(*networkCard.NetworkCardID)
 				state.AzName = types.StringValue(*describeResponse.ReturnObj.AzName)
-				state.ProjectID = types.StringValue(*describeResponse.ReturnObj.ProjectID)
 				return nil
 			}
 		}

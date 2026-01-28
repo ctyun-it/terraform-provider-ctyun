@@ -65,7 +65,6 @@ func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.
 	if err != nil {
 		return
 	}
-	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -171,16 +170,9 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Description: "更新时间，为UTC格式",
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -282,6 +274,7 @@ func (c *CtyunElbCertificate) Update(ctx context.Context, request resource.Updat
 		state.PrivateKey = plan.PrivateKey
 		response.Diagnostics.AddWarning("private_key的更新仅写入状态文件", "在import时，状态文件中private_key为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -452,17 +445,15 @@ func (c *CtyunElbCertificate) updateElbCertificate(ctx context.Context, state *C
 		RegionID:      state.RegionID.ValueString(),
 		CertificateID: state.ID.ValueString(),
 	}
-	if plan.ProjectID.ValueString() != "" && plan.ProjectID.ValueString() != state.ProjectID.ValueString() {
-		params.ProjectID = plan.ProjectID.ValueString()
-	}
+
 	if plan.Name.ValueString() != "" && plan.Name.ValueString() != state.Name.ValueString() {
 		params.Name = plan.Name.ValueString()
 	}
 	if plan.Description.ValueString() != "" && plan.Description.ValueString() != state.Description.ValueString() {
 		params.Description = plan.Description.ValueString()
 	}
-	// 若projectID, 证书名称和证书描述为空的话，不必更新直接返回
-	if params.ProjectID == "" && params.Name == "" && params.Description == "" {
+	// , 证书名称和证书描述为空的话，不必更新直接返回
+	if params.Name == "" && params.Description == "" {
 		return
 	}
 
