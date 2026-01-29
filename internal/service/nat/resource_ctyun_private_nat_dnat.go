@@ -442,7 +442,7 @@ func (c *ctyunPrivateDnatResource) getAndMergePrivateDnat(ctx context.Context, p
 	if !plan.InternalIP.IsNull() || targetDnat.InternalIP != "" {
 		plan.InternalIP = types.StringValue(targetDnat.InternalIP)
 	} else {
-		plan.InternalIP = types.StringValue("")
+		plan.InternalIP = types.StringNull()
 	}
 
 	// 处理可能为null的字段

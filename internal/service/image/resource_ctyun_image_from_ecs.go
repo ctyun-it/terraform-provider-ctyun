@@ -131,7 +131,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"label_key": schema.StringAttribute{
-							Required:    true,
+							Optional:    true,
 							Description: "标签键。",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
@@ -145,7 +145,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 							},
 						},
 						"label_value": schema.StringAttribute{
-							Required:    true,
+							Optional:    true,
 							Description: "标签值。",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
@@ -327,6 +327,9 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
+	// 保存原始标签信息用于后续保护
+	originalLabels := state.Labels
+
 	// 检查更新前条件
 	err = c.checkBeforeUpdate(ctx, &plan, &state)
 	if err != nil {
@@ -345,12 +348,16 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
+	// 保护标签信息：如果API没有返回标签，且原始状态有标签，则恢复原始标签
+	if state.Labels.IsNull() && !originalLabels.IsNull() {
+		state.Labels = originalLabels
+	}
+
 	if !plan.RepositoryId.IsUnknown() && !plan.RepositoryId.IsNull() && state.RepositoryId.IsNull() {
 		state.RepositoryId = plan.RepositoryId
 		response.Diagnostics.AddWarning("repository_id的更新仅写入状态文件", "在import时，状态文件中repository_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-
-	if len(plan.Labels) > 0 && len(state.Labels) > 0 {
+	if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
 		state.Labels = plan.Labels
 		response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
@@ -439,9 +446,16 @@ func (c *ctyunImageFromEcs) createSystemDiskImage(ctx context.Context, plan *Cty
 	regionId := plan.RegionId.ValueString()
 	projectId := plan.ProjectId.ValueString()
 	var labels []*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -506,9 +520,16 @@ func (c *ctyunImageFromEcs) createDataDiskImage(ctx context.Context, plan *Ctyun
 	// 数据盘创建方式
 	// 构造标签列表
 	var labels []*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateEcsDataDiskImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -569,9 +590,16 @@ func (c *ctyunImageFromEcs) createEntireMachineImage(ctx context.Context, plan *
 	// 整机创建方式
 	// 构造标签列表
 	var labels []*ctimage.CtimageCreateFullEcsImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateFullEcsImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateFullEcsImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateFullEcsImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -857,7 +885,7 @@ type CtyunImageFromEcsConfig struct {
 
 	// 标签列表（可选，修改接口支持更新但需重建资源）
 	// 约束：最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾
-	Labels []Label `tfsdk:"labels"`
+	Labels types.Set `tfsdk:"labels"`
 
 	// 云主机ID（系统盘/数据盘/整机镜像创建必填，快照镜像创建不可填）
 	// 约束：云主机状态需为stopped（部分资源池支持running），与数据盘/整机创建强关联

@@ -83,9 +83,9 @@ func (c *CtyunSdwanAclRule) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
-				Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), all(ALL), tcp(TCP)  支持更新",
+				Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), any(ANY), tcp(TCP)  支持更新",
 				Validators: []validator.String{
-					stringvalidator.OneOf("udp", "icmp", "all", "tcp"),
+					stringvalidator.OneOf("udp", "icmp", "any", "tcp"),
 				},
 			},
 			"ip_version": schema.StringAttribute{

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
@@ -27,7 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
 )
 
 var (
@@ -80,7 +80,7 @@ func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"name": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "弹性网卡名称。支持拉丁字母、中文、数字，下划线，连字符，中文/英文字母开头，不能以http:/https:开头，长度2-32  支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
@@ -91,10 +91,10 @@ func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Description: "弹性网卡描述。支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}|《》？：“”【】、；‘'，。、，不能以http:/https:开头，长度0-128 支持更新",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtMost(128),
-					validator2.Desc(),
-				},
+				//Validators: []validator.String{
+				//	stringvalidator.UTF8LengthAtMost(128),
+				//	validator2.Desc(),
+				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,

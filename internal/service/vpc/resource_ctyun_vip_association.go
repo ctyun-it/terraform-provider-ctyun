@@ -203,8 +203,9 @@ func (c *ctyunVipAssociation) Delete(ctx context.Context, request resource.Delet
 }
 func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
+	var hasErrorOccurred = false
 	defer func() {
-		if err != nil {
+		if err != nil && !hasErrorOccurred {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
@@ -216,12 +217,16 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &vipId, &info)
 		if err != nil {
-			return
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	} else {
 		err = terraform_extend.Split(request.ID, &vipId, &info, &regionId)
 		if err != nil {
-			return
+			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}
 
@@ -257,6 +262,7 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 		state.NetworkInterfaceId = types.StringValue(networkInterfaceId)
 		err = c.getAndMerge(ctx, &state)
 		if err != nil {
+			hasErrorOccurred = true
 			title := "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vipId],[instance_id:network_interface_id],[regionId]"
 			response.Diagnostics.AddError(title, detail)
@@ -267,6 +273,7 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 		state.FloatingId = types.StringValue(info)
 		err = c.getAndMerge(ctx, &state)
 		if err != nil {
+			hasErrorOccurred = true
 			title := "导入失败：" + err.Error()
 			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vipId],[floating_id],[regionId]"
 			response.Diagnostics.AddError(title, detail)
@@ -353,7 +360,7 @@ func (c *ctyunVipAssociation) create(ctx context.Context, plan *CtyunVipAssociat
 	}
 
 	// 设置资源ID
-	plan.Id = types.StringValue(fmt.Sprintf("%s:%s", regionId, plan.VipId.ValueString()))
+	plan.Id = types.StringValue(plan.VipId.ValueString())
 	plan.RegionId = types.StringValue(regionId)
 
 	return nil

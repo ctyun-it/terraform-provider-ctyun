@@ -7,7 +7,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -54,16 +53,9 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					planmodifier2.Project(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "临时废弃，定义无效",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -232,8 +224,6 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	if err != nil {
 		return
 	}
-	state.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(state.ProjectId.ValueString(), common.ExtraProjectId))
-
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -314,11 +304,13 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 
 	if returnObj.Ipv4 != nil && *returnObj.Ipv4 != "" {
 		state.Ipv4Address = types.StringValue(*returnObj.Ipv4)
+		state.IpAddress = types.StringValue(*returnObj.Ipv4)
 		state.VipType = types.StringValue("v4")
 	}
 
 	if returnObj.Ipv6 != nil && *returnObj.Ipv6 != "" {
 		state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
+		state.IpAddress = types.StringValue(*returnObj.Ipv6)
 		state.VipType = types.StringValue("v6")
 	}
 
@@ -329,6 +321,7 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 	if returnObj.SubnetID != nil {
 		state.SubnetId = types.StringValue(*returnObj.SubnetID)
 	}
+
 	return
 }
 

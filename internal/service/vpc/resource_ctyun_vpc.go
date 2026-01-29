@@ -293,9 +293,10 @@ func (c *ctyunVpc) getAndMergeVpc(ctx context.Context, cfg CtyunVpcConfig) (*Cty
 		ClientToken: uuid.NewString(),
 		VpcId:       cfg.Id.ValueString(),
 	})
+
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiVpcNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}
