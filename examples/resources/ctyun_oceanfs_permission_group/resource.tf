@@ -13,7 +13,7 @@ provider "ctyun" {
 
 
 resource "ctyun_oceanfs_permission_group" "example" {
-  name        = "oceanf_pg_example"
+  name        = "oceanf-pg-example"
   description = "terraform样例"
 }
 

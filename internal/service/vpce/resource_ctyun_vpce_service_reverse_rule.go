@@ -59,7 +59,7 @@ type CtyunVpceServiceReverseRuleConfig struct {
 
 func (c *ctyunVpceServiceReverseRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10048506"),
+		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyuna.cn/document/10042658/10048506"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

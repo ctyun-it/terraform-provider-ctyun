@@ -510,7 +510,7 @@ func (c *ctyunSfs) getAndMergeSfs(ctx context.Context, config *CtyunSfsConfig) e
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(returnObj.CreateTime))
 	config.UpdateTime = types.StringValue(utils.FromUnixToUTC(returnObj.UpdateTime))
 	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnObj.ExpireTime))
-	//config.AzName = types.StringValue(returnObj.AzName)
+	config.AzName = types.StringValue(returnObj.AzName)
 	if config.IsEncrypt.ValueBool() {
 		config.KmsUUID = types.StringValue(returnObj.KmsUUID)
 	} else {

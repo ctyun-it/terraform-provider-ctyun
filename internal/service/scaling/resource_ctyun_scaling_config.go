@@ -750,6 +750,7 @@ func (c *ctyunScalingConfig) updateScalingConfig(ctx context.Context, state *Cty
 		state.Username = types.StringValue(username)
 		params.Username = state.Username.ValueString()
 		params.Password = plan.Password.ValueString()
+		state.Password = plan.Password
 	} else if params.LoginMode == business.ScalingLoginModeKeyPair {
 		params.KeyPairID = plan.KeyPairID.ValueString()
 		state.KeyPairID = plan.KeyPairID

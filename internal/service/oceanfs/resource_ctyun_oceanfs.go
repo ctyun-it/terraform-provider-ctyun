@@ -253,7 +253,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签键",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
@@ -263,7 +263,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签值",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
