@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
 page_title: "CTYUN: ctyun_scaling_ecs_list"
-subcategory: "SCALING"
 ---
 
 # ctyun_scaling_ecs_list (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10216515
+-> 查询弹性伸缩组的云主机列表
 
 
 

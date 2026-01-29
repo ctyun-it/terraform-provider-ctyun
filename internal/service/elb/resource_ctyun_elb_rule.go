@@ -84,7 +84,7 @@ func (c *CtyunElbRule) Metadata(ctx context.Context, request resource.MetadataRe
 
 func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10032110"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡转发规则", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032110"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

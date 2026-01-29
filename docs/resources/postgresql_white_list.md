@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_white_list"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_white_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161484
+-> 管理PostgreSQL实例的白名单
 
 
 
@@ -93,3 +93,15 @@ resource "ctyun_postgresql_white_list" "example" {
 ### Read-Only
 
 - `ip_list_result` (Set of String) 变更后最终的ip列表,数量限制：1-1000
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL白名单
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_white_list.[导入配置名称] [instance_id],<region_id>
+# 示例
+terraform import ctyun_postgresql_white_list.whitelist_example inst123456,<region_id>
+```

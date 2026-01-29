@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
 page_title: "CTYUN: ctyun_elb_listener"
-subcategory: "ELB"
 ---
 
 # ctyun_elb_listener (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276
+-> 管理弹性负载均衡监听器
 
 
 
@@ -95,6 +95,7 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 - `idle_timeout` (Number) 链接空闲断开超时时间，单位秒，取值范围：1 - 300,不支持协议为 TCP / UDP 的监听器，支持更新
 - `listener_cps` (Number) cps大小，仅支持协议为 TCP / UDP 的监听器。支持更新
 - `listener_qps` (Number) qps 大小，仅支持协议为 HTTP / HTTPS，的监听器，支持更新
+- `project_id` (String, Deprecated) 企业项目ID
 - `redirect_listener_id` (String) 重定向监听器ID，当default_action_type为redirect时，此字段必填。支持更新
 - `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
 - `response_timeout` (Number) 响应超时，单位秒，取值范围：1 - 300。不支持协议为 TCP / UDP 的监听器，支持更新
@@ -117,3 +118,15 @@ Required:
 Optional:
 
 - `weight` (Number) 后端主机权重，取值范围：1-256。默认为100，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡监听器
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_listener.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_listener.elb_listener_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

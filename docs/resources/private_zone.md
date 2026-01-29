@@ -1,10 +1,10 @@
 ---
+subcategory: "内网DNS（Intranet Domain Name Service，CT-IDNS）"
 page_title: "CTYUN: ctyun_private_zone"
-subcategory: "DNS"
 ---
 
 # ctyun_private_zone (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10033657
+-> 管理内网DNS
 
 
 
@@ -72,3 +72,15 @@ Required:
 Read-Only:
 
 - `tag_id` (String) 标签id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入私有域
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_private_zone.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_private_zone.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

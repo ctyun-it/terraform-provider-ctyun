@@ -1,10 +1,10 @@
 ---
+subcategory: "共享流量包（SDP，Shared Data Package）"
 page_title: "CTYUN: ctyun_bandwidth"
-subcategory: "BANDWIDTH"
 ---
 
 # ctyun_bandwidth (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10225205
+-> 管理共享带宽
 
 
 
@@ -61,3 +61,15 @@ resource "ctyun_bandwidth" "bandwidth_test2" {
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 共享带宽id
 - `status` (String) 共享带宽状态: active：有效，expired：已过期，freezing：冻结
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入共享带宽
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_bandwidth.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_bandwidth.bandwidth_example bandwidth-12345,region-67890
+```

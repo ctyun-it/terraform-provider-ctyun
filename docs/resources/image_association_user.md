@@ -1,10 +1,10 @@
 ---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
 page_title: "CTYUN: ctyun_image_association_user"
-subcategory: "IMAGE"
 ---
 
 # ctyun_image_association_user (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726
+-> 管理私有镜像共享
 
 
 
@@ -50,3 +50,15 @@ resource "ctyun_image_association_user" "image_association_user_sharer_test" {
 
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `user_email` (String) 共享镜像的接收者，此值为对应账号的邮箱，当type为share时此值必填
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入镜像关联用户
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_image_association_user.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_image_association_user.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

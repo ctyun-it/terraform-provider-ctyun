@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务RabbitMQ"
 page_title: "CTYUN: ctyun_rabbitmq_instance"
-subcategory: "RABBITMQ"
 ---
 
 # ctyun_rabbitmq_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967
+-> 管理RabbitMQ实例
 
 
 
@@ -108,3 +108,15 @@ resource "ctyun_rabbitmq_instance" "test" {
 - `master_order_id` (String) 主订单号
 - `name` (String) 名称
 - `ssl_endpoint` (String) SSL接入点
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入RabbitMQ实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_rabbitmq_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_rabbitmq_instance.instance_example inst123456,<region_id>
+```

@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_backup"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10160072
+-> 管理PostgreSQL实例的备份
 
 
 
@@ -98,3 +98,15 @@ resource "ctyun_postgresql_backup" "example" {
 - `end_time` (String) 备份结束时间，时间格式为utc
 - `id` (Number) 备份集ID
 - `start_time` (String) 备份开始时间，时间格式为utc
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL备份
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_backup.[导入配置名称] [name],[instance_id],<region_id>
+# 示例
+terraform import ctyun_postgresql_backup.backup_example mybackup,inst123456,<region_id>
+```

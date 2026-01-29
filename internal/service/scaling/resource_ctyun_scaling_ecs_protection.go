@@ -57,7 +57,7 @@ func (c *ctyunScalingEcsProtection) Configure(_ context.Context, request resourc
 
 func (c *ctyunScalingEcsProtection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725/10216534"),
+		MarkdownDescription: utils.FormatDesc("配置弹性伸缩组云主机的伸缩保护", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10216534"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

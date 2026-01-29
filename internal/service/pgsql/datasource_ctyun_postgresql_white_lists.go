@@ -40,7 +40,7 @@ func (c *CtyunPostgresqlWhiteLists) Metadata(ctx context.Context, request dataso
 
 func (c *CtyunPostgresqlWhiteLists) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10161484"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL实例的白名单", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10161484"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

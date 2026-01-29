@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
 page_title: "CTYUN: ctyun_elb_targets"
-subcategory: "ELB"
 ---
 
 # ctyun_elb_targets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10196689
+-> 查询弹性负载均衡后端主机列表
 
 
 

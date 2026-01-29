@@ -50,7 +50,7 @@ type CtyunRedisParamTemplatesConfig struct {
 
 func (c *ctyunRedisParamTemplates) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10156164"),
+		MarkdownDescription: utils.FormatDesc("查询Redis参数模板", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10156164"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

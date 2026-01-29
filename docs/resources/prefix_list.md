@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_prefix_list"
-subcategory: "PREFIXLIST"
 ---
 
 # ctyun_prefix_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321
+-> 管理前缀列表
 
 
 
@@ -66,3 +66,15 @@ Required:
 Optional:
 
 - `description` (String) 前缀规则描述。支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:"{},./;'[\]·！@#￥%……&*（） —— -+={}\《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入前缀列表
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_prefix_list.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_prefix_list.prefix_list_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

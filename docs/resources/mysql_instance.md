@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_instance"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365
+-> 管理MySQL实例
 
 
 
@@ -183,3 +183,15 @@ Required:
 - `availability_zone_count` (Number) 该AZ内存在的实例节点数量，支持更新。
 - `availability_zone_name` (String) 资源池可用区名称，支持更新。
 - `node_type` (String) 表示分布AZ的节点类型，master/slave，支持更新。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_mysql_instance.instance_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

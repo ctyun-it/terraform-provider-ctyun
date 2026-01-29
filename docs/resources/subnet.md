@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_subnet"
-subcategory: "VPC"
 ---
 
 # ctyun_subnet (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10197656
+-> 管理子网
 
 
 
@@ -63,3 +63,15 @@ resource "ctyun_subnet" "subnet_test" {
 - `ipv4_start` (String) 子网网段起始ip
 - `ipv6_end` (String) 子网内可用的结束ipv6地址
 - `ipv6_start` (String) 子网内可用的起始ipv6地址
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入子网
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_subnet.example [id],<region_id>
+# 示例
+terraform import ctyun_subnet.example 4a0a1e86-0736-4c33-9478-359a1307a2c8,bb9fdb42056f11eda1610242ac110002
+```

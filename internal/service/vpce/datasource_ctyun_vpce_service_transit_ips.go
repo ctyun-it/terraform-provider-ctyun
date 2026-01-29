@@ -39,20 +39,19 @@ type CtyunVpceServiceTransitIPsModel struct {
 }
 
 type CtyunVpceServiceTransitIPsConfig struct {
-	EndpointServiceID types.String `tfsdk:"endpoint_service_id"`
-	RegionID          types.String `tfsdk:"region_id"`
-	PageNo            types.Int32  `tfsdk:"page_no"`
-	PageSize          types.Int32  `tfsdk:"page_size"`
-
-	CurrentCount types.Int32                       `tfsdk:"current_count"`
-	TotalCount   types.Int32                       `tfsdk:"total_count"`
-	TotalPage    types.Int32                       `tfsdk:"total_page"`
-	IPs          []CtyunVpceServiceTransitIPsModel `tfsdk:"ips"`
+	EndpointServiceID types.String                      `tfsdk:"endpoint_service_id"`
+	RegionID          types.String                      `tfsdk:"region_id"`
+	PageNo            types.Int32                       `tfsdk:"page_no"`
+	PageSize          types.Int32                       `tfsdk:"page_size"`
+	CurrentCount      types.Int32                       `tfsdk:"current_count"`
+	TotalCount        types.Int32                       `tfsdk:"total_count"`
+	TotalPage         types.Int32                       `tfsdk:"total_page"`
+	IPs               []CtyunVpceServiceTransitIPsModel `tfsdk:"ips"`
 }
 
 func (c *ctyunVpceServiceTransitIPs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10048507"),
+		MarkdownDescription: utils.FormatDesc("查询终端节点服务中转IP", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048507"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

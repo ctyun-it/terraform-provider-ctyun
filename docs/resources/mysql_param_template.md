@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_param_template"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_param_template (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098794
+-> 管理MySQL参数模板
 
 
 
@@ -50,3 +50,15 @@ resource "ctyun_mysql_param_template" "examples" {
 ### Read-Only
 
 - `id` (Number) 参数模板id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql参数模板
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_param_template.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_mysql_param_template.param_template_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

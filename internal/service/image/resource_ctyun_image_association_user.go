@@ -40,7 +40,7 @@ func (c *ctyunImageAssociationUser) Metadata(_ context.Context, request resource
 
 func (c *ctyunImageAssociationUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726"),
+		MarkdownDescription: utils.FormatDesc("管理私有镜像共享", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"image_id": schema.StringAttribute{
 				Required:    true,

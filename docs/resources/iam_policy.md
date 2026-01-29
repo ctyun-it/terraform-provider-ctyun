@@ -1,10 +1,10 @@
 ---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
 page_title: "CTYUN: ctyun_iam_policy"
-subcategory: "IAM"
 ---
 
 # ctyun_iam_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484
+-> 管理权限策略
 
 
 
@@ -65,7 +65,7 @@ resource "ctyun_iam_policy" "iam_policy_test" {
 
 ### Read-Only
 
-- `id` (String) 绑定关系id
+- `id` (String) 策略ID
 
 <a id="nestedatt--content"></a>
 ### Nested Schema for `content`
@@ -89,3 +89,15 @@ Required:
 Optional:
 
 - `resource` (Set of String) 资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入IAM策略资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_iam_policy.[导入配置名称] [id]
+# 示例
+terraform import ctyun_iam_policy.policy_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
+```

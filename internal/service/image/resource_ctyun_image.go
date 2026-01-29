@@ -50,7 +50,7 @@ func (c *ctyunImage) Metadata(_ context.Context, request resource.MetadataReques
 
 func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726"),
+		MarkdownDescription: utils.FormatDesc("管理私有镜像（从镜像文件创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

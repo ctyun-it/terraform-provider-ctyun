@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_database"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_database (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10140487
+-> 管理MySQL实例的数据库
 
 
 
@@ -105,3 +105,15 @@ Read-Only:
 - `insert_priv` (Boolean) 写入权限
 - `read_only` (Boolean) 用户读写权限
 - `select_priv` (Boolean) 查询权限
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入MySQL数据库资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_database.[导入配置名称] [name],[instance_id],<project_id>,<region_id>
+# 示例
+terraform import ctyun_mysql_database.example testdb,c81c2dc376e34e7887334cbcbd4xxx,prj-1234567890abcdef0,bb9fdb42056f11eda1610242ac110002
+```

@@ -52,7 +52,7 @@ type CtyunEbmAssociationEbsConfig struct {
 
 func (c *ctyunEbmAssociationEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724/10173867"),
+		MarkdownDescription: utils.FormatDesc("管理物理机与云硬盘的绑定关系", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10173867"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

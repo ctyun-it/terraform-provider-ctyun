@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_dhcpoptionsets"
-subcategory: "DHCP"
 ---
 
 # ctyun_dhcpoptionsets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询DHCP选项集
 
 
 

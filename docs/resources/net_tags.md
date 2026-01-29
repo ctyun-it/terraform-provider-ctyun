@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_net_tags"
-subcategory: "VPC"
 ---
 
 # ctyun_net_tags (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975
+-> 管理网络资源的标签
 
 
 
@@ -55,7 +55,7 @@ resource "ctyun_net_tags" "example" {
 
 ### Read-Only
 
-- `id` (String) ID，值
+- `id` (String) ID
 
 <a id="nestedatt--tags"></a>
 ### Nested Schema for `tags`
@@ -68,3 +68,15 @@ Required:
 Read-Only:
 
 - `id` (String) 标签id。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入网络标签
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_net_tags.[导入配置名称] [resource_type],[resource_id],<region_id>
+# 示例
+terraform import ctyun_net_tags.net_tags_example vpc,vpc-12345,region-67890
+```

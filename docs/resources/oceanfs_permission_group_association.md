@@ -1,10 +1,10 @@
 ---
+subcategory: "海量文件服务OceanFS"
 page_title: "CTYUN: ctyun_oceanfs_permission_group_association"
-subcategory: "OCEANFS"
 ---
 
 # ctyun_oceanfs_permission_group_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853
+-> 管理海量文件服务和权限组的绑定关系
 
 
 
@@ -82,3 +82,15 @@ resource "ctyun_oceanfs_permission_group_association" "example" {
 ### Read-Only
 
 - `id` (String) oceanfs与权限组绑定id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入OceanFS权限组关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_oceanfs_permission_group_association.[导入配置名称] [oceanfs_id],[vpc_id],[permission_group_id],<region_id>
+# 示例
+terraform import ctyun_oceanfs_permission_group_association.permission_group_association_example oceanfs-123,vpc-456,perm-789,region-bb9fdb42056f11eda1610242ac110002
+```

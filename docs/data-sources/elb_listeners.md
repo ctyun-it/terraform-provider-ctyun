@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
 page_title: "CTYUN: ctyun_elb_listeners"
-subcategory: "ELB"
 ---
 
 # ctyun_elb_listeners (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276
+-> 查询弹性负载均衡监听器
 
 
 

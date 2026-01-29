@@ -65,7 +65,7 @@ type ctyunEcsBackupPoliciesConfig struct {
 
 func (c *ctyunEcsBackupPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026751/10033770"),
+		MarkdownDescription: utils.FormatDesc("查询云主机备份策略", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033770"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

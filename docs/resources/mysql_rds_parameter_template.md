@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_rds_parameter_template"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_rds_parameter_template (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10035295
+-> 配置MySQL实例的参数，同时支持应用参数模板
 
 
 
@@ -97,3 +97,15 @@ resource "ctyun_mysql_rds_parameter_template" "examples" {
 ### Read-Only
 
 - `id` (String) 参数模板管理id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql rds参数模板
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_rds_parameter_template.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_mysql_rds_parameter_template.rds_parameter_template_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

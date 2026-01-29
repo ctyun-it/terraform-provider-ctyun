@@ -1,10 +1,10 @@
 ---
-page_title: "CTYUN: ctyun_port"
 subcategory: "PORT"
+page_title: "CTYUN: ctyun_port"
 ---
 
 # ctyun_port (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225195
+-> 管理弹性网卡
 
 
 
@@ -83,3 +83,15 @@ resource "ctyun_port" "port" {
 - `mac_address` (String) MAC地址
 - `port_id` (String) 网卡ID
 - `status` (String) 网卡状态
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入网络接口/弹性网卡
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_port.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_port.port_example port-12345,region-67890
+```

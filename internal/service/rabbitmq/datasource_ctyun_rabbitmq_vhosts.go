@@ -48,7 +48,7 @@ type CtyunRabbitmqVhostsConfig struct {
 
 func (c *ctyunRabbitmqVhosts) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("RABBITMQ", "https://www.ctyun.cn/document/10000118/10220893"),
+		MarkdownDescription: utils.FormatDesc("查询RabbitMQ实例的虚拟主机", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

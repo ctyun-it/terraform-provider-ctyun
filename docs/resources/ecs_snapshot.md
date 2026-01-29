@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
 page_title: "CTYUN: ctyun_ecs_snapshot"
-subcategory: "ECS"
 ---
 
 # ctyun_ecs_snapshot (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345
+-> 管理云主机快照
 
 
 
@@ -59,3 +59,15 @@ resource "ctyun_ecs_snapshot" "test" {
 
 - `id` (String) 云主机快照id
 - `snapshot_status` (String) 云主机快照状态： pending：创建中, available：可用， restoring：恢复中， error：错误
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云主机快照
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_snapshot.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ecs_snapshot.snapshot_example snap-12345678,<region_id>
+```

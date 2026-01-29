@@ -42,7 +42,7 @@ func (c *CtyunHpfsInstances) Metadata(ctx context.Context, request datasource.Me
 
 func (c *CtyunHpfsInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("HPFS", "https://www.ctyun.cn/document/10088932/10090437"),
+		MarkdownDescription: utils.FormatDesc("查询并行文件服务实例", "并行文件服务HPFS（CT-HPFS，High Performance File Storage）", "https://www.ctyun.cn/document/10088932/10090437"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

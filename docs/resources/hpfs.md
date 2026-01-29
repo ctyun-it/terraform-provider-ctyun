@@ -1,10 +1,10 @@
 ---
+subcategory: "并行文件服务HPFS（CT-HPFS，High Performance File Storage）"
 page_title: "CTYUN: ctyun_hpfs"
-subcategory: "HPFS"
 ---
 
 # ctyun_hpfs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
+-> 管理并行文件服务实例
 
 
 
@@ -64,3 +64,15 @@ resource "ctyun_hpfs" "test" {
 - `status` (String) 并行文件状态
 - `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 已用大小（MB）
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入HPFS资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_hpfs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_hpfs.hpfs_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

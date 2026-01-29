@@ -48,7 +48,7 @@ func (c *CtyunEcsDataVolume) Metadata(_ context.Context, request resource.Metada
 
 func (c *CtyunEcsDataVolume) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10027696/10169293"),
+		MarkdownDescription: utils.FormatDesc("配置云主机挂载的云硬盘，支持多块盘", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10027696/10169293"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

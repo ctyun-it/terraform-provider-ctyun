@@ -52,7 +52,7 @@ func (c *ctyunImageFromEcs) Metadata(_ context.Context, request resource.Metadat
 
 func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726/10031013"),
+		MarkdownDescription: utils.FormatDesc("管理私有镜像（从云主机创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726/10031013"),
 		Attributes: map[string]schema.Attribute{
 			// 新增：资源ID（由API返回，自动生成）
 			"id": schema.StringAttribute{

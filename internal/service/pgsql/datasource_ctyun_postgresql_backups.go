@@ -42,7 +42,7 @@ func (c *ctyunPgsqlBackups) Metadata(ctx context.Context, request datasource.Met
 
 func (c *ctyunPgsqlBackups) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10160072"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL实例的备份", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10160072"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

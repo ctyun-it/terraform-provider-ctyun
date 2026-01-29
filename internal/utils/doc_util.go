@@ -1,8 +1,11 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func FormatDesc(subcategory, url string) string {
-	return fmt.Sprintf(`%s
--> 详细说明请见文档：%s`, subcategory, url)
+func FormatDesc(purpose, subcategory, url string) string {
+	return fmt.Sprintf(`-> %s
+%s
+%s`, purpose, subcategory, url)
 }

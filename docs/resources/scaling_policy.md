@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
 page_title: "CTYUN: ctyun_scaling_policy"
-subcategory: "SCALING"
 ---
 
 # ctyun_scaling_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241454
+-> 管理弹性伸缩组的策略
 
 
 
@@ -103,7 +103,7 @@ resource "ctyun_scaling_group" "group_test" {
 
 # 告警策略
 resource "ctyun_scaling_policy" "policy_alert_example" {
-  group_id                    = ctyun_security_group.sg_test.id
+  group_id                    = ctyun_scaling_group.group_test.id
   name                        = "alert-policy-example"
   policy_type                 = "alert"
   operate_unit                = "percent"
@@ -160,3 +160,15 @@ resource "ctyun_scaling_policy" "policy_alert_example" {
 ### Read-Only
 
 - `id` (Number) 伸缩策略id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入伸缩策略
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_scaling_policy.[导入配置名称] [id],[group_id],[policy_type],<region_id>
+# 示例
+terraform import ctyun_scaling_policy.scaling_policy_example 123456789,987654321,alert,<region-123456>
+```

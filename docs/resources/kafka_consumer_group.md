@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_consumer_group"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_consumer_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145103
+-> 管理KAFKA的消费组
 
 
 
@@ -74,3 +74,15 @@ Optional:
 
 - `partition` (Number) 主题分区号 支持更新
 - `shift_by` (Number) 主题分区消费位点向左或向右移动的相对位置，例如当前offset是1000，当shiftBy=-10重置后offset=990，当shiftBy=10重置后offset=1010。支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka消费者组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_consumer_group.[导入配置名称] [instance_id],[group_name],<region_id>
+# 示例
+terraform import ctyun_kafka_consumer_group.kafka_consumer_group_example instance-123456,kafka-consumer-group-test,region-11111111
+```

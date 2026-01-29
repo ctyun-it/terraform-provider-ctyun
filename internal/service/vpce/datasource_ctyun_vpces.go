@@ -59,7 +59,7 @@ type CtyunVpcesConfig struct {
 
 func (c *ctyunVpces) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyun.cn/document/10042658/10217121"),
+		MarkdownDescription: utils.FormatDesc("查询终端节点", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10217121"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "共享流量包（SDP，Shared Data Package）"
 page_title: "CTYUN: ctyun_bandwidth_association_eip"
-subcategory: "BANDWIDTH"
 ---
 
 # ctyun_bandwidth_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030
+-> 管理共享带宽和弹性IP的绑定关系
 
 
 
@@ -46,3 +46,15 @@ resource "ctyun_bandwidth_association_eip" "bandwidth_association_eip_test" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入共享带宽与弹性IP关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_bandwidth_association_eip.[导入配置名称] [bandwidth_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_bandwidth_association_eip.bandwidth_eip_assoc_example bandwidth-12345,eip-67890,region-11111
+```

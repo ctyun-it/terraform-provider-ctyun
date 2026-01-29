@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_acl"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/11078051
+-> 管理KAFKA的访问控制
 
 
 
@@ -70,3 +70,15 @@ Required:
 Optional:
 
 - `ip` (String) ip或网段，多个用半角分号分开，默认*，表示所有ip 支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka ACL
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_acl.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_kafka_acl.kafak_acl_example 12345678-1234-1234-1234-123456789012,kafka_acl_name,bb9fdb42056f11eda1610242ac110002
+```

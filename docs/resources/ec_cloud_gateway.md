@@ -1,10 +1,10 @@
 ---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
 page_title: "CTYUN: ctyun_ec_cloud_gateway"
-subcategory: "EXPRESS_CONNECT"
 ---
 
 # ctyun_ec_cloud_gateway (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
+-> 管理云企业路由器
 
 
 
@@ -46,16 +46,28 @@ resource "ctyun_ec_cloud_gateway" "example" {
 
 - `ec_id` (String) 云间高速实例ID
 - `name` (String) 云网关名称 支持更新
+- `region_id` (String) 资源池ID，必填,需要与资源池名称一致,验证用
+- `region_name` (String) 资源池名称
 
 ### Optional
 
 - `description` (String) 云网关描述  支持更新
 - `region` (Number) 地域信息，取值如下: 1：中国大陆（默认） 2:亚太
-- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
-- `region_name` (String) 资源池名称
 
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 云网关实例ID
 - `rtb_id` (String) 云网关实例ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云网关实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_cloud_gateway.[导入配置名称] [ec_id],[cgw_id]
+# 示例
+terraform import ctyun_ec_cloud_gateway.ec_cloud_gateway_example ec-12345678,cgw-87654321
+```

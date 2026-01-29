@@ -52,7 +52,7 @@ type CtyunRedisAssociationEipConfig struct {
 
 func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10132173"),
+		MarkdownDescription: utils.FormatDesc("管理Redis实例和弹性IP的绑定关系", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10132173"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{

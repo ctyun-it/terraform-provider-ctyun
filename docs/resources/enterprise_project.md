@@ -1,10 +1,10 @@
 ---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
 page_title: "CTYUN: ctyun_enterprise_project"
-subcategory: "IAM"
 ---
 
 # ctyun_enterprise_project (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10358242
+-> 管理企业项目
 
 
 
@@ -44,3 +44,15 @@ resource "ctyun_enterprise_project" "enterprise_project_test" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入企业项目资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_enterprise_project.[导入配置名称] [id]
+# 示例
+terraform import ctyun_enterprise_project.enterprise_project_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
+```

@@ -28,7 +28,7 @@ func (c *ctyunImages) Metadata(_ context.Context, req datasource.MetadataRequest
 
 func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726"),
+		MarkdownDescription: utils.FormatDesc("查询云主机可用的镜像列表", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"visibility": schema.StringAttribute{
 				Required:    true,

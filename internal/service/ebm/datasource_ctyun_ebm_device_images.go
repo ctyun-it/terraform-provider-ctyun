@@ -66,7 +66,7 @@ type CtyunEbmDeviceImagesConfig struct {
 
 func (c *ctyunEbmDeviceImages) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724/10173844"),
+		MarkdownDescription: utils.FormatDesc("查询物理机镜像", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10173844"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

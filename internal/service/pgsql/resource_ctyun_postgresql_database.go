@@ -99,7 +99,7 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 
 func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10159978"),
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的数据库", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10159978"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

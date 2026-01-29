@@ -81,7 +81,7 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 
 func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133794"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的白名单", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133794"),
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
 				Optional:    true,

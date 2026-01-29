@@ -1,10 +1,10 @@
 ---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
 page_title: "CTYUN: ctyun_ebm_device_types"
-subcategory: "EBM"
 ---
 
 # ctyun_ebm_device_types (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001
+-> 查询物理机可用的规格列表
 
 
 

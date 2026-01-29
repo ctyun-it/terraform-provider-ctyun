@@ -48,7 +48,7 @@ func (c *ctyunSecurityGroup) Metadata(_ context.Context, request resource.Metada
 
 func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026730/10225459"),
+		MarkdownDescription: utils.FormatDesc("管理安全组", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225459"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

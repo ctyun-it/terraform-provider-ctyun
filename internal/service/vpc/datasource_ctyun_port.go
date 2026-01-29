@@ -25,7 +25,7 @@ func (c *ctyunNetworkInterfaces) Metadata(_ context.Context, req datasource.Meta
 
 func (c *ctyunNetworkInterfaces) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PORT", "https://www.ctyun.cn/document/10026730/10225195"),
+		MarkdownDescription: utils.FormatDesc("查询弹性网卡", "PORT", "https://www.ctyun.cn/document/10026730/10225195"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

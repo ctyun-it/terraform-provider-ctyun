@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_association_eip"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10183412
+-> 管理MongoDB实例和弹性IP的绑定关系
 
 
 
@@ -96,3 +96,15 @@ resource "ctyun_mongodb_association_eip" "test" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb关联eip
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_mongodb_association_eip.mongodb_association_eip_example inst-12345678,eip-87654321,region-11111111
+```

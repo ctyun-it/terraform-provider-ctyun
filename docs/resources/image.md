@@ -1,10 +1,10 @@
 ---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
 page_title: "CTYUN: ctyun_image"
-subcategory: "IMAGE"
 ---
 
 # ctyun_image (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726
+-> 管理私有镜像（从镜像文件创建）
 
 
 
@@ -62,3 +62,15 @@ resource "ctyun_image" "image_test" {
 
 - `id` (String) id
 - `status` (String) 镜像状态，accepted：已接受共享镜像，active：正常，deactivated：已弃用，deactivating：弃用中，deleted：已删除，deleting：删除中，error：错误，importing：导入中，killed：上传出错，镜像不可读，pending_delete：等待删除中，queued：排队中，reactivating：取消弃用中，rejected：已拒绝共享镜像，saving：保存中，syncing：同步中，uploading：上传中，waiting：等待接受/拒绝共享镜像
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入镜像
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_image.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_image.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

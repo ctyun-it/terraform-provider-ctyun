@@ -51,7 +51,7 @@ type CtyunCrsVpcAttachConfig struct {
 
 func (c *ctyunCrsVpcAttach) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CRS", "https://www.ctyun.cn/document/10007018/10007025"),
+		MarkdownDescription: utils.FormatDesc("将虚拟私有云接入容器镜像服务", "容器镜像服务（CRS）", "https://www.ctyun.cn/document/10007018/10007025"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
