@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
 page_title: "CTYUN: ctyun_scaling_group"
-subcategory: "SCALING"
 ---
 
 # ctyun_scaling_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725
+-> 管理弹性伸缩组
 
 
 
@@ -192,3 +192,15 @@ Required:
 - `lb_id` (String) 负载均衡ID，当status=disable时支持更新
 - `port` (Number) 端口号，当status=disable时支持更新，取值范围：1~65535
 - `weight` (Number) 权重，当status=disable时支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入伸缩组
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_scaling_group.[导入配置名称] [id],[vpc_id],<region_id>
+# 示例
+terraform import ctyun_scaling_group.scaling_group_example 123456789,subnet-123456,<region-123456>
+```

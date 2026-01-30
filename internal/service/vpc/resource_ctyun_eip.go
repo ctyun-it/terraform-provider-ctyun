@@ -71,7 +71,7 @@ func (c *ctyunEip) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EIP", "https://www.ctyun.cn/document/10026753/10219975"),
+		MarkdownDescription: utils.FormatDesc("管理弹性IP", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -134,7 +134,7 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "按需计费类型，当cycle_type为on_demand时生效，bandwidth：按带宽，upflowc：按流量",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
@@ -324,6 +324,11 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
+
+	if !plan.DemandBillingType.IsUnknown() && !plan.DemandBillingType.IsNull() && state.DemandBillingType.IsNull() {
+		state.DemandBillingType = plan.DemandBillingType
+		response.Diagnostics.AddWarning("demand_billing_type的更新仅写入状态文件", "在import时，状态文件中demand_billing_type为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -453,6 +458,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
 
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	if resp.BillingMethod == business.OnDemandCycleType {
 		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
 		if resp.BandwidthType == "standalone" {

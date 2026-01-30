@@ -85,7 +85,7 @@ func (c *CtyunElbAcl) Metadata(ctx context.Context, request resource.MetadataReq
 
 func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10032777"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡ACL", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032777"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -230,6 +230,7 @@ func (c *CtyunElbAcl) Update(ctx context.Context, request resource.UpdateRequest
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

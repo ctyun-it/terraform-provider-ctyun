@@ -77,7 +77,7 @@ type CtyunEbsBackupConfig struct {
 
 func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10037428"),
+		MarkdownDescription: utils.FormatDesc("管理云硬盘备份", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10037428"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

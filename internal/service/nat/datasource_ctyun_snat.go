@@ -40,7 +40,7 @@ func (c *ctyunSNats) Metadata(_ context.Context, request datasource.MetadataRequ
 
 func (c *ctyunSNats) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166268"),
+		MarkdownDescription: utils.FormatDesc("查询公网NAT网关snat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166268"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

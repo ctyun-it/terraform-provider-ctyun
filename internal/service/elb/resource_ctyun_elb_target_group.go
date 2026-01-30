@@ -57,7 +57,7 @@ func (c *CtyunElbTargetGroup) Metadata(ctx context.Context, request resource.Met
 
 func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10155289"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡后端服务组", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155289"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -319,6 +319,7 @@ func (c *CtyunElbTargetGroup) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -569,17 +570,29 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.Algorithm = types.StringValue(returnObj.Algorithm)
 	plan.Name = types.StringValue(returnObj.Name)
 	plan.SessionStickyMode = types.StringValue(returnObj.SessionSticky.SessionStickyMode)
-	if returnObj.SessionSticky.SessionStickyMode != "CLOSE" {
-		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
-		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
-	} else {
+	if returnObj.SessionSticky.SessionStickyMode == "CLOSE" {
 		plan.CookieExpire = types.Int64Null()
 		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringNull()
+
 	}
-	plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
+	if returnObj.SessionSticky.SessionStickyMode == "REWRITE" {
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
+	}
+
+	if returnObj.SessionSticky.SessionStickyMode == "INSERT" {
+		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
+		plan.RewriteCookieName = types.StringNull()
+
+	}
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
+	plan.Protocol = types.StringValue(returnObj.Protocol)
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
+
 	return
 }
 

@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -42,7 +40,7 @@ type CtyunSdwanAclConfig struct {
 	ID        types.String `tfsdk:"id"`
 	ProjectID types.String `tfsdk:"project_id"`
 	Name      types.String `tfsdk:"name"`
-	Rules     types.List   `tfsdk:"rules"`
+	Rules     types.Set    `tfsdk:"rules"`
 }
 
 type SdwanAclRule struct {
@@ -64,7 +62,7 @@ func (c *CtyunSdwanAcl) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SDWAN", "https://www.ctyun.cn/document/10035786/10035852"),
+		MarkdownDescription: utils.FormatDesc("管理SDWAN的访问控制", "天翼云SD-WAN", "https://www.ctyun.cn/document/10035786/10035852"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -94,11 +92,11 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"rules": schema.ListNestedAttribute{
-				Required:    true,
+			"rules": schema.SetNestedAttribute{
+				Optional:    true,
 				Description: "ACL规则列表",
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					explanmodifier.NullIgnoreSet(),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -109,17 +107,17 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.OneOf("in", "out"),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"protocol": schema.StringAttribute{
 							Required:    true,
-							Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), all(ALL), tcp(TCP)",
+							Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), any(ANY), tcp(TCP)",
 							Validators: []validator.String{
-								stringvalidator.OneOf("udp", "icmp", "all", "tcp"),
+								stringvalidator.OneOf("udp", "icmp", "any", "tcp"),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"ip_version": schema.StringAttribute{
@@ -129,7 +127,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.OneOf("IPv4", "IPv6"),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"dst_cidr": schema.StringAttribute{
@@ -139,7 +137,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.LengthAtLeast(1),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"dst_port_range": schema.StringAttribute{
@@ -149,7 +147,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.LengthAtLeast(1),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"priority": schema.Int32Attribute{
@@ -159,7 +157,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								int32validator.Between(1, 100),
 							},
 							PlanModifiers: []planmodifier.Int32{
-								int32planmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreInt32(),
 							},
 						},
 						"action": schema.StringAttribute{
@@ -169,7 +167,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.OneOf("allow", "deny"),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"src_cidr": schema.StringAttribute{
@@ -179,7 +177,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.LengthAtLeast(1),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"src_port_range": schema.StringAttribute{
@@ -189,7 +187,7 @@ func (c *CtyunSdwanAcl) Schema(ctx context.Context, req resource.SchemaRequest, 
 								stringvalidator.LengthAtLeast(1),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 					},
@@ -272,6 +270,10 @@ func (c *CtyunSdwanAcl) Update(ctx context.Context, req resource.UpdateRequest, 
 	if err != nil {
 		return
 	}
+	if !plan.Rules.IsUnknown() && !plan.Rules.IsNull() && state.Rules.IsNull() {
+		state.Rules = plan.Rules
+		resp.Diagnostics.AddWarning("rules的更新仅写入状态文件", "在import时，状态文件中rules为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
@@ -320,7 +322,7 @@ func (c *CtyunSdwanAcl) ImportState(ctx context.Context, req resource.ImportStat
 	}
 
 	// 导入时不设置 rules 字段，保持其为未知状态
-	config.Rules = types.ListNull(types.ObjectType{
+	config.Rules = types.SetNull(types.ObjectType{
 		AttrTypes: map[string]attr.Type{
 			"direction":      types.StringType,
 			"protocol":       types.StringType,
@@ -454,7 +456,7 @@ func (c *CtyunSdwanAcl) getAclRules(ctx context.Context, plan *CtyunSdwanAclConf
 
 	// 直接在当前方法中实现规则转换逻辑
 	if len(resp.ReturnObj.Result) == 0 {
-		plan.Rules = types.ListNull(types.ObjectType{
+		plan.Rules = types.SetNull(types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"direction":      types.StringType,
 				"protocol":       types.StringType,
@@ -507,7 +509,7 @@ func (c *CtyunSdwanAcl) getAclRules(ctx context.Context, plan *CtyunSdwanAclConf
 		ruleObjects = append(ruleObjects, object)
 	}
 
-	list, diags := types.ListValue(
+	list, diags := types.SetValue(
 		types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"direction":      types.StringType,
@@ -567,12 +569,12 @@ func (c *CtyunSdwanAcl) update(ctx context.Context, plan *CtyunSdwanAclConfig, s
 		}
 	} else if !plan.Rules.Equal(state.Rules) {
 		// 规则发生变化，需要找出新增、删除和更新的规则
-		planRules, err := c.extractRulesFromList(ctx, plan.Rules)
+		planRules, err := c.extractRulesFromSet(ctx, plan.Rules)
 		if err != nil {
 			return err
 		}
 
-		stateRules, err := c.extractRulesFromList(ctx, state.Rules)
+		stateRules, err := c.extractRulesFromSet(ctx, state.Rules)
 		if err != nil {
 			return err
 		}
@@ -610,33 +612,32 @@ func (c *CtyunSdwanAcl) update(ctx context.Context, plan *CtyunSdwanAclConfig, s
 	return
 }
 
-// extractRulesFromList 从types.List中提取规则
-func (c *CtyunSdwanAcl) extractRulesFromList(ctx context.Context, rulesList types.List) ([]*SdwanAclRule, error) {
+// extractRulesFromSet 从types.Set中提取规则
+func (c *CtyunSdwanAcl) extractRulesFromSet(ctx context.Context, rulesSet types.Set) ([]*SdwanAclRule, error) {
 	var rules []*SdwanAclRule
 
-	if rulesList.IsNull() || rulesList.IsUnknown() {
+	if rulesSet.IsNull() || rulesSet.IsUnknown() {
 		return rules, nil
 	}
 
-	for _, ruleValue := range rulesList.Elements() {
-		// 将规则值转换为对象
-		ruleObj, ok := ruleValue.(types.Object)
-		if !ok {
-			return nil, fmt.Errorf("failed to convert rule value to object")
-		}
+	// 使用ElementsAs方法从Set中提取元素
+	var ruleObjects []SdwanAclRule
+	diags := rulesSet.ElementsAs(ctx, &ruleObjects, false)
+	if diags.HasError() {
+		return nil, fmt.Errorf("failed to extract rules from set: %v", diags.Errors())
+	}
 
-		attributes := ruleObj.Attributes()
-
+	for _, ruleObj := range ruleObjects {
 		rule := &SdwanAclRule{
-			Direction:    attributes["direction"].(types.String),
-			Protocol:     attributes["protocol"].(types.String),
-			IpVersion:    attributes["ip_version"].(types.String),
-			DstCidr:      attributes["dst_cidr"].(types.String),
-			DstPortRange: attributes["dst_port_range"].(types.String),
-			Priority:     attributes["priority"].(types.Int32),
-			Action:       attributes["action"].(types.String),
-			SrcCidr:      attributes["src_cidr"].(types.String),
-			SrcPortRange: attributes["src_port_range"].(types.String),
+			Direction:    ruleObj.Direction,
+			Protocol:     ruleObj.Protocol,
+			IpVersion:    ruleObj.IpVersion,
+			DstCidr:      ruleObj.DstCidr,
+			DstPortRange: ruleObj.DstPortRange,
+			Priority:     ruleObj.Priority,
+			Action:       ruleObj.Action,
+			SrcCidr:      ruleObj.SrcCidr,
+			SrcPortRange: ruleObj.SrcPortRange,
 		}
 
 		rules = append(rules, rule)

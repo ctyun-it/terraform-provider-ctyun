@@ -70,8 +70,8 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	}()
 	var config CtyunScalingConfig
 	var ID, vpcId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &ID, &vpcId)
 		if err != nil {
@@ -117,7 +117,7 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

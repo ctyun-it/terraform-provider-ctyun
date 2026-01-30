@@ -74,7 +74,7 @@ func (c *ctyunEcs) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730"),
+		MarkdownDescription: utils.FormatDesc("管理云主机", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -107,6 +107,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"flavor_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
@@ -115,6 +116,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"flavor_name": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，支持更新",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_id")),
@@ -1426,13 +1428,16 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.UpdateTime = types.StringValue(*instance_details_resp.UpdatedTime)
 	cfg.Name = cfg.DisplayName
 	cfg.EipAddress = utils.SecStringValue(instance_details_resp.FloatingIP)
-	if cfg.FlavorId != types.StringNull() {
-		cfg.FlavorId = types.StringValue(*instance_details_resp.Flavor.FlavorID)
-	}
+
+	cfg.FlavorId = types.StringValue(*instance_details_resp.Flavor.FlavorID)
+
+	cfg.FlavorName = types.StringValue(*instance_details_resp.Flavor.FlavorName)
+
 	cfg.ActualImageID = types.StringValue(*instance_details_resp.Image.ImageID)
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
 	cfg.ProjectId = types.StringValue(*instance_details_resp.ProjectID)
+
 	if instance_details_resp.ExpiredTime != nil {
 		cfg.ExpireTime = types.StringValue(*instance_details_resp.ExpiredTime)
 	} else {
@@ -1440,8 +1445,8 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		cfg.ExpireTime = types.StringValue("")
 	}
 
-	// 填充安全组信息
-	sgs := []types.String{}
+	// 将SecGroupList转换成Set并赋值到cfg.SecurityGroupIds
+	sgs := make([]types.String, 0, len(instance_details_resp.SecGroupList))
 	for _, sg := range instance_details_resp.SecGroupList {
 		// 如果存在默认的安全组，要判断一下返回的是否为默认的安全组，如果是默认的就把它排除掉
 		if !cfg.DefaultSecurityGroupId.IsNull() && !cfg.DefaultSecurityGroupId.IsUnknown() {

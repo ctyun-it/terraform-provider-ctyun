@@ -84,7 +84,7 @@ func (c *CtyunOceanfsPermissionGroup) ImportState(ctx context.Context, request r
 
 func (c *CtyunOceanfsPermissionGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10332853"),
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务权限组", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10332853"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

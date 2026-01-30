@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_node_association"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_node_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452
+-> 纳管云容器引擎节点
 
 
 
@@ -67,3 +67,15 @@ variable "password" {
 - `name` (String) 纳管后的节点名称，通常和主机名称相同
 - `node_status` (String) 节点状态，normal：健康，abnormal：异常，expulsion：驱逐中。
 - `node_type` (String) 节点类型，master或slave
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入CCSE节点关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ccse_node_association.[导入配置名称] [name],[cluster_id],<region_id>
+# 示例
+terraform import ctyun_ccse_node_association.example test-node,cl-12345678,region-123
+```

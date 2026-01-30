@@ -42,7 +42,7 @@ func (c *CtyunMysqlParameters) Metadata(ctx context.Context, request datasource.
 
 func (c *CtyunMysqlParameters) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10035295"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的参数列表", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10035295"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

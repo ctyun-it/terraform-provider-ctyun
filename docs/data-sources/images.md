@@ -1,10 +1,10 @@
 ---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
 page_title: "CTYUN: ctyun_images"
-subcategory: "IMAGE"
 ---
 
 # ctyun_images (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726
+-> 查询云主机可用的镜像列表
 
 
 

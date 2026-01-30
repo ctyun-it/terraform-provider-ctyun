@@ -67,7 +67,7 @@ func (c *CtyunEcPacket) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038220"),
+		MarkdownDescription: utils.FormatDesc("管理云间高速带宽包", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

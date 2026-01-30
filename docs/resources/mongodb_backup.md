@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_backup"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 管理MongoDB实例的备份
 
 
 
@@ -91,3 +91,16 @@ resource "ctyun_mongodb_backup" "example" {
 ### Read-Only
 
 - `id` (String) 资源ID，格式为region_id:inst_id:backup_name
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb备份
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_backup.[导入配置名称] [name],[instance_id],<region_id>
+# 示例
+# 使用全部参数
+terraform import ctyun_mongodb_backup.example backup-name,inst-12345678,region-11111111
+```

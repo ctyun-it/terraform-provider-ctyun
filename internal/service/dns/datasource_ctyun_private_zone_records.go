@@ -41,7 +41,7 @@ func (c *CtyunPrivateZoneRecords) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunPrivateZoneRecords) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10033663"),
+		MarkdownDescription: utils.FormatDesc("查询内网DNS记录", "内网DNS（Intranet Domain Name Service，CT-IDNS）", "https://www.ctyun.cn/document/10026757/10033663"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

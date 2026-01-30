@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_white_list"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_white_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794
+-> 管理MySQL实例的白名单
 
 
 
@@ -52,3 +52,15 @@ resource "ctyun_mysql_white_list" "test" {
 - `group_white_list_count` (Number) 白名单分组组内数量
 - `id` (String) id 唯一标识
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入MySQL白名单资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_white_list.[导入配置名称] [name],[instance_id],<project_id>,<region_id>
+# 示例
+terraform import ctyun_mysql_white_list.example mywhitelist,c81c2dc376e34e7887334cbcbd4xxx,prj-1234567890abcdef0,bb9fdb42056f11eda1610242ac110002
+```

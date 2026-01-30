@@ -46,7 +46,7 @@ func NewCtyunDnatResource() resource.Resource {
 
 func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166499"),
+		MarkdownDescription: utils.FormatDesc("管理公网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166499"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

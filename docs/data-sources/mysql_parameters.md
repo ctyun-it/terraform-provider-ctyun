@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_parameters"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_parameters (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10035295
+-> 查询MySQL实例的参数列表
 
 
 

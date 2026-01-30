@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
 page_title: "CTYUN: ctyun_elb_loadbalancer"
-subcategory: "ELB"
 ---
 
 # ctyun_elb_loadbalancer (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703
+-> 管理弹性负载均衡
 
 
 
@@ -95,3 +95,15 @@ Read-Only:
 - `bandwidth` (Number) 弹性公网IP的带宽
 - `eip_id` (String) 弹性公网IP的Id
 - `is_talk_order` (Boolean) 是否按需资源
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_loadbalancer.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_loadbalancer.elb_loadbalancer_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_vpc"
-subcategory: "VPC"
 ---
 
 # ctyun_vpc (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755
+-> 管理虚拟私有云
 
 
 
@@ -50,3 +50,15 @@ resource "ctyun_vpc" "vpc_test" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入虚拟私有云
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpc.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vpc.vpc_example vpc-12345,region-67890
+```

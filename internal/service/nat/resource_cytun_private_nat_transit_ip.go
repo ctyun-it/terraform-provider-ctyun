@@ -42,7 +42,7 @@ func (c *ctyunPrivateNatTransitIpResource) Metadata(ctx context.Context, request
 
 func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10378390"),
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关的中转IP", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378390"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -104,13 +104,6 @@ func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.
 					int32planmodifier.UseStateForUnknown(),
 				},
 			},
-			"dnat_count": schema.Int32Attribute{
-				Computed:    true,
-				Description: "在使用此中转IP的dnat数量",
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknown(),
-				},
-			},
 		},
 	}
 }
@@ -141,9 +134,6 @@ func (c *ctyunPrivateNatTransitIpResource) Create(ctx context.Context, request r
 		return
 	}
 
-	// 设置ID
-	id := fmt.Sprintf("%s,%s,%s", plan.RegionID.ValueString(), plan.NatGatewayID.ValueString(), plan.Address.ValueString())
-	plan.ID = types.StringValue(id)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -239,7 +229,7 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 		}
 	}()
 	var config CtyunPrivateNatTransitIpConfig
-	var ID, regionID, natGateWayID, address string
+	var regionID, natGateWayID, address string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &address, &natGateWayID)
@@ -252,7 +242,6 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 			return
 		}
 	}
-	ID = fmt.Sprintf("%s,%s,%s", regionID, natGateWayID, address)
 
 	if regionID == "" {
 		err = fmt.Errorf("regionID不能为空")
@@ -266,7 +255,6 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 	}
 	config.RegionID = types.StringValue(regionID)
 	config.NatGatewayID = types.StringValue(natGateWayID)
-	config.ID = types.StringValue(ID)
 	config.Address = types.StringValue(address)
 	err = c.getAndMergePrivateNatTransitIp(ctx, &config)
 	if err != nil {
@@ -308,8 +296,9 @@ func (c *ctyunPrivateNatTransitIpResource) getAndMergePrivateNatTransitIp(ctx co
 		cfg.IsDefault = types.BoolValue(*targetIp.IsDefault)
 	}
 	cfg.SnatCount = types.Int32Value(targetIp.SnatCnt)
-	cfg.DnatCount = types.Int32Value(targetIp.DnarCnt)
-
+	// 设置ID
+	id := fmt.Sprintf("%s,%s", cfg.NatGatewayID.ValueString(), cfg.Address.ValueString())
+	cfg.ID = types.StringValue(id)
 	return nil
 }
 
@@ -321,5 +310,4 @@ type CtyunPrivateNatTransitIpConfig struct {
 	Status       types.String `tfsdk:"status"`         // 中转IP状态
 	IsDefault    types.Bool   `tfsdk:"is_default"`     // 是否为默认中转地址
 	SnatCount    types.Int32  `tfsdk:"snat_count"`     // 在使用此中转IP的snat数量
-	DnatCount    types.Int32  `tfsdk:"dnat_count"`     // 在使用此中转IP的dnat数量
 }

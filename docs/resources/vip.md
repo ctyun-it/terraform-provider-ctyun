@@ -1,10 +1,10 @@
 ---
-page_title: "CTYUN: ctyun_vip"
 subcategory: "VIP"
+page_title: "CTYUN: ctyun_vip"
 ---
 
 # ctyun_vip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10224288
+-> 管理虚拟IP
 
 
 
@@ -63,3 +63,15 @@ resource "ctyun_vip" "example" {
 - `id` (String) 高可用虚IP的ID
 - `ipv4_address` (String) 高可用虚IP的IPv4地址
 - `ipv6_address` (String) 高可用虚IP的IPv6地址
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入高可用虚IP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vip.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vip.vip_example vip-12345,region-67890
+```

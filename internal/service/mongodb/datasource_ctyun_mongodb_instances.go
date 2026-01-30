@@ -39,7 +39,7 @@ func (c *ctyunMongodbInstances) Configure(ctx context.Context, request datasourc
 
 func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10089535"),
+		MarkdownDescription: utils.FormatDesc("查询MongoDB实例", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"page_no": schema.Int32Attribute{
 				Optional:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_white_list"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_white_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 管理MongoDB实例的白名单
 
 
 
@@ -96,3 +96,18 @@ resource "ctyun_mongodb_white_list" "example" {
 
 - `id` (String) 资源唯一标识，格式为 instance_id,ip_whitelist_name
 - `white_list_id` (Number) 白名单分组Id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb白名单
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_white_list.[导入配置名称] [instance_id],[group_name],<region_id>
+# 示例
+# 使用必填参数（region_id从环境变量获取）
+terraform import ctyun_mongodb_white_list.example inst-12345678,my-whitelist-group
+# 使用全部参数
+terraform import ctyun_mongodb_white_list.example inst-12345678,my-whitelist-group,region-11111111
+```

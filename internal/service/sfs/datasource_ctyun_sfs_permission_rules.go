@@ -39,7 +39,7 @@ func (c *CtyunSfsPermissionRules) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunSfsPermissionRules) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350/10192622"),
+		MarkdownDescription: utils.FormatDesc("查询弹性文件服务权限组规则", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192622"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

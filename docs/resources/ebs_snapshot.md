@@ -1,10 +1,10 @@
 ---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
 page_title: "CTYUN: ctyun_ebs_snapshot"
-subcategory: "EBS"
 ---
 
 # ctyun_ebs_snapshot (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10043223
+-> 管理云硬盘快照
 
 
 
@@ -58,3 +58,15 @@ resource "ctyun_ebs_snapshot" "test" {
 
 - `id` (String) 云硬盘快照id
 - `snapshot_status` (String) 云硬盘快照状态： pending：创建中, available：可用， restoring：恢复中， error：错误
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘快照
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_snapshot.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ebs_snapshot.example b4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```

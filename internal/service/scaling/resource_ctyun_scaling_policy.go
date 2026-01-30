@@ -64,7 +64,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[group_id],[policy_type],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -117,7 +117,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725/10241454"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组的策略", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10241454"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

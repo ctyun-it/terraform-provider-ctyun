@@ -24,7 +24,7 @@ func (c *ctyunIamAuthorities) Metadata(_ context.Context, req datasource.Metadat
 
 func (c *ctyunIamAuthorities) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10409363"),
+		MarkdownDescription: utils.FormatDesc("查询IAM权限点", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10409363"),
 		Attributes: map[string]schema.Attribute{
 			"service_id": schema.Int64Attribute{
 				Required:    true,

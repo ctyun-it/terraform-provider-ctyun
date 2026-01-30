@@ -90,7 +90,7 @@ func (c *CtyunPgsqlWhiteList) ImportState(ctx context.Context, request resource.
 
 func (c *CtyunPgsqlWhiteList) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10161484"),
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的白名单", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10161484"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

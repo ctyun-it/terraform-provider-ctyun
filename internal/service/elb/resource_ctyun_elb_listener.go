@@ -60,7 +60,7 @@ func (c *CtyunElbListener) Metadata(ctx context.Context, request resource.Metada
 
 func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10140276"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡监听器", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10140276"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -499,7 +499,7 @@ func (c *CtyunElbListener) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -825,6 +825,7 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 
 	// 更新defaultAction
 	plan.DefaultActionType = types.StringValue(respObj.DefaultAction.RawType)
+	plan.RedirectListenerID = types.StringValue(respObj.DefaultAction.RedirectListenerID)
 	targetGroupList := respObj.DefaultAction.ForwardConfig.TargetGroups
 	var targetGroups []TargetGroupsModel
 	for _, targetGroupItem := range targetGroupList {

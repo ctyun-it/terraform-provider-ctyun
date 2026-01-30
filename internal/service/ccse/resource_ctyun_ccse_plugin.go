@@ -56,7 +56,7 @@ type CtyunCcsePluginConfig struct {
 
 func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10102631"),
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎插件", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10102631"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

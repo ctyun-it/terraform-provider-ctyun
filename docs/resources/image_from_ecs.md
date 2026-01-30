@@ -1,10 +1,10 @@
 ---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
 page_title: "CTYUN: ctyun_image_from_ecs"
-subcategory: "IMAGE"
 ---
 
 # ctyun_image_from_ecs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726/10031013
+-> 管理私有镜像（从云主机创建）
 
 
 
@@ -160,3 +160,15 @@ Required:
 
 - `label_key` (String) 标签键。
 - `label_value` (String) 标签值。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入从ECS创建的镜像
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_image_from_ecs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_image_from_ecs.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_backup_setting"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_backup_setting (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797
+-> 管理MySQL实例的备份配置
 
 
 
@@ -98,3 +98,15 @@ resource "ctyun_mysql_backup_setting" "examples" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql备份设置
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_backup_setting.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_mysql_backup_setting.backup_setting_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

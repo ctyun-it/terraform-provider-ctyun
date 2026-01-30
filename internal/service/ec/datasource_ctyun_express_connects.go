@@ -25,7 +25,7 @@ func (c *ctyunExpressConnects) Metadata(_ context.Context, req datasource.Metada
 
 func (c *ctyunExpressConnects) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038220"),
+		MarkdownDescription: utils.FormatDesc("查询云间高速实例", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Optional:    true,

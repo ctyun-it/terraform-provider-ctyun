@@ -1,10 +1,10 @@
 ---
+subcategory: "NAT网关（CT-NAT Gateway）"
 page_title: "CTYUN: ctyun_private_nat_transit_ips"
-subcategory: "NAT"
 ---
 
 # ctyun_private_nat_transit_ips (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166345
+-> 查询私网NAT网关的中转IP
 
 
 

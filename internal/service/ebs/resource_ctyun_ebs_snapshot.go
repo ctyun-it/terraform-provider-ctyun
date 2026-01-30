@@ -70,7 +70,7 @@ func (c *ctyunEbsSnapshot) Metadata(_ context.Context, request resource.Metadata
 
 func (c *ctyunEbsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10027696/10043223"),
+		MarkdownDescription: utils.FormatDesc("管理云硬盘快照", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10043223"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

@@ -50,7 +50,7 @@ func NewCtyunVpcPeerConnectionAttach() resource.Resource {
 
 func (c *CtyunVpcPeerConnectionAttach) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PEER_CONNECTION", "https://www.ctyun.cn/document/10026760/10037761"),
+		MarkdownDescription: utils.FormatDesc("接受或拒绝对等连接申请", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037761"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

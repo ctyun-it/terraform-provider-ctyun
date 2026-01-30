@@ -1,10 +1,10 @@
 ---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
 page_title: "CTYUN: ctyun_iam_user"
-subcategory: "IAM"
 ---
 
 # ctyun_iam_user (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289
+-> 管理用户
 
 
 
@@ -70,3 +70,15 @@ resource "ctyun_iam_user" "iam_user_test" {
 
 - `account_id` (String) 账户id
 - `id` (String) 用户id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入IAM用户资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_iam_user.[导入配置名称] [id]
+# 示例
+terraform import ctyun_iam_user.user_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
+```

@@ -91,7 +91,7 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 }
 func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038250"),
+		MarkdownDescription: utils.FormatDesc("管理云间高速跨域连接", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038250"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,

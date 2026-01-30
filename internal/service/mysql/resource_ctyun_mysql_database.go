@@ -101,7 +101,7 @@ func (c *CtyunMysqlDatabase) ImportState(ctx context.Context, request resource.I
 
 func (c *CtyunMysqlDatabase) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10140487"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的数据库", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10140487"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

@@ -56,7 +56,7 @@ func (c *CtyunEcCloudGateway) Metadata(ctx context.Context, req resource.Metadat
 
 func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038220"),
+		MarkdownDescription: utils.FormatDesc("管理云企业路由器", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -90,8 +90,7 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"description": schema.StringAttribute{
-				Optional: true,
-
+				Optional:    true,
 				Description: "云网关描述  支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(255),
@@ -119,14 +118,9 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"region_id": schema.StringAttribute{
-				Required:    true,
-				Description: "资源池ID，必填,需要与资源池名称一致,验证用",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "资源池ID",
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -290,19 +284,14 @@ func (c *CtyunEcCloudGateway) create(ctx context.Context, plan *CtyunEcCloudGate
 	if err != nil {
 		return
 	}
-	//添加验证 该dcname 是不是 与 region_id 匹配
 	if len(responseRegion.RegionList) == 0 {
 		return fmt.Errorf("资源池名称 %s 不存在", plan.DcName.ValueString())
 	}
-	if responseRegion.RegionList[0].RegionId != plan.RegionID.ValueString() {
-		return fmt.Errorf("资源池名称 %s 与 资源池ID %s 不匹配", plan.DcName.ValueString(), plan.RegionID.ValueString())
-	}
-
 	// 创建云网关实例
 	createReq := &ec.EcEcCreateGatewayRequest{
 		CgwName: plan.Name.ValueString(),
 		DcName:  plan.DcName.ValueString(),
-		DcID:    plan.RegionID.ValueString(),
+		DcID:    responseRegion.RegionList[0].RegionId,
 		EcID:    plan.EcID.ValueString(),
 		DcType:  "CNP",
 	}
@@ -366,10 +355,6 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 		return fmt.Errorf("API return error. EcID is nil")
 	}
 
-	if result.DcID == nil {
-		return fmt.Errorf("API return error. RegionID is nil")
-	}
-
 	if result.DcName == nil {
 		return fmt.Errorf("API return error. DcName is nil")
 	}
@@ -377,7 +362,7 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 	plan.ID = types.StringValue(*result.CgwID)
 	plan.Name = types.StringValue(*result.CgwName)
 	plan.EcID = types.StringValue(*result.EcID)
-	plan.RegionID = types.StringValue(*result.DcID)
+	//plan.RegionID = types.StringValue(*result.DcID)
 	plan.DcName = types.StringValue(*result.DcName)
 	plan.Region = types.Int64Value(*result.Region)
 	if result.Region != nil {

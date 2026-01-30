@@ -54,7 +54,7 @@ func (c *CtyunSdwanAclRule) Metadata(ctx context.Context, req resource.MetadataR
 
 func (c *CtyunSdwanAclRule) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SDWAN", "https://www.ctyun.cn/document/10035786/10035852"),
+		MarkdownDescription: utils.FormatDesc("管理SDWAN的访问控制规则", "天翼云SD-WAN", "https://www.ctyun.cn/document/10035786/10035852"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -83,9 +83,9 @@ func (c *CtyunSdwanAclRule) Schema(ctx context.Context, req resource.SchemaReque
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
-				Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), all(ALL), tcp(TCP)  支持更新",
+				Description: "协议类型，取值范围: udp(UDP), icmp(ICMP), any(ANY), tcp(TCP)  支持更新",
 				Validators: []validator.String{
-					stringvalidator.OneOf("udp", "icmp", "all", "tcp"),
+					stringvalidator.OneOf("udp", "icmp", "any", "tcp"),
 				},
 			},
 			"ip_version": schema.StringAttribute{

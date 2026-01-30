@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_database"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_database (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10159978
+-> 管理PostgreSQL实例的数据库
 
 
 
@@ -111,3 +111,15 @@ resource "ctyun_postgresql_database" "examples" {
 ### Read-Only
 
 - `id` (String) postgresql实例数据库id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL数据库
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_database.[导入配置名称] [name],[instance_id],<region_id>
+# 示例
+terraform import ctyun_postgresql_database.database_example mydatabase,inst123456,<region_id>
+```

@@ -59,7 +59,7 @@ type CtyunKafkaInstancesConfig struct {
 
 func (c *ctyunKafkaInstances) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10030700"),
+		MarkdownDescription: utils.FormatDesc("查询KAFKA实例列表", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10030700"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

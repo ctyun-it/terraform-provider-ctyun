@@ -63,7 +63,7 @@ type SourceProgressInfoModel struct {
 
 func (c *ctyunRedisMigrationTasks) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10518385"),
+		MarkdownDescription: utils.FormatDesc("查询Redis迁移任务", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10518385"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Optional:    true,

@@ -61,7 +61,7 @@ func (c *CtyunMysqlCopyParamTemplate) ImportState(ctx context.Context, request r
 
 func (c *CtyunMysqlCopyParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10035290"),
+		MarkdownDescription: utils.FormatDesc("复制MySQL参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10035290"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -60,7 +60,7 @@ package ecs
 //
 //func (c *ctyunEcsBackupRepos) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 //	response.Schema = schema.Schema{
-//		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026751/10224092`,
+//		MarkdownDescription: utils.FormatDesc("弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10224092`,
 //		Attributes: map[string]schema.Attribute{
 //			"region_id": schema.StringAttribute{
 //				Optional:    true,

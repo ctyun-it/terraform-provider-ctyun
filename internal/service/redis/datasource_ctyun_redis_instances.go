@@ -56,7 +56,7 @@ type CtyunRedisInstancesConfig struct {
 
 func (c *ctyunRedisInstances) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/11030280"),
+		MarkdownDescription: utils.FormatDesc("查询Redis实例", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/11030280"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

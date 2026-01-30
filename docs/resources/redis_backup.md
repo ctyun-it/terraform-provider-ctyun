@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式缓存服务Redis版"
 page_title: "CTYUN: ctyun_redis_backup"
-subcategory: "REDIS"
 ---
 
 # ctyun_redis_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10142282
+-> 管理Redis实例的备份
 
 
 

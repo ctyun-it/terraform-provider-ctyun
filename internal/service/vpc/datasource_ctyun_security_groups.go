@@ -72,7 +72,7 @@ type CtyunSecurityGroupsConfig struct {
 
 func (c *ctyunSecurityGroups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10028310"),
+		MarkdownDescription: utils.FormatDesc("查询安全组", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_instance"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165
+-> 管理PostgreSQL实例
 
 
 
@@ -176,3 +176,15 @@ Required:
 - `availability_zone_count` (Number) 资源池可用区总数，支持更新。
 - `availability_zone_name` (String) 资源池可用区名称，支持更新。可以根据data.ctyun_zones查询
 - `node_type` (String) 节点类型(master/slave)，支持更新。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_postgresql_instance.instance_example inst123456,<region_id>
+```

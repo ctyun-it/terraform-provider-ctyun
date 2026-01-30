@@ -83,7 +83,7 @@ func (c *ctyunDhcpOptionSetAssociationVpc) Metadata(_ context.Context, request r
 
 func (c *ctyunDhcpOptionSetAssociationVpc) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("DHCP", "https://www.ctyun.cn/document/10026755/10381274"),
+		MarkdownDescription: utils.FormatDesc("管理DHCP选项集和VPC的绑定关系", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10381274"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

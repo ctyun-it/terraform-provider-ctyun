@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
@@ -27,7 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
 )
 
 var (
@@ -70,7 +70,7 @@ type CtyunNetworkInterfaceConfig struct {
 
 func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PORT", "https://www.ctyun.cn/document/10026730/10225195"),
+		MarkdownDescription: utils.FormatDesc("管理弹性网卡", "PORT", "https://www.ctyun.cn/document/10026730/10225195"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -80,7 +80,7 @@ func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"name": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "弹性网卡名称。支持拉丁字母、中文、数字，下划线，连字符，中文/英文字母开头，不能以http:/https:开头，长度2-32  支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
@@ -91,10 +91,10 @@ func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Description: "弹性网卡描述。支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}|《》？：“”【】、；‘'，。、，不能以http:/https:开头，长度0-128 支持更新",
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtMost(128),
-					validator2.Desc(),
-				},
+				//Validators: []validator.String{
+				//	stringvalidator.UTF8LengthAtMost(128),
+				//	validator2.Desc(),
+				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -588,7 +588,10 @@ func (c *ctyunNetworkInterface) getAndMergePort(ctx context.Context, plan *Ctyun
 		// 如果没有辅助私有IP，确保字段被正确初始化为空集合
 		plan.SecondaryPrivateIps, _ = types.SetValue(types.StringType, []attr.Value{})
 	}
+	if len(networkInterface.SecondaryPrivateIps) > 0 {
+		plan.SecondaryPrivateIpCount = types.Int32Value(int32(len(networkInterface.SecondaryPrivateIps)))
 
+	}
 	// 设置IPv6地址
 	if networkInterface.Ipv6Addresses != nil {
 		ipv6Addrs := make([]attr.Value, len(networkInterface.Ipv6Addresses))

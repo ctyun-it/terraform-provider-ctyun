@@ -70,7 +70,7 @@ type CtyunRabbitmqQueueConfig struct {
 
 func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("RABBITMQ", "https://www.ctyun.cn/document/10000118/10220893"),
+		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的队列", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

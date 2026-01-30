@@ -48,7 +48,7 @@ func (c *CtyunMongodbRestartDb) Metadata(ctx context.Context, req resource.Metad
 
 func (c *CtyunMongodbRestartDb) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10089535"),
+		MarkdownDescription: utils.FormatDesc("重启MongoDB实例", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

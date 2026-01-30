@@ -38,7 +38,7 @@ func (c *ctyunMysqlRecoverableTimePoints) Metadata(ctx context.Context, request 
 
 func (c *ctyunMysqlRecoverableTimePoints) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的备份可恢复时间点", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

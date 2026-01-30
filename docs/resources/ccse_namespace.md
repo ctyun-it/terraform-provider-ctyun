@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_namespace"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_namespace (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631
+-> 管理云容器引擎命名空间
 
 
 
@@ -52,3 +52,15 @@ EOF
 - `actual_config` (String) 实际配置(YAML格式)
 - `id` (String) ID
 - `namespace` (String) 命名空间
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入CCSE命名空间
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ccse_namespace.[导入配置名称] [namespace],[cluster_id],<region_id>
+# 示例
+terraform import ctyun_ccse_namespace.example test-namespace,cl-12345678,region-123
+```

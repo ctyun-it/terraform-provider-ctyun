@@ -109,7 +109,7 @@ func (c *ctyunScalingConfig) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725/10241446"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩配置", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10241446"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

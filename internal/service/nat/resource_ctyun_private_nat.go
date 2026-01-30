@@ -49,7 +49,7 @@ func (c *ctyunPrivateNat) Metadata(_ context.Context, request resource.MetadataR
 
 func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10378361"),
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378361"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,

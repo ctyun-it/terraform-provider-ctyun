@@ -53,9 +53,11 @@ type CtyunVpcRouteTableRuleConfig struct {
 	Description  types.String `tfsdk:"description"`
 }
 
+var NextHopType = []string{"vpcpeering", "havip", "bm", "vm", "natgw", "igw", "igw6", "dc", "ticc", "vpngw", "enic"}
+
 func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10171000"),
+		MarkdownDescription: utils.FormatDesc("管理虚拟私有云路由表规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10171000"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -102,7 +104,7 @@ func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:    true,
 				Description: "下一跳设备类型，支持vpcpeering、havip、bm、vm、natgw、igw、igw6、dc、ticc、vpngw、enic",
 				Validators: []validator.String{
-					stringvalidator.OneOf("vpcpeering", "havip", "bm", "vm", "natgw", "igw", "igw6", "dc", "ticc", "vpngw", "enic"),
+					stringvalidator.OneOf(NextHopType...),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -300,6 +302,17 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
+		return
+	}
+	var validNHT bool
+	for _, v := range NextHopType {
+		if v == cfg.NextHopType.ValueString() {
+			validNHT = true
+			break
+		}
+	}
+	if !validNHT {
+		err = fmt.Errorf("仅支持导入自定义路由规则")
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)

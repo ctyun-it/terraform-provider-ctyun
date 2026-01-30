@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_vpc_route_table_rules"
-subcategory: "VPC"
 ---
 
 # ctyun_vpc_route_table_rules (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000
+-> 查询虚拟私有云路由表规则
 
 
 
