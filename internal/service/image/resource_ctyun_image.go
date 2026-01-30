@@ -447,6 +447,8 @@ func (c *ctyunImage) waitForUploadImageActive(ctx context.Context, cfg CtyunImag
 			switch response.Images[0].Status {
 			case business.ImageStatusQueued:
 				return true
+			case business.ImageStatusImporting:
+				return true
 			case business.ImageStatusActive:
 				executeSuccessFlag = true
 				return false
@@ -486,7 +488,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	}
 	cfg.Id = types.StringValue(resp.ImageId)
 	cfg.Name = types.StringValue(resp.ImageName)
-	cfg.OsDistro = types.StringValue(strings.ToLower(resp.OsDistro))
+	cfg.OsDistro = types.StringValue(resp.OsDistro)
 	cfg.OsVersion = types.StringValue(resp.OsVersion)
 	cfg.Architecture = types.StringValue(resp.Architecture)
 	cfg.BootMode = types.StringValue(resp.BootMode)
@@ -497,6 +499,8 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	// cfg.MaximumRam = types.Int64Value(int64(resp.MaximumRam))
 	// cfg.MinimumRam = types.Int64Value(int64(resp.MinimumRam))
 	cfg.ProjectId = types.StringValue(resp.ProjectId)
+	cfg.Description = types.StringValue(resp.Description)
+
 	return &cfg, nil
 }
 
