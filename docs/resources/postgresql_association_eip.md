@@ -100,15 +100,3 @@ resource "ctyun_postgresql_association_eip" "pgsql_association_eip_test" {
 
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
 - `id` (String) id
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入PostgreSQL关联EIP
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_postgresql_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
-# 示例
-terraform import ctyun_postgresql_association_eip.association_example inst123456,eip789012,<region_id>
-```

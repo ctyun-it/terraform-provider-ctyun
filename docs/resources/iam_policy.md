@@ -89,15 +89,3 @@ Required:
 Optional:
 
 - `resource` (Set of String) 资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*，支持更新
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入IAM策略资源
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_iam_policy.[导入配置名称] [id]
-# 示例
-terraform import ctyun_iam_policy.policy_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
-```

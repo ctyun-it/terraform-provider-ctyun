@@ -61,8 +61,6 @@ resource "ctyun_oceanfs_permission_group_association" "example" {
   permission_group_id = ctyun_oceanfs_permission_group.test.id
   oceanfs_id          = ctyun_oceanfs.test.id
   vpc_id              = ctyun_vpc.vpc_test.id
-  subnet_id           = ctyun_subnet.subnet_test.id
-  is_vpce             = false
 }
 ```
 

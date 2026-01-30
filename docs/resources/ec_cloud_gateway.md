@@ -46,13 +46,13 @@ resource "ctyun_ec_cloud_gateway" "example" {
 
 - `ec_id` (String) 云间高速实例ID
 - `name` (String) 云网关名称 支持更新
-- `region_id` (String) 资源池ID，必填,需要与资源池名称一致,验证用
 - `region_name` (String) 资源池名称
 
 ### Optional
 
 - `description` (String) 云网关描述  支持更新
 - `region` (Number) 地域信息，取值如下: 1：中国大陆（默认） 2:亚太
+- `region_id` (String, Deprecated) 资源池ID
 
 ### Read-Only
 

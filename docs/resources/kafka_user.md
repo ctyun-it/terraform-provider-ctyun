@@ -75,15 +75,3 @@ Optional:
 
 - `ip` (String) ip或网段，* 表示所有ip，默认：* 支持更新
 - `permission` (String) 权限，ALLOW:允许，DENY:拒绝，默认：ALLOW 支持更新
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入kafka用户
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_kafka_user.[导入配置名称] [instance_id],[user_name],[password],<region_id>
-# 示例
-terraform import ctyun_kafka_user.kafka_user_example instance-123456,user_test,password123,region-11111111
-```

@@ -53,7 +53,7 @@ resource "ctyun_vip" "example" {
 ### Optional
 
 - `ip_address` (String) ip地址
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `vip_type` (String) 虚拟IP的类型，v4-IPv4类型虚IP，v6-IPv6类型虚IP。默认为v4
 - `vpc_id` (String) VPC的ID

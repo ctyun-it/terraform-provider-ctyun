@@ -118,15 +118,3 @@ resource "ctyun_mysql_backup_cancel" "example" {
 
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入mysql备份取消
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_mysql_backup_cancel.[导入配置名称] [id],<region_id>
-# 示例
-terraform import ctyun_mysql_backup_cancel.backup_cancel_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
-```

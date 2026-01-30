@@ -117,15 +117,3 @@ Required:
 
 - `grant_schema` (String) 需要授权的数据库名称，支持更新
 - `privilege` (String) 授权数据库的权限，取值范围：readwrite-读写，readonly-只读，支持更新
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入PostgreSQL账号
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_postgresql_account.[导入配置名称] [name],[instance_id],<region_id>
-# 示例
-terraform import ctyun_postgresql_account.account_example myaccount,inst123456,<region_id>
-```

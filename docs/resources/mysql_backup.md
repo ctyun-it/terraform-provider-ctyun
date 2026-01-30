@@ -114,15 +114,3 @@ resource "ctyun_mysql_backup" "backup_test" {
 
 - `id` (String) id
 - `name` (String) 备份名称
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入MySQL备份资源
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_mysql_backup.[导入配置名称] [name],[instance_id],<project_id>,<region_id>
-# 示例
-terraform import ctyun_mysql_backup.example backup-test,c81c2dc376e34e7887334cbcbd4xxx,prj-1234567890abcdef0,bb9fdb42056f11eda1610242ac110002
-```

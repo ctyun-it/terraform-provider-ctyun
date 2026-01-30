@@ -63,7 +63,7 @@ resource "ctyun_sdwan_acl_rule" "demo" {
 - `direction` (String) 控制方向，取值范围: in(入方向), out(出方向)  支持更新
 - `dst_cidr` (String) 目的网段 支持更新
 - `priority` (Number) 优先级 支持更新
-- `protocol` (String) 协议类型，取值范围: udp(UDP), icmp(ICMP), all(ALL), tcp(TCP)  支持更新
+- `protocol` (String) 协议类型，取值范围: udp(UDP), icmp(ICMP), any(ANY), tcp(TCP)  支持更新
 - `src_cidr` (String) 源网段 支持更新
 
 ### Optional

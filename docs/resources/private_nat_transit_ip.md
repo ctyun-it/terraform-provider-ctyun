@@ -85,7 +85,6 @@ resource "ctyun_private_nat_transit_ip" "transit_ip2" {
 
 ### Read-Only
 
-- `dnat_count` (Number) 在使用此中转IP的dnat数量
 - `id` (String) 中转IP的ID，格式为regionID:natGatewayID:address
 - `is_default` (Boolean) 是否为默认中转地址
 - `snat_count` (Number) 在使用此中转IP的snat数量

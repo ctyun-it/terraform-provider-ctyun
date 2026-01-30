@@ -149,15 +149,3 @@ Required:
 
 - `size` (Number) 系统盘大小，单位为G，支持范围40-2040，支持更新
 - `type` (String) 系统盘类型，支持SATA、SAS、SSD，支持更新
-## 导入
-
-使用以下语法支持导入：
-
-```shell
-# 导入CCSE节点池
-#[] 标记的参数为必填参数
-#<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_ccse_node_pool.[导入配置名称] [id],[cluster_id],<region_id>
-# 示例
-terraform import ctyun_ccse_node_pool.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002,az123
-```

@@ -61,7 +61,6 @@ resource "ctyun_port" "port" {
 
 ### Required
 
-- `name` (String) 弹性网卡名称。支持拉丁字母、中文、数字，下划线，连字符，中文/英文字母开头，不能以http:/https:开头，长度2-32  支持更新
 - `subnet_id` (String) 子网ID
 
 ### Optional
@@ -69,6 +68,7 @@ resource "ctyun_port" "port" {
 - `description` (String) 弹性网卡描述。支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}|《》？：“”【】、；‘'，。、，不能以http:/https:开头，长度0-128 支持更新
 - `ipv6_address_count` (Number) IPv6地址数量，指定IPv6地址数量，让系统为您自动创建IPv6地址，最多支持10个
 - `ipv6_addresses` (List of String) IPv6地址列表，指定IPv6地址，不能和ipv6_address_count同时指定，最多支持10个
+- `name` (String) 弹性网卡名称。支持拉丁字母、中文、数字，下划线，连字符，中文/英文字母开头，不能以http:/https:开头，长度2-32  支持更新
 - `primary_ip_address` (String) 主私有IP地址，如果不指定则自动分配
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `secondary_private_ip_count` (Number) 辅助私有IP地址数量，指定私有IP地址数量，让系统为您自动创建IP地址，最多支持10个
