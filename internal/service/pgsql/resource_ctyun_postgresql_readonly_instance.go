@@ -271,7 +271,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) Read(ctx context.Context, request reso
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到实例") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -387,6 +387,10 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceDetail(ctx contex
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {

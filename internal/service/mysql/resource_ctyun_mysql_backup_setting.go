@@ -235,8 +235,10 @@ func (c *CtyunMysqlBackupSetting) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeMysqlBackupSetting(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -399,6 +401,10 @@ func (c *CtyunMysqlBackupSetting) getMysqlBackupSettingInfo(ctx context.Context,
 		err = fmt.Errorf("获取mysql(id=%s)备份设置信息失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "paasProduct find failed") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {

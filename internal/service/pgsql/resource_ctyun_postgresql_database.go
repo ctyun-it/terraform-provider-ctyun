@@ -433,7 +433,6 @@ func (c *CtyunPgsqlDatabase) getDatabaseDetail(ctx context.Context, config *Ctyu
 		detail = resp.ReturnObj[0]
 	}
 	return
-
 }
 
 func (c *CtyunPgsqlDatabase) updatePgsqlDatabase(ctx context.Context, state *CtyunPostgresqlDatabaseConfig, plan *CtyunPostgresqlDatabaseConfig) error {

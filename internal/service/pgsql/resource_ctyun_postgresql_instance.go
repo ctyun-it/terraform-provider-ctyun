@@ -474,7 +474,8 @@ func (c *CtyunPostgresqlInstance) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergePgsqlInstance(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到实例") {
+		if errors.Is(err, common.ResourceNotExistError) {
+			// 删除state
 			response.State.RemoveResource(ctx)
 			err = nil
 		}

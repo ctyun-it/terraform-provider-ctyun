@@ -254,7 +254,10 @@ func (c *CtyunMysqlDatabase) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeMysqlDatabase(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		err = nil
 		return
 	}
@@ -431,6 +434,9 @@ func (c *CtyunMysqlDatabase) getMysqlDatabaseInfo(ctx context.Context, config *C
 		err = fmt.Errorf("查询mysql实例(id=%s)的database schema(name=%s)失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(*resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -443,7 +449,8 @@ func (c *CtyunMysqlDatabase) getMysqlDatabaseInfo(ctx context.Context, config *C
 			return &schemaItem, nil
 		}
 	}
-	return nil, fmt.Errorf("未查询到db_name=%s，mysql实例(id=%s)的schema 信息", config.Name.ValueString(), config.InstID.ValueString())
+	// 如果for循环遍历后，仍未找到schema，则返回Not EXIST 错误
+	return nil, common.ResourceNotExistError
 }
 
 func (c *CtyunMysqlDatabase) checkDBName(ctx context.Context, config *CtyunMysqlDatabaseConfig) error {

@@ -162,7 +162,7 @@ func (c *CtyunPgsqlAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "is not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -363,6 +363,7 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 	params := &mysql.TeledbBoundEipListRequest{
 		RegionID: config.RegionID.ValueString(),
 		EipID:    config.EipID.ValueStringPointer(),
+		InstID:   config.InstID.ValueStringPointer(),
 	}
 	header := &mysql.TeledbBoundEipListRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
@@ -372,16 +373,27 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 	if err != nil {
 		return
 	} else if resp.StatusCode != 200 {
+		if strings.Contains(resp.Error, "TELEDB_1001") || strings.Contains(resp.Message, "instId不存在") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s ", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ReturnObj.Data == nil || len(resp.ReturnObj.Data) == 0 {
+		err = common.ResourceNotExistError
+		return
 	}
 	// 解析返回的绑定eip列表
 	returnObj := resp.ReturnObj.Data
-	if len(returnObj) != 1 {
+	if len(returnObj) > 1 {
 		err = fmt.Errorf("eip获取数量有误！")
+		return
+	}
+	if len(returnObj) <= 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 

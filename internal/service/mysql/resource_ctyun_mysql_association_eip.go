@@ -226,9 +226,9 @@ func (c *CtyunMysqlAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "is not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -359,6 +359,9 @@ func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
+	} else if resp.ReturnObj.Data == nil || len(resp.ReturnObj.Data) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 	eipInfo := resp.ReturnObj.Data[0]

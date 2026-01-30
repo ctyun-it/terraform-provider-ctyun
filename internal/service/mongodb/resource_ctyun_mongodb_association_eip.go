@@ -224,9 +224,12 @@ func (c *CtyunMongodbAssociationEip) Read(ctx context.Context, request resource.
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "is not found") {
-			response.State.RemoveResource(ctx)
+		// 几种情况会触发移除：
+		// 1. mongodb实例详情查询失败
+		// 2. mongodb的eip id为空
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -415,18 +418,32 @@ func (c *CtyunMongodbAssociationEip) getAndMergeBindEip(ctx context.Context, con
 		ProjectID: nil,
 		RegionID:  config.RegionID.ValueString(),
 	}
+	// 查询 Mongodb实例，判断实例详情中eip id是否可以对应上
 	resp, err2 := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 	if err2 != nil {
 		err = err2
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		// DDS_83000 =请确认用户下是否有实例, DDS_84000 =请确认prodInstId是否正确
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
 	}
+	if resp.ReturnObj.NodeInfoVOS == nil || len(resp.ReturnObj.NodeInfoVOS) == 0 {
+		err = common.InvalidReturnObjError
+		return
+	}
 	nodeinfoVos := resp.ReturnObj.NodeInfoVOS[0]
+	if nodeinfoVos.OuterElasticIpId == "" {
+		err = common.ResourceNotExistError
+		return
+	}
 	config.EipID = types.StringValue(nodeinfoVos.OuterElasticIpId)
 	return
 }

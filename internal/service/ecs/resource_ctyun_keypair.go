@@ -156,7 +156,7 @@ func (c *ctyunKeypair) Read(ctx context.Context, request resource.ReadRequest, r
 			response.State.RemoveResource(ctx)
 			err = nil
 		} else {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			response.Diagnostics.AddError(fmt.Sprintf("Failed to Read Ctyun KeyPair"), err.Error())
 		}
 		return
 	}

@@ -251,8 +251,10 @@ func (c *CtyunMysqlAccount) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMergeMysqlAccount(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -439,9 +441,14 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("查询mysql实例(id=%s)的用户权限列表失败", config.InstID.ValueString())
+		err = fmt.Errorf("查询mysql实例(id=%s)的用户信息失败", config.InstID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		// MYSQL_10002=实例id不存在 || message: accountName not exist
+		if strings.Contains(*resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "accountName not exist") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("get mysql account failed, API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -454,7 +461,7 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 			return &accountPrivilege, nil
 		}
 	}
-	return nil, fmt.Errorf("mysql实例(id=%s)不存在account_name=%s的权限配置", config.InstID.ValueString(), config.Name.ValueString())
+	return nil, common.ResourceNotExistError
 }
 
 func (c *CtyunMysqlAccount) updateMysqlAccount(ctx context.Context, state *CtyunMysqlAccountConfig, plan *CtyunMysqlAccountConfig) error {

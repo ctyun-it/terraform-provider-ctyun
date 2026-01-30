@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -221,8 +222,10 @@ func (c *CtyunMysqlParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeMysqlParameterTemplate(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -416,8 +419,8 @@ func (c *CtyunMysqlParamTemplate) getIDByParameterTemplateName(ctx context.Conte
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
-	if len(resp.ReturnObj.List) < 1 {
-		err = fmt.Errorf("未查询到参数模板(name=%s)列表", config.Name.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) < 1 {
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) > 1 {

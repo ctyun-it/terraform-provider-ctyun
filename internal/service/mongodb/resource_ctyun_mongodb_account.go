@@ -203,6 +203,7 @@ func (c *CtyunMongodbAccount) Read(ctx context.Context, req resource.ReadRequest
 	if err != nil {
 		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -400,6 +401,8 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		return common.ResourceNotExistError
 	}
 	// 这里获取账号信息, 并更新到配置中  循环list 获取账号信息user字段 ==plan.user
 	for _, account := range resp.ReturnObj.List {
@@ -408,7 +411,6 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 			if plan.Database.IsNull() || plan.Database.IsUnknown() {
 				plan.Database = types.StringValue(account.DB)
 			}
-
 			// 如果roles块为空，则根据API返回的角色信息填充
 			if len(plan.Roles) == 0 && len(account.Roles) > 0 {
 				plan.Roles = make([]MongodbAccountRole, len(account.Roles))
