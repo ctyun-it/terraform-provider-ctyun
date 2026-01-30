@@ -351,10 +351,10 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		state.RepositoryId = plan.RepositoryId
 		response.Diagnostics.AddWarning("repository_id的更新仅写入状态文件", "在import时，状态文件中repository_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-	//if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
-	//	state.Labels = plan.Labels
-	//	response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
-	//}
+	if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
+		state.Labels = plan.Labels
+		response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
