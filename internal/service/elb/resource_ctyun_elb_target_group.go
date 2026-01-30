@@ -570,17 +570,29 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.Algorithm = types.StringValue(returnObj.Algorithm)
 	plan.Name = types.StringValue(returnObj.Name)
 	plan.SessionStickyMode = types.StringValue(returnObj.SessionSticky.SessionStickyMode)
-	if returnObj.SessionSticky.SessionStickyMode != "CLOSE" {
-		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
-		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
-	} else {
+	if returnObj.SessionSticky.SessionStickyMode == "CLOSE" {
 		plan.CookieExpire = types.Int64Null()
 		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringNull()
+
 	}
-	plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
+	if returnObj.SessionSticky.SessionStickyMode == "REWRITE" {
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
+	}
+
+	if returnObj.SessionSticky.SessionStickyMode == "INSERT" {
+		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
+		plan.RewriteCookieName = types.StringNull()
+
+	}
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
+	plan.Protocol = types.StringValue(returnObj.Protocol)
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
+
 	return
 }
 

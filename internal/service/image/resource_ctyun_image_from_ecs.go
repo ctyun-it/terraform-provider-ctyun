@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -221,6 +222,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 			// 数据盘特有参数
 			"data_disk_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "数据盘ID，仅数据盘创建方式必填，需挂载于指定云主机。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 64),
@@ -327,9 +329,6 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	// 保存原始标签信息用于后续保护
-	originalLabels := state.Labels
-
 	// 检查更新前条件
 	err = c.checkBeforeUpdate(ctx, &plan, &state)
 	if err != nil {
@@ -348,19 +347,14 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
-	// 保护标签信息：如果API没有返回标签，且原始状态有标签，则恢复原始标签
-	if state.Labels.IsNull() && !originalLabels.IsNull() {
-		state.Labels = originalLabels
-	}
-
 	if !plan.RepositoryId.IsUnknown() && !plan.RepositoryId.IsNull() && state.RepositoryId.IsNull() {
 		state.RepositoryId = plan.RepositoryId
 		response.Diagnostics.AddWarning("repository_id的更新仅写入状态文件", "在import时，状态文件中repository_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-	if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
-		state.Labels = plan.Labels
-		response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
-	}
+	//if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
+	//	state.Labels = plan.Labels
+	//	response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	//}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -838,6 +832,16 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	// 应用类型转换逻辑
 	convertedType := convertImageType(resp.ImageType)
 	cfg.ImageType = types.StringValue(convertedType)
+
+	// 初始化标签字段，防止导入时出现类型不匹配错误
+	if cfg.Labels.IsUnknown() || cfg.Labels.IsNull() {
+		cfg.Labels = types.SetNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"label_key":   types.StringType,
+				"label_value": types.StringType,
+			},
+		})
+	}
 
 	return
 }

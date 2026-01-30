@@ -588,7 +588,10 @@ func (c *ctyunNetworkInterface) getAndMergePort(ctx context.Context, plan *Ctyun
 		// 如果没有辅助私有IP，确保字段被正确初始化为空集合
 		plan.SecondaryPrivateIps, _ = types.SetValue(types.StringType, []attr.Value{})
 	}
+	if len(networkInterface.SecondaryPrivateIps) > 0 {
+		plan.SecondaryPrivateIpCount = types.Int32Value(int32(len(networkInterface.SecondaryPrivateIps)))
 
+	}
 	// 设置IPv6地址
 	if networkInterface.Ipv6Addresses != nil {
 		ipv6Addrs := make([]attr.Value, len(networkInterface.Ipv6Addresses))

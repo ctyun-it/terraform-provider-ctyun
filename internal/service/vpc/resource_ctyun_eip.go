@@ -134,7 +134,7 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "按需计费类型，当cycle_type为on_demand时生效，bandwidth：按带宽，upflowc：按流量",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
@@ -323,6 +323,11 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
+	}
+
+	if !plan.DemandBillingType.IsUnknown() && !plan.DemandBillingType.IsNull() && state.DemandBillingType.IsNull() {
+		state.DemandBillingType = plan.DemandBillingType
+		response.Diagnostics.AddWarning("demand_billing_type的更新仅写入状态文件", "在import时，状态文件中demand_billing_type为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
