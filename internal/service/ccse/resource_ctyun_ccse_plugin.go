@@ -260,7 +260,7 @@ func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.Impo
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [chart_name],[cluster_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [cluster_id],[chart_name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -281,15 +281,15 @@ func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.Impo
 	}
 
 	if chartName == "" {
-		err = fmt.Errorf("chartName不能为空")
+		err = fmt.Errorf("chart_name不能为空")
 		return
 	}
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -393,7 +393,7 @@ func (c *ctyunCcsePlugin) getAndMerge(ctx context.Context, plan *CtyunCcsePlugin
 	plan.ChartName = types.StringValue(plugin.ChartName)
 	plan.ChartVersion = types.StringValue(plugin.ChartVersion)
 	plan.ClusterID = types.StringValue(plugin.ClusterId)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plugin.ChartName, plugin.ClusterId))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plugin.ClusterId, plugin.ChartName))
 
 	return
 }
