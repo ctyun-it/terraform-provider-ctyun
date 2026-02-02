@@ -198,12 +198,26 @@ func (c *ctyunKafkaUser) Create(ctx context.Context, request resource.CreateRequ
 	// 计算权限信息
 	err = c.calcPermissionInfo(ctx, &plan)
 	if err != nil {
+		e := err.Error()
+		err = c.destroy(ctx, plan)
+		if err != nil {
+			err = fmt.Errorf("权限设置失败 %s，尝试回滚账号时失败，请移步控制台操作", e)
+		} else {
+			err = fmt.Errorf("权限设置失败，%s，账号已回滚，请修改权限后重新创建", e)
+		}
 		return
 	}
 	if len(plan.permissionInfoList) > 0 {
 		// 更新用户ACL权限
 		err = c.updateUserTopicsAcl(ctx, plan, "CREATE")
 		if err != nil {
+			e := err.Error()
+			err = c.destroy(ctx, plan)
+			if err != nil {
+				err = fmt.Errorf("权限设置失败 %s，尝试回滚账号时失败，请移步控制台操作", e)
+			} else {
+				err = fmt.Errorf("权限设置失败，%s，账号已回滚，请修改权限后重新创建", e)
+			}
 			return
 		}
 	}
@@ -232,6 +246,10 @@ func (c *ctyunKafkaUser) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -314,48 +332,43 @@ func (c *ctyunKafkaUser) ImportState(ctx context.Context, request resource.Impor
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[user_name],[password],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunKafkaUserConfig
-	var instanceId, regionID, userName, password string
+	var instanceId, regionID, userName string
 
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &instanceId, &userName, &password)
+		err = terraform_extend.Split(request.ID, &instanceId, &userName)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &instanceId, &userName, &password, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceId, &userName, &regionID)
 		if err != nil {
 			return
 		}
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if userName == "" {
-		err = fmt.Errorf("userName不能为空")
-		return
-	}
-	if password == "" {
-		err = fmt.Errorf("password不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 
 	cfg.RegionId = types.StringValue(regionID)
 	cfg.InstanceId = types.StringValue(instanceId)
 	cfg.UserName = types.StringValue(userName)
-	cfg.Password = types.StringValue(password)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
@@ -445,8 +458,11 @@ func (c *ctyunKafkaUser) getAndMerge(ctx context.Context, plan *CtyunKafkaUserCo
 	} else if resp.StatusCode != common.NormalStatusCodeString {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
-	} else if resp.ReturnObj == nil || resp.ReturnObj.Data == nil {
+	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
+	} else if len(resp.ReturnObj.Data) == 0 {
+		err = fmt.Errorf("kafka user %s not found", plan.UserName.ValueString())
 		return
 	}
 

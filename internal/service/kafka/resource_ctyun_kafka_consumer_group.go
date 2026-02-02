@@ -237,6 +237,10 @@ func (c *ctyunKafkaConsumerGroup) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -316,7 +320,7 @@ func (c *ctyunKafkaConsumerGroup) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[group_name],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -338,15 +342,15 @@ func (c *ctyunKafkaConsumerGroup) ImportState(ctx context.Context, request resou
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if groupName == "" {
-		err = fmt.Errorf("groupName不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 
@@ -514,17 +518,16 @@ func (c *ctyunKafkaConsumerGroup) getAndMerge(ctx context.Context, plan *CtyunKa
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if len(resp.ReturnObj.Data) == 0 {
+		err = fmt.Errorf("kafka consumer group %s not found", plan.Name.ValueString())
+		return
 	}
-	if len(resp.ReturnObj.Data) > 0 {
-		plan.ID = types.Int32Value(resp.ReturnObj.Data[0].Id)
-		plan.Ctime = types.StringValue(utils.ConvertToUTCZ(utils.Layout2, resp.ReturnObj.Data[0].Ctime))
-		plan.State = types.StringValue(resp.ReturnObj.Data[0].State)
-		plan.CoordinatorId = types.Int32Value(resp.ReturnObj.Data[0].CoordinatorId)
-		plan.Description = types.StringValue(resp.ReturnObj.Data[0].Description)
-		plan.Name = types.StringValue(resp.ReturnObj.Data[0].Name)
-		if plan.ID.IsNull() {
-			err = common.InvalidReturnObjResultsError
-		}
-	}
+
+	plan.ID = types.Int32Value(resp.ReturnObj.Data[0].Id)
+	plan.Ctime = types.StringValue(utils.ConvertToUTCZ(utils.Layout2, resp.ReturnObj.Data[0].Ctime))
+	plan.State = types.StringValue(resp.ReturnObj.Data[0].State)
+	plan.CoordinatorId = types.Int32Value(resp.ReturnObj.Data[0].CoordinatorId)
+	plan.Description = types.StringValue(resp.ReturnObj.Data[0].Description)
+	plan.Name = types.StringValue(resp.ReturnObj.Data[0].Name)
 	return
 }

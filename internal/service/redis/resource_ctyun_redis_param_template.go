@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
@@ -228,7 +229,13 @@ func (c *ctyunRedisParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMerge(ctx, nil, &state)
 	if err != nil {
-		return
+		if err != nil {
+			if errors.Is(err, common.ResourceNotExistError) {
+				err = nil
+				response.State.RemoveResource(ctx)
+			}
+			return
+		}
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
@@ -456,7 +463,12 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if msg == "未找到模板数据" {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Template == nil {
 		err = common.InvalidReturnObjError

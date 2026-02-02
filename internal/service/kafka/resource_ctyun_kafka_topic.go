@@ -55,7 +55,7 @@ type CtyunKafkaTopicConfig struct {
 	PartitionNum                types.Int32  `tfsdk:"partition_num"`
 	FactorNum                   types.Int32  `tfsdk:"factor_num"`
 	PartitionCapacity           types.Int32  `tfsdk:"partition_capacity"`
-	RetentionTime               types.Int32  `tfsdk:"retention_time"`
+	RetentionTime               types.Int64  `tfsdk:"retention_time"`
 	MinReplicas                 types.Int32  `tfsdk:"min_replicas"`
 	MaxMessage                  types.Int32  `tfsdk:"max_message"`
 	NeedFlush                   types.Bool   `tfsdk:"need_flush"`
@@ -171,14 +171,20 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:    true,
 				Description: "分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制，默认值-1。支持更新",
 				Validators: []validator.Int32{
-					int32validator.AtLeast(1),
+					int32validator.Any(
+						int32validator.OneOf(-1),
+						int32validator.Between(1, 100),
+					),
 				},
 			},
-			"retention_time": schema.Int32Attribute{
+			"retention_time": schema.Int64Attribute{
 				Optional:    true,
-				Description: "消息保留时长，单位毫秒，取值-1或范围[3600000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新",
-				Validators: []validator.Int32{
-					int32validator.AtLeast(1),
+				Description: "消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新",
+				Validators: []validator.Int64{
+					int64validator.Any(
+						int64validator.OneOf(-1),
+						int64validator.Between(36000, 315360000000),
+					),
 				},
 			},
 			"min_replicas": schema.Int32Attribute{
@@ -378,6 +384,10 @@ func (c *ctyunKafkaTopic) Read(ctx context.Context, request resource.ReadRequest
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -414,7 +424,6 @@ func (c *ctyunKafkaTopic) Update(ctx context.Context, request resource.UpdateReq
 	if err != nil {
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -452,7 +461,7 @@ func (c *ctyunKafkaTopic) ImportState(ctx context.Context, request resource.Impo
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[topic_name],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -506,7 +515,7 @@ func (c *ctyunKafkaTopic) create(ctx context.Context, plan CtyunKafkaTopicConfig
 		PartitionNum:                plan.PartitionNum.ValueInt32(),
 		FactorNum:                   plan.FactorNum.ValueInt32(),
 		PartitionCapacity:           plan.PartitionCapacity.ValueInt32(),
-		RetentionTime:               plan.RetentionTime.ValueInt32(),
+		RetentionTime:               plan.RetentionTime.ValueInt64(),
 		MinReplicas:                 plan.MinReplicas.ValueInt32(),
 		MaxMessage:                  plan.MaxMessage.ValueInt32(),
 		NeedFlush:                   plan.NeedFlush.ValueBoolPointer(),
@@ -550,7 +559,7 @@ func (c *ctyunKafkaTopic) update(ctx context.Context, plan, state CtyunKafkaTopi
 		params.PartitionCapacity = plan.PartitionCapacity.ValueInt32()
 	}
 	if !plan.RetentionTime.IsNull() {
-		params.RetentionTime = plan.RetentionTime.ValueInt32()
+		params.RetentionTime = plan.RetentionTime.ValueInt64()
 	}
 	if !plan.MaxMessage.IsNull() {
 		params.MaxMessage = plan.MaxMessage.ValueInt32()
@@ -632,11 +641,11 @@ func (c *ctyunKafkaTopic) getAndMerge(ctx context.Context, plan *CtyunKafkaTopic
 	topicData := resp.ReturnObj.Data
 
 	// 设置ID（使用组合键）
-	id := fmt.Sprintf("%s,%s,%s", plan.InstanceId.ValueString(), plan.RegionId.ValueString(), plan.TopicName.ValueString())
+	id := fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.TopicName.ValueString())
 	plan.Id = types.StringValue(id)
 
 	// 设置主题名称
-	plan.TopicName = types.StringValue(*topicData.TopicName)
+	plan.TopicName = utils.SecStringValue(topicData.TopicName)
 	// 设置分区数量
 	plan.PartitionNum = types.Int32Value(int32(len(topicData.PartitionList)))
 	// 设置订阅该主题的消费组列表
@@ -715,6 +724,32 @@ func (c *ctyunKafkaTopic) getAndMerge(ctx context.Context, plan *CtyunKafkaTopic
 			[]attr.Value{},
 		)
 	}
+	err = c.getConfig(ctx, plan)
+	return
+}
 
+func (c *ctyunKafkaTopic) getConfig(ctx context.Context, plan *CtyunKafkaTopicConfig) (err error) {
+	params := &ctgkafka.CtgkafkaTopicQueryV3Request{
+		RegionId:   plan.RegionId.ValueString(),
+		ProdInstId: plan.InstanceId.ValueString(),
+		TopicName:  plan.TopicName.ValueString(),
+	}
+
+	resp, err := c.meta.Apis.SdkKafkaApis.CtgkafkaTopicQueryV3Api.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCodeString {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	} else if len(resp.ReturnObj.Data) == 0 {
+		err = common.ResourceNotExistError
+		return
+	}
+	topic := resp.ReturnObj.Data[0]
+	plan.RetentionTime = types.Int64Value(utils.StringToInt64Must(topic.Configs.RetentionMs))
+	plan.PartitionCapacity = types.Int32Value(utils.StringToInt32Must(topic.Configs.RetentionBytes))
 	return
 }

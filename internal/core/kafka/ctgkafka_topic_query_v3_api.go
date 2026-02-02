@@ -88,4 +88,17 @@ type CtgkafkaTopicQueryV3ReturnObjDataResponse struct {
 	Configs      *CtgkafkaTopicQueryV3ReturnObjDataConfigsResponse `json:"configs"`      /*  主题配置信息，Map的key为配置名称，value为配置值。  */
 }
 
-type CtgkafkaTopicQueryV3ReturnObjDataConfigsResponse struct{}
+type CtgkafkaTopicQueryV3ReturnObjDataConfigsResponse struct {
+	RemoteStorageEnable         string `json:"remote.storage.enable"`
+	MaxMessageBytes             string `json:"max.message.bytes"`
+	MessageTimestampType        string `json:"message.timestamp.type"`
+	MinInsyncReplicas           string `json:"min.insync.replicas"`
+	UncleanLeaderElectionEnable string `json:"unclean.leader.election.enable"`
+	RetentionBytes              string `json:"retention.bytes"`
+	LocalRetentionMs            string `json:"local.retention.ms"`
+	CleanupPolicy               string `json:"cleanup.policy"`
+	SyncMessageFlush            string `json:"sync.message.flush"`
+	SegmentBytes                string `json:"segment.bytes"`
+	RetentionMs                 string `json:"retention.ms"`
+	SegmentMs                   string `json:"segment.ms"`
+}
