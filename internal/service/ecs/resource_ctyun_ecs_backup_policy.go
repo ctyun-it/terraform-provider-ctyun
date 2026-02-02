@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
@@ -322,7 +323,7 @@ func (c *ctyunEcsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEcsBac
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	} else if resp.ReturnObj.CurrentCount != 1 {
+	} else if resp.ReturnObj.CurrentCount > 1 {
 		err = common.InvalidReturnObjResultsError
 		return
 	} else if len(resp.ReturnObj.PolicyList) == 0 {
@@ -432,6 +433,10 @@ func (c *ctyunEcsBackupPolicy) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 

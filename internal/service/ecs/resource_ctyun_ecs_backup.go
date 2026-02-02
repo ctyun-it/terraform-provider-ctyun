@@ -256,6 +256,8 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
+		return common.ResourceNotExistError
 	}
 
 	//资源返回内容更新
@@ -303,6 +305,10 @@ func (c *ctyunEcsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 

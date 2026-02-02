@@ -38,6 +38,7 @@ const (
 	OpenapiEbmNotFound               = "Ebm.Instance.NotFound"
 	OpenapiEbsBackupNotFound         = "EbsBackup.BackupInfo.NotFound"
 	OpenapiEbsBackupPolicyNotFound   = "EbsBackup.PolicyInfo.NotFound"
+	OpenapiEcsBackupPolicyNotFound   = "EcsBackup.Backup.NotFound"
 	OpenapiVpcPortNotFound           = "Openapi.Parameter.Error"
 	OpenapiCCSENotExist              = "CCE_2024"
 	CtiamNoPermission                = "CTIAM_0005"

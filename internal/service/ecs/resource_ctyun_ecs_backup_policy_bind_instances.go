@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -155,12 +156,13 @@ func (c *ctyunEcsBackupPolicyBindInstances) Read(ctx context.Context, request re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -404,6 +406,9 @@ func (c *ctyunEcsBackupPolicyBindInstances) getBindingInstances(ctx context.Cont
 	var instanceIds []string
 	for _, policy := range resp.ReturnObj.InstancePolicies {
 		instanceIds = append(instanceIds, policy.InstanceID)
+	}
+	if len(instanceIds) == 0 {
+		return "", common.ResourceNotExistError
 	}
 	instanceIdList = strings.Join(instanceIds, ",")
 	return

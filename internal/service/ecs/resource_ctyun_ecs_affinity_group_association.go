@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -141,9 +142,9 @@ func (c *ctyunEcsAffinityGroupAssociation) Read(ctx context.Context, request res
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -373,8 +374,7 @@ func (c *ctyunEcsAffinityGroupAssociation) getAndMerge(ctx context.Context, plan
 		return
 	}
 	if bindID != groupID {
-		err = fmt.Errorf("云主机 %s 和云主机组 %s 未关联", instanceID, groupID)
-		return
+		return common.ResourceNotExistError
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instanceID, groupID, regionID))
 	return
