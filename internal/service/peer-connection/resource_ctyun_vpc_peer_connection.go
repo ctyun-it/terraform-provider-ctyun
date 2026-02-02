@@ -59,7 +59,7 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
