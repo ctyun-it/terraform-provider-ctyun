@@ -39,10 +39,15 @@ const (
 	OpenapiEbsBackupNotFound         = "EbsBackup.BackupInfo.NotFound"
 	OpenapiEbsBackupPolicyNotFound   = "EbsBackup.PolicyInfo.NotFound"
 	OpenapiEcsBackupPolicyNotFound   = "EcsBackup.Backup.NotFound"
-	OpenapiVpcPortNotFound           = "Openapi.Parameter.Error"
-	OpenapiCCSENotExist              = "CCE_2024"
-	CtiamNoPermission                = "CTIAM_0005"
-	CtiamNoPrivilege                 = "CTIAM_1044"
+	OpenapiAccessControlNotFound     = "Openapi.AccessControl.NotFound"
+	OpenapiCertificateAccessFailed   = "Openapi.Certificate.AccessFailed"
+	OpenapiElbPolicyNotFound         = "Openapi.ElbPolicy.NotFound"
+	OpenapiTargetNotFound            = "Openapi.Target.NotFound"
+
+	OpenapiVpcPortNotFound = "Openapi.Parameter.Error"
+	OpenapiCCSENotExist    = "CCE_2024"
+	CtiamNoPermission      = "CTIAM_0005"
+	CtiamNoPrivilege       = "CTIAM_1044"
 
 	ErrorStatusCode        = 900
 	NormalStatusCode       = 800

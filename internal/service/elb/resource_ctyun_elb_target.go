@@ -383,6 +383,9 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiTargetNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

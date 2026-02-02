@@ -300,11 +300,10 @@ func (c *CtyunElbRule) Read(ctx context.Context, request resource.ReadRequest, r
 	}
 	//查询远端并同步state
 	err = c.getAndMergeRule(ctx, &state)
-
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -510,6 +509,9 @@ func (c *CtyunElbRule) getAndMergeRule(ctx context.Context, plan *CtyunElbRuleCo
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiElbPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
