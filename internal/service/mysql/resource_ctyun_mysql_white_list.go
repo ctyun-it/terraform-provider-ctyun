@@ -373,10 +373,7 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	} else if len(resp.ReturnObj) == 0 {
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
 		err = common.ResourceNotExistError
 		return
 	}

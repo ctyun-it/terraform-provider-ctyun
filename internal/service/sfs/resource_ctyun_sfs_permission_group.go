@@ -187,8 +187,10 @@ func (c *ctyunSfsPermissionGroup) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroup(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -315,12 +317,12 @@ func (c *ctyunSfsPermissionGroup) getAndMergeSfsPermissionGroup(ctx context.Cont
 		err = common.InvalidReturnObjError
 		return err
 	}
-
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("弹性文件查询有误，通过id=%s查询，结果大于一条，当前条数为%d。", config.ID.ValueString(), len(resp.ReturnObj.List))
-		return err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("弹性文件查询有误，通过id=%s查询，结果为空。", config.ID.ValueString())
 		return err
 	}
 	groupItem := resp.ReturnObj.List[0]

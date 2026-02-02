@@ -430,7 +430,7 @@ func (c *ctyunScaling) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMergeScaling(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotExists") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -716,6 +716,9 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 		err = errors.New("获取弹性伸缩列表信息返回nil，请稍后重试或联系研发人员！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Scaling.Group.NotFound") || strings.Contains(resp.Message, "未找到弹性伸缩组信息") {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -727,7 +730,7 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 		return nil, err
 	}
 	if len(resp.ReturnObj.ScalingGroups) == 0 {
-		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回为空。", config.ID.ValueInt64())
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	return resp, nil

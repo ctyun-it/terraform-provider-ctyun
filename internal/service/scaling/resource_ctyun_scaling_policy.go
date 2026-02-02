@@ -488,7 +488,7 @@ func (c *ctyunScalingPolicy) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingPolicy(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -761,7 +761,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 	// 伸缩策略只有列表查询，需要先查询到再通过遍历定位到具体策略
 	policyNum := resp.ReturnObj.NumberOfAll
 	if policyNum <= 0 {
-		return nil, fmt.Errorf("未查询到弹性伸缩组：%d下有任何伸缩策略", config.GroupID)
+		return nil, common.ResourceNotExistError
 	}
 
 	// 如果策略数量大于页面大小，则需要翻页获取。
@@ -787,7 +787,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 			return nil, err
 		}
 	}
-	return nil, nil
+	return nil, common.ResourceNotExistError
 }
 
 func (c *ctyunScalingPolicy) requestRuleList(ctx context.Context, config *CtyunScalingPolicyConfig, pageNo int32, pageSize int32) (*scaling.ScalingRuleListResponse, error) {

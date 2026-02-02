@@ -247,7 +247,7 @@ func (c *ctyunDnatResource) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMergeDnat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -397,6 +397,10 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if strings.Contains(*resp.ErrorCode, "Openapi.Dnat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

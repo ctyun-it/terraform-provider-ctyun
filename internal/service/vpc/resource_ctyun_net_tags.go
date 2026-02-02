@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 
@@ -169,7 +170,7 @@ func (c *ctyunNetTags) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}

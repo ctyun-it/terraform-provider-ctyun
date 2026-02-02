@@ -2,6 +2,7 @@ package oceanfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -201,7 +202,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Read(ctx context.Context, reque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -303,7 +304,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getAndMerge(ctx context.Context
 		return err
 	}
 	if len(resp.ReturnObj.List) < 1 {
-		err = fmt.Errorf("未查询到vpc信息(SfsUID=%s)，请检查参数是否正确", config.SfsUID.ValueString())
+		err = common.ResourceNotExistError
 		return err
 	}
 	for _, item := range resp.ReturnObj.List {
@@ -311,7 +312,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getAndMerge(ctx context.Context
 			return nil
 		}
 	}
-	return fmt.Errorf("权限组绑定vpc未成功！")
+	return common.ResourceNotExistError
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Context, config *CtyunOceanfsPermissionGroupAssociationConfig) (*oceanfs.OceanfsListVpcPermissionResponse, error) {
@@ -326,6 +327,10 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Conte
 		err = fmt.Errorf("获取vpc列表失败(oceanfs_id = %s)，接口返回为nil。请与研发联系确认问题原因", config.SfsUID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExist") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {

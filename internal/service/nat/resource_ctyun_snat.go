@@ -349,6 +349,10 @@ func (c *ctyunSnatResource) getAndMergeSnat(ctx context.Context, config *CtyunSn
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if strings.Contains(*resp.ErrorCode, "Openapi.Snat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

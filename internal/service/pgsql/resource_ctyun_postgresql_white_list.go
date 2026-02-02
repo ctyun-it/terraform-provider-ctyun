@@ -289,6 +289,9 @@ func (c *CtyunPgsqlWhiteList) getWhiteIpList(ctx context.Context, config *CtyunP
 		}
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
 	}
 
 	return resp, nil
