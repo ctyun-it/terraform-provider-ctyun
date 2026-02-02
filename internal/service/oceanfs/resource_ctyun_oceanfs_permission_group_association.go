@@ -293,7 +293,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, con
 		return err
 	}
 
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	return nil
 }
 

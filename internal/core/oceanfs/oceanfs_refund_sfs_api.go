@@ -61,4 +61,9 @@ type OceanfsRefundSfsResponse struct {
 	Description string `json:"description"` /*  响应描述，一般为中文描述  */
 	ErrorCode   string `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码.参考[结果码]  */
 	Error       string `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	ReturnObj   struct {
+		MasterOrderNO string `json:"masterOrderNO"`
+		RegionID      string `json:"regionID"`
+		MasterOrderID string `json:"masterOrderID"`
+	} `json:"returnObj"`
 }
