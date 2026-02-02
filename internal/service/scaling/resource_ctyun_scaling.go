@@ -725,14 +725,15 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
+	if resp.ReturnObj.ScalingGroups == nil || len(resp.ReturnObj.ScalingGroups) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.ScalingGroups) > 1 {
 		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回多个实例。具体如下:%#v\n", config.ID.ValueInt64(), resp.ReturnObj.ScalingGroups)
 		return nil, err
 	}
-	if len(resp.ReturnObj.ScalingGroups) == 0 {
-		err = common.ResourceNotExistError
-		return nil, err
-	}
+
 	return resp, nil
 }
 
