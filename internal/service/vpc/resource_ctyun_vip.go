@@ -210,11 +210,11 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if vipId == "" {
-		err = fmt.Errorf("vipId不能为空")
+		err = fmt.Errorf("vip_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

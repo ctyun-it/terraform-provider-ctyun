@@ -222,15 +222,15 @@ func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request reso
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eipID不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

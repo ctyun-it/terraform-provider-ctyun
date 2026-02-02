@@ -62,19 +62,19 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 	}
 
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if packetId == "" {
-		err = fmt.Errorf("packetId不能为空")
+		err = fmt.Errorf("packet_id不能为空")
 		return
 	}
 	if srcCgwId == "" {
-		err = fmt.Errorf("srcCgwId不能为空")
+		err = fmt.Errorf("src_cgw_id不能为空")
 		return
 	}
 

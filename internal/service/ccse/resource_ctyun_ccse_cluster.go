@@ -1053,11 +1053,11 @@ func (c *ctyunCcseCluster) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

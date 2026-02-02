@@ -561,11 +561,11 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -638,7 +638,7 @@ func (c *CtyunElbListener) CreateElbListener(ctx context.Context, plan *CtyunElb
 	for _, targetGroupItem := range targetGroupList {
 		var targetGroup ctelb.CtelbCreateListenerDefaultActionForwardConfigTargetGroupsRequest
 		if targetGroupItem.TargetGroupID.IsNull() {
-			err = errors.New("创建转发规则时，targetGroupID不能为空")
+			err = errors.New("创建转发规则时，targetGroup_id不能为空")
 			return
 		}
 		targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()
@@ -705,7 +705,7 @@ func (c *CtyunElbListener) updateListenerInfo(ctx context.Context, state *CtyunE
 		defaultAction.RawType = plan.DefaultActionType.ValueString()
 		if plan.DefaultActionType.ValueString() == business.ListenerDefaultActionTypeRedirect {
 			if plan.RedirectListenerID.ValueString() == "" {
-				err = fmt.Errorf("当DefaultActionType=redirect时，redirectListenerID不能为空")
+				err = fmt.Errorf("当DefaultActionType=redirect时，redirectListener_id不能为空")
 				return
 			}
 			defaultAction.RedirectListenerID = plan.RedirectListenerID.ValueString()
@@ -725,7 +725,7 @@ func (c *CtyunElbListener) updateListenerInfo(ctx context.Context, state *CtyunE
 			for _, targetGroupItem := range targetGroupList {
 				var targetGroup ctelb.CtelbUpdateListenerDefaultActionForwardConfigTargetGroupsRequest
 				if targetGroupItem.TargetGroupID.IsNull() {
-					err = errors.New("targetGroupID不能为空")
+					err = errors.New("targetGroup_id不能为空")
 					return
 				}
 				targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()

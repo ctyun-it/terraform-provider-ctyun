@@ -448,15 +448,15 @@ func (c *ctyunEcsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if repositoryID == "" {
-		err = fmt.Errorf("repositoryID不能为空")
+		err = fmt.Errorf("repository_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

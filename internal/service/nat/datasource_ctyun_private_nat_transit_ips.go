@@ -89,7 +89,7 @@ func (c *ctyunPrivateNatTransitIpsDatasource) Read(ctx context.Context, request 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	// region_id不能为空
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

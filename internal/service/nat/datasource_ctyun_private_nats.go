@@ -163,7 +163,7 @@ func (c *ctyunPrivateNats) Read(ctx context.Context, request datasource.ReadRequ
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

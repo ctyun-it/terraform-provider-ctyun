@@ -300,15 +300,15 @@ func (c *ctyunEcsPortAssociation) ImportState(ctx context.Context, req resource.
 		}
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if networkInterfaceId == "" {
-		err = fmt.Errorf("networkInterfaceId不能为空")
+		err = fmt.Errorf("network_interface_id不能为空")
 		return
 	}
 

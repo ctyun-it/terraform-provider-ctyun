@@ -255,11 +255,11 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if cgwID == "" {
-		err = fmt.Errorf("cgwID不能为空")
+		err = fmt.Errorf("cgw_id不能为空")
 		return
 	}
 

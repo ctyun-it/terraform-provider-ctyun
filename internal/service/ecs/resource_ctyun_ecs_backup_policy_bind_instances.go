@@ -452,11 +452,11 @@ func (c *ctyunEcsBackupPolicyBindInstances) ImportState(ctx context.Context, req
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

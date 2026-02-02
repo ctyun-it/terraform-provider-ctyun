@@ -408,11 +408,11 @@ func (c *ctyunImageFromEcs) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if imageId == "" {
-		err = fmt.Errorf("imageId不能为空")
+		err = fmt.Errorf("image_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

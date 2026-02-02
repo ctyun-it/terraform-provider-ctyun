@@ -301,11 +301,11 @@ func (c *ctyunKafkaAcl) ImportState(ctx context.Context, request resource.Import
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if name == "" {

@@ -331,11 +331,11 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 		}
 	}
 	if subnetId == "" {
-		err = fmt.Errorf("subnetId不能为空")
+		err = fmt.Errorf("subnet_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(subnetId)

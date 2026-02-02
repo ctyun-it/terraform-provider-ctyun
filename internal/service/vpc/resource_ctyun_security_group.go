@@ -260,7 +260,7 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

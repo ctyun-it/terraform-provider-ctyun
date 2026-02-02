@@ -547,7 +547,7 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {

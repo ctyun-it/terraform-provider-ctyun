@@ -90,15 +90,15 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if vpcId == "" {
-		err = fmt.Errorf("vpcId不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 

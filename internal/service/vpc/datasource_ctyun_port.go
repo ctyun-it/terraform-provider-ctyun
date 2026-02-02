@@ -131,7 +131,7 @@ func (c *ctyunNetworkInterfaces) Read(ctx context.Context, req datasource.ReadRe
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		resp.Diagnostics.AddError(msg, msg)
 		return
 	}

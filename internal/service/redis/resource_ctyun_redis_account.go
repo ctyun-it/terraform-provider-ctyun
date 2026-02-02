@@ -271,11 +271,11 @@ func (c *ctyunRedisAccount) ImportState(ctx context.Context, request resource.Im
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("实例ID不能为空")
+		err = fmt.Errorf("实例instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)

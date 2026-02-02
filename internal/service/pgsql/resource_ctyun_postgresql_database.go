@@ -78,11 +78,11 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(fmt.Sprintf("%s", instID+"-"+name))

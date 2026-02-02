@@ -302,11 +302,11 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 		}
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instdID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if name == "" {

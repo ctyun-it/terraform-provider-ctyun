@@ -214,15 +214,15 @@ func (c *ctyunEcsAffinityGroupAssociation) ImportState(ctx context.Context, requ
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if groupID == "" {
-		err = fmt.Errorf("groupID不能为空")
+		err = fmt.Errorf("group_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

@@ -74,11 +74,11 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -335,7 +335,7 @@ func (c *ctyunElbTarget) Delete(ctx context.Context, request resource.DeleteRequ
 
 func (c *ctyunElbTarget) CrateElbTarget(ctx context.Context, plan *CtyunElbTargetConfig) (err error) {
 	if plan.RegionID.IsNull() {
-		err = errors.New("创建ELB后端主机时，regionID不能为空")
+		err = errors.New("创建ELB后端主机时，region_id不能为空")
 		return
 	}
 

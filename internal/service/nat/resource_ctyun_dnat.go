@@ -366,15 +366,15 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DNatID = types.StringValue(ID)

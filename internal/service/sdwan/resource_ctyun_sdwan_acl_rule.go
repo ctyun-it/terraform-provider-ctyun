@@ -253,11 +253,11 @@ func (c *CtyunSdwanAclRule) ImportState(ctx context.Context, req resource.Import
 	}
 
 	if aclRuleID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if aclID == "" {
-		err = fmt.Errorf("aclID不能为空")
+		err = fmt.Errorf("acl_id不能为空")
 		return
 	}
 

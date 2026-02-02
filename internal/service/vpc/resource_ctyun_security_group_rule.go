@@ -425,15 +425,15 @@ func (c *ctyunSecurityGroupRule) ImportState(ctx context.Context, request resour
 	}
 
 	if securityGroupRuleId == "" {
-		err = fmt.Errorf("securityGroupRuleId不能为空")
+		err = fmt.Errorf("security_group_rule_id不能为空")
 		return
 	}
 	if securityGroupId == "" {
-		err = fmt.Errorf(" securityGroupId不能为空")
+		err = fmt.Errorf(" security_group_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(securityGroupRuleId)

@@ -76,11 +76,11 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 		}
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instdID不能为空")
+		err = fmt.Errorf("instd_id不能为空")
 		return
 	}
 	if name == "" {

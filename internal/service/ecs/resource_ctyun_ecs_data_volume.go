@@ -199,11 +199,11 @@ func (c *CtyunEcsDataVolume) ImportState(ctx context.Context, request resource.I
 	}
 
 	if ecsId == "" {
-		err = fmt.Errorf("ecsId不能为空")
+		err = fmt.Errorf("ecs_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

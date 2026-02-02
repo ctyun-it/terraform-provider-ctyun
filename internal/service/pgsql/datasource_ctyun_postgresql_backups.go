@@ -151,7 +151,7 @@ func (c *ctyunPgsqlBackups) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

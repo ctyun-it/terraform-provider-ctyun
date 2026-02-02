@@ -244,11 +244,11 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 	}
 
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	if address == "" {
 		err = fmt.Errorf("address不能为空")

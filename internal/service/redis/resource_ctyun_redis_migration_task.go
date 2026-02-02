@@ -388,11 +388,11 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 	}
 
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if taskId == "" {
-		err = fmt.Errorf("taskID不能为空")
+		err = fmt.Errorf("task_id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)

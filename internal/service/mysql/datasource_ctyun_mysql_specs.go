@@ -184,7 +184,7 @@ func (c *CtyunMysqlSpecs) Read(ctx context.Context, request datasource.ReadReque
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	params := &mysql.TeledbMysqlSpecsRequest{

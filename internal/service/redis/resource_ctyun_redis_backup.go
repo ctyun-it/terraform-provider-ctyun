@@ -247,11 +247,11 @@ func (c *ctyunRedisBackup) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("实例ID不能为空")
+		err = fmt.Errorf("实例instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if restoreName == "" {

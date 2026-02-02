@@ -220,7 +220,7 @@ func (c *ctyunEbms) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)

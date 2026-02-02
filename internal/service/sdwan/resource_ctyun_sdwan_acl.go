@@ -309,7 +309,7 @@ func (c *CtyunSdwanAcl) ImportState(ctx context.Context, req resource.ImportStat
 
 	ID := req.ID
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 

@@ -256,11 +256,11 @@ func (c *ctyunVpc) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if vpcId == "" {
-		err = fmt.Errorf("vpcIdD不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
