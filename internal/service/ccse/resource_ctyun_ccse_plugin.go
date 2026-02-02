@@ -393,7 +393,7 @@ func (c *ctyunCcsePlugin) getAndMerge(ctx context.Context, plan *CtyunCcsePlugin
 	plan.ChartName = types.StringValue(plugin.ChartName)
 	plan.ChartVersion = types.StringValue(plugin.ChartVersion)
 	plan.ClusterID = types.StringValue(plugin.ClusterId)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plugin.ChartName, plugin.ClusterId, plan.RegionID.ValueString()))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plugin.ChartName, plugin.ClusterId))
 
 	return
 }

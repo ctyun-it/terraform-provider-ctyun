@@ -337,7 +337,7 @@ package ccse
 //		return
 //	}
 //	plan.ActualConfig = types.StringValue(config)
-//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString()))
 //	return
 //}
 //

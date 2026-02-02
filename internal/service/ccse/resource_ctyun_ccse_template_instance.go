@@ -413,7 +413,7 @@ package ccse
 //	plan.TplVersion = types.StringValue(instance.ChartVersion)
 //	plan.ClusterID = types.StringValue(instance.ClusterId)
 //	plan.Name = types.StringValue(instance.Name)
-//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", instance.Name, instance.Namespace, instance.ClusterId, plan.RegionID.ValueString()))
+//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instance.Name, instance.Namespace, instance.ClusterId))
 //	return
 //}
 //

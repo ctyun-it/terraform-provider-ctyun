@@ -416,7 +416,7 @@ func (c *ctyunEcsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *Ct
 		err = fmt.Errorf("云主机备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, repositoryID, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", policyId, repositoryID))
 	return
 }
 

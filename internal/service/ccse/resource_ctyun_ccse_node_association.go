@@ -501,7 +501,7 @@ func (c *ctyunCcseNodeAssociation) getAndMerge(ctx context.Context, plan *CtyunC
 	plan.IsEvict = types.BoolValue(map[int32]bool{1: true, 0: false}[node.IsEvict])
 	plan.NodeType = types.StringValue(map[int32]string{1: "master", 0: "slave"}[node.NodeType])
 	plan.NodeStatus = types.StringValue(node.NodeStatus)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.Name.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.Name.ValueString(), plan.ClusterID.ValueString()))
 	return
 }
 

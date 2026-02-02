@@ -450,10 +450,9 @@ func (c *ctyunRabbitmqExchange) getAndMerge(ctx context.Context, plan *CtyunRabb
 	if exchange.Argument.XDelayedType != "" {
 		plan.XDelayedType = types.StringValue(exchange.Argument.XDelayedType)
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s",
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s",
 		plan.Name.ValueString(),
 		plan.Vhost.ValueString(),
-		plan.InstanceID.ValueString(),
-		plan.RegionID.ValueString()))
+		plan.InstanceID.ValueString()))
 	return
 }

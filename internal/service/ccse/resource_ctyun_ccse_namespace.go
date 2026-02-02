@@ -314,7 +314,7 @@ func (c *ctyunCcseNamespace) getAndMerge(ctx context.Context, plan *CtyunCcseNam
 		return
 	}
 	plan.ActualConfig = types.StringValue(config)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.Namespace.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.Namespace.ValueString(), plan.ClusterID.ValueString()))
 	return
 }
 
