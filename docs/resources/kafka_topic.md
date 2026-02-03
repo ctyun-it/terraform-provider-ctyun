@@ -53,7 +53,7 @@ resource "ctyun_kafka_topic" "tbidgqvfbs" {
 - `partition_capacity` (Number) 分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制，默认值-1。支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `remote_storage_enable` (Boolean) 是否开启对象存储。<br><li>true：是<br><li>false：否<br><li>默认值false 支持更新
-- `retention_time` (Number) 消息保留时长，单位毫秒，取值-1或范围[3600000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新
+- `retention_time` (Number) 消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新
 - `segment_bytes` (Number) 分片大小，单位byte。 取值范围[268435456, 10737418240]，默认值：1073741824 支持更新
 - `segment_ms` (Number) 日志滚动时间，单位ms。 取值范围[86400000, 7776000000]，默认值：259200000 支持更新
 - `timestamp_type` (String) 消息时间戳类型。<br><li>CreateTime<br><li>LogAppendTime<br><li>默认值CreateTime 支持更新

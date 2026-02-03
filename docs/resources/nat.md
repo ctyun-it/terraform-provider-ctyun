@@ -57,7 +57,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称
+- `az_name` (String) 可用区名称，az_name为必填字段，用户如果未填写，可以从环境变量中读取，需要保证provider声明或环境变量中包含该字段的定义
 - `cycle_count` (Number) 订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 - `description` (String) nat描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}，支持更新
 - `name` (String) nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新

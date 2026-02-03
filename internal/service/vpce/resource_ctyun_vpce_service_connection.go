@@ -53,9 +53,11 @@ func (c *ctyunVpceServiceConnection) Schema(_ context.Context, _ resource.Schema
 		MarkdownDescription: utils.FormatDesc("接受或拒绝终端节点连接申请", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10043026"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
