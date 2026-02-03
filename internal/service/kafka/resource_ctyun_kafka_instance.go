@@ -430,7 +430,7 @@ func (c *ctyunKafkaInstance) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "已经销毁") {
+		if strings.Contains(err.Error(), "已经销毁") || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}

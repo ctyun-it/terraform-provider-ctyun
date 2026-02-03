@@ -312,7 +312,7 @@ func (c *ctyunCcseNodeAssociation) ImportState(ctx context.Context, request reso
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[cluster_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [cluster_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -321,12 +321,12 @@ func (c *ctyunCcseNodeAssociation) ImportState(ctx context.Context, request reso
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &clusterID)
+		err = terraform_extend.Split(request.ID, &clusterID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &clusterID, &regionID)
+		err = terraform_extend.Split(request.ID, &clusterID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -501,7 +501,7 @@ func (c *ctyunCcseNodeAssociation) getAndMerge(ctx context.Context, plan *CtyunC
 	plan.IsEvict = types.BoolValue(map[int32]bool{1: true, 0: false}[node.IsEvict])
 	plan.NodeType = types.StringValue(map[int32]string{1: "master", 0: "slave"}[node.NodeType])
 	plan.NodeStatus = types.StringValue(node.NodeStatus)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.Name.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.ClusterID.ValueString(), plan.Name.ValueString()))
 	return
 }
 

@@ -332,5 +332,5 @@ func (c *ctyunEcsPortAssociation) checkBeforeCreate(ctx context.Context, c2 *Cty
 }
 
 func generateEcsPortAssociationId(regionId, instanceId, networkInterfaceId string) string {
-	return fmt.Sprintf("%s,%s,%s", instanceId, networkInterfaceId, regionId)
+	return fmt.Sprintf("%s,%s", instanceId, networkInterfaceId)
 }

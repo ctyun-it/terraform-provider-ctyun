@@ -275,7 +275,7 @@ func (c *ctyunEbsAssociation) getAndMergeEbsAssociationEcs(ctx context.Context, 
 			break
 		}
 	}
-	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString(), cfg.RegionId.ValueString()))
+	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString()))
 	return &cfg, err
 }
 

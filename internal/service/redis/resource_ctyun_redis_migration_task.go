@@ -368,7 +368,7 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [regionID]/[taskID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -392,7 +392,7 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 		return
 	}
 	if taskId == "" {
-		err = fmt.Errorf("task_id不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)
@@ -501,7 +501,6 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 		RegionId: state.RegionId.ValueString(),
 		TaskId:   state.ID.ValueString(),
 	}
-
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2GetTransferTaskInfoApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
@@ -511,12 +510,13 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ReturnObj.TaskId == "" {
+		err = common.ResourceNotExistError
+		return
 	}
 
 	// 更新state中的信息
-	state.ID = types.StringValue(resp.ReturnObj.TaskId)
 	state.Status = types.Int32Value(resp.ReturnObj.Status)
-
 	state.CreateTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.CreateTime))
 	state.CompleteTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.CompleteTime))
 	state.SyncMode = types.Int32Value(resp.ReturnObj.SyncMode)

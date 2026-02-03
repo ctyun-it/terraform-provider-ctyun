@@ -95,7 +95,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 	config.VpcID = types.StringValue(vpcID)
 	config.PermissionGroupFuid = types.StringValue(permissionGroupID)
 	config.RegionID = types.StringValue(regionID)
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString(), config.RegionID.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -293,7 +293,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, con
 		return err
 	}
 
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString(), config.RegionID.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	return nil
 }
 

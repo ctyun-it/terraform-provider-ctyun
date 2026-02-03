@@ -147,7 +147,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 			"az_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "可用区名称",
+				Description: "可用区名称，az_name为必填字段，用户如果未填写，可以从环境变量中读取，需要保证provider声明或环境变量中包含该字段的定义",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

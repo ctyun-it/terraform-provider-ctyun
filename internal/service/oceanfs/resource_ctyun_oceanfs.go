@@ -33,6 +33,7 @@ type CtyunOceanfs struct {
 	meta          *common.CtyunMetadata
 	name          string
 	regionService *business.RegionService
+	orderLooper   *business.OrderLooper
 }
 
 func (c *CtyunOceanfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -47,7 +48,7 @@ func (c *CtyunOceanfs) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func NewCtyunOceanfs() resource.Resource {
@@ -253,7 +254,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签键",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
@@ -263,7 +264,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签值",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
@@ -641,7 +642,8 @@ func (c *CtyunOceanfs) delete(ctx context.Context, config CtyunOceanfsConfig) er
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	return nil
+	masterOrderID := resp.ReturnObj.MasterOrderID
+	return c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 }
 
 func (c *CtyunOceanfs) resizeLoop(ctx context.Context, state *CtyunOceanfsConfig, plan *CtyunOceanfsConfig, loopCount ...int) error {

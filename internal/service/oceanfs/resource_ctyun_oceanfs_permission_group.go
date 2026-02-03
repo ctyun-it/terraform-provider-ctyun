@@ -100,7 +100,7 @@ func (c *CtyunOceanfsPermissionGroup) Schema(ctx context.Context, request resour
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成，不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。",
+				Description: "权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成（不支持下划线_），不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 255),
 				},

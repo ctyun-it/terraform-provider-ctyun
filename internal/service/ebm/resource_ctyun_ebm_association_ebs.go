@@ -439,8 +439,8 @@ func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbm
 	for _, attachID := range instance.AttachedVolumes {
 		if ebsID == utils.SecString(attachID) {
 			plan.ID = types.StringValue(fmt.Sprintf(
-				"%s,%s,%s,%s",
-				instanceID, ebsID, plan.AzName.ValueString(), plan.RegionID.ValueString()))
+				"%s,%s",
+				instanceID, ebsID))
 			return
 		}
 	}
