@@ -528,16 +528,16 @@ func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, p
 		return fmt.Errorf("region_id不能为空!")
 	}
 	if subnetId.IsNull() {
-		return fmt.Errorf("subnetId-子网的_id不能为空!")
+		return fmt.Errorf("subnet_id不能为空!")
 	}
 	if slaName.IsNull() {
-		return fmt.Errorf("slaName-lb的规格名称不能为空！")
+		return fmt.Errorf("sla_name-lb的规格名称不能为空！")
 	}
 	if resourceType.IsNull() {
-		return fmt.Errorf("resourceType-资源类型不能为空！")
+		return fmt.Errorf("resource_type-资源类型不能为空！")
 	}
 	if !c.isContains(resourceType.ValueString(), business.LbResourceType) {
-		return fmt.Errorf("resourceType资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
+		return fmt.Errorf("resource_type资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
 	}
 	//当resourceType=external为必填, eip_id不能为空
 	if resourceType.ValueString() == business.LbResourceTypeExternal && eipId.IsNull() {

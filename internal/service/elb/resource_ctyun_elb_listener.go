@@ -613,7 +613,7 @@ func (c *CtyunElbListener) CreateElbListener(ctx context.Context, plan *CtyunElb
 	var defaultAction ctelb.CtelbCreateListenerDefaultActionRequest
 	defaultAction.RawType = plan.DefaultActionType.ValueString()
 	if plan.DefaultActionType.ValueString() == business.ListenerDefaultActionTypeRedirect && plan.RedirectListenerID.IsNull() {
-		err = fmt.Errorf("创建负载均衡监听器时，若默认规则类型=redirect时，重定向监听器ID不能为空")
+		err = fmt.Errorf("创建负载均衡监听器时，若默认规则类型=redirect时，重定向监听器id不能为空")
 	}
 	defaultAction.RedirectListenerID = plan.RedirectListenerID.ValueString()
 	defaultAction.ForwardConfig = &ctelb.CtelbCreateListenerDefaultActionForwardConfigRequest{}
@@ -705,7 +705,7 @@ func (c *CtyunElbListener) updateListenerInfo(ctx context.Context, state *CtyunE
 		defaultAction.RawType = plan.DefaultActionType.ValueString()
 		if plan.DefaultActionType.ValueString() == business.ListenerDefaultActionTypeRedirect {
 			if plan.RedirectListenerID.ValueString() == "" {
-				err = fmt.Errorf("当DefaultActionType=redirect时，redirectListener_id不能为空")
+				err = fmt.Errorf("当DefaultActionType=redirect时，redirect_listener_id不能为空")
 				return
 			}
 			defaultAction.RedirectListenerID = plan.RedirectListenerID.ValueString()
@@ -725,7 +725,7 @@ func (c *CtyunElbListener) updateListenerInfo(ctx context.Context, state *CtyunE
 			for _, targetGroupItem := range targetGroupList {
 				var targetGroup ctelb.CtelbUpdateListenerDefaultActionForwardConfigTargetGroupsRequest
 				if targetGroupItem.TargetGroupID.IsNull() {
-					err = errors.New("targetGroup_id不能为空")
+					err = errors.New("target_group_id不能为空")
 					return
 				}
 				targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()

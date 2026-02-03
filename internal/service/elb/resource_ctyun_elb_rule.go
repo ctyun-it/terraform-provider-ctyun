@@ -382,7 +382,7 @@ func (c *CtyunElbRule) Delete(ctx context.Context, request resource.DeleteReques
 func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConfig) (err error) {
 	//配置创建接口所需请求参数
 	if plan.ListenerID.IsNull() {
-		err = errors.New("创建转发规则时，Listener_id不能为空")
+		err = errors.New("创建转发规则时，listener_id不能为空")
 		return
 	}
 
@@ -447,7 +447,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("创建转发规则时，若action type = redirect, redirectListener_id不能为空")
+			err = errors.New("创建转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -466,7 +466,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			targetGroup := &ctelb.CtelbCreateRuleActionForwardConfigTargetGroupsRequest{}
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("创建转发规则时，targetGroup_id不能为空")
+				err = errors.New("创建转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()
@@ -614,7 +614,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("修改转发规则时，若action type = redirect, redirectListener_id不能为空")
+			err = errors.New("修改转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -632,7 +632,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			var targetGroup ctelb.CtelbUpdateRuleActionForwardConfigTargetGroupsRequest
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("修改转发规则时，targetGroup_id不能为空")
+				err = errors.New("修改转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()

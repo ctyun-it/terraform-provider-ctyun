@@ -86,15 +86,15 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
