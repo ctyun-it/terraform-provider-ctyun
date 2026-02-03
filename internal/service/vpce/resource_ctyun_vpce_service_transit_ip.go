@@ -56,9 +56,11 @@ func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaR
 		MarkdownDescription: utils.FormatDesc("管理终端节点服务中转IP", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048507"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，使用中转IP地址，和transit_ip相等",
+				Computed:    true,
+				Description: "ID，使用中转IP地址，和transit_ip相等",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -100,19 +102,20 @@ func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaR
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"create_time": schema.StringAttribute{
-				Description: "创建时间，为UTC格式",
 				Computed:    true,
+				Description: "创建时间，为UTC格式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"update_time": schema.StringAttribute{
-				Description: "更新时间，为UTC格式",
 				Computed:    true,
+				Description: "更新时间，为UTC格式",
 			},
 		},
 	}
