@@ -2,6 +2,7 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -229,10 +230,9 @@ func (c *CtyunElbCertificate) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeCertificate(ctx, &state)
 	if err != nil {
-		// 有待确定
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -421,6 +421,9 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiCertificateAccessFailed {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

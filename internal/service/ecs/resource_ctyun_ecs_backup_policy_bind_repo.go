@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -151,9 +152,9 @@ func (c *ctyunEcsBackupPolicyBindRepo) Read(ctx context.Context, request resourc
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -413,8 +414,8 @@ func (c *ctyunEcsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *Ct
 		return
 	}
 	if !hasBind {
-		err = fmt.Errorf("云主机备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
-		return
+		//err = fmt.Errorf("云主机备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
+		return common.ResourceNotExistError
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", policyId, repositoryID))
 	return
@@ -447,15 +448,15 @@ func (c *ctyunEcsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if repositoryID == "" {
-		err = fmt.Errorf("repositoryID不能为空")
+		err = fmt.Errorf("repository_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

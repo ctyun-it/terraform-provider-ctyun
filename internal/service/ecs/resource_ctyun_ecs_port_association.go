@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
@@ -191,15 +192,14 @@ func (c *ctyunEcsPortAssociation) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	err = c.getAndMerge(ctx, state)
-
 	if err != nil {
-		if strings.Contains(err.Error(), "弹性网卡未绑定") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
-			// 如果弹性网卡未绑定，则从状态中移除该资源
 			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -227,7 +227,7 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 		}
 	}
 
-	return fmt.Errorf("弹性网卡未绑定")
+	return common.ResourceNotExistError
 
 }
 
@@ -300,15 +300,15 @@ func (c *ctyunEcsPortAssociation) ImportState(ctx context.Context, req resource.
 		}
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if networkInterfaceId == "" {
-		err = fmt.Errorf("networkInterfaceId不能为空")
+		err = fmt.Errorf("network_interface_id不能为空")
 		return
 	}
 

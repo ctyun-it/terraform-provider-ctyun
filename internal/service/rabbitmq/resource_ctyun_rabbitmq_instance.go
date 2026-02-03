@@ -431,11 +431,11 @@ func (c *ctyunRabbitmqInstance) ImportState(ctx context.Context, request resourc
 	}
 
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

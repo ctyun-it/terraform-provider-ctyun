@@ -203,11 +203,11 @@ func (c *ctyunCrsVpcAttach) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

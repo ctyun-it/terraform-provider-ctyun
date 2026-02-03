@@ -385,11 +385,11 @@ func (c *ctyunPrivateNat) ImportState(ctx context.Context, request resource.Impo
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)

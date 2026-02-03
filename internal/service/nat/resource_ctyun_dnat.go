@@ -247,9 +247,9 @@ func (c *ctyunDnatResource) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMergeDnat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -366,15 +366,15 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DNatID = types.StringValue(ID)
@@ -397,6 +397,9 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if *resp.ErrorCode == common.OpenapiDnatNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

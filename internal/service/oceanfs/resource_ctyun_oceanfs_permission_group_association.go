@@ -75,19 +75,19 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 		}
 	}
 	if sfsID == "" {
-		err = fmt.Errorf("oceanfsID不能为空")
+		err = fmt.Errorf("oceanfs_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 

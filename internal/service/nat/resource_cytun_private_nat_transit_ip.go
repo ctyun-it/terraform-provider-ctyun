@@ -2,6 +2,7 @@ package nat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctnat"
@@ -165,8 +166,10 @@ func (c *ctyunPrivateNatTransitIpResource) Read(ctx context.Context, request res
 	// 查询远端
 	err = c.getAndMergePrivateNatTransitIp(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(request.State.Set(ctx, &state)...)
@@ -244,11 +247,11 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 	}
 
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	if address == "" {
 		err = fmt.Errorf("address不能为空")
@@ -271,9 +274,15 @@ func (c *ctyunPrivateNatTransitIpResource) getAndMergePrivateNatTransitIp(ctx co
 		Address:      cfg.Address.ValueString(),
 	})
 	if err != nil {
-		return err
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiParameterError {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
 		return
 	}
 

@@ -344,11 +344,11 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	}
 
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if packetId == "" {
-		err = fmt.Errorf("resourceId不能为空")
+		err = fmt.Errorf("resource_id不能为空")
 		return
 	}
 

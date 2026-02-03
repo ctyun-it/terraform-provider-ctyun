@@ -251,6 +251,9 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -303,6 +306,10 @@ func (c *ctyunEcsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -499,11 +506,11 @@ func (c *ctyunEcsBackup) ImportState(ctx context.Context, request resource.Impor
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.Id = types.StringValue(ID)

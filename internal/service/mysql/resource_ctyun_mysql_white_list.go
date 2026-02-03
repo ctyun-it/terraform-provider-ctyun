@@ -61,11 +61,11 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 		}
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.GroupName = types.StringValue(name)

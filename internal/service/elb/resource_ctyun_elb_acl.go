@@ -2,6 +2,7 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
@@ -61,11 +62,11 @@ func (c *CtyunElbAcl) ImportState(ctx context.Context, request resource.ImportSt
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -191,12 +192,13 @@ func (c *CtyunElbAcl) Read(ctx context.Context, request resource.ReadRequest, re
 	// 查询远端
 	err = c.getAndMergeAcl(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -313,6 +315,9 @@ func (c *CtyunElbAcl) getAndMergeAcl(ctx context.Context, config *CtyunElbAclCon
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiAccessControlNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

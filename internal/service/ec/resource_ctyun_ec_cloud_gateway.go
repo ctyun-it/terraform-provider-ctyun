@@ -111,7 +111,7 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				Required:    true,
 				Description: "资源池名称",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -255,11 +255,11 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if cgwID == "" {
-		err = fmt.Errorf("cgwID不能为空")
+		err = fmt.Errorf("cgw_id不能为空")
 		return
 	}
 

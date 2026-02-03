@@ -69,15 +69,15 @@ func (c *CtyunExpressConnectVpcInstance) ImportState(ctx context.Context, reques
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if ecID == "" {
-		err = fmt.Errorf("ecID不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if cgwID == "" {
-		err = fmt.Errorf("cgwID不能为空")
+		err = fmt.Errorf("cgw_id不能为空")
 		return
 	}
 

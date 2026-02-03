@@ -226,11 +226,11 @@ package pgsql
 //		}
 //	}
 //	if instanceId == "" {
-//		err = fmt.Errorf("ID不能为空")
+//		err = fmt.Errorf(id不能为空")
 //		return
 //	}
 //	if regionId == "" {
-//		err = fmt.Errorf("regionID不能为空")
+//		err = fmt.Errorf("region_id不能为空")
 //		return
 //	}
 //	config.InstanceID = types.StringValue(instanceId)

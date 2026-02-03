@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -166,9 +167,9 @@ func (c *ctyunVipAssociation) Read(ctx context.Context, request resource.ReadReq
 
 	err := c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -231,11 +232,11 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 	}
 
 	if vipId == "" {
-		err = fmt.Errorf("vipId不能为空")
+		err = fmt.Errorf("vip_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if info == "" {
@@ -391,28 +392,27 @@ func (c *ctyunVipAssociation) getAndMerge(ctx context.Context, state *CtyunVipAs
 
 	// 检查绑定信息是否存在
 	returnObj := resp.ReturnObj
-
+	found := false
 	// 如果是网络类型绑定，检查NetworkInfo
 	if state.ResourceType.ValueString() == "NETWORK" {
 		if len(returnObj.NetworkInfo) == 0 {
 			return
 		}
-		found := false
+
 		for _, network := range returnObj.NetworkInfo {
 			if network.EipID != nil && *network.EipID == state.FloatingId.ValueString() {
 				found = true
-				break
+
 			}
 		}
 		if !found {
-			return
+			return common.ResourceNotExistError
 		}
 	} else {
 		// 如果是VM/PM类型绑定，检查InstanceInfo和BindPorts
 		if len(returnObj.InstanceInfo) == 0 || len(returnObj.BindPorts) == 0 {
 			return
 		}
-		found := false
 		for _, instance := range returnObj.InstanceInfo {
 			if instance.Id != nil && *instance.Id == state.InstanceId.ValueString() {
 				found = true
@@ -420,7 +420,7 @@ func (c *ctyunVipAssociation) getAndMerge(ctx context.Context, state *CtyunVipAs
 			}
 		}
 		if !found {
-			return
+			return common.ResourceNotExistError
 		}
 	}
 

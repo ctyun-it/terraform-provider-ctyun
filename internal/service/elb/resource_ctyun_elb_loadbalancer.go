@@ -432,11 +432,11 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -517,7 +517,7 @@ func (c *CtyunElbLoadBalancerResource) createPgElb(ctx context.Context, plan *Ct
 }
 
 func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, plan CtyunElbLoadBalancerConfig) error {
-	// regionid不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
+	// region_id不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
 	regionId := plan.RegionID
 	subnetId := plan.SubnetID
 	slaName := plan.SlaName
@@ -525,23 +525,23 @@ func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, p
 	name := plan.Name
 	eipId := plan.EipID
 	if regionId.IsNull() {
-		return fmt.Errorf("regionID不能为空!")
+		return fmt.Errorf("region_id不能为空!")
 	}
 	if subnetId.IsNull() {
-		return fmt.Errorf("subnetId-子网的ID不能为空!")
+		return fmt.Errorf("subnet_id不能为空!")
 	}
 	if slaName.IsNull() {
-		return fmt.Errorf("slaName-lb的规格名称不能为空！")
+		return fmt.Errorf("sla_name-lb的规格名称不能为空！")
 	}
 	if resourceType.IsNull() {
-		return fmt.Errorf("resourceType-资源类型不能为空！")
+		return fmt.Errorf("resource_type-资源类型不能为空！")
 	}
 	if !c.isContains(resourceType.ValueString(), business.LbResourceType) {
-		return fmt.Errorf("resourceType资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
+		return fmt.Errorf("resource_type资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
 	}
-	//当resourceType=external为必填, eipID不能为空
+	//当resourceType=external为必填, eip_id不能为空
 	if resourceType.ValueString() == business.LbResourceTypeExternal && eipId.IsNull() {
-		return fmt.Errorf("当resourceType=external为必填, eipID不能为空")
+		return fmt.Errorf("当resourceType=external为必填, eip_id不能为空")
 	}
 
 	if name.IsNull() {

@@ -65,19 +65,19 @@ func (c *CtyunExpressConnectRoute) ImportState(ctx context.Context, request reso
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if cgwId == "" {
-		err = fmt.Errorf("cgwId不能为空")
+		err = fmt.Errorf("cgw_id不能为空")
 		return
 	}
 	if rtbId == "" {
-		err = fmt.Errorf("rtbId不能为空")
+		err = fmt.Errorf("rtb_id不能为空")
 		return
 	}
 

@@ -328,11 +328,11 @@ func (c *ctyunRedisParamTemplate) ImportState(ctx context.Context, request resou
 	}
 
 	if templateId == "" {
-		err = fmt.Errorf("templateID不能为空")
+		err = fmt.Errorf("template_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)

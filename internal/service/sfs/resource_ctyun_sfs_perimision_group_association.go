@@ -80,15 +80,15 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	}
 
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if sfsUid == "" {
-		err = fmt.Errorf("sfsUid不能为空")
+		err = fmt.Errorf("sfs_uid不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

@@ -2,6 +2,7 @@ package sdwan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
@@ -192,6 +193,10 @@ func (c *CtyunSdwanAclRule) Read(ctx context.Context, req resource.ReadRequest, 
 	// 查询远端确认资源是否存在
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -253,11 +258,11 @@ func (c *CtyunSdwanAclRule) ImportState(ctx context.Context, req resource.Import
 	}
 
 	if aclRuleID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if aclID == "" {
-		err = fmt.Errorf("aclID不能为空")
+		err = fmt.Errorf("acl_id不能为空")
 		return
 	}
 

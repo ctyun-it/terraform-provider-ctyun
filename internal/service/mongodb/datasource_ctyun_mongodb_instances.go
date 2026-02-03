@@ -296,7 +296,7 @@ func (c *ctyunMongodbInstances) Read(ctx context.Context, request datasource.Rea
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	if config.PageNo.ValueInt32() == 0 {

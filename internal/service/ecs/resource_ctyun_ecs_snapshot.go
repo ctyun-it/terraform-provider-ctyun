@@ -182,8 +182,7 @@ func (c *ctyunEcsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEcsSnapsho
 		err = common.InvalidReturnObjError
 		return
 	} else if len(resp.ReturnObj.Results) == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
-		return
+		return common.ResourceNotExistError
 	}
 
 	//快照名称更新
@@ -208,6 +207,10 @@ func (c *ctyunEcsSnapshot) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -421,11 +424,11 @@ func (c *ctyunEcsSnapshot) ImportState(ctx context.Context, request resource.Imp
 		}
 	}
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
