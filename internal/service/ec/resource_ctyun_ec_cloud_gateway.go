@@ -111,7 +111,7 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				Required:    true,
 				Description: "资源池名称",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
