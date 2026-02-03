@@ -267,11 +267,10 @@ func (c *ctyunImage) Read(ctx context.Context, request resource.ReadRequest, res
 
 	instance, err := c.getAndMergeImage(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -473,7 +472,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	})
 	if err != nil {
 		if err.ErrorCode() == common.ImageImageCheckNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

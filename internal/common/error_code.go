@@ -43,6 +43,10 @@ const (
 	OpenapiCertificateAccessFailed   = "Openapi.Certificate.AccessFailed"
 	OpenapiElbPolicyNotFound         = "Openapi.ElbPolicy.NotFound"
 	OpenapiTargetNotFound            = "Openapi.Target.NotFound"
+	OpenapiDnatNotFound              = "Openapi.Dnat.NotFound"
+	OpenapiSnatNotFound              = "Openapi.Snat.NotFound"
+	OpenapiParameterError            = "Openapi.Parameter.Error"
+	OpenapiPrivateZoneRecordNotFound = "Openapi.PrivateZoneRecord.NotFound"
 
 	OpenapiVpcPortNotFound = "Openapi.Parameter.Error"
 	OpenapiCCSENotExist    = "CCE_2024"

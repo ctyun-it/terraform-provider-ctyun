@@ -251,13 +251,14 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	} else if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
-		return common.ResourceNotExistError
 	}
 
 	//资源返回内容更新

@@ -250,9 +250,9 @@ func (c *ctyunSnatResource) Read(ctx context.Context, request resource.ReadReque
 	// 远端查询
 	err = c.getAndMergeSnat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -349,6 +349,9 @@ func (c *ctyunSnatResource) getAndMergeSnat(ctx context.Context, config *CtyunSn
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if *resp.ErrorCode == common.OpenapiSnatNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

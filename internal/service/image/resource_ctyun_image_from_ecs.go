@@ -298,7 +298,7 @@ func (c *ctyunImageFromEcs) Read(ctx context.Context, request resource.ReadReque
 
 	err = c.getAndMergeImage(ctx, &state)
 	if err != nil {
-		if err.Error() == common.ImageImageCheckNotFound {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -786,13 +786,17 @@ func (c *ctyunImageFromEcs) getImageByID(ctx context.Context, cfg *CtyunImageFro
 		ImageID:  cfg.Id.ValueString(),
 		RegionID: cfg.RegionId.ValueString(),
 	})
-
 	if err != nil {
 		return nil, err
-	}
+	} else if response.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", response.Message, response.Description)
+		return nil, err
+	} else if response.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return nil, err
+	} else if len(response.ReturnObj.Images) == 0 {
+		return nil, common.ResourceNotExistError
 
-	if response.ReturnObj == nil || len(response.ReturnObj.Images) == 0 {
-		return nil, fmt.Errorf(common.ImageImageCheckNotFound)
 	}
 
 	return response.ReturnObj.Images[0], nil
