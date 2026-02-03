@@ -407,7 +407,7 @@ func (c *ctyunEcsBackupPolicyBindRepo) getBindingRepos(ctx context.Context, plan
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEcsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *CtyunEcsBackupPolicyBindRepoConfig) (err error) {
-	policyId, repositoryID, regionID := plan.PolicyID.ValueString(), plan.RepositoryID.ValueString(), plan.RegionID.ValueString()
+	policyId, repositoryID := plan.PolicyID.ValueString(), plan.RepositoryID.ValueString()
 	hasBind, err := c.getBindingRepos(ctx, *plan)
 
 	if err != nil {

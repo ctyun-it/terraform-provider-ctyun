@@ -365,11 +365,6 @@ func (c *ctyunKafkaUser) ImportState(ctx context.Context, request resource.Impor
 		err = fmt.Errorf("name不能为空")
 		return
 	}
-	if password == "" {
-		err = fmt.Errorf("password不能为空")
-		err = fmt.Errorf("name不能为空")
-		return
-	}
 
 	cfg.RegionId = types.StringValue(regionID)
 	cfg.InstanceId = types.StringValue(instanceId)
