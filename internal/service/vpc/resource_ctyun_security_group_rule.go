@@ -304,11 +304,10 @@ func (c *ctyunSecurityGroupRule) Read(ctx context.Context, request resource.Read
 	}
 	instance, err := c.getAndMergeSecurityGroupRule(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -468,7 +467,7 @@ func (c *ctyunSecurityGroupRule) getAndMergeSecurityGroupRule(ctx context.Contex
 	if err != nil {
 		// 如果查询不到信息会报异常，此时直接返回空
 		if err.ErrorCode() == common.OpenapiSecurityGroupRuleNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

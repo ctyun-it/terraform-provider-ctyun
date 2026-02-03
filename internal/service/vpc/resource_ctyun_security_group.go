@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -172,12 +173,10 @@ func (c *ctyunSecurityGroup) Read(ctx context.Context, request resource.ReadRequ
 
 	instance, err := c.getAndMergeSecurityGroup(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -292,7 +291,7 @@ func (c *ctyunSecurityGroup) getAndMergeSecurityGroup(ctx context.Context, cfg C
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSecurityGroupNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

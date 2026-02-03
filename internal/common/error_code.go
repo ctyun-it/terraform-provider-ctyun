@@ -47,6 +47,8 @@ const (
 	OpenapiSnatNotFound              = "Openapi.Snat.NotFound"
 	OpenapiParameterError            = "Openapi.Parameter.Error"
 	OpenapiPrivateZoneRecordNotFound = "Openapi.PrivateZoneRecord.NotFound"
+	OpenapiHavipNotFound             = "Openapi.Havip.NotFound"
+	OpenapiVpcPeeringNotFound        = "Openapi.VpcPeering.NotFound"
 
 	OpenapiVpcPortNotFound = "Openapi.Parameter.Error"
 	OpenapiCCSENotExist    = "CCE_2024"
