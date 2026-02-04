@@ -641,6 +641,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 	header := &mongodb.MongodbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbCreateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {

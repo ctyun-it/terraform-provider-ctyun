@@ -398,6 +398,10 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError

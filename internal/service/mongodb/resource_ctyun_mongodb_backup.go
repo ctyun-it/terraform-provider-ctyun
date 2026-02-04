@@ -345,6 +345,10 @@ func (r *CtyunMongodbBackupResource) getAndMerge(ctx context.Context, plan *Ctyu
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
