@@ -349,9 +349,10 @@ func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSd
 	} else if *listResp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s", *listResp.Message)
 		return
-	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) == 0 || len(listResp.ReturnObj.Results) > 1 {
-		err = common.ResourceNotExistError
-		return
+	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) > 1 {
+		return common.InvalidReturnObjError
+	} else if len(listResp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
 	// 检查返回的实例是否匹配
 	found := false
