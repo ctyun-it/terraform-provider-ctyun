@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"strings"
 	"time"
 )
 
@@ -167,7 +168,7 @@ func (u EcsService) CheckEcsStatus(ctx context.Context, id, regionId string) err
 // HS3.MEDIUM.4:
 func (u EcsService) GetInstanceSeries(_ context.Context, hostType string) string {
 	for key, _ := range MysqlInstanceSeriesDict {
-		if len(hostType) >= len(key) && hostType[:len(key)] == key {
+		if len(hostType) >= len(key) && strings.HasPrefix(hostType, key) {
 			return key
 		}
 	}
