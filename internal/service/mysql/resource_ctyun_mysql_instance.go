@@ -627,6 +627,7 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 	header := &mysql.TeledbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 
 	var MysqlNodeInfos []mysql.MysqlNodeInfoListRequest
