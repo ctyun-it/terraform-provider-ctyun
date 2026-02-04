@@ -231,8 +231,21 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 
 }
 
-func (c *ctyunEcsPortAssociation) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// 由于所有属性都需要替换资源，实际上不会执行更新操作
+func (c *ctyunEcsPortAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	// 读取tf文件中配置
+	var plan CtyunEcsPortAssociationConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 读取state中的配置
+	var state CtyunEcsPortAssociationConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunEcsPortAssociation) Delete(ctx context.Context, req resource.DeleteRequest, response *resource.DeleteResponse) {

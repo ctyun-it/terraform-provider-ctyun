@@ -203,7 +203,7 @@ func (c *CtyunEcSdwanInstance) Read(ctx context.Context, req resource.ReadReques
 
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if err == common.ResourceNotExistError {
+		if errors.Is(err, common.ResourceNotExistError) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
