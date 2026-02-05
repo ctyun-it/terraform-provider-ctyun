@@ -236,8 +236,6 @@ func (c *ctyunImageAssociationUser) Configure(_ context.Context, request resourc
 	c.imageService = business.NewImageService(meta)
 }
 
-// ImportState 用于导入资源
-
 // check 校验
 func (c *ctyunImageAssociationUser) check(ctx context.Context, cfg CtyunImageAssociationUserConfig) error {
 	return c.imageService.MustExist(ctx, cfg.ImageId.ValueString(), cfg.RegionId.ValueString())

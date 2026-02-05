@@ -1,6 +1,11 @@
 package utils
 
-import "github.com/aws/aws-sdk-go/service/s3"
+import (
+	"fmt"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"net/http"
+	"strconv"
+)
 
 func ParseAcl(grants []*s3.Grant) string {
 	// 1. 检查grants是否为空，为空默认私有权限
@@ -40,4 +45,29 @@ func ParseAcl(grants []*s3.Grant) string {
 		return "public-read"
 	}
 	return "private"
+}
+
+func GetFileSize(url string) (int64, error) {
+	resp, err := http.Head(url)
+	if err != nil {
+		return 0, fmt.Errorf("获取镜像源文件失败")
+	}
+	defer resp.Body.Close() // 必须关闭
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return 0, fmt.Errorf("获取镜像源文件失败")
+	}
+
+	// 3. 从响应头获取 Content-Length
+	contentLength := resp.Header.Get("Content-Length")
+	if contentLength == "" {
+		return 0, fmt.Errorf("获取镜像源文件失败")
+	}
+
+	// 4. 转为数字（字节）
+	sizeBytes, err := strconv.ParseInt(contentLength, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("获取镜像源文件失败")
+	}
+	return sizeBytes / 1024 / 1024 / 1024, nil
 }
