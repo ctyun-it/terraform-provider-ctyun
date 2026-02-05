@@ -58,12 +58,8 @@ variable "password" {
 
 resource "ctyun_mysql_account" "example" {
   instance_id = ctyun_mysql_instance.mysql_account.id
-  name        = "tf_example-user"
+  name        = "example"
   password    = var.password
-  schema_privilege_list = [
-    { "grant_schema" : "testDB1", "privilege" : "read_only" },
-    { "grant_schema" : "testDB3", "privilege" : "dml" }
-  ]
   description = "mysql 账号resource样例"
 }
 

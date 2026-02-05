@@ -175,6 +175,10 @@ func (this *MongodbDescribeBackupsApi) Do(ctx context.Context, credential ctyuns
 	}
 	builder.AddParam("prodInstId", req.ProdInstId)
 
+	if req.BackupName != nil {
+		builder.AddParam("backupName", *req.BackupName)
+	}
+
 	//if req.BackupId != nil {
 	//	builder.AddParam("backupId", *req.BackupId)
 	//}
