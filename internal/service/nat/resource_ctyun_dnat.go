@@ -425,7 +425,7 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 			if strings.HasPrefix(*dnat.VirtualMachineID, "ss-") {
 				// 如果以 ss- 开头，可以认为是某种特定类型的资源
 				// 例如设置 resourceType 为 "VM" 或其他适当的类型
-				cfg.ServerType = types.StringValue("PM")
+				cfg.ServerType = types.StringValue("BM")
 			} else {
 				cfg.ServerType = types.StringValue("VM")
 
