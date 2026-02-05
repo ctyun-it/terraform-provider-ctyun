@@ -589,7 +589,12 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 
 	}
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
-	plan.Protocol = types.StringValue(returnObj.Protocol)
+	if returnObj.Protocol == "" {
+		plan.Protocol = types.StringNull()
+	} else {
+		plan.Protocol = types.StringValue(returnObj.Protocol)
+
+	}
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
 

@@ -227,7 +227,7 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [address],[nat_gateway_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [nat_gateway_id],[address],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -235,12 +235,12 @@ func (c *ctyunPrivateNatTransitIpResource) ImportState(ctx context.Context, requ
 	var regionID, natGateWayID, address string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &address, &natGateWayID)
+		err = terraform_extend.Split(request.ID, &natGateWayID, &address)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &address, &natGateWayID, &regionID)
+		err = terraform_extend.Split(request.ID, &natGateWayID, &address, &regionID)
 		if err != nil {
 			return
 		}
