@@ -46,7 +46,7 @@ func NewCtyunDnatResource() resource.Resource {
 
 func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166499"),
+		MarkdownDescription: utils.FormatDesc("管理公网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166499"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -366,15 +366,15 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DNatID = types.StringValue(ID)
@@ -397,9 +397,8 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		if strings.Contains(*resp.ErrorCode, "Openapi.Dnat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
-			err = common.ResourceNotExistError
-			return
+		if *resp.ErrorCode == common.OpenapiDnatNotFound {
+			return common.ResourceNotExistError
 		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
@@ -421,8 +420,22 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.InternalPort = types.Int32Value(dnat.InternalPort)
 	if dnat.VirtualMachineID != nil && *dnat.VirtualMachineID != "" {
 		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCloud)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			// 在 ImportState 方法中添加判断逻辑
+			if strings.HasPrefix(*dnat.VirtualMachineID, "ss-") {
+				// 如果以 ss- 开头，可以认为是某种特定类型的资源
+				// 例如设置 resourceType 为 "VM" 或其他适当的类型
+				cfg.ServerType = types.StringValue("PM")
+			} else {
+				cfg.ServerType = types.StringValue("VM")
+
+			}
+		}
 	} else {
 		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCustom)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			cfg.ServerType = types.StringNull()
+		}
 	}
 	switch cfg.DnatType.ValueString() {
 	case business.VirtualMachineTypeCloud:
@@ -430,6 +443,7 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	case business.VirtualMachineTypeCustom:
 		cfg.InternalIP = utils.SecStringValue(dnat.InternalIp)
 	}
+
 	return nil
 }
 

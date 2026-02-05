@@ -76,15 +76,15 @@ func (c *CtyunMongodbAssociationEip) ImportState(ctx context.Context, request re
 		}
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eipID不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.InstID = types.StringValue(instanceID)
@@ -113,7 +113,7 @@ func (c *CtyunMongodbAssociationEip) Configure(ctx context.Context, request reso
 
 func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10183412"),
+		MarkdownDescription: utils.FormatDesc("管理MongoDB实例和弹性IP的绑定关系", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10183412"),
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,

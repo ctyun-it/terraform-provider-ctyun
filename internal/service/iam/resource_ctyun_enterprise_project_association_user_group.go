@@ -49,7 +49,7 @@ func (c *ctyunEnterpriseProjectAssociationUserGroup) Metadata(_ context.Context,
 
 func (c *ctyunEnterpriseProjectAssociationUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10356399"),
+		MarkdownDescription: utils.FormatDesc("管理企业项目和用户组的绑定关系", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10356399"),
 		Attributes: map[string]schema.Attribute{
 			"enterprise_project_id": schema.StringAttribute{
 				Required:    true,

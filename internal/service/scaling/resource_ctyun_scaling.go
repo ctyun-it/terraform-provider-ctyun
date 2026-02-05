@@ -64,21 +64,21 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[vpc_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunScalingConfig
-	var ID, vpcId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &vpcId)
+		err = terraform_extend.Split(request.ID, &ID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &vpcId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -86,25 +86,20 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
-		return
-	}
-	if vpcId == "" {
-		err = fmt.Errorf("vpcId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
 	config.ID = types.Int64Value(id)
 	config.RegionID = types.StringValue(regionId)
-	config.VpcID = types.StringValue(vpcId)
 	config.AddInstanceUUIDList = types.SetNull(types.StringType)
 	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
 
@@ -117,7 +112,7 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -649,10 +644,11 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 	config.MinCount = types.Int32Value(scalingDetail.MinCount)
 	config.MaxCount = types.Int32Value(scalingDetail.MaxCount)
 	//  todo 考虑是否需要同步
-	//config.ExpectedCount = types.Int32Value(scalingDetail.ExpectedCount)
+	config.ExpectedCount = types.Int32Value(scalingDetail.ExpectedCount)
 	config.RealCount = types.Int32Value(scalingDetail.InstanceCount)
 	config.UseLb = types.Int32Value(scalingDetail.UseLb)
 	config.HealthPeriod = types.Int32Value(scalingDetail.HealthPeriod)
+	config.VpcID = types.StringValue(scalingDetail.VpcID)
 	var diags diag.Diagnostics
 	config.SecurityGroupIDList, diags = types.SetValueFrom(ctx, types.StringType, scalingDetail.SecurityGroupIDList)
 	config.ProjectID = types.StringValue(scalingDetail.ProjectIDEcs)

@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_backup_recovery"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_backup_recovery (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797
+-> 根据备份进行MySQL实例恢复
 
 
 

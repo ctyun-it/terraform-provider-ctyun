@@ -82,11 +82,11 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 		return
 	}
 	if instId == "" {
-		err = fmt.Errorf("instID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
@@ -103,7 +103,7 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 
 func (c *CtyunMysqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098797"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的备份", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

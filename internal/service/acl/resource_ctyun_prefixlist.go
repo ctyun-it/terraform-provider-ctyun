@@ -81,11 +81,11 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -100,7 +100,7 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 
 func (c *CtyunPrefix) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PREFIXLIST", "https://www.ctyun.cn/document/10026755/10298321"),
+		MarkdownDescription: utils.FormatDesc("管理前缀列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10298321"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,

@@ -2,6 +2,7 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -65,7 +66,6 @@ func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.
 	if err != nil {
 		return
 	}
-	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -85,7 +85,7 @@ func (c *CtyunElbCertificate) Metadata(ctx context.Context, request resource.Met
 
 func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10155416"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡访问证书", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155416"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -171,16 +171,9 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Description: "更新时间，为UTC格式",
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -237,10 +230,9 @@ func (c *CtyunElbCertificate) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeCertificate(ctx, &state)
 	if err != nil {
-		// 有待确定
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -282,6 +274,7 @@ func (c *CtyunElbCertificate) Update(ctx context.Context, request resource.Updat
 		state.PrivateKey = plan.PrivateKey
 		response.Diagnostics.AddWarning("private_key的更新仅写入状态文件", "在import时，状态文件中private_key为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -428,6 +421,9 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiCertificateAccessFailed {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -452,17 +448,15 @@ func (c *CtyunElbCertificate) updateElbCertificate(ctx context.Context, state *C
 		RegionID:      state.RegionID.ValueString(),
 		CertificateID: state.ID.ValueString(),
 	}
-	if plan.ProjectID.ValueString() != "" && plan.ProjectID.ValueString() != state.ProjectID.ValueString() {
-		params.ProjectID = plan.ProjectID.ValueString()
-	}
+
 	if plan.Name.ValueString() != "" && plan.Name.ValueString() != state.Name.ValueString() {
 		params.Name = plan.Name.ValueString()
 	}
 	if plan.Description.ValueString() != "" && plan.Description.ValueString() != state.Description.ValueString() {
 		params.Description = plan.Description.ValueString()
 	}
-	// 若projectID, 证书名称和证书描述为空的话，不必更新直接返回
-	if params.ProjectID == "" && params.Name == "" && params.Description == "" {
+	// , 证书名称和证书描述为空的话，不必更新直接返回
+	if params.Name == "" && params.Description == "" {
 		return
 	}
 

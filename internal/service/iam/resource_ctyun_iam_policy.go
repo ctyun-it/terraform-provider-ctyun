@@ -44,12 +44,12 @@ func (c *ctyunPolicy) Metadata(_ context.Context, request resource.MetadataReque
 
 func (c *ctyunPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10390484"),
+		MarkdownDescription: utils.FormatDesc("管理权限策略", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10390484"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 				Computed:      true,
-				Description:   "绑定关系id",
+				Description:   "策略ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,

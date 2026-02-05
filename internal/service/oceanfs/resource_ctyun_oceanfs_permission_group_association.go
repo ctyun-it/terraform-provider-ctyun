@@ -76,19 +76,19 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 		}
 	}
 	if sfsID == "" {
-		err = fmt.Errorf("oceanfsID不能为空")
+		err = fmt.Errorf("oceanfs_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 
@@ -96,7 +96,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 	config.VpcID = types.StringValue(vpcID)
 	config.PermissionGroupFuid = types.StringValue(permissionGroupID)
 	config.RegionID = types.StringValue(regionID)
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString(), config.RegionID.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -106,7 +106,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10332853"),
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务和权限组的绑定关系", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10332853"),
 		Attributes: map[string]schema.Attribute{
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,
@@ -294,7 +294,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, con
 		return err
 	}
 
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.PermissionGroupFuid.ValueString(), config.RegionID.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	return nil
 }
 

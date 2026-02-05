@@ -1,10 +1,10 @@
 ---
-page_title: "CTYUN: ctyun_ports"
 subcategory: "PORT"
+page_title: "CTYUN: ctyun_ports"
 ---
 
 # ctyun_ports (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225195
+-> 查询弹性网卡
 
 
 

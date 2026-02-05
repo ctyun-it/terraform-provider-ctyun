@@ -74,11 +74,11 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -93,7 +93,7 @@ func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.Impor
 
 func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10196689"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡后端主机", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10196689"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -293,6 +293,7 @@ func (c *ctyunElbTarget) Update(ctx context.Context, request resource.UpdateRequ
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -334,7 +335,7 @@ func (c *ctyunElbTarget) Delete(ctx context.Context, request resource.DeleteRequ
 
 func (c *ctyunElbTarget) CrateElbTarget(ctx context.Context, plan *CtyunElbTargetConfig) (err error) {
 	if plan.RegionID.IsNull() {
-		err = errors.New("创建ELB后端主机时，regionID不能为空")
+		err = errors.New("创建ELB后端主机时，region_id不能为空")
 		return
 	}
 
@@ -382,6 +383,9 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiTargetNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

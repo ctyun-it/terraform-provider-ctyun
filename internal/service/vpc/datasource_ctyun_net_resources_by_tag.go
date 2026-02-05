@@ -52,7 +52,7 @@ type CtyunNetResourcesByTagConfig struct {
 
 func (c *ctyunNetResourcesByTag) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10028310"),
+		MarkdownDescription: utils.FormatDesc("根据标签查询网络资源", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -147,7 +147,7 @@ func (c *ctyunNetResourcesByTag) Read(ctx context.Context, request datasource.Re
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

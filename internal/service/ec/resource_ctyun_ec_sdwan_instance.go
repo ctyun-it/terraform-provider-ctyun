@@ -55,7 +55,7 @@ func (c *CtyunEcSdwanInstance) Metadata(ctx context.Context, req resource.Metada
 
 func (c *CtyunEcSdwanInstance) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038220"),
+		MarkdownDescription: utils.FormatDesc("管理云间高速SDWAN网络实例", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -203,7 +203,7 @@ func (c *CtyunEcSdwanInstance) Read(ctx context.Context, req resource.ReadReques
 
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if err == common.ResourceNotExistError {
+		if errors.Is(err, common.ResourceNotExistError) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -261,13 +261,13 @@ func (c *CtyunEcSdwanInstance) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sdwan_id],[cgw_id],[ec_id]", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sdwan_id],[ec_id],[cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcSdwanInstanceConfig
-	var sdwanId, cgwID, ecID string
-	err = terraform_extend.Split(request.ID, &sdwanId, &cgwID, &ecID)
+	var sdwanId, ecID, cgwID string
+	err = terraform_extend.Split(request.ID, &sdwanId, &ecID, &cgwID)
 	if err != nil {
 		return
 	}
@@ -349,9 +349,10 @@ func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSd
 	} else if *listResp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s", *listResp.Message)
 		return
-	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) == 0 || len(listResp.ReturnObj.Results) > 1 {
-		err = common.ResourceNotExistError
-		return
+	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) > 1 {
+		return common.InvalidReturnObjError
+	} else if len(listResp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
 	// 检查返回的实例是否匹配
 	found := false

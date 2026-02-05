@@ -52,7 +52,7 @@ func (c *CtyunMysqlAudit) Configure(ctx context.Context, request resource.Config
 
 func (c *CtyunMysqlAudit) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133568"),
+		MarkdownDescription: utils.FormatDesc("设置MySQL实例的审计开关状态", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133568"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_acl_rule"
-subcategory: "ACL"
 ---
 
 # ctyun_acl_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028588
+-> 管理访问控制规则
 
 
 
@@ -73,3 +73,15 @@ resource "ctyun_acl_rule" "example" {
 ### Read-Only
 
 - `id` (String) acl 规则id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ACL规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_acl_rule.[导入配置名称] [id],[acl_id],<region_id>
+# 示例
+terraform import ctyun_acl_rule.acl_rule_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,acl-123456,bb9fdb42056f11eda1610242ac110002
+```

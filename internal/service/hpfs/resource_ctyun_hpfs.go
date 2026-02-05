@@ -97,7 +97,7 @@ func NewCtyunHpfsInstance() resource.Resource {
 
 func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("HPFS", "https://www.ctyun.cn/document/10088932/10090437"),
+		MarkdownDescription: utils.FormatDesc("管理并行文件服务实例", "并行文件服务HPFS（CT-HPFS，High Performance File Storage）", "https://www.ctyun.cn/document/10088932/10090437"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

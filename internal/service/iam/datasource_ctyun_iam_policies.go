@@ -31,7 +31,7 @@ func (c *CtyunIamPolicies) Metadata(_ context.Context, req datasource.MetadataRe
 
 func (c *CtyunIamPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10390484"),
+		MarkdownDescription: utils.FormatDesc("查询IAM策略列表", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10390484"),
 		Attributes: map[string]schema.Attribute{
 			"page_size": schema.Int32Attribute{
 				Optional:    true,

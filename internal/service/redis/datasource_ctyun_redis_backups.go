@@ -46,7 +46,7 @@ type CtyunRedisBackupsConfig struct {
 
 func (c *ctyunRedisBackups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10142282"),
+		MarkdownDescription: utils.FormatDesc("查询Redis实例的备份", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10142282"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -111,13 +111,13 @@ func (c *ctyunRedisBackups) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
 	instanceId := config.InstanceId.ValueString()
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 

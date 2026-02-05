@@ -62,15 +62,15 @@ func (c *ctyunPrivateSnatResource) ImportState(ctx context.Context, request reso
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.SNatID = types.StringValue(ID)
@@ -90,7 +90,7 @@ func (c *ctyunPrivateSnatResource) Metadata(ctx context.Context, request resourc
 
 func (c *ctyunPrivateSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10378381"),
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关snat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378381"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

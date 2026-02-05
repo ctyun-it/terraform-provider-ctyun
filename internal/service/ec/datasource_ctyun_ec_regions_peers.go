@@ -39,7 +39,7 @@ func (c *CtyunExpressConnectionRegionPeer) Metadata(ctx context.Context, request
 
 func (c *CtyunExpressConnectionRegionPeer) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038250"),
+		MarkdownDescription: utils.FormatDesc("查询云间高速跨域连接", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038250"),
 		Attributes: map[string]schema.Attribute{
 			"ec_id": schema.StringAttribute{
 				Required:    true,

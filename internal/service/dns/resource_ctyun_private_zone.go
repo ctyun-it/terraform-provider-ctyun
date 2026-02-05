@@ -81,11 +81,11 @@ func (c *CtyunPrivateZone) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -99,7 +99,7 @@ func (c *CtyunPrivateZone) ImportState(ctx context.Context, request resource.Imp
 
 func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("DNS", "https://www.ctyun.cn/document/10026757/10033657"),
+		MarkdownDescription: utils.FormatDesc("管理内网DNS", "内网DNS（Intranet Domain Name Service，CT-IDNS）", "https://www.ctyun.cn/document/10026757/10033657"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

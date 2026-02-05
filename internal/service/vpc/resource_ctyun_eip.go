@@ -71,7 +71,7 @@ func (c *ctyunEip) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EIP", "https://www.ctyun.cn/document/10026753/10219975"),
+		MarkdownDescription: utils.FormatDesc("管理弹性IP", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -134,12 +134,17 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "按需计费类型，当cycle_type为on_demand时生效，bandwidth：按带宽，upflowc：按流量",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
 					),
 					stringvalidator.OneOf(business.EipDemandBillingTypes...),
 				},
@@ -452,7 +457,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
-
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	if resp.BillingMethod == business.OnDemandCycleType {
 		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
 		if resp.BandwidthType == "standalone" {

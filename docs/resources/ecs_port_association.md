@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
 page_title: "CTYUN: ctyun_ecs_port_association"
-subcategory: "ECS"
 ---
 
 # ctyun_ecs_port_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225195
+-> 管理云主机和弹性网卡的绑定关系
 
 
 
@@ -46,9 +46,21 @@ resource "ctyun_ecs_port_association" "ecs_port_for_association_test" {
 ### Optional
 
 - `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) 资源唯一标识符
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入弹性网卡关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_port_association.[导入配置名称] [instance_id],[port_id],<region_id>
+# 示例
+terraform import ctyun_ecs_port_association.port_association_example instance-12345678,port-87654321,<region_id>
+```

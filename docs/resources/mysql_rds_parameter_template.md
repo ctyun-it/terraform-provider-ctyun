@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_rds_parameter_template"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_rds_parameter_template (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10035295
+-> 配置MySQL实例的参数，同时支持应用参数模板
 
 
 

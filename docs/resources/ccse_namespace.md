@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_namespace"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_namespace (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631
+-> 管理云容器引擎命名空间
 
 
 

@@ -66,7 +66,7 @@ type repositoryListModel struct {
 
 func (c *ctyunEbsBackupPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026752/10628749"),
+		MarkdownDescription: utils.FormatDesc("查询云硬盘备份策略", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10628749"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -201,7 +201,7 @@ func (c *ctyunEbsBackupPolicies) Read(ctx context.Context, request datasource.Re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

@@ -64,7 +64,7 @@ type CtyunKafkaAclRule struct {
 
 func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/11078051"),
+		MarkdownDescription: utils.FormatDesc("管理KAFKA的访问控制", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/11078051"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -179,13 +179,11 @@ func (c *ctyunKafkaAcl) Create(ctx context.Context, request resource.CreateReque
 	if err != nil {
 		return
 	}
-
 	// 反查信息
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -204,9 +202,11 @@ func (c *ctyunKafkaAcl) Read(ctx context.Context, request resource.ReadRequest, 
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		return
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -301,11 +301,11 @@ func (c *ctyunKafkaAcl) ImportState(ctx context.Context, request resource.Import
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if name == "" {
@@ -433,7 +433,7 @@ func (c *ctyunKafkaAcl) getAndMerge(ctx context.Context, plan *CtyunKafkaAclConf
 	}
 
 	// 设置基本属性
-	plan.Id = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.InstanceId.ValueString(), plan.RegionId.ValueString(), plan.Name.ValueString()))
+	plan.Id = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.Name.ValueString()))
 	if resp.ReturnObj.TopicNum > 0 {
 		// 设置topics
 		topicsSet, diags := types.SetValueFrom(ctx, types.StringType, resp.ReturnObj.Topics)

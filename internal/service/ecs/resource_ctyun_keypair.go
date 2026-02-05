@@ -44,7 +44,7 @@ func (c *ctyunKeypair) Metadata(_ context.Context, request resource.MetadataRequ
 
 func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730/10230554"),
+		MarkdownDescription: utils.FormatDesc("管理密钥对", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10230554"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

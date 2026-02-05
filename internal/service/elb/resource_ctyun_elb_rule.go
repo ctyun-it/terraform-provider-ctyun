@@ -84,7 +84,7 @@ func (c *CtyunElbRule) Metadata(ctx context.Context, request resource.MetadataRe
 
 func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10032110"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡转发规则", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032110"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -300,11 +300,10 @@ func (c *CtyunElbRule) Read(ctx context.Context, request resource.ReadRequest, r
 	}
 	//查询远端并同步state
 	err = c.getAndMergeRule(ctx, &state)
-
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -341,7 +340,7 @@ func (c *CtyunElbRule) Update(ctx context.Context, request resource.UpdateReques
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -383,7 +382,7 @@ func (c *CtyunElbRule) Delete(ctx context.Context, request resource.DeleteReques
 func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConfig) (err error) {
 	//配置创建接口所需请求参数
 	if plan.ListenerID.IsNull() {
-		err = errors.New("创建转发规则时，ListenerID不能为空")
+		err = errors.New("创建转发规则时，listener_id不能为空")
 		return
 	}
 
@@ -448,7 +447,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("创建转发规则时，若action type = redirect, redirectListenerID不能为空")
+			err = errors.New("创建转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -467,7 +466,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			targetGroup := &ctelb.CtelbCreateRuleActionForwardConfigTargetGroupsRequest{}
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("创建转发规则时，targetGroupID不能为空")
+				err = errors.New("创建转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()
@@ -510,6 +509,9 @@ func (c *CtyunElbRule) getAndMergeRule(ctx context.Context, plan *CtyunElbRuleCo
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiElbPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -612,7 +614,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("修改转发规则时，若action type = redirect, redirectListenerID不能为空")
+			err = errors.New("修改转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -630,7 +632,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			var targetGroup ctelb.CtelbUpdateRuleActionForwardConfigTargetGroupsRequest
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("修改转发规则时，targetGroupID不能为空")
+				err = errors.New("修改转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()

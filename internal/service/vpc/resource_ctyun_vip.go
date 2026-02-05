@@ -2,12 +2,12 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -44,7 +44,7 @@ func (c *CtyunVip) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VIP", "https://www.ctyun.cn/document/10026730/10224288"),
+		MarkdownDescription: utils.FormatDesc("管理虚拟IP", "VIP", "https://www.ctyun.cn/document/10026730/10224288"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -54,16 +54,9 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					planmodifier2.Project(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "临时废弃，定义无效",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -168,9 +161,9 @@ func (c *CtyunVip) Read(ctx context.Context, request resource.ReadRequest, respo
 
 	err := c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -178,8 +171,20 @@ func (c *CtyunVip) Read(ctx context.Context, request resource.ReadRequest, respo
 }
 
 func (c *CtyunVip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	// HaVip资源不支持更新操作，直接返回
-	return
+	// 读取tf文件中配置
+	var plan CtyunVipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 读取state中的配置
+	var state CtyunVipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectId = plan.ProjectId
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunVip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -218,11 +223,11 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if vipId == "" {
-		err = fmt.Errorf("vipId不能为空")
+		err = fmt.Errorf("vip_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -232,8 +237,6 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	if err != nil {
 		return
 	}
-	state.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(state.ProjectId.ValueString(), common.ExtraProjectId))
-
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -298,6 +301,9 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.ErrorCode == common.OpenapiHavipNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -314,11 +320,13 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 
 	if returnObj.Ipv4 != nil && *returnObj.Ipv4 != "" {
 		state.Ipv4Address = types.StringValue(*returnObj.Ipv4)
+		state.IpAddress = types.StringValue(*returnObj.Ipv4)
 		state.VipType = types.StringValue("v4")
 	}
 
 	if returnObj.Ipv6 != nil && *returnObj.Ipv6 != "" {
 		state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
+		state.IpAddress = types.StringValue(*returnObj.Ipv6)
 		state.VipType = types.StringValue("v6")
 	}
 
@@ -329,6 +337,7 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 	if returnObj.SubnetID != nil {
 		state.SubnetId = types.StringValue(*returnObj.SubnetID)
 	}
+
 	return
 }
 

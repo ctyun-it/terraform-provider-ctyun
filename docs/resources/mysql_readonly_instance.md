@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_readonly_instance"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_readonly_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10148056
+-> 管理MySQL只读实例
 
 
 

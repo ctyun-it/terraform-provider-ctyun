@@ -64,15 +64,15 @@ func (c *ctyunSnatResource) ImportState(ctx context.Context, request resource.Im
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.SNatID = types.StringValue(ID)
@@ -92,7 +92,7 @@ func (c *ctyunSnatResource) Metadata(ctx context.Context, request resource.Metad
 
 func (c *ctyunSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166496"),
+		MarkdownDescription: utils.FormatDesc("管理公网NAT网关snat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166496"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -250,9 +250,9 @@ func (c *ctyunSnatResource) Read(ctx context.Context, request resource.ReadReque
 	// 远端查询
 	err = c.getAndMergeSnat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -349,9 +349,8 @@ func (c *ctyunSnatResource) getAndMergeSnat(ctx context.Context, config *CtyunSn
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		if strings.Contains(*resp.ErrorCode, "Openapi.Snat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
-			err = common.ResourceNotExistError
-			return
+		if *resp.ErrorCode == common.OpenapiSnatNotFound {
+			return common.ResourceNotExistError
 		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return

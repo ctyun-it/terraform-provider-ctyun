@@ -41,7 +41,7 @@ func (c *ctyunMysqlAccounts) Metadata(ctx context.Context, request datasource.Me
 
 func (c *ctyunMysqlAccounts) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10133363"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的账户", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133363"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -116,7 +116,7 @@ func (c *ctyunMysqlAccounts) Read(ctx context.Context, request datasource.ReadRe
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

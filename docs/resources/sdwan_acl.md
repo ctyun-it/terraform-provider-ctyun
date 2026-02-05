@@ -1,10 +1,10 @@
 ---
+subcategory: "天翼云SD-WAN"
 page_title: "CTYUN: ctyun_sdwan_acl"
-subcategory: "SDWAN"
 ---
 
 # ctyun_sdwan_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10035786/10035852
+-> 管理SDWAN的访问控制
 
 
 
@@ -47,11 +47,11 @@ resource "ctyun_sdwan_acl" "acl_test" {
 ### Required
 
 - `name` (String) 访问控制名称 支持更新
-- `rules` (Attributes List) ACL规则列表 (see [below for nested schema](#nestedatt--rules))
 
 ### Optional
 
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `rules` (Attributes Set) ACL规则列表 (see [below for nested schema](#nestedatt--rules))
 
 ### Read-Only
 
@@ -68,6 +68,18 @@ Required:
 - `dst_port_range` (String) 目的端口范围（例如1-200， -1/-1为默认值，表示1-65535）
 - `ip_version` (String) IP协议版本，取值范围: IPv4(IPv4), IPv6(IPv6)
 - `priority` (Number) 优先级
-- `protocol` (String) 协议类型，取值范围: udp(UDP), icmp(ICMP), all(ALL), tcp(TCP)
+- `protocol` (String) 协议类型，取值范围: udp(UDP), icmp(ICMP), any(ANY), tcp(TCP)
 - `src_cidr` (String) 源网段
 - `src_port_range` (String) 源端口范围（例如1-200， -1/-1为默认值，表示1-65535）
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SD-WAN ACL
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sdwan_acl.[导入配置名称] [id]
+# 示例
+terraform import ctyun_sdwan_acl.sdwan_acl_example acl-123456
+```

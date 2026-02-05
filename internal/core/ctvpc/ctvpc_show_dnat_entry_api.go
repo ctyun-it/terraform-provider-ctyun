@@ -75,4 +75,5 @@ type CtvpcShowDnatEntryReturnObjResponse struct {
 	VirtualMachineDisplayName *string `json:"virtualMachineDisplayName,omitempty"` /*  虚拟机展示名称。  */
 	VirtualMachineID          *string `json:"virtualMachineID,omitempty"`          /*  虚拟机id。  */
 	VirtualMachineName        *string `json:"virtualMachineName,omitempty"`        /*  虚拟机名称。  */
+	ServerType                string  `json:"vm_type,omitempty"`                   /*  虚拟机名称。  */
 }

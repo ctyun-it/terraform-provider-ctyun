@@ -1,10 +1,10 @@
 ---
+subcategory: "对等连接（VPC peering connection）"
 page_title: "CTYUN: ctyun_vpc_peer_connections"
-subcategory: "PEER_CONNECTION"
 ---
 
 # ctyun_vpc_peer_connections (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873
+-> 查询对等连接
 
 
 

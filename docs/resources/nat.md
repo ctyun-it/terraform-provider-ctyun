@@ -1,10 +1,10 @@
 ---
+subcategory: "NAT网关（CT-NAT Gateway）"
 page_title: "CTYUN: ctyun_nat"
-subcategory: "NAT"
 ---
 
 # ctyun_nat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166493
+-> 管理公网NAT网关
 
 
 
@@ -57,7 +57,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称
+- `az_name` (String) 可用区名称，az_name为必填字段，用户如果未填写，可以从环境变量中读取，需要保证provider声明或环境变量中包含该字段的定义
 - `cycle_count` (Number) 订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 - `description` (String) nat描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}，支持更新
 - `name` (String) nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
@@ -76,3 +76,15 @@ resource "ctyun_nat" "nat_cycle_test" {
 - `nat_gateway_id` (String) 网关id
 - `vpc_cidr` (String) 当前网关所属的vpc cidr
 - `vpc_name` (String) NAT所属的vpc专有网络名字
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入nat网关
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_nat.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_nat.nat_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

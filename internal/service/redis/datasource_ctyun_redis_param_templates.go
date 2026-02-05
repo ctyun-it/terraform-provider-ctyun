@@ -50,7 +50,7 @@ type CtyunRedisParamTemplatesConfig struct {
 
 func (c *ctyunRedisParamTemplates) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10156164"),
+		MarkdownDescription: utils.FormatDesc("查询Redis参数模板", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10156164"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -127,7 +127,7 @@ func (c *ctyunRedisParamTemplates) Read(ctx context.Context, request datasource.
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionId = types.StringValue(regionId)

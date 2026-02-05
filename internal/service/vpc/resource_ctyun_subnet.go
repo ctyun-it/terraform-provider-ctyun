@@ -51,7 +51,7 @@ func (c *ctyunSubnet) Metadata(_ context.Context, request resource.MetadataReque
 
 func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10197656"),
+		MarkdownDescription: utils.FormatDesc("管理子网", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10197656"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -331,11 +331,11 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 		}
 	}
 	if subnetId == "" {
-		err = fmt.Errorf("subnetId不能为空")
+		err = fmt.Errorf("subnet_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(subnetId)

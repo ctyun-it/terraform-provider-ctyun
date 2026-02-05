@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_white_list"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_white_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161484
+-> 管理PostgreSQL实例的白名单
 
 
 

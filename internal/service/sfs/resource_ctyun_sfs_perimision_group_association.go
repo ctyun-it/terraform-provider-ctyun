@@ -81,15 +81,15 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	}
 
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if sfsUid == "" {
-		err = fmt.Errorf("sfsUid不能为空")
+		err = fmt.Errorf("sfs_uid不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -106,7 +106,7 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 
 func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350/10192625"),
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务和权限组的绑定关系", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192625"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

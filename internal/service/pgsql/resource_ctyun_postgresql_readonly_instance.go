@@ -64,11 +64,11 @@ func (c *CtyunPostgresqlReadOnlyInstance) ImportState(ctx context.Context, reque
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -101,7 +101,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) Configure(ctx context.Context, request
 
 func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10322776"),
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL只读实例", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10322776"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

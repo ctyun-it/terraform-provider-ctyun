@@ -59,7 +59,7 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -80,11 +80,11 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	// id需要分析下，传入的uuid还是vpr-xxx格式
@@ -109,7 +109,7 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 
 func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("PEER_CONNECTION", "https://www.ctyun.cn/document/10026760/10037873"),
+		MarkdownDescription: utils.FormatDesc("管理对等连接", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037873"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "对等连接id",
@@ -295,9 +295,9 @@ func (c *CtyunVpcPeerConnection) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "不存在") || strings.Contains(err.Error(), "not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -520,6 +520,9 @@ func (c *CtyunVpcPeerConnection) getPeerConnectionDetail(ctx context.Context, co
 		err = fmt.Errorf("获取vpc对等连接详情失败(instance_id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.ErrorCode == common.OpenapiVpcPeeringNotFound {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {

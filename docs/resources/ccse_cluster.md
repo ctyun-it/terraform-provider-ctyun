@@ -1,10 +1,10 @@
 ---
+subcategory: "云容器引擎（CCSE）"
 page_title: "CTYUN: ctyun_ccse_cluster"
-subcategory: "CCSE"
 ---
 
 # ctyun_ccse_cluster (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137
+-> 管理云容器引擎集群
 
 
 

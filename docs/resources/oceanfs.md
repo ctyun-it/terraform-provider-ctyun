@@ -1,10 +1,10 @@
 ---
+subcategory: "海量文件服务OceanFS"
 page_title: "CTYUN: ctyun_oceanfs"
-subcategory: "OCEANFS"
 ---
 
 # ctyun_oceanfs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906
+-> 管理海量文件服务
 
 
 
@@ -66,8 +66,7 @@ resource "ctyun_oceanfs" "example" {
 - `name` (String) 文件系统名称；单账户单资源池下，命名需唯一，只能由数字、“-”、字母组成，不能以数字和“-”开头、且不能以“-”结尾，2~255字符
 - `protocol` (String) 协议类型，nfs/cifs。nfs 适用于 Linux；cifs 适用于 Windows
 - `size` (Number) 文件系统大小（GB），支持更新。取值范围默认为[100,1048576]，实际取值受限于用户剩余容量配额大小。为避免资源浪费，单用户单资源池默认分配500TB容量配额，可提交工单提升配额。
-- `subnet_id` (String) 子网ID，当isVpce为true时必填
-- `vpc_id` (String) VPC ID
+- `vpc_id` (String) VPC ID，创建时仅支持一个vpc，若需要更新依赖ctyun_oceanfs_permission_group_association能力
 
 ### Optional
 
@@ -76,6 +75,7 @@ resource "ctyun_oceanfs" "example" {
 - `is_vpce` (Boolean) 创建文件系统时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String) 子网ID，当isVpce为true时必填
 - `tags` (Attributes Set) 标签列表 (see [below for nested schema](#nestedatt--tags))
 
 ### Read-Only
@@ -96,3 +96,15 @@ Required:
 
 - `key` (String) 标签键
 - `value` (String) 标签值
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入OceanFS文件系统
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_oceanfs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_oceanfs.oceanfs_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

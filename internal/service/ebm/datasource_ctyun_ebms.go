@@ -67,7 +67,7 @@ type CtyunEbmsConfig struct {
 
 func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBM", "https://www.ctyun.cn/document/10027724/10040106"),
+		MarkdownDescription: utils.FormatDesc("查询物理机列表", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10040106"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -220,7 +220,7 @@ func (c *ctyunEbms) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)

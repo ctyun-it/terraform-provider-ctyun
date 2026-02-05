@@ -70,7 +70,7 @@ type CtyunEcsBackupConfig struct {
 
 func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026751/10033761"),
+		MarkdownDescription: utils.FormatDesc("管理云主机备份", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033761"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -125,6 +125,7 @@ func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"full_backup": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
@@ -250,6 +251,9 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -277,6 +281,13 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	cfg.CreatedTime = types.StringValue(result.CreatedTime)
 	cfg.ProjectID = types.StringValue(result.ProjectID)
 	cfg.BackupType = types.StringValue(result.BackupType)
+	if cfg.FullBackup.IsUnknown() || cfg.FullBackup.IsNull() {
+		if result.BackupType == "FULL" {
+			cfg.FullBackup = types.BoolValue(true)
+		} else {
+			cfg.FullBackup = types.BoolValue(false)
+		}
+	}
 	return
 }
 
@@ -295,6 +306,10 @@ func (c *ctyunEcsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -382,7 +397,9 @@ func (c *ctyunEcsBackup) create(ctx context.Context, plan *CtyunEcsBackupConfig)
 		InstanceBackupName:        plan.InstanceBackupName.ValueString(),
 		InstanceBackupDescription: plan.InstanceBackupDescription.ValueString(),
 		RepositoryID:              plan.RepositoryID.ValueString(),
-		FullBackup:                plan.FullBackup.ValueBool(),
+	}
+	if plan.FullBackup.ValueBool() {
+		params.FullBackup = true
 	}
 
 	// 创建实例
@@ -489,11 +506,11 @@ func (c *ctyunEcsBackup) ImportState(ctx context.Context, request resource.Impor
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.Id = types.StringValue(ID)

@@ -62,19 +62,19 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 	}
 
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if packetId == "" {
-		err = fmt.Errorf("packetId不能为空")
+		err = fmt.Errorf("packet_id不能为空")
 		return
 	}
 	if srcCgwId == "" {
-		err = fmt.Errorf("srcCgwId不能为空")
+		err = fmt.Errorf("src_cgw_id不能为空")
 		return
 	}
 
@@ -91,7 +91,7 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 }
 func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038250"),
+		MarkdownDescription: utils.FormatDesc("管理云间高速跨域连接", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038250"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,

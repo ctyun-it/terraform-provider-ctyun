@@ -256,11 +256,11 @@ package ccse
 //		return
 //	}
 //	if clusterID == "" {
-//		err = fmt.Errorf("clusterID不能为空")
+//		err = fmt.Errorf("cluster_id不能为空")
 //		return
 //	}
 //	if regionID == "" {
-//		err = fmt.Errorf("regionID不能为空")
+//		err = fmt.Errorf("region_id不能为空")
 //		return
 //	}
 //
@@ -337,7 +337,7 @@ package ccse
 //		return
 //	}
 //	plan.ActualConfig = types.StringValue(config)
-//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString()))
 //	return
 //}
 //

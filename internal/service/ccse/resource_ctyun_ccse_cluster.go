@@ -141,7 +141,7 @@ type CtyunCcseClusterDisk struct {
 
 func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10656137"),
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎集群", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10656137"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -1053,11 +1053,11 @@ func (c *ctyunCcseCluster) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

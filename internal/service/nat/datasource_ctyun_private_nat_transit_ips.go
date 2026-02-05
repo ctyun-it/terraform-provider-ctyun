@@ -30,7 +30,7 @@ func (c *ctyunPrivateNatTransitIpsDatasource) Metadata(_ context.Context, reques
 
 func (c *ctyunPrivateNatTransitIpsDatasource) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10166345"),
+		MarkdownDescription: utils.FormatDesc("查询私网NAT网关的中转IP", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166345"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -89,7 +89,7 @@ func (c *ctyunPrivateNatTransitIpsDatasource) Read(ctx context.Context, request 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	// region_id不能为空
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

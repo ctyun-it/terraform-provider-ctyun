@@ -41,7 +41,7 @@ func (c *CtyunMysqlParamTemplates) Metadata(ctx context.Context, request datasou
 
 func (c *CtyunMysqlParamTemplates) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098794"),
+		MarkdownDescription: utils.FormatDesc("查询MySQL参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098794"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -171,7 +171,7 @@ func (c *CtyunMysqlParamTemplates) Read(ctx context.Context, request datasource.
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

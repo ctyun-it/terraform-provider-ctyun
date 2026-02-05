@@ -87,7 +87,7 @@ type CtyunCcseNodePoolDisk struct {
 
 func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10318452"),
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎节点池", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10318452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -554,11 +554,11 @@ func (c *ctyunCcseNodePool) ImportState(ctx context.Context, request resource.Im
 		return
 	}
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

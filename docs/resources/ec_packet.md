@@ -1,10 +1,10 @@
 ---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
 page_title: "CTYUN: ctyun_ec_packet"
-subcategory: "EXPRESS_CONNECT"
 ---
 
 # ctyun_ec_packet (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
+-> 管理云间高速带宽包
 
 
 
@@ -67,3 +67,15 @@ resource "ctyun_ec_packet" "example" {
 - `master_order_no` (String) 订单号
 - `master_resource_id` (String) 主资源ID
 - `master_resource_status` (String) 主资源状态，只有主订单资源会返回
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云间高速带宽包
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_packet.[导入配置名称] [ec_id],[packet_id]
+# 示例
+terraform import ctyun_ec_packet.ec_packet_example ec-12345678,pkt-87654321
+```

@@ -51,7 +51,7 @@ type CtyunKafkaConsumerGroupsConfig struct {
 
 func (c *ctyunKafkaConsumerGroups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10145103"),
+		MarkdownDescription: utils.FormatDesc("查询KAFKA消费组", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10145103"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -134,7 +134,7 @@ func (c *ctyunKafkaConsumerGroups) Read(ctx context.Context, request datasource.
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

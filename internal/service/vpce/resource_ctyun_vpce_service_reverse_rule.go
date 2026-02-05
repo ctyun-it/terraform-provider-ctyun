@@ -59,12 +59,14 @@ type CtyunVpceServiceReverseRuleConfig struct {
 
 func (c *ctyunVpceServiceReverseRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPCE", "https://www.ctyuna.cn/document/10042658/10048506"),
+		MarkdownDescription: utils.FormatDesc("管理终端节点服务反向规则", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048506"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "规则ID",
+				Computed:    true,
+				Description: "规则ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -149,15 +151,15 @@ func (c *ctyunVpceServiceReverseRule) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"create_time": schema.StringAttribute{
-				Description: "创建时间，为UTC格式",
 				Computed:    true,
+				Description: "创建时间，为UTC格式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"update_time": schema.StringAttribute{
-				Description: "更新时间，为UTC格式",
 				Computed:    true,
+				Description: "更新时间，为UTC格式",
 			},
 		},
 	}

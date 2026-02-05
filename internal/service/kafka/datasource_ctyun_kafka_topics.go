@@ -56,7 +56,7 @@ type CtyunKafkaTopicsConfig struct {
 
 func (c *ctyunKafkaTopics) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("KAFKA", "https://www.ctyun.cn/document/10029624/10144604"),
+		MarkdownDescription: utils.FormatDesc("查询KAFKA实例的主题", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10144604"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -158,7 +158,7 @@ func (c *ctyunKafkaTopics) Read(ctx context.Context, request datasource.ReadRequ
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionId = types.StringValue(regionId)

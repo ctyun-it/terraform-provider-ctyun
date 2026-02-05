@@ -33,6 +33,7 @@ type CtyunOceanfs struct {
 	meta          *common.CtyunMetadata
 	name          string
 	regionService *business.RegionService
+	orderLooper   *business.OrderLooper
 }
 
 func (c *CtyunOceanfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -47,7 +48,7 @@ func (c *CtyunOceanfs) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func NewCtyunOceanfs() resource.Resource {
@@ -75,11 +76,11 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -124,7 +125,7 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("OCEANFS", "https://www.ctyun.cn/document/10088966/10115906"),
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10115906"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -642,7 +643,8 @@ func (c *CtyunOceanfs) delete(ctx context.Context, config CtyunOceanfsConfig) er
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	return nil
+	masterOrderID := resp.ReturnObj.MasterOrderID
+	return c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 }
 
 func (c *CtyunOceanfs) resizeLoop(ctx context.Context, state *CtyunOceanfsConfig, plan *CtyunOceanfsConfig, loopCount ...int) error {

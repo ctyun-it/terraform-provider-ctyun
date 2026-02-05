@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -48,7 +49,7 @@ func (c *ctyunSecurityGroup) Metadata(_ context.Context, request resource.Metada
 
 func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026730/10225459"),
+		MarkdownDescription: utils.FormatDesc("管理安全组", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225459"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -172,12 +173,10 @@ func (c *ctyunSecurityGroup) Read(ctx context.Context, request resource.ReadRequ
 
 	instance, err := c.getAndMergeSecurityGroup(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -260,7 +259,7 @@ func (c *ctyunSecurityGroup) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -292,7 +291,7 @@ func (c *ctyunSecurityGroup) getAndMergeSecurityGroup(ctx context.Context, cfg C
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSecurityGroupNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

@@ -57,7 +57,7 @@ func NewCtyunSfs() resource.Resource {
 
 func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350"),
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -688,11 +688,11 @@ func (c *ctyunSfs) ImportState(ctx context.Context, request resource.ImportState
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)

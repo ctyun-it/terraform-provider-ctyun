@@ -43,7 +43,7 @@ type CtyunRedisInstanceWhitelistsConfig struct {
 
 func (c *ctyunRedisInstanceWhitelists) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10398174"),
+		MarkdownDescription: utils.FormatDesc("查询Redis实例的白名单", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10398174"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -92,14 +92,14 @@ func (c *ctyunRedisInstanceWhitelists) Read(ctx context.Context, request datasou
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionId = types.StringValue(regionId)
 
 	instanceId := config.InstanceId.ValueString()
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 

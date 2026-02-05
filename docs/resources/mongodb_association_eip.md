@@ -1,10 +1,10 @@
 ---
+subcategory: "文档数据库服务（MongoDB）"
 page_title: "CTYUN: ctyun_mongodb_association_eip"
-subcategory: "MONGODB"
 ---
 
 # ctyun_mongodb_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10183412
+-> 管理MongoDB实例和弹性IP的绑定关系
 
 
 

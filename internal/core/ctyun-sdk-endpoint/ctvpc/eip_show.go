@@ -54,6 +54,7 @@ func (this *EipShowApi) Do(ctx context.Context, credential ctyunsdk.Credential, 
 		UpdatedAt:        result.UpdatedAt,
 		ExpiredAt:        result.ExpiredAt,
 		BillingMethod:    result.BillingMethod,
+		ProjectID:        result.ProjectID,
 	}, nil
 }
 
@@ -73,6 +74,7 @@ type eipShowRealResponse struct {
 	UpdatedAt        string `json:"updatedAt"`
 	ExpiredAt        string `json:"expiredAt"`
 	BillingMethod    string `json:"billingMethod"`
+	ProjectID        string `json:"projectID"`
 }
 
 type EipShowRequest struct {
@@ -96,4 +98,5 @@ type EipShowResponse struct {
 	UpdatedAt        string
 	ExpiredAt        string
 	BillingMethod    string
+	ProjectID        string
 }

@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -55,7 +56,7 @@ type CtyunEcsBackupPolicyBindInstancesConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindInstances) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026751/10033775"),
+		MarkdownDescription: utils.FormatDesc("管理云主机和备份策略的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033775"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -155,12 +156,13 @@ func (c *ctyunEcsBackupPolicyBindInstances) Read(ctx context.Context, request re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -405,6 +407,9 @@ func (c *ctyunEcsBackupPolicyBindInstances) getBindingInstances(ctx context.Cont
 	for _, policy := range resp.ReturnObj.InstancePolicies {
 		instanceIds = append(instanceIds, policy.InstanceID)
 	}
+	if len(instanceIds) == 0 {
+		return "", common.ResourceNotExistError
+	}
 	instanceIdList = strings.Join(instanceIds, ",")
 	return
 
@@ -412,16 +417,12 @@ func (c *ctyunEcsBackupPolicyBindInstances) getBindingInstances(ctx context.Cont
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEcsBackupPolicyBindInstances) getAndMerge(ctx context.Context, plan *CtyunEcsBackupPolicyBindInstancesConfig) (err error) {
-	policyId, instanceIDList, regionID := plan.PolicyID.ValueString(), plan.InstanceIDList.ValueString(), plan.RegionID.ValueString()
 	bindID, err := c.getBindingInstances(ctx, *plan)
 	if err != nil {
 		return
 	}
-	if bindID != instanceIDList {
-		err = fmt.Errorf("云主机策略 %s 和云主机 %s 未关联  regionID： %s", policyId, instanceIDList, regionID)
-		return
-	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, instanceIDList, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s", plan.PolicyID.ValueString()))
+	plan.InstanceIDList = types.StringValue(bindID)
 	return
 }
 
@@ -430,36 +431,35 @@ func (c *ctyunEcsBackupPolicyBindInstances) ImportState(ctx context.Context, req
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [policy_id],[instance_id_list],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [policy_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsBackupPolicyBindInstancesConfig
-	var instanceIDList, policyID, regionID string
+	var policyID, regionID string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &policyID, &instanceIDList)
+		err = terraform_extend.Split(request.ID, &policyID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &policyID, &instanceIDList, &regionID)
+		err = terraform_extend.Split(request.ID, &policyID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
-	cfg.InstanceIDList = types.StringValue(instanceIDList)
 	cfg.PolicyID = types.StringValue(policyID)
 	cfg.RegionID = types.StringValue(regionID)
 

@@ -107,12 +107,17 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	if err != nil {
 		return
 	}
+	if config.Priority.ValueInt32() == 32767 {
+		err = fmt.Errorf("仅支持导入自定义规则")
+		return
+	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028588"),
+		MarkdownDescription: utils.FormatDesc("管理访问控制规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028588"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

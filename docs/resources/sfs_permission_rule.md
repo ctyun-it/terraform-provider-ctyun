@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
 page_title: "CTYUN: ctyun_sfs_permission_rule"
-subcategory: "SFS"
 ---
 
 # ctyun_sfs_permission_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
+-> 管理弹性文件服务权限组规则
 
 
 
@@ -63,3 +63,15 @@ resource "ctyun_sfs_permission_rule" "sfs_permission_rule_test" {
 
 - `id` (String) 权限组规则唯一标识
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS权限规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs_permission_rule.[导入配置名称] [id],[permission_group_id],<region_id>
+# 示例
+terraform import ctyun_sfs_permission_rule.sfs_permission_rule_example rule-12345,group-12345,bb9fdb42056f11eda1610242ac110002
+```

@@ -1,10 +1,10 @@
 ---
+subcategory: "内网DNS（Intranet Domain Name Service，CT-IDNS）"
 page_title: "CTYUN: ctyun_private_zones"
-subcategory: "DNS"
 ---
 
 # ctyun_private_zones (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10033667
+-> 查询内网DNS列表
 
 
 

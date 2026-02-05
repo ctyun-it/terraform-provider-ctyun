@@ -74,7 +74,7 @@ type ctyunEbsSnapshotsConfig struct {
 
 func (c *ctyunEbsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10026730/10335345"),
+		MarkdownDescription: utils.FormatDesc("查询云硬盘快照", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026730/10335345"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -247,7 +247,7 @@ func (c *ctyunEbsSnapshots) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

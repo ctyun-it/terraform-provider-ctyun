@@ -64,11 +64,11 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -101,7 +101,7 @@ func (c *CtyunMysqlReadOnlyInstance) Configure(ctx context.Context, request reso
 
 func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10148056"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL只读实例", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10148056"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,

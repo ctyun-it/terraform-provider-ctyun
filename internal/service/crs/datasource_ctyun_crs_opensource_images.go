@@ -51,7 +51,7 @@ type CtyunCrsOpensourceImagesConfig struct {
 
 func (c *ctyunCrsOpensourceImages) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CRS", "https://www.ctyun.cn/document/10007018/10007025"),
+		MarkdownDescription: utils.FormatDesc("查询容器镜像服务中的开源镜像", "容器镜像服务（CRS）", "https://www.ctyun.cn/document/10007018/10007025"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -139,7 +139,7 @@ func (c *ctyunCrsOpensourceImages) Read(ctx context.Context, request datasource.
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	// 组装请求体

@@ -1,10 +1,10 @@
 ---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
 page_title: "CTYUN: ctyun_image"
-subcategory: "IMAGE"
 ---
 
 # ctyun_image (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726
+-> 管理私有镜像（从镜像文件创建）
 
 
 
@@ -43,7 +43,6 @@ resource "ctyun_image" "image_test" {
 
 ### Required
 
-- `file_source` (String) 镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象
 - `name` (String) 镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新
 - `os_distro` (String) 操作系统的发行版名称。注意：对于Windows系操作系统，应确保参数值是windows，否则视作Linux系操作系统；对于Linux系操作系统，参数值的取值应根据系统实际情况，建议参照cloud-init的配置文件（/etc/cloud/cloud.cfg）中system_info.distro的取值或以下取值：anolis、centos、ctyunos、debian、fedora、kylin、openEuler、ubuntu、UnionTech、windows
 - `os_version` (String) 操作系统版本。注意：参数值的取值应根据系统实际情况，建议参考（以下列出osDistro所列取值对应的osVersion参考取值）：anolis：7.9、centos：7.8、ctyunos：2.0.1、debian：9.0.0、fedora：36、kylin：V10_sp1、openEuler：20.03、ubuntu：18.04、UnionTech：V20_1050u1e、windows：2008
@@ -54,6 +53,7 @@ resource "ctyun_image" "image_test" {
 - `boot_mode` (String) 启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS），支持更新
 - `description` (String) 镜像描述信息。注意：长度为1~128个字符。支持更新
 - `disk_size` (Number) 磁盘容量，单位为GB，取值范围：最小5（默认值），最大1024。注意：磁盘容量不能小于镜像文件的大小；若小于镜像文件的大小，则实际的磁盘容量将使用镜像文件的大小
+- `file_source` (String) 镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `type` (String) 镜像种类，system：系统盘镜像，data：数据盘镜像，默认为系统盘镜像system
@@ -62,3 +62,15 @@ resource "ctyun_image" "image_test" {
 
 - `id` (String) id
 - `status` (String) 镜像状态，accepted：已接受共享镜像，active：正常，deactivated：已弃用，deactivating：弃用中，deleted：已删除，deleting：删除中，error：错误，importing：导入中，killed：上传出错，镜像不可读，pending_delete：等待删除中，queued：排队中，reactivating：取消弃用中，rejected：已拒绝共享镜像，saving：保存中，syncing：同步中，uploading：上传中，waiting：等待接受/拒绝共享镜像
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入镜像
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_image.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_image.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

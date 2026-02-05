@@ -27,7 +27,7 @@ type CtyunMongodbSpecs struct {
 
 func (c *CtyunMongodbSpecs) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MONGODB", "https://www.ctyun.cn/document/10034467/10034488"),
+		MarkdownDescription: utils.FormatDesc("查询MongoDB可用的规格", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10034488"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -183,7 +183,7 @@ func (c *CtyunMongodbSpecs) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	params := &mysql.TeledbMysqlSpecsRequest{

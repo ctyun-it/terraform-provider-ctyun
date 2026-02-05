@@ -1,10 +1,10 @@
 ---
+subcategory: "VPC终端节点（VPC Endpoint）"
 page_title: "CTYUN: ctyun_vpce_services"
-subcategory: "VPCE"
 ---
 
 # ctyun_vpce_services (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013
+-> 查询终端节点服务
 
 
 

@@ -57,7 +57,7 @@ type CtgkafkaUpdateTopicRequest struct {
 	TopicName                   string `json:"topicName,omitempty"`         /*  主题名称。  */
 	PartitionNum                int32  `json:"partitionNum,omitempty"`      /*  主题分区数，取值范围[1,100]。  */
 	PartitionCapacity           int32  `json:"partitionCapacity,omitempty"` /*  分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制。不传入则不修改。  */
-	RetentionTime               int32  `json:"retentionTime,omitempty"`     /*  消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。不传入则不修改。  */
+	RetentionTime               int64  `json:"retentionTime,omitempty"`     /*  消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。不传入则不修改。  */
 	MinReplicas                 int32  `json:"minReplicas,omitempty"`       /*  最小同步副本数，需小于等于factorNum。  */
 	MaxMessage                  int32  `json:"maxMessage,omitempty"`        /*  最大消息大小，单位字节，取值范围[1, 10485760]。不传入则不修改。  */
 	NeedFlush                   *bool  `json:"needFlush"`                   /*  是否同步刷盘。<br><li>true：是<br><li>false：否<br>  */

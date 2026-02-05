@@ -43,7 +43,7 @@ func (c *ctyunPgsqlInstances) Metadata(ctx context.Context, request datasource.M
 
 func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10153165"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL实例", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10153165"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -194,7 +194,7 @@ func (c *ctyunPgsqlInstances) Read(ctx context.Context, request datasource.ReadR
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	params := &pgsql.PgsqlListRequest{}

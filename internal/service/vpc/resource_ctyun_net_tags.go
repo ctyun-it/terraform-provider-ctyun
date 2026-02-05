@@ -47,11 +47,11 @@ func (c *ctyunNetTags) Metadata(_ context.Context, request resource.MetadataRequ
 
 func (c *ctyunNetTags) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026753/10219975"),
+		MarkdownDescription: utils.FormatDesc("管理网络资源的标签", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "ID，值",
+				Description:   "ID",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"region_id": schema.StringAttribute{

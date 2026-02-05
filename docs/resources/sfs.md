@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
 page_title: "CTYUN: ctyun_sfs"
-subcategory: "SFS"
 ---
 
 # ctyun_sfs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350
+-> 管理弹性文件服务
 
 
 
@@ -63,18 +63,18 @@ resource "ctyun_sfs" "sfs_test" {
 - `name` (String) 文件系统名称；单账户单资源池下，命名需唯一，支持更新
 - `protocol` (String) 协议类型，nfs/cifs
 - `size` (Number) 大小，单位GB，取值范围：[500GB, 32768GB]。支持更新。弹性文件只支持扩容，不支持缩容
-- `subnet_id` (String) 子网ID
 - `type` (String) 存储类型，capacity(标准型)或performance（性能型）
-- `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
 - `az_name` (String) 可用区id，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME。获取不到则使用资源池第一个可用区
 - `cycle_count` (Number) 包周期数，cycle_type是year或month时必须指定，周期最大长度不能超过3年
-- `is_encrypt` (Boolean) 是否加密盘，默认false，支持更新。目前仅少量资源池支持加密。具体可查看产品能力地图：https://www.ctyun.cn/document/10027350/10693922
-- `kms_uuid` (String) 如果是加密盘，需要提供kms的uuid，支持更新
+- `is_encrypt` (Boolean) 是否加密盘，默认false。目前仅少量资源池支持加密。具体可查看产品能力地图：https://www.ctyun.cn/document/10027350/10693922
+- `kms_uuid` (String) 如果是加密盘，需要提供kms的uuid
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String) 子网ID，当
+- `vpc_id` (String) 虚拟私有云ID
 
 ### Read-Only
 
@@ -86,3 +86,15 @@ resource "ctyun_sfs" "sfs_test" {
 - `status` (String) 弹性文件系统状态
 - `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 弹性文件系统已使用大小（MB）
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS文件系统
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_sfs.sfs_example sfs-123456789,<region-123456>
+```

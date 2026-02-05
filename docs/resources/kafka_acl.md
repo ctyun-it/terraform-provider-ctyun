@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_acl"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/11078051
+-> 管理KAFKA的访问控制
 
 
 

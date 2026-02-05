@@ -41,7 +41,7 @@ func (c *ctyunPgsqlAccounts) Metadata(ctx context.Context, request datasource.Me
 
 func (c *ctyunPgsqlAccounts) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10161317"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL实例的账户", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10161317"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -139,7 +139,7 @@ func (c *ctyunPgsqlAccounts) Read(ctx context.Context, request datasource.ReadRe
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

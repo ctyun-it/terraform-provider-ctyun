@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库MySQL版"
 page_title: "CTYUN: ctyun_mysql_white_list"
-subcategory: "MYSQL"
 ---
 
 # ctyun_mysql_white_list (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794
+-> 管理MySQL实例的白名单
 
 
 

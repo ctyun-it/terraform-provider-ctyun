@@ -43,7 +43,7 @@ func (c *ctyunPrivateDnatResource) Metadata(ctx context.Context, request resourc
 
 func (c *ctyunPrivateDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("NAT", "https://www.ctyun.cn/document/10026759/10378362"),
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378362"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -365,15 +365,15 @@ func (c *ctyunPrivateDnatResource) ImportState(ctx context.Context, request reso
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DnatID = types.StringValue(ID)
@@ -442,7 +442,7 @@ func (c *ctyunPrivateDnatResource) getAndMergePrivateDnat(ctx context.Context, p
 	if !plan.InternalIP.IsNull() || targetDnat.InternalIP != "" {
 		plan.InternalIP = types.StringValue(targetDnat.InternalIP)
 	} else {
-		plan.InternalIP = types.StringValue("")
+		plan.InternalIP = types.StringNull()
 	}
 
 	// 处理可能为null的字段

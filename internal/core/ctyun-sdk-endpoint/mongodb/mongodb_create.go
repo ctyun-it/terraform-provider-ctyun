@@ -68,7 +68,7 @@ type MongodbCreateRequest struct {
 	ProjectID            *string                      `json:"projectId,omitempty"`
 }
 type MongodbCreateRequestHeader struct {
-	ProjectID *string `json:"project-id"`
+	ProjectID *string `json:"project_id"`
 }
 
 type MongodbNodeInfoListRequest struct {

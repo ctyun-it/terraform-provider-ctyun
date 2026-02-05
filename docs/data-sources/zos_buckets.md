@@ -1,10 +1,10 @@
 ---
+subcategory: "对象存储（CT-ZOS，Zettabyte Object Storage）"
 page_title: "CTYUN: ctyun_zos_buckets"
-subcategory: "ZOS"
 ---
 
 # ctyun_zos_buckets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237
+-> 查询对象存储桶列表
 
 
 

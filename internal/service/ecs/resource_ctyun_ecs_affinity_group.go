@@ -51,7 +51,7 @@ type CtyunEcsAffinityGroupConfig struct {
 
 func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730/10597693"),
+		MarkdownDescription: utils.FormatDesc("管理云主机组", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10597693"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -244,11 +244,11 @@ func (c *ctyunEcsAffinityGroup) ImportState(ctx context.Context, request resourc
 	err = c.getAndMerge(ctx, &config)
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)

@@ -47,7 +47,7 @@ func (c *CtyunElbLoadBalancerResource) Metadata(_ context.Context, request resou
 
 func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ELB", "https://www.ctyun.cn/document/10026756/10138703"),
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10138703"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -432,11 +432,11 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -445,7 +445,6 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	if err != nil {
 		return
 	}
-	config.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId))
 	// 确保创建时间和到期时间是RFC3339的
 	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreatedTime.ValueString(), config.ExpiredTime.ValueString())
 	if err != nil {
@@ -454,7 +453,6 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	if cycleType == business.YearCycleType || cycleCount == 100 {
 		config.CycleType = types.StringValue(business.OnDemandCycleType)
 		config.CycleCount = types.Int64Null()
-		return
 	} else {
 		config.CycleType = types.StringValue(cycleType)
 		if cycleCount > 0 {
@@ -519,7 +517,7 @@ func (c *CtyunElbLoadBalancerResource) createPgElb(ctx context.Context, plan *Ct
 }
 
 func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, plan CtyunElbLoadBalancerConfig) error {
-	// regionid不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
+	// region_id不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
 	regionId := plan.RegionID
 	subnetId := plan.SubnetID
 	slaName := plan.SlaName
@@ -527,23 +525,23 @@ func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, p
 	name := plan.Name
 	eipId := plan.EipID
 	if regionId.IsNull() {
-		return fmt.Errorf("regionID不能为空!")
+		return fmt.Errorf("region_id不能为空!")
 	}
 	if subnetId.IsNull() {
-		return fmt.Errorf("subnetId-子网的ID不能为空!")
+		return fmt.Errorf("subnet_id不能为空!")
 	}
 	if slaName.IsNull() {
-		return fmt.Errorf("slaName-lb的规格名称不能为空！")
+		return fmt.Errorf("sla_name-lb的规格名称不能为空！")
 	}
 	if resourceType.IsNull() {
-		return fmt.Errorf("resourceType-资源类型不能为空！")
+		return fmt.Errorf("resource_type-资源类型不能为空！")
 	}
 	if !c.isContains(resourceType.ValueString(), business.LbResourceType) {
-		return fmt.Errorf("resourceType资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
+		return fmt.Errorf("resource_type资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
 	}
-	//当resourceType=external为必填, eipID不能为空
+	//当resourceType=external为必填, eip_id不能为空
 	if resourceType.ValueString() == business.LbResourceTypeExternal && eipId.IsNull() {
-		return fmt.Errorf("当resourceType=external为必填, eipID不能为空")
+		return fmt.Errorf("当resourceType=external为必填, eip_id不能为空")
 	}
 
 	if name.IsNull() {
@@ -604,6 +602,7 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	for _, eipItem := range EipInfoList {
 		var eipInfo EipInfoModel
 		eipInfo.EipID = types.StringValue(eipItem.EipID)
+		config.EipID = types.StringValue(eipItem.EipID)
 		eipInfo.Bandwidth = types.Float32Value(eipItem.Bandwidth)
 		eipInfo.IsTalkOrder = utils.SecBoolValue(eipItem.IsTalkOrder)
 		eipInfos = append(eipInfos, eipInfo)

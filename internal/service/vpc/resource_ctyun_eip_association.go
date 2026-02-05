@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -49,7 +48,7 @@ func (c *ctyunEipAssociation) Metadata(_ context.Context, request resource.Metad
 
 func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EIP", "https://www.ctyun.cn/document/10026753/10219975"),
+		MarkdownDescription: utils.FormatDesc("管理弹性IP的绑定", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -89,16 +88,9 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -147,10 +139,8 @@ func (c *ctyunEipAssociation) Create(ctx context.Context, request resource.Creat
 	}
 
 	regionId := plan.RegionId.ValueString()
-	projectId := plan.ProjectId.ValueString()
 	_, err2 := c.meta.Apis.CtVpcApis.EipAssociateApi.Do(ctx, c.meta.Credential, &ctvpc.EipAssociateRequest{
 		RegionId:        regionId,
-		ProjectId:       projectId,
 		ClientToken:     uuid.NewString(),
 		AssociationType: associationType.(int),
 		EipId:           plan.EipId.ValueString(),
@@ -162,7 +152,6 @@ func (c *ctyunEipAssociation) Create(ctx context.Context, request resource.Creat
 	}
 	time.Sleep(10 * time.Second)
 	plan.RegionId = types.StringValue(regionId)
-	plan.ProjectId = types.StringValue(projectId)
 	instance, ctyunRequestError := c.getAndMergeEipAssociation(ctx, plan)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
@@ -193,8 +182,20 @@ func (c *ctyunEipAssociation) Read(ctx context.Context, request resource.ReadReq
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
-func (c *ctyunEipAssociation) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+func (c *ctyunEipAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var state CtyunEipAssociationConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 
+	var plan CtyunEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectId = plan.ProjectId
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEipAssociation) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -207,7 +208,6 @@ func (c *ctyunEipAssociation) Delete(ctx context.Context, request resource.Delet
 	_, err := c.meta.Apis.CtVpcApis.EipDisassociateApi.Do(ctx, c.meta.Credential, &ctvpc.EipDisassociateRequest{
 		EipId:       state.EipId.ValueString(),
 		RegionId:    state.RegionId.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 	})
 	if err != nil {
@@ -246,7 +246,6 @@ func (c *ctyunEipAssociation) ImportState(ctx context.Context, request resource.
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	instance.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(instance.ProjectId.ValueString(), common.ExtraProjectId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }

@@ -71,15 +71,15 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -94,7 +94,7 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 
 func (c *ctyunSfsPermissionGroupRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SFS", "https://www.ctyun.cn/document/10027350/10192622"),
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务权限组规则", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192622"),
 		Attributes: map[string]schema.Attribute{
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,

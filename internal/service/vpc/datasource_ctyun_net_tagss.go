@@ -31,7 +31,7 @@ func (c *ctyunNetTagss) Metadata(_ context.Context, req datasource.MetadataReque
 
 func (c *ctyunNetTagss) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026755/10028310"),
+		MarkdownDescription: utils.FormatDesc("查询网络资源的标签", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -109,7 +109,7 @@ func (c *ctyunNetTagss) Read(ctx context.Context, req datasource.ReadRequest, re
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

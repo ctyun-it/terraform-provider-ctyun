@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式缓存服务Redis版"
 page_title: "CTYUN: ctyun_redis_account"
-subcategory: "REDIS"
 ---
 
 # ctyun_redis_account (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10403139
+-> 管理Redis实例的账户
 
 
 

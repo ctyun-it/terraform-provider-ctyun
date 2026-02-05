@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
@@ -78,7 +79,7 @@ type CtyunEcsBackupPolicyAdvRetention struct {
 
 func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026751/10033770"),
+		MarkdownDescription: utils.FormatDesc("管理云主机备份策略", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033770"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -322,8 +323,11 @@ func (c *ctyunEcsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEcsBac
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	} else if resp.ReturnObj.CurrentCount != 1 {
+	} else if resp.ReturnObj.CurrentCount > 1 {
 		err = common.InvalidReturnObjResultsError
+		return
+	} else if len(resp.ReturnObj.PolicyList) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 
@@ -429,6 +433,10 @@ func (c *ctyunEcsBackupPolicy) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -601,11 +609,11 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

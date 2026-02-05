@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -49,7 +50,7 @@ type CtyunEcsAffinityGroupAssociationConfig struct {
 
 func (c *ctyunEcsAffinityGroupAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730/10028712"),
+		MarkdownDescription: utils.FormatDesc("管理云主机和主机组的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10028712"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -141,9 +142,9 @@ func (c *ctyunEcsAffinityGroupAssociation) Read(ctx context.Context, request res
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -213,15 +214,15 @@ func (c *ctyunEcsAffinityGroupAssociation) ImportState(ctx context.Context, requ
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if groupID == "" {
-		err = fmt.Errorf("groupID不能为空")
+		err = fmt.Errorf("group_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -373,8 +374,7 @@ func (c *ctyunEcsAffinityGroupAssociation) getAndMerge(ctx context.Context, plan
 		return
 	}
 	if bindID != groupID {
-		err = fmt.Errorf("云主机 %s 和云主机组 %s 未关联", instanceID, groupID)
-		return
+		return common.ResourceNotExistError
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instanceID, groupID, regionID))
 	return

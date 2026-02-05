@@ -1,10 +1,10 @@
 ---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
 page_title: "CTYUN: ctyun_security_group"
-subcategory: "VPC"
 ---
 
 # ctyun_security_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225459
+-> 管理安全组
 
 
 
@@ -49,3 +49,15 @@ resource "ctyun_security_group" "security_group_test" {
 
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入安全组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_security_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_security_group.security_group_example sg-12345,region-67890
+```

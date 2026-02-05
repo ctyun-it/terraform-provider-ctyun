@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_backup"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10160072
+-> 管理PostgreSQL实例的备份
 
 
 

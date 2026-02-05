@@ -13,14 +13,14 @@ import (
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -53,7 +53,7 @@ func (c *ctyunImageFromEcs) Metadata(_ context.Context, request resource.Metadat
 
 func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726/10031013"),
+		MarkdownDescription: utils.FormatDesc("管理私有镜像（从云主机创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726/10031013"),
 		Attributes: map[string]schema.Attribute{
 			// 新增：资源ID（由API返回，自动生成）
 			"id": schema.StringAttribute{
@@ -123,16 +123,16 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-			"labels": schema.ListNestedAttribute{
+			"labels": schema.SetNestedAttribute{
 				Optional:    true,
 				Description: "标签列表。最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾。",
-				Validators: []validator.List{
-					listvalidator.SizeAtMost(10),
+				Validators: []validator.Set{
+					setvalidator.SizeAtMost(10),
 				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"label_key": schema.StringAttribute{
-							Required:    true,
+							Optional:    true,
 							Description: "标签键。",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
@@ -142,11 +142,11 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 								//),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 						"label_value": schema.StringAttribute{
-							Required:    true,
+							Optional:    true,
 							Description: "标签值。",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
@@ -156,14 +156,14 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 								//),
 							},
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 						},
 					},
 				},
 				// TODO 标签变更需重建（暂无无动态更新标签能力）
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplace(),
+				PlanModifiers: []planmodifier.Set{
+					explanmodifier.NullIgnoreSet(),
 				},
 			},
 			//
@@ -222,6 +222,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 			// 数据盘特有参数
 			"data_disk_id": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "数据盘ID，仅数据盘创建方式必填，需挂载于指定云主机。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(1, 64),
@@ -241,7 +242,7 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 				// 存储库变更需重建
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 		},
@@ -297,7 +298,7 @@ func (c *ctyunImageFromEcs) Read(ctx context.Context, request resource.ReadReque
 
 	err = c.getAndMergeImage(ctx, &state)
 	if err != nil {
-		if err.Error() == common.ImageImageCheckNotFound {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -346,6 +347,14 @@ func (c *ctyunImageFromEcs) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
+	if !plan.RepositoryId.IsUnknown() && !plan.RepositoryId.IsNull() && state.RepositoryId.IsNull() {
+		state.RepositoryId = plan.RepositoryId
+		response.Diagnostics.AddWarning("repository_id的更新仅写入状态文件", "在import时，状态文件中repository_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Labels.IsUnknown() && !plan.Labels.IsNull() && state.Labels.IsNull() {
+		state.Labels = plan.Labels
+		response.Diagnostics.AddWarning("labels的更新仅写入状态文件", "在import时，状态文件中labels为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -399,11 +408,11 @@ func (c *ctyunImageFromEcs) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if imageId == "" {
-		err = fmt.Errorf("imageId不能为空")
+		err = fmt.Errorf("image_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -431,9 +440,16 @@ func (c *ctyunImageFromEcs) createSystemDiskImage(ctx context.Context, plan *Cty
 	regionId := plan.RegionId.ValueString()
 	projectId := plan.ProjectId.ValueString()
 	var labels []*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateEcsSystemDiskImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -498,9 +514,16 @@ func (c *ctyunImageFromEcs) createDataDiskImage(ctx context.Context, plan *Ctyun
 	// 数据盘创建方式
 	// 构造标签列表
 	var labels []*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateEcsDataDiskImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateEcsDataDiskImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -561,9 +584,16 @@ func (c *ctyunImageFromEcs) createEntireMachineImage(ctx context.Context, plan *
 	// 整机创建方式
 	// 构造标签列表
 	var labels []*ctimage.CtimageCreateFullEcsImageLabelsRequest
-	if plan.Labels != nil {
-		labels = make([]*ctimage.CtimageCreateFullEcsImageLabelsRequest, len(plan.Labels))
-		for i, label := range plan.Labels {
+
+	if !plan.Labels.IsNull() && !plan.Labels.IsUnknown() {
+		labelObjects := []Label{}
+		diags := plan.Labels.ElementsAs(ctx, &labelObjects, false)
+		if diags.HasError() {
+			return fmt.Errorf("解析标签失败: %v", diags.Errors())
+		}
+
+		labels = make([]*ctimage.CtimageCreateFullEcsImageLabelsRequest, len(labelObjects))
+		for i, label := range labelObjects {
 			labels[i] = &ctimage.CtimageCreateFullEcsImageLabelsRequest{
 				LabelKey:   label.LabelKey.ValueString(),
 				LabelValue: label.LabelValue.ValueString(),
@@ -756,13 +786,17 @@ func (c *ctyunImageFromEcs) getImageByID(ctx context.Context, cfg *CtyunImageFro
 		ImageID:  cfg.Id.ValueString(),
 		RegionID: cfg.RegionId.ValueString(),
 	})
-
 	if err != nil {
 		return nil, err
-	}
+	} else if response.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", response.Message, response.Description)
+		return nil, err
+	} else if response.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return nil, err
+	} else if len(response.ReturnObj.Images) == 0 {
+		return nil, common.ResourceNotExistError
 
-	if response.ReturnObj == nil || len(response.ReturnObj.Images) == 0 {
-		return nil, fmt.Errorf(common.ImageImageCheckNotFound)
 	}
 
 	return response.ReturnObj.Images[0], nil
@@ -789,7 +823,7 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	cfg.MinimumRAM = types.Int64Value(int64(resp.MinimumRAM))
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	cfg.InstanceId = types.StringValue(resp.SourceServerID)
-
+	cfg.DataDiskId = types.StringValue(resp.DiskID)
 	// 镜像类型。取值范围（值：描述）：
 	// （空，即 null）：系统盘镜像，    system_disk
 	// data_disk_image：数据盘镜像，    data_disk
@@ -802,6 +836,16 @@ func (c *ctyunImageFromEcs) getAndMergeImage(ctx context.Context, cfg *CtyunImag
 	// 应用类型转换逻辑
 	convertedType := convertImageType(resp.ImageType)
 	cfg.ImageType = types.StringValue(convertedType)
+
+	// 初始化标签字段，防止导入时出现类型不匹配错误
+	if cfg.Labels.IsUnknown() || cfg.Labels.IsNull() {
+		cfg.Labels = types.SetNull(types.ObjectType{
+			AttrTypes: map[string]attr.Type{
+				"label_key":   types.StringType,
+				"label_value": types.StringType,
+			},
+		})
+	}
 
 	return
 }
@@ -849,7 +893,7 @@ type CtyunImageFromEcsConfig struct {
 
 	// 标签列表（可选，修改接口支持更新但需重建资源）
 	// 约束：最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾
-	Labels []Label `tfsdk:"labels"`
+	Labels types.Set `tfsdk:"labels"`
 
 	// 云主机ID（系统盘/数据盘/整机镜像创建必填，快照镜像创建不可填）
 	// 约束：云主机状态需为stopped（部分资源池支持running），与数据盘/整机创建强关联

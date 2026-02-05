@@ -62,7 +62,7 @@ type CtyunCcsePluginMarketConfig struct {
 
 func (c *ctyunCcsePluginMarket) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10656137"),
+		MarkdownDescription: utils.FormatDesc("查询云容器引擎插件市场", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10656137"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -178,7 +178,7 @@ func (c *ctyunCcsePluginMarket) Read(ctx context.Context, request datasource.Rea
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务Kafka"
 page_title: "CTYUN: ctyun_kafka_consumer_group"
-subcategory: "KAFKA"
 ---
 
 # ctyun_kafka_consumer_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145103
+-> 管理KAFKA的消费组
 
 
 

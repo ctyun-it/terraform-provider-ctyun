@@ -1,10 +1,10 @@
 ---
+subcategory: "关系数据库PostgreSQL版"
 page_title: "CTYUN: ctyun_postgresql_databases"
-subcategory: "POSTGRESQL"
 ---
 
 # ctyun_postgresql_databases (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10159978
+-> 查询PostgreSQL实例的数据库
 
 
 

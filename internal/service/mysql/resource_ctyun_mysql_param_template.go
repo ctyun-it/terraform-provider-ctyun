@@ -80,7 +80,7 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -101,7 +101,7 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 
 func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("MYSQL", "https://www.ctyun.cn/document/10033813/10098794"),
+		MarkdownDescription: utils.FormatDesc("管理MySQL参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098794"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

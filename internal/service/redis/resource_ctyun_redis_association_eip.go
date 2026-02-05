@@ -52,7 +52,7 @@ type CtyunRedisAssociationEipConfig struct {
 
 func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10132173"),
+		MarkdownDescription: utils.FormatDesc("管理Redis实例和弹性IP的绑定关系", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10132173"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -222,15 +222,15 @@ func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request reso
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eipID不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

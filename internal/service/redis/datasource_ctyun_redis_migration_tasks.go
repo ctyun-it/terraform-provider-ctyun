@@ -63,7 +63,7 @@ type SourceProgressInfoModel struct {
 
 func (c *ctyunRedisMigrationTasks) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10518385"),
+		MarkdownDescription: utils.FormatDesc("查询Redis迁移任务", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10518385"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Optional:    true,
@@ -222,7 +222,7 @@ func (c *ctyunRedisMigrationTasks) Read(ctx context.Context, request datasource.
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionId = types.StringValue(regionId)

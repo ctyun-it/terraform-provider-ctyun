@@ -1,10 +1,10 @@
 ---
+subcategory: "分布式消息服务RabbitMQ"
 page_title: "CTYUN: ctyun_rabbitmq_exchange"
-subcategory: "RABBITMQ"
 ---
 
 # ctyun_rabbitmq_exchange (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967
+-> 管理RabbitMQ实例的交换器
 
 
 

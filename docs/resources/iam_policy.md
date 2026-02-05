@@ -1,10 +1,10 @@
 ---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
 page_title: "CTYUN: ctyun_iam_policy"
-subcategory: "IAM"
 ---
 
 # ctyun_iam_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484
+-> 管理权限策略
 
 
 
@@ -65,7 +65,7 @@ resource "ctyun_iam_policy" "iam_policy_test" {
 
 ### Read-Only
 
-- `id` (String) 绑定关系id
+- `id` (String) 策略ID
 
 <a id="nestedatt--content"></a>
 ### Nested Schema for `content`

@@ -43,7 +43,7 @@ func (c *ctyunAcls) Metadata(ctx context.Context, request datasource.MetadataReq
 
 func (c *ctyunAcls) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ACL", "https://www.ctyun.cn/document/10026755/10028583"),
+		MarkdownDescription: utils.FormatDesc("查询访问控制列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028583"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -156,7 +156,7 @@ func (c *ctyunAcls) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

@@ -53,7 +53,7 @@ func (c *CtyunExpressConnect) Metadata(ctx context.Context, req resource.Metadat
 
 func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EXPRESS_CONNECT", "https://www.ctyun.cn/document/10026763/10038220"),
+		MarkdownDescription: utils.FormatDesc("管理云间高速实例", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -353,7 +353,6 @@ func (c *CtyunExpressConnect) deleteCgwBill(ctx context.Context, state *CtyunExp
 
 	} else {
 		resourceID := queryResp.ReturnObj.Results[0].ResourceID
-		// 构造请求参数（这里需要根据实际业务需求进行调整）
 		regionID := "bb9fdb42056f11eda1610242ac110002"
 
 		req := &ec.EcEcCgwBillRefundRequest{

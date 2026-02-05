@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -53,7 +54,7 @@ type CtyunRedisBackupConfig struct {
 
 func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10142282"),
+		MarkdownDescription: utils.FormatDesc("管理Redis实例的备份", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10142282"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -178,6 +179,10 @@ func (c *ctyunRedisBackup) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	err = c.getBackupRdbDownLoadUrl(ctx, &state)
@@ -224,7 +229,7 @@ func (c *ctyunRedisBackup) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceId],[restoreName],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -247,15 +252,15 @@ func (c *ctyunRedisBackup) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("实例ID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if restoreName == "" {
-		err = fmt.Errorf("名称不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 	cfg.InstanceId = types.StringValue(instanceId)
@@ -351,7 +356,12 @@ func (c *ctyunRedisBackup) getAndMerge(ctx context.Context, plan *CtyunRedisBack
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Rows == nil {
 		err = common.InvalidReturnObjError
@@ -396,7 +406,7 @@ func (c *ctyunRedisBackup) getAndMerge(ctx context.Context, plan *CtyunRedisBack
 	}
 
 	// 设置ID
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.InstanceId.ValueString(), plan.RegionId.ValueString(), backupData.RestoreName))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), backupData.RestoreName))
 
 	return
 }

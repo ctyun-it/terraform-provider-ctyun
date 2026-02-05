@@ -40,7 +40,7 @@ func (c *ctyunPostgresqlCharacterSet) Metadata(ctx context.Context, request data
 
 func (c *ctyunPostgresqlCharacterSet) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10159978"),
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL支持的字符集", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10159978"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -78,7 +78,7 @@ func (c *ctyunPostgresqlCharacterSet) Read(ctx context.Context, request datasour
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 

@@ -52,7 +52,7 @@ func (c *ctyunEbs) Metadata(_ context.Context, request resource.MetadataRequest,
 
 func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("EBS", "https://www.ctyun.cn/document/10027696"),
+		MarkdownDescription: utils.FormatDesc("管理云硬盘", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -547,7 +547,7 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {

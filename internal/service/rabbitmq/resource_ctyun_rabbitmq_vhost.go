@@ -51,7 +51,7 @@ type CtyunRabbitmqVhostConfig struct {
 
 func (c *ctyunRabbitmqVhost) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("RABBITMQ", "https://www.ctyun.cn/document/10000118/10220893"),
+		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的虚拟主机", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -212,11 +212,11 @@ func (c *ctyunRabbitmqVhost) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

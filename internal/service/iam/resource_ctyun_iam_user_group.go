@@ -38,7 +38,7 @@ func (c *ctyunIamUserGroup) Metadata(_ context.Context, request resource.Metadat
 
 func (c *ctyunIamUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IAM", "https://www.ctyun.cn/document/10345725/10355805"),
+		MarkdownDescription: utils.FormatDesc("管理用户组", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10355805"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

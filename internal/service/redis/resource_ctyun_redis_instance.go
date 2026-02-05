@@ -38,9 +38,10 @@ var (
 )
 
 type ctyunRedisInstance struct {
-	meta       *common.CtyunMetadata
-	vpcService *business.VpcService
-	sgService  *business.SecurityGroupService
+	meta         *common.CtyunMetadata
+	vpcService   *business.VpcService
+	sgService    *business.SecurityGroupService
+	redisService *business.RedisService
 }
 
 func NewCtyunRedisInstance() resource.Resource {
@@ -98,7 +99,7 @@ type CtyunRedisInstanceBackupPolicy struct {
 
 func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("REDIS", "https://www.ctyun.cn/document/10029420/10029727"),
+		MarkdownDescription: utils.FormatDesc("管理Redis实例", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10029727"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -686,6 +687,7 @@ func (c *ctyunRedisInstance) Configure(_ context.Context, request resource.Confi
 	c.meta = meta
 	c.vpcService = business.NewVpcService(meta)
 	c.sgService = business.NewSecurityGroupService(meta)
+	c.redisService = business.NewRedisService(meta)
 }
 
 func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -712,11 +714,11 @@ func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.I
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
@@ -1164,26 +1166,11 @@ func (c *ctyunRedisInstance) getByName(ctx context.Context, plan CtyunRedisInsta
 // getById
 func (c *ctyunRedisInstance) getByID(ctx context.Context, plan CtyunRedisInstanceConfig) (instance *dcs2.Dcs2DescribeInstancesOverviewReturnObjUserInfoResponse, err error) {
 	id, regionID := plan.ID.ValueString(), plan.RegionID.ValueString()
-	params := &dcs2.Dcs2DescribeInstancesOverviewRequest{
-		RegionId:   regionID,
-		ProdInstId: id,
-	}
-	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2DescribeInstancesOverviewApi.Do(ctx, c.meta.SdkCredential, params)
+	resp, err := c.redisService.GetRedisByID(ctx, id, regionID)
 	if err != nil {
 		return
-	} else if resp.StatusCode != common.NormalStatusCode {
-		msg := resp.Message
-		if strings.Contains(msg, "can't find") {
-			err = common.ResourceNotExistError
-		} else {
-			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
-		}
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
 	}
-	instance = resp.ReturnObj.UserInfo
+	instance = resp.UserInfo
 	return
 }
 

@@ -80,11 +80,11 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 		return
 	}
 	if instId == "" {
-		err = fmt.Errorf("instID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
@@ -101,7 +101,7 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 
 func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10160072"),
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的备份", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10160072"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

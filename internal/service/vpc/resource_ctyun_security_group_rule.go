@@ -51,7 +51,7 @@ func (c *ctyunSecurityGroupRule) Metadata(_ context.Context, request resource.Me
 
 func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("VPC", "https://www.ctyun.cn/document/10026730/10225510"),
+		MarkdownDescription: utils.FormatDesc("管理安全组规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225510"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -304,11 +304,10 @@ func (c *ctyunSecurityGroupRule) Read(ctx context.Context, request resource.Read
 	}
 	instance, err := c.getAndMergeSecurityGroupRule(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -425,15 +424,15 @@ func (c *ctyunSecurityGroupRule) ImportState(ctx context.Context, request resour
 	}
 
 	if securityGroupRuleId == "" {
-		err = fmt.Errorf("securityGroupRuleId不能为空")
+		err = fmt.Errorf("security_group_rule_id不能为空")
 		return
 	}
 	if securityGroupId == "" {
-		err = fmt.Errorf(" securityGroupId不能为空")
+		err = fmt.Errorf(" security_group_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(securityGroupRuleId)
@@ -468,7 +467,7 @@ func (c *ctyunSecurityGroupRule) getAndMergeSecurityGroupRule(ctx context.Contex
 	if err != nil {
 		// 如果查询不到信息会报异常，此时直接返回空
 		if err.ErrorCode() == common.OpenapiSecurityGroupRuleNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

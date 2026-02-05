@@ -2,12 +2,12 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -51,7 +51,7 @@ type CtyunEcsPortAssociationConfig struct {
 
 func (c *ctyunEcsPortAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730/10225195"),
+		MarkdownDescription: utils.FormatDesc("管理云主机和弹性网卡的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10225195"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -109,16 +109,9 @@ func (c *ctyunEcsPortAssociation) Schema(_ context.Context, _ resource.SchemaReq
 				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -169,7 +162,6 @@ func (c *ctyunEcsPortAssociation) create(ctx context.Context, plan *CtyunEcsPort
 	attachRequest := &ctecs.CtecsPortsAttachInstanceV41Request{
 		ClientToken:        uuid.NewString(),
 		RegionID:           plan.RegionID.ValueString(),
-		ProjectID:          plan.ProjectID.ValueString(),
 		AzName:             plan.AzName.ValueString(),
 		NetworkInterfaceID: plan.PortID.ValueString(),
 		InstanceID:         plan.InstanceID.ValueString(),
@@ -200,15 +192,14 @@ func (c *ctyunEcsPortAssociation) Read(ctx context.Context, req resource.ReadReq
 	}
 
 	err = c.getAndMerge(ctx, state)
-
 	if err != nil {
-		if strings.Contains(err.Error(), "弹性网卡未绑定") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
-			// 如果弹性网卡未绑定，则从状态中移除该资源
 			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -231,18 +222,30 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 			if networkCard != nil && utils.SecString(networkCard.NetworkCardID) == state.PortID.ValueString() {
 				state.PortID = types.StringValue(*networkCard.NetworkCardID)
 				state.AzName = types.StringValue(*describeResponse.ReturnObj.AzName)
-				state.ProjectID = types.StringValue(*describeResponse.ReturnObj.ProjectID)
 				return nil
 			}
 		}
 	}
 
-	return fmt.Errorf("弹性网卡未绑定")
+	return common.ResourceNotExistError
 
 }
 
-func (c *ctyunEcsPortAssociation) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// 由于所有属性都需要替换资源，实际上不会执行更新操作
+func (c *ctyunEcsPortAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	// 读取tf文件中配置
+	var plan CtyunEcsPortAssociationConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 读取state中的配置
+	var state CtyunEcsPortAssociationConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunEcsPortAssociation) Delete(ctx context.Context, req resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -310,15 +313,15 @@ func (c *ctyunEcsPortAssociation) ImportState(ctx context.Context, req resource.
 		}
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if networkInterfaceId == "" {
-		err = fmt.Errorf("networkInterfaceId不能为空")
+		err = fmt.Errorf("network_interface_id不能为空")
 		return
 	}
 
@@ -342,5 +345,5 @@ func (c *ctyunEcsPortAssociation) checkBeforeCreate(ctx context.Context, c2 *Cty
 }
 
 func generateEcsPortAssociationId(regionId, instanceId, networkInterfaceId string) string {
-	return fmt.Sprintf("%s,%s,%s", instanceId, networkInterfaceId, regionId)
+	return fmt.Sprintf("%s,%s", instanceId, networkInterfaceId)
 }

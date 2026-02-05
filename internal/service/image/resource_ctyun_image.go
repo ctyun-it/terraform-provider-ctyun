@@ -50,7 +50,7 @@ func (c *ctyunImage) Metadata(_ context.Context, request resource.MetadataReques
 
 func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("IMAGE", "https://www.ctyun.cn/document/10027726"),
+		MarkdownDescription: utils.FormatDesc("管理私有镜像（从镜像文件创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -58,7 +58,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Description:   "id",
 			},
 			"file_source": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象",
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.NullIgnoreString(),
@@ -204,6 +204,17 @@ func (c *ctyunImage) Create(ctx context.Context, request resource.CreateRequest,
 		return
 	}
 
+	size, err := utils.GetFileSize(plan.FileSource.ValueString())
+	if err != nil {
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+	if size > plan.DiskSize.ValueInt64() {
+		err = fmt.Errorf("镜像文件大小为%dGB，disk_size必须大于等于该值", size)
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+
 	// 创建实例
 	regionId := plan.RegionId.ValueString()
 	projectId := plan.ProjectId.ValueString()
@@ -267,11 +278,10 @@ func (c *ctyunImage) Read(ctx context.Context, request resource.ReadRequest, res
 
 	instance, err := c.getAndMergeImage(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -361,11 +371,11 @@ func (c *ctyunImage) ImportState(ctx context.Context, request resource.ImportSta
 	}
 
 	if imageId == "" {
-		err = fmt.Errorf("imageId不能为空")
+		err = fmt.Errorf("image_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -447,6 +457,8 @@ func (c *ctyunImage) waitForUploadImageActive(ctx context.Context, cfg CtyunImag
 			switch response.Images[0].Status {
 			case business.ImageStatusQueued:
 				return true
+			case business.ImageStatusImporting:
+				return true
 			case business.ImageStatusActive:
 				executeSuccessFlag = true
 				return false
@@ -471,7 +483,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	})
 	if err != nil {
 		if err.ErrorCode() == common.ImageImageCheckNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}
@@ -486,7 +498,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	}
 	cfg.Id = types.StringValue(resp.ImageId)
 	cfg.Name = types.StringValue(resp.ImageName)
-	cfg.OsDistro = types.StringValue(strings.ToLower(resp.OsDistro))
+	cfg.OsDistro = types.StringValue(resp.OsDistro)
 	cfg.OsVersion = types.StringValue(resp.OsVersion)
 	cfg.Architecture = types.StringValue(resp.Architecture)
 	cfg.BootMode = types.StringValue(resp.BootMode)
@@ -497,6 +509,8 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	// cfg.MaximumRam = types.Int64Value(int64(resp.MaximumRam))
 	// cfg.MinimumRam = types.Int64Value(int64(resp.MinimumRam))
 	cfg.ProjectId = types.StringValue(resp.ProjectId)
+	cfg.Description = types.StringValue(resp.Description)
+
 	return &cfg, nil
 }
 

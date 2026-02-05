@@ -28,7 +28,7 @@ func (c *ctyunEcsFlavors) Metadata(_ context.Context, req datasource.MetadataReq
 
 func (c *ctyunEcsFlavors) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("ECS", "https://www.ctyun.cn/document/10026730/10118193"),
+		MarkdownDescription: utils.FormatDesc("查询云主机可用的规格列表", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10118193"),
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
 				Optional:    true,
@@ -158,7 +158,7 @@ func (c *ctyunEcsFlavors) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		resp.Diagnostics.AddError(msg, msg)
 		return
 	}

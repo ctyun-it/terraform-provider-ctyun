@@ -51,7 +51,7 @@ type CtyunCrsVpcAttachConfig struct {
 
 func (c *ctyunCrsVpcAttach) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("CRS", "https://www.ctyun.cn/document/10007018/10007025"),
+		MarkdownDescription: utils.FormatDesc("将虚拟私有云接入容器镜像服务", "容器镜像服务（CRS）", "https://www.ctyun.cn/document/10007018/10007025"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -203,11 +203,11 @@ func (c *ctyunCrsVpcAttach) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

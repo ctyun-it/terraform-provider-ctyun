@@ -1,10 +1,10 @@
 ---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
 page_title: "CTYUN: ctyun_ecs_affinity_groups"
-subcategory: "ECS"
 ---
 
 # ctyun_ecs_affinity_groups (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597687
+-> 查询云主机组
 
 
 
