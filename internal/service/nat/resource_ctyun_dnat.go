@@ -420,8 +420,22 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.InternalPort = types.Int32Value(dnat.InternalPort)
 	if dnat.VirtualMachineID != nil && *dnat.VirtualMachineID != "" {
 		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCloud)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			// 在 ImportState 方法中添加判断逻辑
+			if strings.HasPrefix(*dnat.VirtualMachineID, "ss-") {
+				// 如果以 ss- 开头，可以认为是某种特定类型的资源
+				// 例如设置 resourceType 为 "VM" 或其他适当的类型
+				cfg.ServerType = types.StringValue("PM")
+			} else {
+				cfg.ServerType = types.StringValue("VM")
+
+			}
+		}
 	} else {
 		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCustom)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			cfg.ServerType = types.StringNull()
+		}
 	}
 	switch cfg.DnatType.ValueString() {
 	case business.VirtualMachineTypeCloud:
@@ -429,6 +443,7 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	case business.VirtualMachineTypeCustom:
 		cfg.InternalIP = utils.SecStringValue(dnat.InternalIp)
 	}
+
 	return nil
 }
 
