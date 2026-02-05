@@ -494,8 +494,8 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		ec2.NewCtyunEcSdwanInstances(),
 		// 添加SD-WAN数据源
 		sdwan2.NewCtyunSdwans(),
-		sdwan2.NewCtyunSdwanAcls(),
-		sdwan2.NewCtyunSdwanAclRules(),
+		//sdwan2.NewCtyunSdwanAcls(),
+		//sdwan2.NewCtyunSdwanAclRules(),
 		iam.NewCtyunIamUserAks(),
 		iam.NewCtyunIamUsers(),
 		iam.NewCtyunIamPolicies(),
@@ -656,8 +656,8 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		ec2.NewCtyunEcSdwanInstance(),
 		// 添加SD-WAN资源
 		sdwan2.NewCtyunSdwan(),
-		sdwan2.NewCtyunSdwanAcl(),
-		sdwan2.NewCtyunSdwanAclRule(),
+		//sdwan2.NewCtyunSdwanAcl(),
+		//sdwan2.NewCtyunSdwanAclRule(),
 		iam.NewCtyunIamUserAk(),
 		dns.NewCtyunPrivateZone(),
 		dns.NewCtyunPrivateZoneRecord(),

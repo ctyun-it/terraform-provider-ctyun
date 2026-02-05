@@ -33,7 +33,7 @@ func TestAccCtyunImage_basic(t *testing.T) {
 					imageName,
 					"CentOS",
 					"7.8",
-					"https://jiangsu-10.zos.ctyun.cn/bucket-SIT-49d97/居住证积分信息列表.txt", // file_source - 实际测试时需要替换为有效值
+					"https://jiangsu-10.zos.ctyun.cn/image-import/ecs.iso", // file_source - 实际测试时需要替换为有效值
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", imageName),
