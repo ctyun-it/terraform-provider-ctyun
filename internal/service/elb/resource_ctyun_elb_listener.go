@@ -543,7 +543,7 @@ func (c *CtyunElbListener) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -825,7 +825,10 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 
 	// 更新defaultAction
 	plan.DefaultActionType = types.StringValue(respObj.DefaultAction.RawType)
-	plan.RedirectListenerID = types.StringValue(respObj.DefaultAction.RedirectListenerID)
+	if plan.DefaultActionType.ValueString() == business.ListenerDefaultActionTypeRedirect {
+		plan.RedirectListenerID = types.StringValue(respObj.DefaultAction.RedirectListenerID)
+	}
+
 	targetGroupList := respObj.DefaultAction.ForwardConfig.TargetGroups
 	var targetGroups []TargetGroupsModel
 	for _, targetGroupItem := range targetGroupList {
