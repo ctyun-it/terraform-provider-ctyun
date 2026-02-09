@@ -30,6 +30,10 @@ func (c checkValueWhenChange) PlanModifyString(ctx context.Context, request plan
 	if request.State.Raw.IsNull() && !request.Plan.Raw.IsNull() {
 		return
 	}
+	// 删除时无需校验
+	if request.Plan.Raw.IsNull() && !request.State.Raw.IsNull() {
+		return
+	}
 	var planExpectedValue types.String
 	// 获取对比值
 	response.Diagnostics.Append(request.Plan.GetAttribute(ctx, c.targetPath, &planExpectedValue)...)
@@ -52,6 +56,10 @@ func (c checkValueWhenChange) PlanModifyString(ctx context.Context, request plan
 func (c checkValueWhenChange) PlanModifyInt64(ctx context.Context, request planmodifier.Int64Request, response *planmodifier.Int64Response) {
 	// 创建时无需校验
 	if request.State.Raw.IsNull() && !request.Plan.Raw.IsNull() {
+		return
+	}
+	// 删除时无需校验
+	if request.Plan.Raw.IsNull() && !request.State.Raw.IsNull() {
 		return
 	}
 	var planExpectedValue types.String

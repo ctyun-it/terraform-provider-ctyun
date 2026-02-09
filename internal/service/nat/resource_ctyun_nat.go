@@ -289,7 +289,7 @@ func (c *ctyunNat) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.InvalidReturnObjError) {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
