@@ -84,7 +84,6 @@ resource "ctyun_ec_cloud_gateway" "cloud_gateway_xinan1" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
   name        = "cloud_gateway_xinan1"
   description = "云间高速开发测试专用"
-  region_id   = "200000002368"
   region_name = "西南1"
 }
 
@@ -92,23 +91,20 @@ resource "ctyun_ec_cloud_gateway" "cloud_gateway_hgh7" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
   name        = "cloud_gateway_hgh7"
   description = "云间高速开发测试专用"
-  region_id   = "200000002527"
   region_name = "南昌5"
 }
 
 resource "ctyun_ec_cloud_gateway" "cloud_gateway_huhehaote3" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
-  name        = "cloud_gateway_xinan1"
+  name        = "cloud_gateway_huhehaote3"
   description = "云间高速开发测试专用"
-  region_id   = "200000003573"
   region_name = "呼和浩特3"
 }
 
 resource "ctyun_ec_cloud_gateway" "cloud_gateway_wulumuqi7" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
-  name        = "cloud_gateway_hgh7"
+  name        = "cloud_gateway_wulumuqi7"
   description = "云间高速开发测试专用"
-  region_id   = "200000004098"
   region_name = "乌鲁木齐7"
 }
 
