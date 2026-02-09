@@ -85,19 +85,19 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	}
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if groupId == "" {
-		err = fmt.Errorf("groupId不能为空")
+		err = fmt.Errorf("group_id不能为空")
 		return
 	}
 
@@ -117,7 +117,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("SCALING", "https://www.ctyun.cn/document/10027725/10241454"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩策略", "SCALING", "https://www.ctyun.cn/document/10027725/10241454"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

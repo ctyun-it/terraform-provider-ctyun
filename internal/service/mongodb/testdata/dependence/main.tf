@@ -9,7 +9,7 @@ locals {
 
 resource "ctyun_vpc" "vpc_test" {
   count       = local.data_vpc_id == "" ? 1 : 0
-  name        = "tf-vpc-for-paas-mongodb"
+  name        = "tf-vpc-for-paas-mongodb1"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true

@@ -72,6 +72,10 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 					stringvalidator.OneOf("aarch64", "loongarch64", "sw_64", "x86_64"),
 				},
 			},
+			"flavor_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "镜像规格名称",
+			},
 			"images": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
@@ -128,6 +132,7 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 		AzName:       azName,
 		Visibility:   visibility.(int),
 		QueryContent: config.Name.ValueString(),
+		FlavorName:   config.FlavorName.ValueString(),
 		PageNo:       int(config.PageNo.ValueInt64()),
 		PageSize:     int(config.PageSize.ValueInt64()),
 	})
@@ -176,6 +181,7 @@ type CtyunImagesConfig struct {
 	RegionId     types.String             `tfsdk:"region_id"`
 	AzName       types.String             `tfsdk:"az_name"`
 	Architecture types.String             `tfsdk:"architecture"`
+	FlavorName   types.String             `tfsdk:"flavor_name"`
 	Images       []CtyunImageImagesConfig `tfsdk:"images"`
 	PageSize     types.Int64              `tfsdk:"page_size"`
 	PageNo       types.Int64              `tfsdk:"page_no"`

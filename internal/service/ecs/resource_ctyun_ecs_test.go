@@ -493,6 +493,7 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 	})
 }
 
+// 测试：1-安全产品； 2-创建时候使用flavor id， 更新时候使用flavor name
 func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
@@ -500,6 +501,7 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	//datasourceName := "data.ctyun_mongodb_instances." + dnd
 
 	resourceFile := "resource_ctyun_ecs_security_product.tf"
+	resourceFile2 := "resource_ctyun_ecs_security_product2.tf"
 	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
 	// 创建参数
 	instanceName := "ecs-sp-" + rnd
@@ -513,6 +515,7 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	securityProduct := "BasicEdition"
 	cycleType := "on_demand"
 	//更新参数
+	flavorName := "c7.large.4"
 
 	//backupStorageType := "SATA"
 
@@ -534,9 +537,17 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			// 升配规格
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, instanceName, displayName, flavorID, imageID, diskSize,
-					vpcID, subnetID, keyPairName, securityProduct, cycleType),
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
 				Destroy: true,
 			},
 		},

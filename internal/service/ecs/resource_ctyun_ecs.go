@@ -108,18 +108,24 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"flavor_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新",
+				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					validator2.UUID(),
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_name")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，支持更新",
+				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_id")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -151,6 +157,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "系统盘大小，单位为G，取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(40, 32768),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.CheckValueWhenChangeInt64(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"vpc_id": schema.StringAttribute{
@@ -224,6 +233,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填 支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypes...),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"cycle_count": schema.Int64Attribute{
@@ -468,19 +480,19 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 
 	// 等待云主机状态为运行中的状态
-	err2 := c.waitInstanceStatusFor(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), business.EcsStatusRunning)
-	if err2 != nil {
+	err = c.waitInstanceStatusFor(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), business.EcsStatusRunning)
+	if err != nil {
 		return
 	}
 
 	// 设置删除保护设置
-	err2 = c.setDeletionProtection(ctx, &plan)
-	if err2 != nil {
+	err = c.setDeletionProtection(ctx, &plan)
+	if err != nil {
 		return
 	}
 
-	err2 = c.createMetadata(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), plan.Metadata)
-	if err2 != nil {
+	err = c.createMetadata(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), plan.Metadata)
+	if err != nil {
 		return
 	}
 
@@ -1258,6 +1270,7 @@ func (c *ctyunEcs) waitInstanceStatusFor(ctx context.Context, id, regionId, stat
 }
 
 // updateFlavor 更新云主机实例规格
+// 支持flavor id 和flavor name 交叉更新的情况：创建时使用flavor id， 更新的时候使用flavor name
 func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan CtyunEcsConfig) error {
 	if state.FlavorId.Equal(plan.FlavorId) && state.FlavorName.Equal(plan.FlavorName) {
 		return nil
@@ -1268,14 +1281,14 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 		return errors.New("变更云主机配置规格，请先将云主机关机")
 	}
 	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
-	if flavorName != "" {
+	if flavorName != "" && !plan.FlavorName.Equal(state.FlavorName) {
 		fid, err := c.ecsService.GetFlavorIDByName(ctx, flavorName, plan.RegionId.ValueString(), plan.AzName.ValueString())
 		if err != nil {
 			return err
 		}
 		flavorID = fid
 	}
-	if flavorID != "" {
+	if flavorID != "" && !plan.FlavorId.Equal(state.FlavorId) {
 		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
 		if err != nil {
 			return err
