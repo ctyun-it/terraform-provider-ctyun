@@ -207,7 +207,7 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 	var hasErrorOccurred = false
 	defer func() {
 		if err != nil && !hasErrorOccurred {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -218,14 +218,14 @@ func (c *ctyunVipAssociation) ImportState(ctx context.Context, request resource.
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &vipId, &info)
 		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	} else {
 		err = terraform_extend.Split(request.ID, &vipId, &info, &regionId)
 		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}

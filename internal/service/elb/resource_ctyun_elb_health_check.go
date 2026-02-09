@@ -334,7 +334,7 @@ func (c *CtyunElbHealthCheck) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
@@ -506,7 +506,7 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	plan.Description = types.StringValue(resp.ReturnObj.Description)
 	plan.Name = types.StringValue(resp.ReturnObj.Name)
 	plan.Protocol = types.StringValue(resp.ReturnObj.Protocol)
-	if plan.ProtocolPort.ValueInt32() > 0 {
+	if resp.ReturnObj.ProtocolPort > 0 {
 		plan.ProtocolPort = types.Int32Value(resp.ReturnObj.ProtocolPort)
 	} else {
 		plan.ProtocolPort = types.Int32Null()

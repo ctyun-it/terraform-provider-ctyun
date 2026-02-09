@@ -47,7 +47,7 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 	var err error
 	defer func() {
 		if err != nil {
-			title := fmt.Sprintf("%s导入失败：%s", c.name, err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
 			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id], [ec_id], [packet_id], [src_cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
