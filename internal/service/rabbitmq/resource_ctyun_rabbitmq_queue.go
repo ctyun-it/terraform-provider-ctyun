@@ -297,7 +297,7 @@ func (c *ctyunRabbitmqQueue) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.ResourceNotExistError) {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
