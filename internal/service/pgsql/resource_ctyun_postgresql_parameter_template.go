@@ -330,14 +330,14 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 }
 
 func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
-	// 若id为空，查询id
-	if config.ID.IsNull() || config.ID.IsUnknown() {
-		respList, err := c.getPgsqlParameterTemplateList(ctx, config)
-		if err != nil {
-			return err
-		}
-		config.ID = types.Int64Value(respList[0].PgTemplateId)
+
+	respList, err := c.getPgsqlParameterTemplateList(ctx, config)
+	if err != nil {
+		return err
 	}
+	detail := respList[0]
+	config.ID = types.Int64Value(detail.PgTemplateId)
+	config.Description = types.StringValue(detail.Description)
 	if config.TemplateParameters.IsNull() {
 		config.TemplateParameters = types.MapNull(types.StringType)
 	}

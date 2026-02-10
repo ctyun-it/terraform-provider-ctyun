@@ -362,7 +362,7 @@ func (c *ctyunSfsPermissionGroupAssociation) getAndMergeSfsPermissionGroupAssoci
 			return nil
 		}
 	}
-	return common.InvalidReturnObjError
+	return common.ResourceNotExistError
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) requestSfsVpcList(ctx context.Context, config CtyunSfsPermissionGroupAssociationConfig) (*sfs.SfsSfsListVpcSfsResponse, error) {

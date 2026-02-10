@@ -488,7 +488,7 @@ func (c *ctyunScalingPolicy) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingPolicy(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}

@@ -386,6 +386,7 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 		err = common.ResourceNotExistError
 		return
 	}
+
 	// 解析返回的绑定eip列表
 	returnObj := resp.ReturnObj.Data
 	if len(returnObj) > 1 {
@@ -396,7 +397,10 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 		err = common.ResourceNotExistError
 		return
 	}
-
+	if returnObj[0].Status == "DOWN" || returnObj[0].BindStatus == 0 {
+		err = common.ResourceNotExistError
+		return
+	}
 	config.EipStatus = types.Int32Value(returnObj[0].BindStatus)
 	return
 }
