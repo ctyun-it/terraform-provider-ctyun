@@ -104,6 +104,12 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 }
 
 func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
 	var plan CtyunIamUserConfig
 	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -127,7 +133,6 @@ func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateReques
 		Groups:             ugs,
 	})
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -137,9 +142,8 @@ func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeIamUser(ctx, plan)
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	instance, err := c.getAndMergeIamUser(ctx, plan)
+	if err != nil {
 		return
 	}
 	if instance == nil {
@@ -168,6 +172,12 @@ func (c *ctyunIamUser) Read(ctx context.Context, request resource.ReadRequest, r
 }
 
 func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
 	var state CtyunIamUserConfig
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -180,7 +190,7 @@ func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
-	_, err := c.meta.Apis.CtIamApis.UserUpdateApi.Do(ctx, c.meta.Credential, &ctiam.UserUpdateRequest{
+	_, err = c.meta.Apis.CtIamApis.UserUpdateApi.Do(ctx, c.meta.Credential, &ctiam.UserUpdateRequest{
 		UserId:      state.Id.ValueString(),
 		Remark:      plan.Description.ValueString(),
 		LoginEmail:  plan.Email.ValueString(),
@@ -189,34 +199,30 @@ func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateReques
 		Prohibit:    0,
 	})
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
 	// 更新密码
 	if !plan.Password.Equal(state.Password) {
-		_, err := c.meta.Apis.CtIamApis.UserResetPasswordApi.Do(ctx, c.meta.Credential, &ctiam.UserResetPasswordRequest{
+		_, err = c.meta.Apis.CtIamApis.UserResetPasswordApi.Do(ctx, c.meta.Credential, &ctiam.UserResetPasswordRequest{
 			UserId:      state.Id.ValueString(),
 			OldPassword: state.Password.ValueString(),
 			NewPassword: plan.Password.ValueString(),
 		})
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
 	}
 
 	// 更新用户组
-	err2 := c.updateUserGroup(ctx, state, plan)
+	err = c.updateUserGroup(ctx, state, plan)
 	if err != nil {
-		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeIamUser(ctx, state)
+	instance, err := c.getAndMergeIamUser(ctx, state)
 	instance.Password = plan.Password
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	if err != nil {
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

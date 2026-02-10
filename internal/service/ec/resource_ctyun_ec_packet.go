@@ -107,7 +107,7 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:    true,
 				Description: "订购周期类型，取值范围：month：按月，year：按年",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.OrderCycleTypes...),
+					stringvalidator.OneOf(business.OrderCycleTypesMY...),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

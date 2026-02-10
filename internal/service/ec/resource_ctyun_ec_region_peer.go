@@ -334,18 +334,63 @@ func (c *CtyunExpressConnectRegionPeer) getAndMerge(ctx context.Context, config 
 	}
 
 	for _, regionPeer := range regionPeerList {
-		if *regionPeer.PeerID == config.ID.ValueString() {
-			config.Name = types.StringValue(*regionPeer.PeerName)
-			config.EcID = types.StringValue(*regionPeer.EcID)
-			config.SrcCgwID = types.StringValue(*regionPeer.SrcCgwID)
-			config.DstCgwID = types.StringValue(*regionPeer.DstCgwID)
-			config.PacketID = types.StringValue(*regionPeer.PacketID)
-			config.Rate = types.Int32Value(*regionPeer.Rate)
-			config.SrcRegionID = types.StringValue(*regionPeer.SrcDcID)
-			config.DstRegionID = types.StringValue(*regionPeer.DstDcID)
-			config.PeerType = types.Int32Value(*regionPeer.PeerType)
-			config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
-			config.RouteLearn = types.Int32Value(*regionPeer.RouteLearn)
+		if regionPeer.PeerID != nil && *regionPeer.PeerID == config.ID.ValueString() {
+			if regionPeer.PeerName != nil {
+				config.Name = types.StringValue(*regionPeer.PeerName)
+			} else {
+				config.Name = types.StringNull()
+			}
+			if regionPeer.EcID != nil {
+				config.EcID = types.StringValue(*regionPeer.EcID)
+			} else {
+				config.EcID = types.StringNull()
+			}
+			if regionPeer.SrcCgwID != nil {
+				config.SrcCgwID = types.StringValue(*regionPeer.SrcCgwID)
+			} else {
+				config.SrcCgwID = types.StringNull()
+			}
+			if regionPeer.DstCgwID != nil {
+				config.DstCgwID = types.StringValue(*regionPeer.DstCgwID)
+			} else {
+				config.DstCgwID = types.StringNull()
+			}
+			if regionPeer.PacketID != nil {
+				config.PacketID = types.StringValue(*regionPeer.PacketID)
+			} else {
+				config.PacketID = types.StringNull()
+			}
+			if regionPeer.Rate != nil {
+				config.Rate = types.Int32Value(*regionPeer.Rate)
+			} else {
+				config.Rate = types.Int32Null()
+			}
+			if regionPeer.SrcDcID != nil {
+				config.SrcRegionID = types.StringValue(*regionPeer.SrcDcID)
+			} else {
+				config.SrcRegionID = types.StringNull()
+			}
+			if regionPeer.DstDcID != nil {
+				config.DstRegionID = types.StringValue(*regionPeer.DstDcID)
+			} else {
+				config.DstRegionID = types.StringNull()
+			}
+
+			if regionPeer.PeerType != nil {
+				config.PeerType = types.Int32Value(*regionPeer.PeerType)
+			} else {
+				config.PeerType = types.Int32Null()
+			}
+			if regionPeer.UpdateDate != nil {
+				config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
+			} else {
+				config.UpdateTime = types.StringNull()
+			}
+			if regionPeer.RouteLearn != nil {
+				config.RouteLearn = types.Int32Value(*regionPeer.RouteLearn)
+			} else {
+				config.RouteLearn = types.Int32Null()
+			}
 			return nil
 		}
 	}

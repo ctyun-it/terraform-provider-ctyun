@@ -58,8 +58,8 @@ func TestAccCtyunEcSdwanInstance_basic(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["sdwan_id"],
-						rs.Primary.Attributes["cgw_id"],
 						rs.Primary.Attributes["ec_id"],
+						rs.Primary.Attributes["cgw_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
