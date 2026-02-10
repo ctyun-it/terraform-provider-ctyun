@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
@@ -203,8 +204,10 @@ func (c *CtyunPgsqlWhiteList) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergePostgresqlWhiteList(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -283,9 +286,17 @@ func (c *CtyunPgsqlWhiteList) getWhiteIpList(ctx context.Context, config *CtyunP
 		err = fmt.Errorf("postgresql实例获取白名单ip失败，接口返回nil，请联系研发确认问题原因！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(*resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
 	}
+
 	return resp, nil
 }
 

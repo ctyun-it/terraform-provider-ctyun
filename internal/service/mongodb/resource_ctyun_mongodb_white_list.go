@@ -195,6 +195,10 @@ func (c *CtyunMongodbWhiteList) Read(ctx context.Context, req resource.ReadReque
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -387,9 +391,16 @@ func (c *CtyunMongodbWhiteList) getAndMerge(ctx context.Context, plan *CtyunMong
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if resp.ReturnObj.WhitelistGroup == nil || len(resp.ReturnObj.WhitelistGroup) == 0 {
+		err = common.ResourceNotExistError
+		return
 	}
 
 	// 查找对应的白名单分组

@@ -2,6 +2,7 @@ package oceanfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -177,7 +178,7 @@ func (c *CtyunOceanfsPermissionGroup) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -351,12 +352,12 @@ func (c *CtyunOceanfsPermissionGroup) getAndMerge(ctx context.Context, config *C
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	if len(resp.ReturnObj.List) > 1 {
-		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回多个结果！", config.ID.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
 		return err
 	}
-	if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回空结果！", config.ID.ValueString())
+	if len(resp.ReturnObj.List) > 1 {
+		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回多个结果！", config.ID.ValueString())
 		return err
 	}
 	returnObj := resp.ReturnObj.List[0]

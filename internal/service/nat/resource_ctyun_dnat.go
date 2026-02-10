@@ -248,8 +248,8 @@ func (c *ctyunDnatResource) Read(ctx context.Context, request resource.ReadReque
 	err = c.getAndMergeDnat(ctx, &state)
 	if err != nil {
 		if errors.Is(err, common.ResourceNotExistError) {
-			err = nil
 			response.State.RemoveResource(ctx)
+			err = nil
 		}
 		return
 	}

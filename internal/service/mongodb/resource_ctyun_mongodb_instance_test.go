@@ -134,7 +134,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SAS"
-	storageSpace := 120
+	storageSpace := 1024
 	backupStorageType := "SATA"
 	azName := dependence.azName
 	azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"master"}, {"availability_zone_name":"%s","availability_zone_count":1,"node_type":"backup"}]`, azName, azName)
@@ -144,7 +144,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	//updatedStorageType := ""
-	updatedStorageSpace := 130
+	updatedStorageSpace := 1500
 	//backupStorageType := "SATA"
 	updatedAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"s"}]`, azName)
 

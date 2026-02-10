@@ -492,3 +492,64 @@ func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
 		},
 	})
 }
+
+// 测试：1-安全产品； 2-创建时候使用flavor id， 更新时候使用flavor name
+func TestAccCtyunEcsSecurityProduct(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_ecs." + rnd
+	//datasourceName := "data.ctyun_mongodb_instances." + dnd
+
+	resourceFile := "resource_ctyun_ecs_security_product.tf"
+	resourceFile2 := "resource_ctyun_ecs_security_product2.tf"
+	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
+	// 创建参数
+	instanceName := "ecs-sp-" + rnd
+	displayName := "ecs-sp-" + rnd
+	flavorID := dependence.flavorID
+	imageID := dependence.imageID
+	diskSize := 60
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+	keyPairName := dependence.keyPairName
+	securityProduct := "BasicEdition"
+	cycleType := "on_demand"
+	//更新参数
+	flavorName := "c7.large.4"
+
+	//backupStorageType := "SATA"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, instanceName, displayName, flavorID, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// 升配规格
+			{
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
+				Destroy: true,
+			},
+		},
+	})
+}

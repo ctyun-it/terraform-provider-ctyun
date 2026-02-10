@@ -210,7 +210,7 @@ func (c *CtyunMysqlWhiteList) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeMysqlAccessWhiteList(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -367,10 +367,14 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		err = errors.New("查询mysql白名单过程中，response返回为空, 请稍后再试！")
 		return
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 	for _, whileListInfo := range resp.ReturnObj {

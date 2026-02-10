@@ -285,8 +285,10 @@ func (c *CtyunPostgresqlAccount) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMergePostgresqlAccount(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -501,6 +503,11 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 		err = fmt.Errorf("查询postgresql实例(id=%s)的账户信息(account_name=%s)失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		// PG_2001 = 未找到实例
+		if strings.Contains(*resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -508,7 +515,7 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) <= 0 {
-		err = fmt.Errorf("查询postgresql实例(id=%s)的账户信息失败，接口未查询到任何(account_name=%s)信息。", config.InstID.ValueString(), config.Name.ValueString())
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) > 1 {

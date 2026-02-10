@@ -226,8 +226,10 @@ func (c *CtyunMysqlBackup) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMergeMysqlBackup(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -390,10 +392,17 @@ func (c *CtyunMysqlBackup) getBackupRecordList(ctx context.Context, config Ctyun
 		err = fmt.Errorf("获取mysql实例(id=%s)备份集(id=%s)信息及备份任务失败，接口返回nil，具体原因请联系研发确认！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "paasProduct find failed") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("get backup list error, API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return nil, err
+	} else if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	return resp.ReturnObj, nil

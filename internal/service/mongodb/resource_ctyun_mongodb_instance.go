@@ -473,8 +473,10 @@ func (c *CtyunMongodbInstance) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMergeMongodbInstance(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -703,13 +705,12 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(detailReturnObj.CreateTime))
 	if detailReturnObj.Backup != nil {
 		backupSize := strings.TrimSuffix(detailReturnObj.Backup.Size, "G")
+		// 暂时不处理，产线接口返回string，暂时无法处理
 		backupStorageSpace, err2 := strconv.ParseInt(backupSize, 10, 32)
 		if err2 != nil {
-			err = err2
-			return
+			backupStorageSpace = 0
 		}
 		config.BackupStorageSpace = types.Int32Value(int32(backupStorageSpace))
-
 	} else {
 		config.BackupStorageSpace = types.Int32Value(0)
 	}
@@ -1180,7 +1181,7 @@ func (c *CtyunMongodbInstance) UpgradeLoop(ctx context.Context, state *CtyunMong
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，未更新成功！")
 	}
 	return
 
@@ -1291,7 +1292,7 @@ func (c *CtyunMongodbInstance) UpgradeStorageLoop(ctx context.Context, state *Ct
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，磁盘空间未更新成功！")
 	}
 	return
 }
@@ -1760,10 +1761,10 @@ func (c *CtyunMongodbInstance) upgradeStorage(ctx context.Context, state *CtyunM
 		}
 
 		// 轮询确认是否已扩容完成
-		err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
-		if err != nil {
-			return
-		}
+		//err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
+		//if err != nil {
+		//	return
+		//}
 	}
 	return
 }
@@ -1775,16 +1776,19 @@ func (c *CtyunMongodbInstance) getMongoDetailInfo(ctx context.Context, config *C
 	detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if config.ProjectID.ValueString() != "" {
-		detailHeader.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 	if err != nil {
 		return
 	} else if resp == nil {
 		err = errors.New("获取mongodb实例为nil，请稍后再试！")
 		return
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
+		// DDS_83000 =请确认用户下是否有实例, DDS_84000 =请确认prodInstId是否正确
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {

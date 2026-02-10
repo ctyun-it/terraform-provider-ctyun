@@ -2,6 +2,7 @@ package pgsql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
@@ -214,8 +215,10 @@ func (c *CtyunPgsqlParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergePostgresqlParameterTemplate(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -327,14 +330,14 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 }
 
 func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
-	// 若id为空，查询id
-	if config.ID.IsNull() || config.ID.IsUnknown() {
-		respList, err := c.getPgsqlParameterTemplateList(ctx, config)
-		if err != nil {
-			return err
-		}
-		config.ID = types.Int64Value(respList[0].PgTemplateId)
+
+	respList, err := c.getPgsqlParameterTemplateList(ctx, config)
+	if err != nil {
+		return err
 	}
+	detail := respList[0]
+	config.ID = types.Int64Value(detail.PgTemplateId)
+	config.Description = types.StringValue(detail.Description)
 	if config.TemplateParameters.IsNull() {
 		config.TemplateParameters = types.MapNull(types.StringType)
 	}
@@ -445,11 +448,12 @@ func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Cont
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("有多个name=%s的参数模板！", config.Name.ValueString())
-		return nil, err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("未查询到name=%s的参数模板！", config.Name.ValueString())
 		return nil, err
 	}
 	return resp.ReturnObj.List, nil

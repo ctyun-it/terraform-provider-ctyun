@@ -107,3 +107,71 @@ func TestAccCtyunOceanfsPermissionGroup(t *testing.T) {
 		},
 	})
 }
+
+// copyFile 辅助函数：复制文件（用于tfstate备份/恢复）
+//func copyFile(src, dst string) error {
+//	input, err := os.ReadFile(src)
+//	if err != nil {
+//		return err
+//	}
+//	return os.WriteFile(dst, input, 0644)
+//}
+
+//func TestResourceYourResource_Read_RemoveFromStateAfterDestroy(t *testing.T) {
+//	rnd := utils.GenerateRandomString()
+//	resourceName := "ctyun_oceanfs_permission_group." + rnd
+//	resourceFile := "resource_ctyun_oceanfs_permission_group.tf"
+//
+//	var (
+//		testWorkspaceDir = filepath.Join(os.TempDir(), "tf-test-"+t.Name())
+//		tfStatePath      = filepath.Join(testWorkspaceDir, "terraform.tfstate")
+//		tfStateBackup    = tfStatePath + ".bak"
+//	)
+//	resource.Test(t, resource.TestCase{
+//		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+//		Steps: []resource.TestStep{
+//			// 创建资源
+//			{
+//				Config: utils.LoadTestCase(
+//					resourceFile, rnd,
+//					"test-permission-group-"+rnd, "Initial permission group description",
+//				),
+//				Check: resource.ComposeAggregateTestCheckFunc(
+//					resource.TestCheckResourceAttrSet(resourceName, "id"),
+//					func(state *terraform.State) error {
+//						// 复制当前tfstate到备份文件
+//						if err := copyFile(tfStatePath, tfStateBackup); err != nil {
+//							return fmt.Errorf("备份tfstate失败: %v", err)
+//						}
+//						return nil
+//					},
+//				),
+//			},
+//			// 删除资源
+//			{
+//				Config: utils.LoadTestCase(
+//					resourceFile, rnd,
+//					"test-permission-group-"+rnd, "Initial permission group description",
+//				),
+//				Destroy: true,
+//			},
+//
+//			// 恢复tfstate文件，并触发refresh
+//			{
+//				Check: func(state *terraform.State) error {
+//					if err := copyFile(tfStateBackup, tfStatePath); err != nil {
+//						return fmt.Errorf("恢复tfstate失败: %v", err)
+//					}
+//					return nil
+//				},
+//				// 触发refresh（read）并验证state被移除
+//				// 从恢复的state中获取资源
+//				rs, ok := state.RootModule().Resources[resourceName]
+//				if !ok {
+//				return fmt.Errorf("恢复的tfstate中未找到资源 %s", resourceName)
+//			}
+//
+//			},
+//		},
+//	})
+//}

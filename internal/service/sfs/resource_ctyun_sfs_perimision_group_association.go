@@ -2,6 +2,7 @@ package sfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -221,8 +222,10 @@ func (c *ctyunSfsPermissionGroupAssociation) Read(ctx context.Context, request r
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroupAssociation(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -355,11 +358,11 @@ func (c *ctyunSfsPermissionGroupAssociation) getAndMergeSfsPermissionGroupAssoci
 			config.PermissionGroupFuid = types.StringValue(association.PermissionGroupFuid)
 			config.VpcCidr = types.StringValue(association.VpcCidr)
 			config.VpcName = types.StringValue(association.VpcName)
-			break
+			config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
+			return nil
 		}
 	}
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
-	return nil
+	return common.ResourceNotExistError
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) requestSfsVpcList(ctx context.Context, config CtyunSfsPermissionGroupAssociationConfig) (*sfs.SfsSfsListVpcSfsResponse, error) {
@@ -374,12 +377,20 @@ func (c *ctyunSfsPermissionGroupAssociation) requestSfsVpcList(ctx context.Conte
 		err = fmt.Errorf("查询文件系统（id=%s）下的vpc列表、vpc绑定的权限组列表表失败， 接口返回nil。请与研发联系确认问题原因。 ", config.SfsUID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExists") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
+	} else if resp.ReturnObj.TotalCount == 0 || resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
 	}
+
 	return resp, nil
 }
 
