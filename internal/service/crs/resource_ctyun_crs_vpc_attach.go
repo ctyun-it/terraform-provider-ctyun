@@ -337,12 +337,15 @@ func (c *ctyunCrsVpcAttach) getAttach(ctx context.Context, plan CtyunCrsVpcAttac
 func (c *ctyunCrsVpcAttach) getAndMerge(ctx context.Context, plan *CtyunCrsVpcAttachConfig) (err error) {
 	state, err := c.getAttach(ctx, *plan)
 	if err != nil {
+		if strings.Contains(err.Error(), "不存在") {
+			err = common.ResourceNotExistError
+		}
 		return
 	}
 	if state != "ACTIVE" {
 		err = common.ResourceNotExistError
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.VpcID.ValueString(), plan.RegionID.ValueString()))
+	plan.ID = plan.VpcID
 	return
 }

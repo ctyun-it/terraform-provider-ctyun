@@ -65,6 +65,17 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 					int64validator.AtLeast(1),
 				},
 			},
+			"architecture": schema.StringAttribute{
+				Optional:    true,
+				Description: "系统架构。取值范围：aarch64：aarch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构",
+				Validators: []validator.String{
+					stringvalidator.OneOf("aarch64", "loongarch64", "sw_64", "x86_64"),
+				},
+			},
+			"flavor_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "镜像规格名称",
+			},
 			"images": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
@@ -87,7 +98,7 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 						},
 						"architecture": schema.StringAttribute{
 							Computed:    true,
-							Description: "架构",
+							Description: "系统架构。取值范围：aarch64：AArch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构",
 						},
 					},
 				},
@@ -116,15 +127,16 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-
 	imageListResponse, err := c.meta.Apis.CtImageApis.ImageListApi.Do(ctx, c.meta.Credential, &ctimage.ImageListRequest{
 		RegionId:     regionId,
 		AzName:       azName,
 		Visibility:   visibility.(int),
 		QueryContent: config.Name.ValueString(),
+		FlavorName:   config.FlavorName.ValueString(),
 		PageNo:       int(config.PageNo.ValueInt64()),
 		PageSize:     int(config.PageSize.ValueInt64()),
 	})
+
 	if err != nil {
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
@@ -132,6 +144,9 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 
 	var images []CtyunImageImagesConfig
 	for _, ig := range imageListResponse.Images {
+		if !config.Architecture.IsNull() && config.Architecture.ValueString() != ig.Architecture {
+			continue
+		}
 		images = append(images, CtyunImageImagesConfig{
 			Name:         types.StringValue(ig.ImageName),
 			Id:           types.StringValue(ig.ImageId),
@@ -161,11 +176,13 @@ type CtyunImageImagesConfig struct {
 }
 
 type CtyunImagesConfig struct {
-	Visibility types.String             `tfsdk:"visibility"`
-	Name       types.String             `tfsdk:"name"`
-	RegionId   types.String             `tfsdk:"region_id"`
-	AzName     types.String             `tfsdk:"az_name"`
-	Images     []CtyunImageImagesConfig `tfsdk:"images"`
-	PageSize   types.Int64              `tfsdk:"page_size"`
-	PageNo     types.Int64              `tfsdk:"page_no"`
+	Visibility   types.String             `tfsdk:"visibility"`
+	Name         types.String             `tfsdk:"name"`
+	RegionId     types.String             `tfsdk:"region_id"`
+	AzName       types.String             `tfsdk:"az_name"`
+	Architecture types.String             `tfsdk:"architecture"`
+	FlavorName   types.String             `tfsdk:"flavor_name"`
+	Images       []CtyunImageImagesConfig `tfsdk:"images"`
+	PageSize     types.Int64              `tfsdk:"page_size"`
+	PageNo       types.Int64              `tfsdk:"page_no"`
 }

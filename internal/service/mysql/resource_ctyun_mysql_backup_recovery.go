@@ -56,7 +56,7 @@ func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "mysql实例id",
+				Description: "mysql实例id，废弃字段。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(32, 32),
 				},
@@ -208,7 +208,7 @@ func (c *CtyunMysqlBackupRecovery) CreateMysqlBackupRecovery(ctx context.Context
 		params.ToTimepoint = &a
 	}
 	header := &mysql.TeledbCreateRecoveryJobRequestHeader{
-		InstID:   config.InstID.ValueString(),
+		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
 	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
@@ -290,13 +290,13 @@ func (c *CtyunMysqlBackupRecovery) BackupRecoveryLoop(ctx context.Context, confi
 
 func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, config *CtyunMysqlBackupRecoveryConfig) ([]mysql.BrRecoveryRecordVo, error) {
 	params := &mysql.TeledbGetBackupRecoveryListRequest{
-		OuterProdInstId: config.InstID.ValueString(),
+		OuterProdInstId: config.SrcInstId.ValueString(),
 		ID:              config.ID.ValueInt64Pointer(),
 		PageSize:        10,
 		PageNow:         1,
 	}
 	header := &mysql.TeledbGetBackupRecoveryListRequestHeader{
-		InstID:   config.InstID.ValueString(),
+		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
 	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
@@ -306,7 +306,7 @@ func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, co
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%d)列表失败，接口返回nil，请联系研发确认问题原因。", config.InstID.ValueString(), config.ID.ValueInt64())
+		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%d)列表失败，接口返回nil，请联系研发确认问题原因。", config.SrcInstId.ValueString(), config.ID.ValueInt64())
 		return nil, err
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
@@ -321,7 +321,7 @@ func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, co
 		return nil, err
 	}
 	if len(recoveryList) > 1 {
-		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%s)列表长度不为1。", config.InstID.ValueString(), config.ID)
+		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%s)列表长度不为1。", config.SrcInstId.ValueString(), config.ID)
 		return nil, err
 	}
 	return recoveryList, nil
@@ -341,10 +341,10 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 		func(currentTime int) bool {
 			// 获取实例详情
 			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
+				OuterProdInstId: state.SrcInstId.ValueString(),
 			}
 			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
+				InstID:   state.SrcInstId.ValueString(),
 				RegionID: state.RegionID.ValueString(),
 			}
 			if state.ProjectID.ValueString() != "" {
@@ -355,7 +355,7 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 				err = err2
 				return false
 			} else if resp == nil {
-				err = fmt.Errorf("查询mysql实例(id=%s)的详情失败，接口返回nil。请与研发联系确认问题原因。", state.InstID.ValueString())
+				err = fmt.Errorf("查询mysql实例(id=%s)的详情失败，接口返回nil。请与研发联系确认问题原因。", state.SrcInstId.ValueString())
 				return false
 			} else if resp.StatusCode != 0 {
 				err = fmt.Errorf("API return error. Message: %s", resp.Message)
@@ -368,7 +368,7 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 			orderStatus := resp.ReturnObj.ProdOrderStatus
 			// 若变配前，发现数据库已冻结，将其恢复
 			if orderStatus == business.MysqlOrderStatusPause {
-				err = fmt.Errorf("mysql实例(id=%s)当前处理冻结状态", state.InstID.ValueString())
+				err = fmt.Errorf("mysql实例(id=%s)当前处理冻结状态", state.SrcInstId.ValueString())
 				if err != nil {
 					return false
 				}

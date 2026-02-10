@@ -287,7 +287,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("SSD"),
-				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD",
+				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD，XSSD-0，XSSD-1，XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.MongodbStorageType...),
 				},
@@ -356,9 +356,8 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Description: "backup节点磁盘空间，当前不支持指定。默认与存储空间相同",
 			},
 			"backup_storage_type": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）。若不填写，默认为云硬盘（SSD）",
+				Required:    true,
+				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSATA, business.StorageTypeSAS, business.StorageTypeSSD, business.BackupStorageTypeOS),
 				},
@@ -474,8 +473,10 @@ func (c *CtyunMongodbInstance) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMergeMongodbInstance(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -596,6 +597,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 		Count:             1,
 		ProdId:            business.MongodbProdIDDict[config.ProdID.ValueString()],
 		MysqlNodeInfoList: nil,
+		CpuType:           business.MongodbCpuTypeDict[config.cpuType],
 	}
 	if config.BackupStorageType.ValueString() == business.BackupStorageTypeOS {
 		osStr := strings.ToLower(config.BackupStorageType.ValueString())
@@ -639,6 +641,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 	header := &mongodb.MongodbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbCreateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -702,13 +705,12 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(detailReturnObj.CreateTime))
 	if detailReturnObj.Backup != nil {
 		backupSize := strings.TrimSuffix(detailReturnObj.Backup.Size, "G")
+		// 暂时不处理，产线接口返回string，暂时无法处理
 		backupStorageSpace, err2 := strconv.ParseInt(backupSize, 10, 32)
 		if err2 != nil {
-			err = err2
-			return
+			backupStorageSpace = 0
 		}
 		config.BackupStorageSpace = types.Int32Value(int32(backupStorageSpace))
-
 	} else {
 		config.BackupStorageSpace = types.Int32Value(0)
 	}
@@ -1179,7 +1181,7 @@ func (c *CtyunMongodbInstance) UpgradeLoop(ctx context.Context, state *CtyunMong
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，未更新成功！")
 	}
 	return
 
@@ -1290,7 +1292,7 @@ func (c *CtyunMongodbInstance) UpgradeStorageLoop(ctx context.Context, state *Ct
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，磁盘空间未更新成功！")
 	}
 	return
 }
@@ -1759,10 +1761,10 @@ func (c *CtyunMongodbInstance) upgradeStorage(ctx context.Context, state *CtyunM
 		}
 
 		// 轮询确认是否已扩容完成
-		err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
-		if err != nil {
-			return
-		}
+		//err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
+		//if err != nil {
+		//	return
+		//}
 	}
 	return
 }
@@ -1774,16 +1776,19 @@ func (c *CtyunMongodbInstance) getMongoDetailInfo(ctx context.Context, config *C
 	detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if config.ProjectID.ValueString() != "" {
-		detailHeader.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 	if err != nil {
 		return
 	} else if resp == nil {
 		err = errors.New("获取mongodb实例为nil，请稍后再试！")
 		return
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
+		// DDS_83000 =请确认用户下是否有实例, DDS_84000 =请确认prodInstId是否正确
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {

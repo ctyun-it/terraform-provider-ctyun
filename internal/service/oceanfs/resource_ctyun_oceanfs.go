@@ -368,10 +368,11 @@ func (c *CtyunOceanfs) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
+
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -691,6 +692,10 @@ func (c *CtyunOceanfs) getOceanfsDetail(ctx context.Context, config *CtyunOceanf
 		err = fmt.Errorf("获取海量文件服务Oceanfs详情失败(id=%s)，返回结果为空，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExists") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {

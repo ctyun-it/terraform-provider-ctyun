@@ -2,6 +2,7 @@ package sfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -199,8 +200,10 @@ func (c *ctyunSfsPermissionGroupRule) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroupRule(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -320,14 +323,15 @@ func (c *ctyunSfsPermissionGroupRule) getAndMergeSfsPermissionGroupRule(ctx cont
 	if err != nil {
 		return err
 	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("查询权限组id=%s，权限组规则id=%s详情，返回信息条数>1。", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
 		return err
 	}
-	if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("未查询到权限组id=%s，权限组规则id=%s详情", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
-		return err
-	}
+
 	rule := resp.ReturnObj.List[0]
 	config.AuthAddr = types.StringValue(rule.AuthAddr)
 	config.RwPermission = types.StringValue(rule.RwPermission)

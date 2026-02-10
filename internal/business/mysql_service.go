@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	"strings"
 	"time"
 )
 
@@ -88,6 +89,10 @@ func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID, regi
 	if err != nil {
 		return
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {

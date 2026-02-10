@@ -60,7 +60,7 @@ variable "update_password" {
 }
 resource "ctyun_mongodb_account" "example" {
   instance_id = ctyun_mongodb_instance.test.id
-  name        = "example-account"
+  name        = "example_account"
   password    = var.update_password
   database    = "admin"
 

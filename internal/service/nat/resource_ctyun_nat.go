@@ -81,8 +81,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				},
 			},
 			"vpc_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIfConfigured(),
@@ -290,7 +289,7 @@ func (c *ctyunNat) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -507,6 +506,10 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if strings.Contains(*resp.ErrorCode, "Openapi.Nat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {

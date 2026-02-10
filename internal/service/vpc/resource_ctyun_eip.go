@@ -141,6 +141,11 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
 					stringvalidator.OneOf(business.EipDemandBillingTypes...),
 				},
 			},
@@ -324,11 +329,6 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-
-	if !plan.DemandBillingType.IsUnknown() && !plan.DemandBillingType.IsNull() && state.DemandBillingType.IsNull() {
-		state.DemandBillingType = plan.DemandBillingType
-		response.Diagnostics.AddWarning("demand_billing_type的更新仅写入状态文件", "在import时，状态文件中demand_billing_type为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
-	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -457,7 +457,6 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
-
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	if resp.BillingMethod == business.OnDemandCycleType {
 		cfg.CycleType = types.StringValue(business.OnDemandCycleType)

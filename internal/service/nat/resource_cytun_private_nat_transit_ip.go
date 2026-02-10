@@ -47,7 +47,7 @@ func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "中转IP的ID，格式为regionID:natGatewayID:address",
+				Description: "中转IP的ID，格式为nat_gateway_id,address",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

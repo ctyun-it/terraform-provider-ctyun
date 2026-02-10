@@ -171,8 +171,20 @@ func (c *CtyunVip) Read(ctx context.Context, request resource.ReadRequest, respo
 }
 
 func (c *CtyunVip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	// HaVip资源不支持更新操作，直接返回
-	return
+	// 读取tf文件中配置
+	var plan CtyunVipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 读取state中的配置
+	var state CtyunVipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectId = plan.ProjectId
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunVip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {

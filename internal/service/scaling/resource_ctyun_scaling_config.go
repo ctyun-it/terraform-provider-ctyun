@@ -361,7 +361,7 @@ func (c *ctyunScalingConfig) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingConfig(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -694,6 +694,10 @@ func (c *ctyunScalingConfig) getScalingDetail(ctx context.Context, config *Ctyun
 		err = fmt.Errorf("获取id为 %d 的伸缩配置详情失败，接口返回nil。请稍后重试！", config.ID.ValueInt64())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Scaling.Config.NotFound") || strings.Contains(resp.Message, "scaling config info not found") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -705,7 +709,7 @@ func (c *ctyunScalingConfig) getScalingDetail(ctx context.Context, config *Ctyun
 		return resp, err
 	}
 	if len(resp.ReturnObj) < 1 {
-		err = fmt.Errorf("根据id：%d查询绳索配置详细信息，返回条数为0", config.ID.ValueInt64())
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	return resp, nil

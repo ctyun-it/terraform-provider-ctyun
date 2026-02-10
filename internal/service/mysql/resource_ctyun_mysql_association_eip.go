@@ -226,9 +226,9 @@ func (c *CtyunMysqlAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "is not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -355,13 +355,27 @@ func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 		err = err2
 		return
 	} else if resp.StatusCode != 200 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s ", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ReturnObj.Data == nil || len(resp.ReturnObj.Data) == 0 {
+		err = common.ResourceNotExistError
+		return
 	}
+
 	eipInfo := resp.ReturnObj.Data[0]
+	// eip未绑定
+	if eipInfo.Status == "DOWN" || eipInfo.BindStatus == 0 {
+		err = common.ResourceNotExistError
+		return
+	}
+
 	config.EipStatus = types.Int32Value(eipInfo.BindStatus)
 	config.Status = types.StringValue(eipInfo.Status)
 	return

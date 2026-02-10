@@ -85,7 +85,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	}
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
@@ -117,7 +117,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组的策略", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10241454"),
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩策略", "SCALING", "https://www.ctyun.cn/document/10027725/10241454"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -488,7 +488,7 @@ func (c *ctyunScalingPolicy) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingPolicy(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -761,7 +761,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 	// 伸缩策略只有列表查询，需要先查询到再通过遍历定位到具体策略
 	policyNum := resp.ReturnObj.NumberOfAll
 	if policyNum <= 0 {
-		return nil, fmt.Errorf("未查询到弹性伸缩组：%d下有任何伸缩策略", config.GroupID.ValueInt64())
+		return nil, common.ResourceNotExistError
 	}
 
 	// 如果策略数量大于页面大小，则需要翻页获取。
@@ -787,7 +787,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 			return nil, err
 		}
 	}
-	return nil, fmt.Errorf("未查询到弹性伸缩组：%d下有伸缩策略%d", config.GroupID.ValueInt64(), config.ID.ValueInt64())
+	return nil, common.ResourceNotExistError
 }
 
 func (c *ctyunScalingPolicy) requestRuleList(ctx context.Context, config *CtyunScalingPolicyConfig, pageNo int32, pageSize int32) (*scaling.ScalingRuleListResponse, error) {

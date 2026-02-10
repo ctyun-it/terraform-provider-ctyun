@@ -20,14 +20,14 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := "c8.large.4"
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
 	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
-	storageType := "SAS"
+	storageType := "XSSD-0"
 	storageSpace := 100
 	backupStorageType := "OS"
 	//azName := dependence.azName
@@ -134,7 +134,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SAS"
-	storageSpace := 120
+	storageSpace := 1024
 	backupStorageType := "SATA"
 	azName := dependence.azName
 	azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"master"}, {"availability_zone_name":"%s","availability_zone_count":1,"node_type":"backup"}]`, azName, azName)
@@ -144,7 +144,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	updatedFlavorName := "c7.xlarge.4"
 	updatedReadPort := 12348
 	//updatedStorageType := ""
-	updatedStorageSpace := 130
+	updatedStorageSpace := 1500
 	//backupStorageType := "SATA"
 	updatedAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"s"}]`, azName)
 

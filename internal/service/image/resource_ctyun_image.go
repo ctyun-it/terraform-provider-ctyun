@@ -204,6 +204,17 @@ func (c *ctyunImage) Create(ctx context.Context, request resource.CreateRequest,
 		return
 	}
 
+	size, err := utils.GetFileSize(plan.FileSource.ValueString())
+	if err != nil {
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+	if size > plan.DiskSize.ValueInt64() {
+		err = fmt.Errorf("镜像文件大小为%dGB，disk_size必须大于等于该值", size)
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+
 	// 创建实例
 	regionId := plan.RegionId.ValueString()
 	projectId := plan.ProjectId.ValueString()

@@ -229,7 +229,7 @@ func (c *ctyunRabbitmqExchange) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.ResourceNotExistError) {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -412,11 +412,7 @@ func (c *ctyunRabbitmqExchange) getExchangeByName(ctx context.Context, plan Ctyu
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
-		if resp.Message == "交换器不存在" {
-			err = common.ResourceNotExistError
-		} else {
-			err = fmt.Errorf("API return error. Message: %s", resp.Message)
-		}
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

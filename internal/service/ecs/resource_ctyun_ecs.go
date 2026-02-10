@@ -108,18 +108,24 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"flavor_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新",
+				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					validator2.UUID(),
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_name")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，支持更新",
+				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_id")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -151,6 +157,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "系统盘大小，单位为G，取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(40, 32768),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.CheckValueWhenChangeInt64(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"vpc_id": schema.StringAttribute{
@@ -224,6 +233,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填 支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypes...),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"cycle_count": schema.Int64Attribute{
@@ -376,6 +388,24 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "是否开启实例删除保护，默认为false，按需实例支持更新",
 				Default:     booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					validator2.ConflictsWithEqualBool(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
+				},
+			},
+			"security_product": schema.StringAttribute{
+				Optional:    true,
+				Description: "安全防护类型，取值范围：EnterpriseEdition：企业版，UltimateEdition：旗舰版，BasicEdition：基础版。不填写表示不开启。",
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"EnterpriseEdition", "UltimateEdition", "BasicEdition"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"labels": schema.ListNestedAttribute{
 				Optional:    true,
@@ -446,7 +476,26 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 	if err != nil {
 		return
 	}
+	// 先保存好state状态，以防后续接口失败，导致资源游离
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
+
+	// 等待云主机状态为运行中的状态
+	err = c.waitInstanceStatusFor(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), business.EcsStatusRunning)
+	if err != nil {
+		return
+	}
+
+	// 设置删除保护设置
+	err = c.setDeletionProtection(ctx, &plan)
+	if err != nil {
+		return
+	}
+
+	err = c.createMetadata(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), plan.Metadata)
+	if err != nil {
+		return
+	}
+
 	// 创建机器后状态默认为启动状态，可根据用户要求的状态，去执行对应的操作，比如关机、节省关机
 	status := plan.Status.ValueString()
 	if status != "" && status != business.EcsStatusRunning {
@@ -790,14 +839,23 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		params.UserPassword = plan.Password.ValueStringPointer()
 	}
 
+	if !plan.SecurityProduct.IsNull() && !plan.SecurityProduct.IsUnknown() {
+		params.SecurityProduct = plan.SecurityProduct.ValueStringPointer()
+	}
+
 	// 创建ecs实例
 	resp, err2 := c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err2 != nil {
 		return err2
 	}
 	if resp.StatusCode == common.ErrorStatusCode {
-		err := fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return err
+		// 若接口返回：订单处理失败: 远程调用失败报错的话，等待5s，重试一次
+		if strings.Contains(*resp.Error, "Ecs.Order.ProcFailed") || strings.Contains(*resp.Message, "order proc failed") {
+			time.Sleep(5 * time.Second)
+			resp, err2 = c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
+		}
+		err2 = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		return err2
 	}
 
 	// 先设置重要的属性
@@ -817,19 +875,6 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	id := loop.Uuid[0]
 	plan.Id = types.StringValue(id)
 
-	// 等待云主机状态为运行中的状态
-	_ = c.waitInstanceStatusFor(ctx, id, regionId, business.EcsStatusRunning)
-
-	// 设置删除保护设置
-	err2 = c.setDeletionProtection(ctx, plan)
-	if err2 != nil {
-		return err2
-	}
-
-	err2 = c.createMetadata(ctx, id, regionId, plan.Metadata)
-	if err2 != nil {
-		return err2
-	}
 	return nil
 }
 
@@ -1225,6 +1270,7 @@ func (c *ctyunEcs) waitInstanceStatusFor(ctx context.Context, id, regionId, stat
 }
 
 // updateFlavor 更新云主机实例规格
+// 支持flavor id 和flavor name 交叉更新的情况：创建时使用flavor id， 更新的时候使用flavor name
 func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan CtyunEcsConfig) error {
 	if state.FlavorId.Equal(plan.FlavorId) && state.FlavorName.Equal(plan.FlavorName) {
 		return nil
@@ -1235,14 +1281,14 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 		return errors.New("变更云主机配置规格，请先将云主机关机")
 	}
 	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
-	if flavorName != "" {
+	if flavorName != "" && !plan.FlavorName.Equal(state.FlavorName) {
 		fid, err := c.ecsService.GetFlavorIDByName(ctx, flavorName, plan.RegionId.ValueString(), plan.AzName.ValueString())
 		if err != nil {
 			return err
 		}
 		flavorID = fid
 	}
-	if flavorID != "" {
+	if flavorID != "" && !plan.FlavorId.Equal(state.FlavorId) {
 		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
 		if err != nil {
 			return err
@@ -1603,7 +1649,7 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	var securityGroupIds []types.String
 	plan.SecurityGroupIds.ElementsAs(ctx, &securityGroupIds, true)
 	for _, id := range securityGroupIds {
-		err := c.securityGroupService.MustExist(ctx, id.ValueString(), plan.RegionId.ValueString())
+		err = c.securityGroupService.MustExist(ctx, id.ValueString(), plan.RegionId.ValueString())
 		if err != nil {
 			return err
 		}
@@ -2008,6 +2054,7 @@ type CtyunEcsConfig struct {
 	EipAddress             types.String  `tfsdk:"eip_address"`
 	CreateTime             types.String  `tfsdk:"create_time"`
 	UpdateTime             types.String  `tfsdk:"update_time"`
+	SecurityProduct        types.String  `tfsdk:"security_product"`
 }
 
 type Label struct {

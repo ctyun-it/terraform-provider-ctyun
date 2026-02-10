@@ -13,6 +13,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -172,6 +173,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						path.MatchRoot("protocol"),
 						types.StringValue(business.HealthCheckProtocolUDP),
 						types.StringValue(business.HealthCheckProtocolTCP),
+					),
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf("http_2xx", "http_3xx", "http_4xx", "http_5xx"),
 					),
 				},
 			},

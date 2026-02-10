@@ -229,8 +229,10 @@ func (c *CtyunPostgresqlBackup) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMergePostgresqlBackup(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -340,19 +342,25 @@ func (c *CtyunPostgresqlBackup) getBackupDetail(ctx context.Context, config *Cty
 		err = fmt.Errorf("查询postgresql实例(id=%s)的备份集(name=%s)失败，接口返回nil，请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(*resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("postgresql实例(id=%s)中存在重名备份集(name=%s)", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("postgresql实例(id=%s)中不存在名为%s的备份集", config.InstID.ValueString(), config.Name.ValueString())
-		return nil, err
 	}
+
 	return resp, nil
 }
 

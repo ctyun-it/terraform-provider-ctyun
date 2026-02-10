@@ -293,7 +293,7 @@ func (c *CtyunMysqlReadOnlyInstance) Read(ctx context.Context, request resource.
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -410,6 +410,10 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceDetail(ctx context.Context,
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {
