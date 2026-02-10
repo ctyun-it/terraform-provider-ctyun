@@ -316,10 +316,15 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"fixed_ip": schema.StringAttribute{
+				Optional:    true,
 				Computed:    true,
 				Description: "加入子网后的ip地址",
+				Validators: []validator.String{
+					validator2.Ip(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"port_id": schema.StringAttribute{
@@ -716,6 +721,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 	dataVolumeRaidUUID := plan.DataVolumeRaidUUID.ValueString()
 	userData := plan.UserData.ValueString()
 	keyName := plan.KeyPairName.ValueString()
+	fixedIP := plan.FixedIP.ValueString()
 	securityGroupIDs, _ := c.buildSecGroupList(ctx, plan)
 	securityGroupStr := strings.Join(securityGroupIDs, ",")
 	params := &ctebm.EbmCreateInstanceV4plusRequest{
@@ -734,6 +740,9 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 	}
 	if len(securityGroupStr) > 0 {
 		params.SecurityGroupID = &securityGroupStr
+	}
+	if fixedIP != "" {
+		params.NetworkCardList[0].FixedIP = &fixedIP
 	}
 
 	if plan.BandWidth.ValueInt32() > 0 {

@@ -2,6 +2,7 @@ package ccse
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -262,7 +263,7 @@ func (c *ctyunCcseNodeAssociation) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -454,7 +455,11 @@ func (c *ctyunCcseNodeAssociation) getNodeDetailByName(ctx context.Context, plan
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		if resp.Error == common.OpenapiCCSENotExist || strings.Contains(resp.Message, "不存在") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -475,10 +480,14 @@ func (c *ctyunCcseNodeAssociation) getCustomPoolID(ctx context.Context, plan Cty
 	resp, err := c.meta.Apis.SdkCcseApis.CcseListNodePoolsApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
+	} else if resp.StatusCode != common.NormalStatusCode {
+		if resp.Error == common.OpenapiCCSENotExist {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
-	} else if len(resp.ReturnObj.Records) == 0 {
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Records) == 0 {
 		err = common.InvalidReturnObjError
 		return
 	}

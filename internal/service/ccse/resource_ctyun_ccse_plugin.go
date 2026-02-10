@@ -183,6 +183,10 @@ func (c *ctyunCcsePlugin) Read(ctx context.Context, request resource.ReadRequest
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -269,12 +273,12 @@ func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.Impo
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &chartName, &clusterID)
+		err = terraform_extend.Split(request.ID, &clusterID, &chartName)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &chartName, &clusterID, &regionID)
+		err = terraform_extend.Split(request.ID, &clusterID, &chartName, &regionID)
 		if err != nil {
 			return
 		}
@@ -530,10 +534,14 @@ func (c *ctyunCcsePlugin) getByChartName(ctx context.Context, plan CtyunCcsePlug
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		if resp.Error == common.OpenapiCCSENotExist {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
 	} else if len(resp.ReturnObj.Records) == 0 {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 	plugin = resp.ReturnObj.Records[0]
