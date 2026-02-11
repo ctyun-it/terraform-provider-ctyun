@@ -262,7 +262,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
-				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true",
+				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true，支持更新",
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -618,6 +618,11 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	}
 	//更新云主机组
 	err = c.updateAffinityGroup(ctx, state, plan)
+	if err != nil {
+		return
+	}
+	//更新续订开关
+	err = c.updateAutoRenew(ctx, state, plan)
 	if err != nil {
 		return
 	}
@@ -1459,14 +1464,12 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 	}
 
 	// 将SecGroupList转换成Set并赋值到cfg.SecurityGroupIds
-	if cfg.SecurityGroupIds.IsUnknown() {
-		sgs := make([]types.String, 0, len(instance_details_resp.SecGroupList))
-		for _, sg := range instance_details_resp.SecGroupList {
-			sgs = append(sgs, types.StringValue(*sg.SecurityGroupID))
-		}
-		securityGroupIds, _ := types.SetValueFrom(ctx, types.StringType, sgs)
-		cfg.SecurityGroupIds = securityGroupIds
+	sgs := make([]types.String, 0, len(instance_details_resp.SecGroupList))
+	for _, sg := range instance_details_resp.SecGroupList {
+		sgs = append(sgs, types.StringValue(*sg.SecurityGroupID))
 	}
+	securityGroupIds, _ := types.SetValueFrom(ctx, types.StringType, sgs)
+	cfg.SecurityGroupIds = securityGroupIds
 
 	// 填充主网卡信息
 	for _, nc := range instance_details_resp.NetworkCardList {
@@ -2026,6 +2029,25 @@ func (c *ctyunEcs) updateLabels(ctx context.Context, state CtyunEcsConfig, plan 
 	return nil
 }
 
+func (c *ctyunEcs) updateAutoRenew(ctx context.Context, state, plan CtyunEcsConfig) (err error) {
+	if plan.AutoRenew.Equal(state.AutoRenew) {
+		return
+	}
+	params := &ctecs2.CtecsEcsUpdateAutoRenewConfigRequest{
+		RegionID:        state.RegionId.ValueString(),
+		InstanceIDList:  state.Id.ValueString(),
+		AutoRenewStatus: map[bool]int32{true: 1, false: 0}[plan.AutoRenew.ValueBool()],
+	}
+	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsEcsUpdateAutoRenewConfigApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
+	}
+	return
+}
+
 type CtyunEcsConfig struct {
 	Id                 types.String  `tfsdk:"id"`
 	Name               types.String  `tfsdk:"name"`
@@ -2123,5 +2145,6 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	} else {
 		config.CycleCount = types.Int64Null()
 	}
+	config.MasterOrderId = types.StringValue("unknown")
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }

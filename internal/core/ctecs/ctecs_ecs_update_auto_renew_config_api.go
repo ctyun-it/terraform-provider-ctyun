@@ -58,7 +58,7 @@ type CtecsEcsUpdateAutoRenewConfigRequest struct {
 }
 
 type CtecsEcsUpdateAutoRenewConfigResponse struct {
-	StatusCode  *int32                                          `json:"statusCode"`  /*  返回状态码（800为成功，900为失败）  */
+	StatusCode  int32                                           `json:"statusCode"`  /*  返回状态码（800为成功，900为失败）  */
 	ErrorCode   *string                                         `json:"errorCode"`   /*  错误码，为product.module.code三段式码  */
 	Error       *string                                         `json:"error"`       /*  错误码，为product.module.code三段式码  */
 	Message     *string                                         `json:"message"`     /*  英文描述信息  */
