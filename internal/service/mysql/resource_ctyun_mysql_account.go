@@ -315,9 +315,6 @@ func (c *CtyunMysqlAccount) Delete(ctx context.Context, request resource.DeleteR
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -345,9 +342,6 @@ func (c *CtyunMysqlAccount) createMysqlAccount(ctx context.Context, config *Ctyu
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	if !config.SchemaPrivilegeList.IsNull() {
 		var privilegeList []MysqlSchemaPrivilegeModel
 		diags := config.SchemaPrivilegeList.ElementsAs(ctx, &privilegeList, false)
@@ -425,9 +419,6 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetAccountInfoApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -492,9 +483,6 @@ func (c *CtyunMysqlAccount) updatePassword(ctx context.Context, state *CtyunMysq
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-	//	header.ProjectID = state.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbResetPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
