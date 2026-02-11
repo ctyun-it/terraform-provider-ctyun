@@ -115,17 +115,9 @@ func (c *CtyunMysqlAssociationEip) Schema(ctx context.Context, request resource.
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional: true,
-				//Computed:    true,
+				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目id",
-				//Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				//Validators: []validator.String{
-				//	validator2.Project(),
-				//},
-				//PlanModifiers: []planmodifier.String{
-				//	explanmodifier.Project(),
-				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -226,8 +218,23 @@ func (c *CtyunMysqlAssociationEip) Read(ctx context.Context, request resource.Re
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
-func (c *CtyunMysqlAssociationEip) Update(ctx context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+func (c *CtyunMysqlAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
 	//暂无可更新内容
+	var plan CtyunAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -255,9 +262,7 @@ func (c *CtyunMysqlAssociationEip) Delete(ctx context.Context, request resource.
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &mysql.TeledbUnbindEipRequestHeader{}
-	//if state.ProjectID.ValueString() != "" {
-	//	unbindHeader.ProjectID = state.ProjectID.ValueStringPointer()
-	//}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUnbindEipApi.Do(ctx, c.meta.Credential, unbindParams, unbindHeader)
 	if err != nil {
 		return
@@ -295,9 +300,7 @@ func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *Cty
 		InstID: config.InstID.ValueString(),
 	}
 	header := &mysql.TeledbBindEipRequestHeader{}
-	//if config.ProjectID.ValueString() != "" {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbBindEipApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -309,28 +312,6 @@ func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *Cty
 }
 
 func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, config *CtyunAssociationEipConfig) (err error) {
-	//detailParams := &mysql.TeledbQueryDetailRequest{
-	//	OuterProdInstId: config.InstID.ValueString(),
-	//}
-	//header := &mysql.TeledbQueryDetailRequestHeaders{
-	//	InstID:   config.InstID.ValueString(),
-	//	RegionID: config.RegionID.ValueString(),
-	//}
-	//if config.ProjectID.ValueString() != "" {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
-	//
-	//resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, header)
-	//if err != nil {
-	//	return err
-	//} else if resp.StatusCode != 0 {
-	//	err = fmt.Errorf("API return error. Message: %s", resp.Message)
-	//	return
-	//} else if resp.ReturnObj == nil {
-	//	err = common.InvalidReturnObjError
-	//	return
-	//}
-	//returnObj := resp.ReturnObj
 
 	params := &mysql.TeledbBoundEipListRequest{
 		RegionID: config.RegionID.ValueString(),
@@ -338,9 +319,7 @@ func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 	}
 
 	headers := &mysql.TeledbBoundEipListRequestHeader{}
-	//if config.ProjectID.ValueString() != "" {
-	//	headers.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
+
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, headers)
 	if err2 != nil {
 		err = err2
@@ -389,9 +368,6 @@ func (c *CtyunMysqlAssociationEip) BindLoop(ctx context.Context, config *CtyunAs
 			}
 
 			headers := &mysql.TeledbBoundEipListRequestHeader{}
-			//if config.ProjectID.ValueString() != "" {
-			//	headers.ProjectID = config.ProjectID.ValueStringPointer()
-			//}
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, headers)
 			if err2 != nil {
 				err = err2
@@ -443,9 +419,6 @@ func (c *CtyunMysqlAssociationEip) StartedLoop(ctx context.Context, state *Ctyun
 				InstID:   state.InstID.ValueString(),
 				RegionID: state.RegionID.ValueString(),
 			}
-			//if state.ProjectID.ValueString() != "" {
-			//	detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			//}
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 			if err2 != nil {
 				err = err2

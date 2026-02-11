@@ -80,7 +80,7 @@ func (r *CtyunMongodbBackupResource) Schema(ctx context.Context, req resource.Sc
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description:        "企业项目ID",
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -179,7 +179,21 @@ func (r *CtyunMongodbBackupResource) Read(ctx context.Context, req resource.Read
 }
 
 func (r *CtyunMongodbBackupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// 备份资源不支持更新
+	var plan CtyunMongodbBackupConfig
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMongodbBackupConfig
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *CtyunMongodbBackupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

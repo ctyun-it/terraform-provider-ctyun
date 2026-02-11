@@ -113,17 +113,9 @@ func (c *CtyunMysqlBackup) Schema(ctx context.Context, request resource.SchemaRe
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional: true,
-				//Computed:    true,
+				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				//PlanModifiers: []planmodifier.String{
-				//	explanmodifier.Project(),
-				//},
-				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				//Validators: []validator.String{
-				//	validator2.Project(),
-				//},
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -237,7 +229,22 @@ func (c *CtyunMysqlBackup) Read(ctx context.Context, request resource.ReadReques
 }
 
 func (c *CtyunMysqlBackup) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	//暂无可更新内容
+	var plan CtyunMysqlBackupConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlBackupConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlBackup) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -274,9 +281,6 @@ func (c *CtyunMysqlBackup) createMysqlBackup(ctx context.Context, config CtyunMy
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	//  mysql备份之前，确定状态running
 	err := c.startedLoop(ctx, config, 60)
 	if err != nil {
@@ -352,9 +356,6 @@ func (c *CtyunMysqlBackup) deleteBackupSetAndFile(ctx context.Context, config Ct
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	deleteResp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -380,9 +381,6 @@ func (c *CtyunMysqlBackup) getBackupRecordList(ctx context.Context, config Ctyun
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -414,9 +412,6 @@ func (c *CtyunMysqlBackup) getBackupRecordDetail(ctx context.Context, config *Ct
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupRecordDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -510,9 +505,6 @@ func (c *CtyunMysqlBackup) startedLoop(ctx context.Context, config CtyunMysqlBac
 				InstID:   config.InstID.ValueString(),
 				RegionID: config.RegionID.ValueString(),
 			}
-			//if config.ProjectID.ValueString() != "" {
-			//	detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-			//}
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 			if err2 != nil {
 				err = err2

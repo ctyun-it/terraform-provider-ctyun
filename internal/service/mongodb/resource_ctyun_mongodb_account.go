@@ -79,7 +79,7 @@ func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaReq
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,

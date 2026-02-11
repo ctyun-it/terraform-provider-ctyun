@@ -113,17 +113,9 @@ func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional: true,
-				//Computed:    true,
+				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				//PlanModifiers: []planmodifier.String{
-				//	explanmodifier.Project(),
-				//},
-				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				//Validators: []validator.String{
-				//	validator2.Project(),
-				//},
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -264,6 +256,7 @@ func (c *CtyunMysqlParamTemplate) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -307,9 +300,7 @@ func (c *CtyunMysqlParamTemplate) CreateMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbCreateParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -381,9 +372,6 @@ func (c *CtyunMysqlParamTemplate) getParameterListByPage(ctx context.Context, co
 	header := &mysql.TeledbGetParameterTemplateDetailRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -413,9 +401,6 @@ func (c *CtyunMysqlParamTemplate) getIDByParameterTemplateName(ctx context.Conte
 	header := mysql.TeledbGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateListApi.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return nil, err
@@ -483,9 +468,6 @@ func (c *CtyunMysqlParamTemplate) updateMysqlParameterTemplate(ctx context.Conte
 		header := &mysql.TeledbUpdateParameterTemplateRequestHeader{
 			RegionID: state.RegionID.ValueString(),
 		}
-		//if !state.ProjectID.IsNull() {
-		//	header.ProjectID = state.ProjectID.ValueStringPointer()
-		//}
 		resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 		if err2 != nil {
 			return err2
@@ -508,9 +490,6 @@ func (c *CtyunMysqlParamTemplate) deleteMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbDeleteParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

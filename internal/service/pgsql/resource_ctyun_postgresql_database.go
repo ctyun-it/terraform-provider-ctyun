@@ -111,7 +111,7 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -292,6 +292,7 @@ func (c *CtyunPgsqlDatabase) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

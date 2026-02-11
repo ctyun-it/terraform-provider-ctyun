@@ -127,7 +127,7 @@ func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resourc
 			"project_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -219,7 +219,21 @@ func (c *CtyunMongodbAssociationEip) Read(ctx context.Context, request resource.
 }
 
 func (c *CtyunMongodbAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan MongodbAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state MongodbAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMongodbAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {

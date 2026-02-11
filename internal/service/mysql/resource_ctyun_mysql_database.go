@@ -111,17 +111,9 @@ func (c *CtyunMysqlDatabase) Schema(ctx context.Context, request resource.Schema
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional: true,
-				//Computed:    true,
+				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				//PlanModifiers: []planmodifier.String{
-				//	explanmodifier.Project(),
-				//},
-				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				//Validators: []validator.String{
-				//	validator2.Project(),
-				//},
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -297,6 +289,7 @@ func (c *CtyunMysqlDatabase) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -340,9 +333,6 @@ func (c *CtyunMysqlDatabase) createMysqlDatabase(ctx context.Context, config *Ct
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -374,9 +364,6 @@ func (c *CtyunMysqlDatabase) updateDescription(ctx context.Context, config *Ctyu
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateDatabaseRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -422,9 +409,6 @@ func (c *CtyunMysqlDatabase) getMysqlDatabaseInfo(ctx context.Context, config *C
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetDatabaseSchemaApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -460,9 +444,6 @@ func (c *CtyunMysqlDatabase) checkDBName(ctx context.Context, config *CtyunMysql
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCheckDatabaseNameAvailableApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -501,9 +482,6 @@ func (c *CtyunMysqlDatabase) deleteMysqlDatabase(ctx context.Context, config Cty
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

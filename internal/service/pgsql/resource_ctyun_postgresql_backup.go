@@ -232,7 +232,21 @@ func (c *CtyunPostgresqlBackup) Read(ctx context.Context, request resource.ReadR
 }
 
 func (c *CtyunPostgresqlBackup) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunPostgresqlBackupConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunPostgresqlBackupConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunPostgresqlBackup) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {

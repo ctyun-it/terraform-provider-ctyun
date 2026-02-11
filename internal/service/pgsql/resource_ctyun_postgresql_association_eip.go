@@ -164,7 +164,21 @@ func (c *CtyunPgsqlAssociationEip) Read(ctx context.Context, request resource.Re
 }
 
 func (c *CtyunPgsqlAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunPgsqlAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunPgsqlAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunPgsqlAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {

@@ -62,17 +62,9 @@ func (c *CtyunMysqlBackupCancel) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional: true,
-				//Computed:    true,
+				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				//PlanModifiers: []planmodifier.String{
-				//	explanmodifier.Project(),
-				//},
-				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				//Validators: []validator.String{
-				//	validator2.Project(),
-				//},
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -95,9 +87,6 @@ func (c *CtyunMysqlBackupCancel) Schema(ctx context.Context, request resource.Sc
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
-				//Validators: []validator.String{
-				//	stringvalidator.UTF8LengthAtLeast(1),
-				//},
 			},
 		},
 	}
@@ -132,7 +121,21 @@ func (c *CtyunMysqlBackupCancel) Read(ctx context.Context, request resource.Read
 }
 
 func (c *CtyunMysqlBackupCancel) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunBackupCancelConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunBackupCancelConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlBackupCancel) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -147,9 +150,6 @@ func (c *CtyunMysqlBackupCancel) CancelBackupRecord(ctx context.Context, config 
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCancelBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -219,9 +219,7 @@ func (c *CtyunMysqlBackupCancel) getBackupRecordDetail(ctx context.Context, conf
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueString()
-	//}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupRecordDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
