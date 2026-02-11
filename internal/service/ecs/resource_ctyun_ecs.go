@@ -260,7 +260,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true",
+				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为false",
 				PlanModifiers: []planmodifier.Bool{
 					explanmodifier.NullIgnoreBool(),
 				},

@@ -27,6 +27,9 @@ func (m nullModifierString) PlanModifyString(ctx context.Context, req planmodifi
 	if req.Plan.Raw.IsNull() {
 		return
 	}
+	if req.ConfigValue.IsNull() {
+		return
+	}
 	if req.StateValue.IsNull() {
 		resp.RequiresReplace = false
 		return
@@ -53,6 +56,9 @@ func (m nullModifierBool) PlanModifyBool(ctx context.Context, req planmodifier.B
 		return
 	}
 	if req.Plan.Raw.IsNull() {
+		return
+	}
+	if req.ConfigValue.IsNull() {
 		return
 	}
 	if req.StateValue.IsNull() {
@@ -83,6 +89,9 @@ func (m nullModifierInt32) PlanModifyInt32(ctx context.Context, req planmodifier
 	if req.Plan.Raw.IsNull() {
 		return
 	}
+	if req.ConfigValue.IsNull() {
+		return
+	}
 	if req.StateValue.IsNull() {
 		resp.RequiresReplace = false
 		return
@@ -109,6 +118,9 @@ func (m nullModifierSet) PlanModifySet(ctx context.Context, req planmodifier.Set
 		return
 	}
 	if req.Plan.Raw.IsNull() {
+		return
+	}
+	if req.ConfigValue.IsNull() {
 		return
 	}
 	if req.StateValue.IsNull() {
