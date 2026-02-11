@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -59,16 +58,15 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 		}
 	}()
 	var config CtyunPostgresqlDatabaseConfig
-	var name, regionID, projectID, instID string
+	var name, regionID, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
@@ -89,7 +87,6 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 	config.Name = types.StringValue(name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergePgsqlDatabase(ctx, &config)
 	if err != nil {
 		return
@@ -112,16 +109,9 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -329,9 +319,6 @@ func (c *CtyunPgsqlDatabase) Delete(ctx context.Context, request resource.Delete
 	header := &pgsql.PgsqlDeleteDatabaseRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -367,9 +354,7 @@ func (c *CtyunPgsqlDatabase) createPgsqlDatabase(ctx context.Context, config *Ct
 	header := &pgsql.PgsqlCreateDatabaseRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -405,9 +390,6 @@ func (c *CtyunPgsqlDatabase) getDatabaseDetail(ctx context.Context, config *Ctyu
 
 	header := &pgsql.PgsqlGetDatabaseSchemaRequestHeader{
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetDatabaseSchemaApi.Do(ctx, c.meta.Credential, params, header)
@@ -455,9 +437,7 @@ func (c *CtyunPgsqlDatabase) updateRemark(ctx context.Context, config *CtyunPost
 	header := &pgsql.PgsqlUpdateDatabaseRemarkRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateDatabaseRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

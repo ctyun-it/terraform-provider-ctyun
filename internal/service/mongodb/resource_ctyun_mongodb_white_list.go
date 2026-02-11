@@ -10,8 +10,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -93,16 +91,9 @@ func (c *CtyunMongodbWhiteList) Schema(ctx context.Context, req resource.SchemaR
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 			},
 			"group_name": schema.StringAttribute{
 				Required:    true,
@@ -113,16 +104,16 @@ func (c *CtyunMongodbWhiteList) Schema(ctx context.Context, req resource.SchemaR
 			},
 			"ip_type": schema.StringAttribute{
 				Required:    true,
-				Description: "ip类型 支持更新",
+				Description: "ip类型，取值ipv4或者ipv6。支持更新",
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
+					stringvalidator.OneOf("ipv4", "ipv6"),
 				},
 			},
 			"white_list_type": schema.StringAttribute{
 				Required:    true,
-				Description: "白名单列表类型  支持更新",
+				Description: "白名单列表类型，1是内网访问，2是公网访问 支持更新",
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
+					stringvalidator.OneOf("1", "2"),
 				},
 			},
 			"white_list_id": schema.Int32Attribute{
@@ -286,13 +277,6 @@ func (c *CtyunMongodbWhiteList) checkBefore(ctx context.Context, state CtyunMong
 		return
 	}
 
-	listHeader := &mongodb.MongodbGetListHeaders{
-		RegionID: state.RegionID.ValueString(),
-	}
-	if state.ProjectID.ValueString() != "" {
-		listHeader.ProjectID = state.ProjectID.ValueStringPointer()
-	}
-
 	result := retryer.Start(
 		func(currentTime int) bool {
 
@@ -301,9 +285,6 @@ func (c *CtyunMongodbWhiteList) checkBefore(ctx context.Context, state CtyunMong
 			}
 			detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeader.ProjectID = state.ProjectID.ValueStringPointer()
 			}
 			detailResp, err3 := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 			if err3 != nil {
@@ -356,9 +337,6 @@ func (c *CtyunMongodbWhiteList) create(ctx context.Context, plan *CtyunMongodbWh
 	headers := &mongodb.MongodbCreateIpWhitelistRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "创建MongoDB白名单分组", map[string]interface{}{
 		"instance_id": plan.InstanceID.ValueString(),
@@ -383,10 +361,6 @@ func (c *CtyunMongodbWhiteList) getAndMerge(ctx context.Context, plan *CtyunMong
 	headers := &mongodb.MongodbDescribeIpWhitelistRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
-
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbDescribeIpWhitelistApi.Do(ctx, c.meta.Credential, describeReq, headers)
 	if err != nil {
 		return
@@ -459,9 +433,6 @@ func (c *CtyunMongodbWhiteList) update(ctx context.Context, plan *CtyunMongodbWh
 	headers := &mongodb.MongodbUpdateIpWhitelistRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbUpdateIpWhitelistApi.Do(ctx, c.meta.Credential, updateReq, headers)
 	if err != nil {
@@ -480,9 +451,6 @@ func (c *CtyunMongodbWhiteList) delete(ctx context.Context, state *CtyunMongodbW
 
 	headers := &mongodb.MongodbDeleteIpWhitelistRequestHeaders{
 		RegionID: state.RegionID.ValueString(),
-	}
-	if !state.ProjectID.IsNull() {
-		headers.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 
 	tflog.Info(ctx, "删除MongoDB白名单分组", map[string]interface{}{

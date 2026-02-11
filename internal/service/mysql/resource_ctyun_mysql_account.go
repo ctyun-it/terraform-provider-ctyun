@@ -10,7 +10,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -62,16 +61,15 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 		}
 	}()
 	var config CtyunMysqlAccountConfig
-	var regionID, projectID, instID, name string
+	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
@@ -91,7 +89,6 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMergeMysqlAccount(ctx, &config)
 	if err != nil {
@@ -127,16 +124,17 @@ func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaR
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional: true,
+				//Computed:    true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				//PlanModifiers: []planmodifier.String{
+				//	explanmodifier.Project(),
+				//},
+				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				//Validators: []validator.String{
+				//	validator2.Project(),
+				//},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -324,9 +322,9 @@ func (c *CtyunMysqlAccount) Delete(ctx context.Context, request resource.DeleteR
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -354,9 +352,9 @@ func (c *CtyunMysqlAccount) createMysqlAccount(ctx context.Context, config *Ctyu
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 	if !config.SchemaPrivilegeList.IsNull() {
 		var privilegeList []MysqlSchemaPrivilegeModel
 		diags := config.SchemaPrivilegeList.ElementsAs(ctx, &privilegeList, false)
@@ -434,9 +432,9 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetAccountInfoApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -501,9 +499,9 @@ func (c *CtyunMysqlAccount) updatePassword(ctx context.Context, state *CtyunMysq
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
-	}
+	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
+	//	header.ProjectID = state.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbResetPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -618,9 +616,9 @@ func (c *CtyunMysqlAccount) requestGrantAndUpdateSchemaPrivilege(ctx context.Con
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
-	}
+	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
+	//	header.ProjectID = state.ProjectID.ValueString()
+	//}
 
 	var schemaPrivilegeVOList []mysql.SchemaPrivilegeVO
 	for schemaName, privilege := range privilegeMap {
@@ -663,9 +661,9 @@ func (c *CtyunMysqlAccount) revokeSchemaPrivilege(ctx context.Context, state *Ct
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
-	}
+	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
+	//	header.ProjectID = state.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbRevokeSchemaApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -688,9 +686,9 @@ func (c *CtyunMysqlAccount) updateRemark(ctx context.Context, config *CtyunMysql
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateAccountRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

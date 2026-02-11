@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -61,16 +60,15 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 		}
 	}()
 	var config CtyunPostgresqlAccountConfig
-	var regionID, projectID, name, instID string
+	var regionID, name, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
@@ -90,7 +88,6 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMergePostgresqlAccount(ctx, &config)
 	if err != nil {
@@ -126,16 +123,9 @@ func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -329,6 +319,7 @@ func (c *CtyunPostgresqlAccount) Update(ctx context.Context, request resource.Up
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -357,9 +348,6 @@ func (c *CtyunPostgresqlAccount) Delete(ctx context.Context, request resource.De
 	header := &pgsql.PgsqlDeleteAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -387,9 +375,7 @@ func (c *CtyunPostgresqlAccount) CreatePostgresqlAccount(ctx context.Context, co
 	header := &pgsql.PgsqlCreateAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -443,9 +429,7 @@ func (c *CtyunPostgresqlAccount) updateInstanceDescription(ctx context.Context, 
 	header := &pgsql.PgsqlUpdateAccountRemarkRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateAccountRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -493,9 +477,7 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 	header := &pgsql.PgsqlGetAccountListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetAccountListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -639,9 +621,7 @@ func (c *CtyunPostgresqlAccount) grantSchemaPrivilege(ctx context.Context, privi
 		header := &pgsql.PgsqlGrantPrivilegeRequestHeader{
 			RegionID: config.RegionID.ValueString(),
 		}
-		if !config.ProjectID.IsNull() {
-			header.ProjectID = config.ProjectID.ValueStringPointer()
-		}
+
 		resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGrantPrivilegeApi.Do(ctx, c.meta.Credential, params, header)
 		if err != nil {
 			return err
@@ -666,9 +646,7 @@ func (c *CtyunPostgresqlAccount) revokeSchemaPrivilege(ctx context.Context, priv
 		header := &pgsql.PgsqlRevokePrivilegeRequestHeader{
 			RegionID: config.RegionID.ValueString(),
 		}
-		if !config.ProjectID.IsNull() {
-			header.ProjectID = config.ProjectID.ValueStringPointer()
-		}
+
 		resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlRevokePrivilegeApi.Do(ctx, c.meta.Credential, params, header)
 		if err != nil {
 			return err
@@ -691,9 +669,7 @@ func (c *CtyunPostgresqlAccount) lockAccount(ctx context.Context, config *CtyunP
 	header := &pgsql.PgsqlLockAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlLockAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -715,9 +691,7 @@ func (c *CtyunPostgresqlAccount) unlockAccount(ctx context.Context, config *Ctyu
 	header := &pgsql.PgsqlUnLockAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUnLockAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -740,9 +714,7 @@ func (c *CtyunPostgresqlAccount) updatePassword(ctx context.Context, state *Ctyu
 	header := &pgsql.PgsqlResetPasswordRequestHeader{
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlResetPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

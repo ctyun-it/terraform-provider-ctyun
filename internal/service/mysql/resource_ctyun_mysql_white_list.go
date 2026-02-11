@@ -9,8 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -46,16 +44,15 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 		}
 	}()
 	var config CtyunMysqlWhiteListConfig
-	var name, instanceID, regionId, projectId string
+	var name, instanceID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instanceID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instanceID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &name, &instanceID, &regionId)
 		if err != nil {
 			return
 		}
@@ -71,7 +68,6 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 	config.GroupName = types.StringValue(name)
 	config.ProdInstID = types.StringValue(instanceID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMergeMysqlAccessWhiteList(ctx, &config)
 	if err != nil {
 		return
@@ -84,16 +80,17 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 		MarkdownDescription: utils.FormatDesc("管理MySQL实例的白名单", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133794"),
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional: true,
+				//Computed:    true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				//PlanModifiers: []planmodifier.String{
+				//	explanmodifier.Project(),
+				//},
+				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				//Validators: []validator.String{
+				//	validator2.Project(),
+				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -288,9 +285,9 @@ func (c *CtyunMysqlWhiteList) Delete(ctx context.Context, request resource.Delet
 		InstID:   state.ProdInstID.ValueStringPointer(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
+	//	header.ProjectID = state.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -334,9 +331,9 @@ func (c *CtyunMysqlWhiteList) CreateMysqlAccessWhiteList(ctx context.Context, co
 		InstID:   config.ProdInstID.ValueStringPointer(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -357,9 +354,9 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		InstID:   config.ProdInstID.ValueStringPointer(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetAccessWhiteList.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return err
@@ -423,9 +420,9 @@ func (c *CtyunMysqlWhiteList) updateMysqlWhiteList(ctx context.Context, state *C
 		InstID:   state.ProdInstID.ValueStringPointer(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
+	//	header.ProjectID = state.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -489,9 +486,9 @@ func (c *CtyunMysqlWhiteList) getDetail(ctx context.Context, state CtyunMysqlWhi
 		InstID:   state.ProdInstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if state.ProjectID.ValueString() != "" {
-		detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+	//if state.ProjectID.ValueString() != "" {
+	//	detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return

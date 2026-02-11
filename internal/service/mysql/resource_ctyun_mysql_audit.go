@@ -8,8 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -65,16 +63,17 @@ func (c *CtyunMysqlAudit) Schema(ctx context.Context, request resource.SchemaReq
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional: true,
+				//Computed:    true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				//PlanModifiers: []planmodifier.String{
+				//	explanmodifier.Project(),
+				//},
+				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				//Validators: []validator.String{
+				//	validator2.Project(),
+				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -153,9 +152,9 @@ func (c *CtyunMysqlAudit) create(ctx context.Context, config *CtyunMysqlAuditCon
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbStartAuditApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -190,9 +189,9 @@ func (c *CtyunMysqlAudit) getMysqlAuditStatus(ctx context.Context, config *Ctyun
 		RegionID: config.RegionID.ValueString(),
 		InstID:   config.InstID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	// 先确保mysql实例状态running
 
 	err := c.startedLoop(ctx, config)

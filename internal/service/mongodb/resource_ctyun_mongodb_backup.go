@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -79,16 +78,9 @@ func (r *CtyunMongodbBackupResource) Schema(ctx context.Context, req resource.Sc
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -223,10 +215,6 @@ func (r *CtyunMongodbBackupResource) delete(ctx context.Context, plan CtyunMongo
 		RegionID: plan.RegionID.ValueString(),
 	}
 
-	if !plan.ProjectID.IsNull() {
-		header.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
-
 	resp, err := r.meta.Apis.SdkMongodbApis.MongodbDeleteBackupApi.Do(ctx, r.meta.Credential, deleteReq, header)
 	if err != nil {
 		return
@@ -246,17 +234,16 @@ func (c *CtyunMongodbBackupResource) ImportState(ctx context.Context, request re
 		}
 	}()
 	var cfg CtyunMongodbBackupConfig
-	var name, regionId, projectId, instId string
+	var name, regionId, instId string
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
 		if err != nil {
 			return
 		}
@@ -274,7 +261,6 @@ func (c *CtyunMongodbBackupResource) ImportState(ctx context.Context, request re
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
 	cfg.Name = types.StringValue(name)
 	cfg.InstanceID = types.StringValue(instId)
 	err = c.getAndMerge(ctx, &cfg)
@@ -305,10 +291,6 @@ func (r *CtyunMongodbBackupResource) create(ctx context.Context, plan *CtyunMong
 		RegionID: plan.RegionID.ValueString(),
 	}
 
-	if !plan.ProjectID.IsNull() {
-		header.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
-
 	tflog.Info(ctx, "开始创建MongoDB备份", map[string]interface{}{
 		"instance_id": plan.InstanceID.ValueString(),
 	})
@@ -335,10 +317,6 @@ func (r *CtyunMongodbBackupResource) getAndMerge(ctx context.Context, plan *Ctyu
 
 	header := &mongodb.MongodbDescribeBackupsRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
-	}
-
-	if !plan.ProjectID.IsNull() {
-		header.ProjectID = plan.ProjectID.ValueStringPointer()
 	}
 
 	resp, err := r.meta.Apis.SdkMongodbApis.MongodbDescribeBackupsApi.Do(ctx, r.meta.Credential, describeReq, header)

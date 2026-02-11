@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
@@ -61,16 +60,15 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 		}
 	}()
 	var config CtyunMysqlParamTemplateConfig
-	var id, regionID, projectID string
+	var id, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		id = request.ID
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &id, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &id, &regionID)
 		if err != nil {
 			return
 		}
@@ -91,7 +89,6 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 	}
 	config.ID = types.Int64Value(num)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeMysqlParameterTemplate(ctx, &config)
 	if err != nil {
 		return
@@ -116,16 +113,17 @@ func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional: true,
+				//Computed:    true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				//PlanModifiers: []planmodifier.String{
+				//	explanmodifier.Project(),
+				//},
+				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				//Validators: []validator.String{
+				//	validator2.Project(),
+				//},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -309,9 +307,9 @@ func (c *CtyunMysqlParamTemplate) CreateMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbCreateParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -383,9 +381,9 @@ func (c *CtyunMysqlParamTemplate) getParameterListByPage(ctx context.Context, co
 	header := &mysql.TeledbGetParameterTemplateDetailRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -415,9 +413,9 @@ func (c *CtyunMysqlParamTemplate) getIDByParameterTemplateName(ctx context.Conte
 	header := mysql.TeledbGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+	//if !config.ProjectID.IsNull() {
+	//	header.ProjectID = config.ProjectID.ValueStringPointer()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateListApi.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return nil, err
@@ -485,9 +483,9 @@ func (c *CtyunMysqlParamTemplate) updateMysqlParameterTemplate(ctx context.Conte
 		header := &mysql.TeledbUpdateParameterTemplateRequestHeader{
 			RegionID: state.RegionID.ValueString(),
 		}
-		if !state.ProjectID.IsNull() {
-			header.ProjectID = state.ProjectID.ValueStringPointer()
-		}
+		//if !state.ProjectID.IsNull() {
+		//	header.ProjectID = state.ProjectID.ValueStringPointer()
+		//}
 		resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 		if err2 != nil {
 			return err2
@@ -510,9 +508,9 @@ func (c *CtyunMysqlParamTemplate) deleteMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbDeleteParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -642,6 +640,7 @@ func (c *CtyunMysqlParamTemplate) getParameterTemplateGroupDetail(ctx context.Co
 		return nil, err
 	} else if resp == nil {
 		err = fmt.Errorf("查询id=%d mysql参数模板失败，接口返回nil，请联系研发确认问题原因！", config.ID.ValueInt64())
+		return nil, err
 	} else if resp.StatusCode != 0 {
 		if strings.Contains(*resp.Error, "MYSQL_10005") || strings.Contains(resp.Message, "id not exists") {
 			err = common.ResourceNotExistError

@@ -6,10 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -60,13 +57,11 @@ func (c *CtyunPgsqlWhiteList) ImportState(ctx context.Context, request resource.
 		}
 	}()
 	var config CtyunPostgresqlWhiteListConfig
-	var instanceId, regionId, projectId string
+	var instanceId, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		instanceId = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &instanceId, &projectId, &regionId)
 		if err != nil {
 			return
 		}
@@ -81,7 +76,6 @@ func (c *CtyunPgsqlWhiteList) ImportState(ctx context.Context, request resource.
 	}
 	config.InstID = types.StringValue(instanceId)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMergePostgresqlWhiteList(ctx, &config)
 	if err != nil {
 		return
@@ -116,16 +110,9 @@ func (c *CtyunPgsqlWhiteList) Schema(ctx context.Context, request resource.Schem
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 			},
 			"mode": schema.StringAttribute{
 				Required:    true,
@@ -239,9 +226,6 @@ func (c *CtyunPgsqlWhiteList) updateWhiteListRequest(ctx context.Context, config
 	header := &pgsql.PgsqlUpdateWhiteListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateWhiteListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -276,9 +260,7 @@ func (c *CtyunPgsqlWhiteList) getWhiteIpList(ctx context.Context, config *CtyunP
 	header := &pgsql.PgsqlGetWhiteListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetWhiteListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err

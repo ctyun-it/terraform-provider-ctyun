@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -60,17 +59,16 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 		}
 	}()
 	var cfg CtyunPostgresqlBackupConfig
-	var name, regionId, projectId, instId string
+	var name, regionId, instId string
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
 		if err != nil {
 			return
 		}
@@ -88,7 +86,6 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
 	cfg.Name = types.StringValue(name)
 	cfg.InstID = types.StringValue(instId)
 	err = c.getAndMergePostgresqlBackup(ctx, &cfg)
@@ -126,16 +123,9 @@ func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.Sch
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:            true,
+				MarkdownDescription: "废弃字段，请不要指定",
+				Description:         "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -271,9 +261,7 @@ func (c *CtyunPostgresqlBackup) Delete(ctx context.Context, request resource.Del
 	header := &pgsql.PgsqlDeleteBackupRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -297,9 +285,7 @@ func (c *CtyunPostgresqlBackup) CreatePostgresqlBackup(ctx context.Context, conf
 	header := &pgsql.PgsqlCreateBackupRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -332,9 +318,7 @@ func (c *CtyunPostgresqlBackup) getBackupDetail(ctx context.Context, config *Cty
 	header := &pgsql.PgsqlGetBackupListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetBackupListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err

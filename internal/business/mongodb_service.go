@@ -74,23 +74,20 @@ func (u MongodbService) GetIDByOrder(ctx context.Context, masterOrderID string, 
 	return
 }
 
-func (u MongodbService) GetHostIpByInstID(ctx context.Context, instID string, regionID string, projectID string) (string, error) {
-	detail, err := u.GetMongodbDetail(ctx, instID, regionID, projectID)
+func (u MongodbService) GetHostIpByInstID(ctx context.Context, instID string, regionID string) (string, error) {
+	detail, err := u.GetMongodbDetail(ctx, instID, regionID)
 	if err != nil {
 		return "", err
 	}
 	return detail.Host, nil
 }
 
-func (u MongodbService) GetMongodbDetail(ctx context.Context, instID string, regionID string, projectID string) (*mongodb.DetailRespReturnObj, error) {
+func (u MongodbService) GetMongodbDetail(ctx context.Context, instID string, regionID string) (*mongodb.DetailRespReturnObj, error) {
 	detailParams := &mongodb.MongodbQueryDetailRequest{
 		ProdInstId: instID,
 	}
 	detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 		RegionID: regionID,
-	}
-	if projectID != "" {
-		detailHeader.ProjectID = &projectID
 	}
 	resp, err := u.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, u.meta.Credential, detailParams, detailHeader)
 	if err != nil {

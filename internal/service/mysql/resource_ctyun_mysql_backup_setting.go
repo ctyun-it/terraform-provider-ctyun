@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -65,13 +64,13 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 		}
 	}()
 	var cfg CtyunMysqlBackupSettingConfig
-	var regionId, projectId, instId string
+	var regionId, instId string
 
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		instId = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &instId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &instId, &regionId)
 		if err != nil {
 			return
 		}
@@ -85,7 +84,6 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 	}
 
 	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
 	cfg.InstID = types.StringValue(instId)
 	cfg.ID = types.StringValue(fmt.Sprintf("%s-setting", instId))
 	err = c.getAndMergeMysqlBackupSetting(ctx, &cfg)
@@ -110,16 +108,17 @@ func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional: true,
+				//Computed:    true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				//PlanModifiers: []planmodifier.String{
+				//	explanmodifier.Project(),
+				//},
+				//Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				//Validators: []validator.String{
+				//	validator2.Project(),
+				//},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -320,9 +319,9 @@ func (c *CtyunMysqlBackupSetting) updateMysqlBackupSettingConfig(ctx context.Con
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateBackupSettingApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -391,9 +390,9 @@ func (c *CtyunMysqlBackupSetting) getMysqlBackupSettingInfo(ctx context.Context,
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
+	//	header.ProjectID = config.ProjectID.ValueString()
+	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupSettingDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
