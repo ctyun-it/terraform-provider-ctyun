@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -202,6 +203,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					setvalidator.SizeAtLeast(1),
 					setvalidator.ValueStringsAre(validator2.SecurityGroupValidate()),
 				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
 				Description: "安全组id列表，在多可用区类型资源池下，安全组ID通常以“sg-”开头，非多可用区类型资源池安全组ID为uuid格式；默认使用默认安全组，无默认安全组情况下请填写该参数 支持更新",
 			},
 			"key_pair_name": schema.StringAttribute{
@@ -291,7 +295,10 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "系统盘的id",
+				Description: "系统盘ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_data": schema.StringAttribute{
 				Optional:    true,
@@ -306,6 +313,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -1272,7 +1282,11 @@ func (c *ctyunEcs) waitInstanceStatusFor(ctx context.Context, id, regionId, stat
 // updateFlavor 更新云主机实例规格
 // 支持flavor id 和flavor name 交叉更新的情况：创建时使用flavor id， 更新的时候使用flavor name
 func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan CtyunEcsConfig) error {
-	if state.FlavorId.Equal(plan.FlavorId) && state.FlavorName.Equal(plan.FlavorName) {
+	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
+	if flavorID != "" && state.FlavorId.Equal(plan.FlavorId) {
+		return nil
+	}
+	if flavorName != "" && state.FlavorName.Equal(plan.FlavorName) {
 		return nil
 	}
 
@@ -1280,7 +1294,6 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 	if !c.checkInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString(), business.EcsStatusStopped) {
 		return errors.New("变更云主机配置规格，请先将云主机关机")
 	}
-	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
 	if flavorName != "" && !plan.FlavorName.Equal(state.FlavorName) {
 		fid, err := c.ecsService.GetFlavorIDByName(ctx, flavorName, plan.RegionId.ValueString(), plan.AzName.ValueString())
 		if err != nil {

@@ -130,10 +130,10 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Optional:    true,
 				Description: "服务器证书私钥，type=Server服务器证书此字段必填",
 				Validators: []validator.String{
-					validator2.AlsoRequiresEqualString(
-						path.MatchRoot("type"),
-						types.StringValue(business.CertificateTypeServer),
-					),
+					//validator2.AlsoRequiresEqualString(
+					//	path.MatchRoot("type"),
+					//	types.StringValue(business.CertificateTypeServer),
+					//),
 					validator2.ConflictsWithEqualString(
 						path.MatchRoot("type"),
 						types.StringValue(business.CertificateTypeCA),
