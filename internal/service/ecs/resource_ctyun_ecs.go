@@ -444,6 +444,13 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					validator2.UUID(),
 				},
 			},
+			"master_port_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "主网卡id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
@@ -1476,6 +1483,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 		if *nc.IsMaster {
 			cfg.SubnetId = types.StringValue(*nc.SubnetID)
 			cfg.FixedIp = types.StringValue(*nc.IPv4Address)
+			cfg.MasterPortID = types.StringValue(*nc.NetworkCardID)
 		}
 	}
 
@@ -1602,6 +1610,10 @@ func (c *ctyunEcs) getUserData(ctx context.Context, plan *CtyunEcsConfig) (err e
 }
 
 func (c *ctyunEcs) getAutoRenew(ctx context.Context, plan *CtyunEcsConfig) (err error) {
+	if plan.ExpireTime.ValueString() == "" {
+		plan.AutoRenew = types.BoolValue(true)
+		return
+	}
 	params := &ctecs2.CtecsEcsGetAutoRenewConfigRequest{
 		RegionID:   plan.RegionId.ValueString(),
 		InstanceID: plan.Id.ValueString(),
@@ -2087,6 +2099,7 @@ type CtyunEcsConfig struct {
 	CreateTime         types.String  `tfsdk:"create_time"`
 	UpdateTime         types.String  `tfsdk:"update_time"`
 	SecurityProduct    types.String  `tfsdk:"security_product"`
+	MasterPortID       types.String  `tfsdk:"master_port_id"`
 }
 
 type Label struct {

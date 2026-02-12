@@ -127,22 +127,37 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"gateway_ip": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网关",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_start": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网段起始ip",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_end": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网段结束ip",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_start": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网内可用的起始ipv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_end": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网内可用的结束ipv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -211,8 +226,6 @@ func (c *ctyunSubnet) Create(ctx context.Context, request resource.CreateRequest
 	}
 
 	plan.Id = types.StringValue(resp.SubnetId)
-	plan.RegionId = types.StringValue(regionId)
-	plan.ProjectId = types.StringValue(projectId)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -283,10 +296,6 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	if !plan.ProjectId.IsUnknown() && !plan.ProjectId.IsNull() && state.ProjectId.IsNull() {
-		state.ProjectId = plan.ProjectId
-		response.Diagnostics.AddWarning("project_id的更新仅写入状态文件", "在import时，状态文件中project_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
-	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -314,7 +323,7 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[regionId]", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<regionId>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -344,7 +353,6 @@ func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportSt
 	if err != nil {
 		return
 	}
-	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -393,6 +401,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 	cfg.Description = types.StringValue(resp.Description)
 	cfg.Dns = dnsList
 	cfg.EnableIpv6 = types.BoolValue(resp.EnableIpv6)
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	cfg.Type = types.StringValue(subnetType.(string))
 	cfg.GatewayIp = types.StringValue(resp.Gateway)
 	cfg.Ipv4Start = types.StringValue(resp.Start)

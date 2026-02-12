@@ -105,10 +105,10 @@ func TestAccCtyunPrivateDNat2(t *testing.T) {
 	datasourceFile := "datasource_ctyun_private_nat_dnats.tf"
 	externalIp := dependence.privateNatIP1
 	natGatewayId := dependence.privateNatID
-	internalPort := utils.GenerateRandomPort(0, 65535)
-	updatedInternalPort := utils.GenerateRandomPort(0, 65535)
-	externalPort := utils.GenerateRandomPort(0, 1024)
-	updatedExternalPort := utils.GenerateRandomPort(0, 1024)
+	internalPort := utils.GenerateRandomPort(1, 65535)
+	updatedInternalPort := utils.GenerateRandomPort(1, 65535)
+	externalPort := utils.GenerateRandomPort(1, 1024)
+	updatedExternalPort := utils.GenerateRandomPort(1, 1024)
 
 	protocol := "tcp"
 	updatedProtocol := "udp"
