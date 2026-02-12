@@ -82,9 +82,7 @@ func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID strin
 		InstID:   instID,
 		RegionID: regionID,
 	}
-	//if projectID != "" {
-	//	detailHeaders.ProjectID = &projectID
-	//}
+
 	resp, err := u.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, u.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return
@@ -115,7 +113,8 @@ func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectId 
 			if err != nil {
 				return false
 			}
-			if instance.ProdRunningStatus == runningStatus && instance.ProdOrderStatus == orderStatus {
+			// 运行状态 0正常 -1异常
+			if instance.ProdRunningStatus == runningStatus && instance.ProdOrderStatus == orderStatus && instance.Alive == 0 {
 				return false
 			}
 			return true
