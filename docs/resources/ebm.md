@@ -153,6 +153,7 @@ resource "ctyun_ebm" "ebm_test2" {
 - `bandwidth` (Number) 带宽大小，传递时会自动创建弹性IP并绑定，单位为Mbit/s，取值范围：[1, 2000]
 - `cycle_count` (Number) 订购时长，最长订购周期为60个月（5年）；非按需时必填
 - `data_volume_raid_uuid` (String) 本地数据盘raid类型，如果有本地盘则必填，可通过ctyun_ebm_device_raids查询
+- `fixed_ip` (String) 加入子网后的ip地址
 - `key_pair_name` (String) 密钥对名词，和password只能传其中之一
 - `metadata` (Map of String) 物理机元数据信息，键值对形式，支持更新
 - `password` (String, Sensitive) 密码(必须包含大小写字母和（一个数字或者特殊字符）长度8到30位)，未传入有效的keyName时必须传入password，支持更新
@@ -171,7 +172,6 @@ resource "ctyun_ebm" "ebm_test2" {
 - `create_time` (String) 创建时间，为UTC格式
 - `eip_address` (String) 弹性公网IP的地址
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
-- `fixed_ip` (String) 加入子网后的ip地址
 - `id` (String) ID
 - `instance_id` (String) 物理机UUID，值与id相同
 - `interface_id` (String) 主网卡UUID

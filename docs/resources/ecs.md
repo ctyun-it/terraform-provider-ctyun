@@ -72,14 +72,14 @@ resource "ctyun_ecs" "test" {
 ### Optional
 
 - `affinity_group_id` (String) 云主机组ID，支持更新
-- `auto_renew` (Boolean) 是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true
+- `auto_renew` (Boolean) 是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true，支持更新
 - `az_name` (String) 可用区id，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME
 - `bandwidth` (Number) 带宽大小，传递时会自动创建弹性IP并绑定，单位为Mbit/s，取值范围：[1, 2000]
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年 支持更新
 - `deletion_protection` (Boolean) 是否开启实例删除保护，默认为false，按需实例支持更新
 - `fixed_ip` (String) 加入子网后的ip地址
-- `flavor_id` (String) 规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新
-- `flavor_name` (String) 云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，支持更新
+- `flavor_id` (String) 规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。
+- `flavor_name` (String) 云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。
 - `is_destroy_instance` (Boolean) 是否立即释放，默认为false。包周期云主机退订之后有一定时间的保留期，通过terraform destroy触发退订后，若此字段为true，会立即释放该云主机。支持更新
 - `key_pair_name` (String) 密钥对名称，与password字段互斥，支持更新
 - `labels` (Attributes List) 标签 云主机绑定多个标签时，标签键（参数labelKey）不可重复，单台云主机最多可绑定10个标签 支持更新 (see [below for nested schema](#nestedatt--labels))
@@ -89,6 +89,7 @@ resource "ctyun_ecs" "test" {
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `security_group_ids` (Set of String) 安全组id列表，在多可用区类型资源池下，安全组ID通常以“sg-”开头，非多可用区类型资源池安全组ID为uuid格式；默认使用默认安全组，无默认安全组情况下请填写该参数 支持更新
+- `security_product` (String) 安全防护类型，取值范围：EnterpriseEdition：企业版，UltimateEdition：旗舰版，BasicEdition：基础版。不填写表示不开启。
 - `status` (String) 云主机状态，初始状态为running，取值范围：backingup: 备份中，creating: 创建中，expired: 已到期，freezing: 冻结中，rebuild: 重装，restarting: 重启中，running: 运行中，starting: 开机中，stopped: 已关机，stopping: 关机中，error: 错误，snapshotting: 快照创建中，unsubscribed: 包周期已退订，unsubscribing: 包周期退订中，shelve：节省关机，shelving：节省关机中
 - `user_data` (String) 用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符
 
@@ -96,13 +97,13 @@ resource "ctyun_ecs" "test" {
 
 - `actual_image_id` (String) 实际镜像id，重装、集群纳管等操作会导致actual_image_id与image_id不同
 - `create_time` (String) 创建时间，为UTC格式
-- `default_security_group_id` (String) 默认加入安全组id
 - `eip_address` (String) 弹性IP地址
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) id
 - `master_order_id` (String) 订购的受理单ID
+- `master_port_id` (String) 主网卡id
 - `name` (String) 名称
-- `system_disk_id` (String) 系统盘的id
+- `system_disk_id` (String) 系统盘ID
 - `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--labels"></a>

@@ -127,7 +127,7 @@ resource "ctyun_mysql_backup_recovery" "example" {
 ### Required
 
 - `dst_instance_id` (String) 恢复的目标mysql实例id
-- `instance_id` (String) mysql实例id
+- `instance_id` (String) mysql实例id，废弃字段。
 - `src_instance_id` (String) 恢复的源mysql实例id
 
 ### Optional

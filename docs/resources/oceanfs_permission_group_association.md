@@ -44,7 +44,7 @@ resource "ctyun_subnet" "subnet_test" {
 }
 
 resource "ctyun_oceanfs_permission_group" "test" {
-  name        = "pg-for-tf1"
+  name        = "vpc-for-oceanfs"
   description = "terraform测试使用1"
 }
 

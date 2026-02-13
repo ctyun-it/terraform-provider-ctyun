@@ -86,7 +86,7 @@ resource "ctyun_postgresql_database" "examples" {
   charset_collate = data.ctyun_postgresql_collation_time_zone.collations.collations[0].coll_name
   charset_type    = data.ctyun_postgresql_collation_time_zone.collations.collations[0].coll_type
   owner           = "root"
-  description     = "postgresql 样例"
+  description     = "postgresql样例"
 }
 ```
 

@@ -117,19 +117,19 @@ variable "password" {
 
 ### Required
 
-- `resource_type` (String) 绑定的实例类型，VM 表示虚拟机ECS, PM 表示裸金属, NETWORK 表示弹性 IP
 - `vip_id` (String) 高可用虚IP的ID
 
 ### Optional
 
-- `floating_id` (String) 弹性IP ID，当 resource_type 为 NETWORK 时，必填
-- `instance_id` (String) ECS示例ID，当 resource_type 为 VM / PM 时，必填
-- `network_interface_id` (String) 虚拟网卡ID, 该网卡属于instance_id, 当 resource_type 为 VM / PM 时，必填
+- `floating_id` (String) 弹性IP ID，与弹性网卡ID有且只能有一个
+- `instance_id` (String, Deprecated) 实例ID
+- `network_interface_id` (String) 弹性网卡ID, 与弹性IP ID有且只能有一个
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `resource_type` (String, Deprecated) 资源类型
 
 ### Read-Only
 
-- `id` (String) 资源唯一标识，格式为 region_id:vip_id
+- `id` (String) 资源唯一标识
 ## 导入
 
 使用以下语法支持导入：
@@ -138,7 +138,11 @@ variable "password" {
 # 导入高可用虚IP关联
 #[] 标记的参数为必填参数
 #<> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_vip_association.[导入配置名称] [vip_id],[(instance_id:network_interface_id)/floating_id],<region_id>
+terraform import ctyun_vip_association.[导入配置名称] [vip_id],[network_interface_id],<region_id>
+或
+terraform import ctyun_vip_association.[导入配置名称] [vip_id],[floating_id],<region_id>
 # 示例
-terraform import ctyun_vip_association.vip_assoc_example vip-12345,"vm-67890:port-11111",region-22222
+terraform import ctyun_vip_association.vip_assoc_example vip-12345,port-xxxx,region-22222
+或
+terraform import ctyun_vip_association.vip_assoc_example vip-12345,eip-xxxx,region-22222
 ```
