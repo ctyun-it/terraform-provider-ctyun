@@ -228,7 +228,6 @@ func (c *CtyunMysqlAudit) startedLoop(ctx context.Context, state *CtyunMysqlAudi
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {

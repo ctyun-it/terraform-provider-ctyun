@@ -74,7 +74,7 @@ func (u MysqlService) GetIDByOrder(ctx context.Context, orderID, projectID strin
 	return
 }
 
-func (u MysqlService) GetDetailByID(ctx context.Context, instID, _ string, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
+func (u MysqlService) GetDetailByID(ctx context.Context, instID, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
 	detailParams := &mysql.TeledbQueryDetailRequest{
 		OuterProdInstId: instID,
 	}
@@ -109,7 +109,7 @@ func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectId 
 	result := retryer.Start(
 		func(currentTime int) bool {
 			var instance *mysql.DetailRespReturnObj
-			instance, err = u.GetDetailByID(ctx, instID, projectId, regionID)
+			instance, err = u.GetDetailByID(ctx, instID, regionID)
 			if err != nil {
 				return false
 			}
