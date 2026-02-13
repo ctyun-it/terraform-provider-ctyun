@@ -42,7 +42,9 @@ output "ctyun_image" {
 
 ### Optional
 
+- `architecture` (String) 系统架构。取值范围：aarch64：aarch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构
 - `az_name` (String) 可用区id，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME
+- `flavor_name` (String) 镜像规格名称
 - `name` (String) 镜像名称，模糊查询
 - `region_id` (String) 资源池id，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
@@ -55,7 +57,7 @@ output "ctyun_image" {
 
 Read-Only:
 
-- `architecture` (String) 架构
+- `architecture` (String) 系统架构。取值范围：aarch64：AArch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构
 - `description` (String) 描述
 - `id` (String) 镜像id
 - `name` (String) 镜像名称

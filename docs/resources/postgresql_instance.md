@@ -32,7 +32,7 @@ variable "password" {
 resource "ctyun_vpc" "vpc_test" {
   name        = "tf-vpc-for-pgsql"
   cidr        = "192.168.0.0/16"
-  description = "terraform-kafka测试使用"
+  description = "terraform-postgresql样例"
   enable_ipv6 = true
 }
 
@@ -40,7 +40,7 @@ resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-for-pgsql"
   cidr        = "192.168.1.0/24"
-  description = "terraform-kafka测试使用"
+  description = "terraform-postgresql样例"
   dns = [
     "114.114.114.114",
     "8.8.8.8",
@@ -48,8 +48,8 @@ resource "ctyun_subnet" "subnet_test" {
 }
 resource "ctyun_security_group" "sg_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-sg-for-esc"
-  description = "terraform-kafka测试使用"
+  name        = "tf-sg-for-pgsql"
+  description = "terraform-postgresql样例"
   lifecycle {
     prevent_destroy = false
   }
@@ -132,7 +132,7 @@ resource "ctyun_postgresql_instance" "test3" {
 - `prod_id` (String) 产品ID，支持更新。取值范围包括：Single1222-（单实例12.22版本）, MasterSlave1222（一主一备12.22版本）, Single1417（单实例14.17版本）, MasterSlave1417（一主一备14.17版本）, Single1320（单实例13.20版本）, MasterSlave1320（一主一备13.20版本）, ReadOnly1222（只读实例12.22版本）, ReadOnly1320（只读实例13.20版本）, ReadOnly1417（只读实例14.17版本）, Single1512（单实例15.12版本）, MasterSlave1512（一主一备15.12版本）, ReadOnly1512（只读实例15.12版本）, Master2Slave1222（一主两备12.22版本）, Master2Slave1417（一主两备14.17版本）, Master2Slave1320（一主两备13.20版本）, Master2Slave1512（一主两备15.12版本）, Single168（单实例16.8版本）, MasterSlave168（一主一备16.8版本）, Master2Slave168（一主两备16.8版本）, ReadOnly168（只读实例16.8版本）。注：扩容过程中，不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(prod_id)扩容同时进行
 - `security_group_id` (String) 安全组Id，支持多个安全组，用英文逗号分割(,)。支持更新，最少得有一个安全组
 - `storage_space` (Number) 主存储空间(单位:G，范围100-32768)。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行
-- `storage_type` (String) 主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）
+- `storage_type` (String) 主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2
 - `subnet_id` (String) 子网Id
 - `vpc_id` (String) 虚拟私有云Id
 

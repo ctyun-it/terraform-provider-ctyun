@@ -1,10 +1,10 @@
 ---
-subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
+subcategory: "SCALING"
 page_title: "CTYUN: ctyun_scaling_policy"
 ---
 
 # ctyun_scaling_policy (Resource)
--> 管理弹性伸缩组的策略
+-> 管理弹性伸缩策略
 
 
 

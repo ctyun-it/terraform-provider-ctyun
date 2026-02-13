@@ -85,7 +85,7 @@ resource "ctyun_private_nat_transit_ip" "transit_ip2" {
 
 ### Read-Only
 
-- `id` (String) 中转IP的ID，格式为regionID:natGatewayID:address
+- `id` (String) 中转IP的ID，格式为nat_gateway_id,address
 - `is_default` (Boolean) 是否为默认中转地址
 - `snat_count` (Number) 在使用此中转IP的snat数量
 - `status` (String) 中转IP状态: running代表运行中, freeze代表已冻结, expired代表已到期

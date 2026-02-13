@@ -138,7 +138,7 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 - `prod_id` (String) 产品id，支持更新。取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。
 - `security_group_id` (String) 安全组Id
 - `storage_space` (Number) 存储空间(单位:G，范围100,32768)，支持更新
-- `storage_type` (String) 存储类型: SSD=超高IO、SATA=普通IO、SAS=高IO、SSD-genric=通用型SSD、FAST-SSD=极速型SSD
+- `storage_type` (String) 存储类型: SSD=超高IO、SATA=普通IO，SAS=高IO，SSD-genric=通用型SSD，FAST-SSD=极速型SSD，XSSD-0，XSSD-1，XSSD-2
 - `subnet_id` (String) 子网Id
 - `vpc_id` (String) 虚拟私有云Id
 
@@ -147,7 +147,7 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
 - `availability_zone_info` (Attributes List) 可用区信息，支持更新。需要根据prod_id而定。创建阶段，需要指定master和slave的所在az。例：若一主一备，需要传参：[｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'master'｝,｛'availability_zone_name':'xxxx', 'availability_zone_count':1,node_type:'slave'｝]；在更新阶段，仅需要填写扩容部分的AZ信息。例：将单节点扩容至1主2备，[{'availability_zone_name':'xxxx', 'availability_zone_count':2,node_type:'slave'}] (see [below for nested schema](#nestedatt--availability_zone_info))
 - `backup_storage_space` (Number) 备份存储空间(单位:G，范围100,32768)，若storage_space和backup_storage_space都不为空，优先升配备份节点存储空间，支持更新
-- `backup_storage_type` (String) 备份空间磁盘存储类型：SSD=超高IO、SATA=普通IO、SAS=高IO
+- `backup_storage_type` (String) 备份空间磁盘存储类型：SSD=超高IO，SATA=普通IO，SAS=高IO
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
 - `password` (String, Sensitive) 实例密码，支持更新。密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
