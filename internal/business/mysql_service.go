@@ -74,7 +74,7 @@ func (u MysqlService) GetIDByOrder(ctx context.Context, orderID, projectID strin
 	return
 }
 
-func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID string, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
+func (u MysqlService) GetDetailByID(ctx context.Context, instID, _ string, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
 	detailParams := &mysql.TeledbQueryDetailRequest{
 		OuterProdInstId: instID,
 	}
@@ -113,7 +113,7 @@ func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectId 
 			if err != nil {
 				return false
 			}
-			// 运行状态 0正常 -1异常
+			//
 			if instance.ProdRunningStatus == runningStatus && instance.ProdOrderStatus == orderStatus && instance.Alive == 0 {
 				return false
 			}
