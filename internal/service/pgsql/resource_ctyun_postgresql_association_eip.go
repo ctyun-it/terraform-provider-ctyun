@@ -10,7 +10,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -70,16 +69,9 @@ func (c *CtyunPgsqlAssociationEip) Schema(ctx context.Context, request resource.
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:            true,
+				MarkdownDescription: "废弃字段，请不要指定",
+				Description:         "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -172,7 +164,21 @@ func (c *CtyunPgsqlAssociationEip) Read(ctx context.Context, request resource.Re
 }
 
 func (c *CtyunPgsqlAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunPgsqlAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunPgsqlAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunPgsqlAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -202,9 +208,7 @@ func (c *CtyunPgsqlAssociationEip) Delete(ctx context.Context, request resource.
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &pgsql.PgsqlUnBindEipRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		unbindHeader.ProjectId = state.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUnBindEipApi.Do(ctx, c.meta.Credential, unbindParams, unbindHeader)
 	if err != nil {
 		return
@@ -240,23 +244,16 @@ func (c *CtyunPgsqlAssociationEip) ImportState(ctx context.Context, request reso
 		}
 	}()
 	var config CtyunPgsqlAssociationEipConfig
-	var eipID, regionID, projectID, instanceID string
+	var eipID, regionID, instanceID string
 	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
@@ -276,9 +273,7 @@ func (c *CtyunPgsqlAssociationEip) ImportState(ctx context.Context, request reso
 	config.InstID = types.StringValue(instanceID)
 	config.EipID = types.StringValue(eipID)
 	config.RegionID = types.StringValue(regionID)
-	if projectID != "" {
-		config.ProjectID = types.StringValue(projectID)
-	}
+
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
 	err = c.getAndMergeBindEip(ctx, &config)
 	if err != nil {
@@ -299,9 +294,7 @@ func (c *CtyunPgsqlAssociationEip) PgsqlBindEip(ctx context.Context, config *Cty
 		InstID: config.InstID.ValueString(),
 	}
 	header := &pgsql.PgsqlBindEipRequestHeader{}
-	if config.ProjectID.ValueString() != "" {
-		header.ProjectId = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlBindEipApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -328,9 +321,7 @@ func (c *CtyunPgsqlAssociationEip) BindLoop(ctx context.Context, config *CtyunPg
 				EipID:    config.EipID.ValueStringPointer(),
 			}
 			header := &mysql.TeledbBoundEipListRequestHeader{}
-			if config.ProjectID.ValueString() != "" {
-				header.ProjectID = config.ProjectID.ValueStringPointer()
-			}
+
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, header)
 			if err2 != nil {
 				err = err2
@@ -366,9 +357,7 @@ func (c *CtyunPgsqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 		InstID:   config.InstID.ValueStringPointer(),
 	}
 	header := &mysql.TeledbBoundEipListRequestHeader{}
-	if config.ProjectID.ValueString() != "" {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return

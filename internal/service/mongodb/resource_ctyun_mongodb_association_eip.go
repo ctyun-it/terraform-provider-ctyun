@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -54,23 +53,16 @@ func (c *CtyunMongodbAssociationEip) ImportState(ctx context.Context, request re
 		}
 	}()
 	var config MongodbAssociationEipConfig
-	var eipID, regionID, projectID, instanceID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
+	var eipID, regionID, instanceID string
+	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
@@ -90,9 +82,6 @@ func (c *CtyunMongodbAssociationEip) ImportState(ctx context.Context, request re
 	config.InstID = types.StringValue(instanceID)
 	config.EipID = types.StringValue(eipID)
 	config.RegionID = types.StringValue(regionID)
-	if projectID != "" {
-		config.ProjectID = types.StringValue(projectID)
-	}
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
 	err = c.getAndMergeBindEip(ctx, &config)
 	if err != nil {
@@ -136,16 +125,9 @@ func (c *CtyunMongodbAssociationEip) Schema(ctx context.Context, request resourc
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -237,7 +219,21 @@ func (c *CtyunMongodbAssociationEip) Read(ctx context.Context, request resource.
 }
 
 func (c *CtyunMongodbAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan MongodbAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state MongodbAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMongodbAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -273,9 +269,7 @@ func (c *CtyunMongodbAssociationEip) Delete(ctx context.Context, request resourc
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &mongodb.MongodbUnbindEipRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		unbindHeader.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbUnbindEipApi.Do(ctx, c.meta.Credential, unbindParams, unbindHeader)
 	if err != nil {
 		return
@@ -297,7 +291,7 @@ func (c *CtyunMongodbAssociationEip) MongodbBindEip(ctx context.Context, config 
 		return err
 	}
 	// 根据inst id 获取 host ip
-	hostIP, err := c.mongodbService.GetHostIpByInstID(ctx, config.InstID.ValueString(), config.RegionID.ValueString(), config.ProjectID.ValueString())
+	hostIP, err := c.mongodbService.GetHostIpByInstID(ctx, config.InstID.ValueString(), config.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -311,9 +305,7 @@ func (c *CtyunMongodbAssociationEip) MongodbBindEip(ctx context.Context, config 
 		HostIp: config.hostIP,
 	}
 	bindHeader := &mongodb.MongodbBindEipRequestHeader{}
-	if config.ProjectID.ValueString() != "" {
-		bindHeader.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbBindEipApi.Do(ctx, c.meta.Credential, bindParams, bindHeader)
 	if err != nil {
 		return err

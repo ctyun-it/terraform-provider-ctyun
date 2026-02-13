@@ -109,10 +109,9 @@ func TestAccMongodbAccount_basicImportState(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					// 构造导入ID: "id,region_id"
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},

@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -78,16 +77,9 @@ func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaReq
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -255,7 +247,7 @@ func (c *CtyunMongodbAccount) Update(ctx context.Context, req resource.UpdateReq
 	if err != nil {
 		return
 	}
-
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 }
 
@@ -288,16 +280,15 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 		}
 	}()
 	var config MongodbAccountConfig
-	var regionID, projectID, instID, name string
+	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
@@ -317,7 +308,6 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instID, name))
 	config.InstanceID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -357,9 +347,6 @@ func (c *CtyunMongodbAccount) create(ctx context.Context, plan MongodbAccountCon
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "开始创建MongoDB账号", map[string]interface{}{
 		"instance_id":  plan.InstanceID.ValueString(),
@@ -389,9 +376,6 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 
 	headers := &mongodb.MongodbDescribeAccountsRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
-	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbDescribeAccountsApi.Do(ctx, c.meta.Credential, describeReq, headers)
@@ -448,9 +432,6 @@ func (c *CtyunMongodbAccount) updateAccountPassword(ctx context.Context, plan *M
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "更新MongoDB账号密码", map[string]interface{}{
 		"instance_id":  plan.InstanceID.ValueString(),
@@ -496,9 +477,6 @@ func (c *CtyunMongodbAccount) updateAccountPermission(ctx context.Context, plan 
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "更新MongoDB账号权限", map[string]interface{}{
 		"instance_id":  plan.InstanceID.ValueString(),
@@ -525,9 +503,6 @@ func (c *CtyunMongodbAccount) delete(ctx context.Context, state MongodbAccountCo
 	headers := &mongodb.MongodbDeleteAccountRequestHeaders{
 		RegionID:   state.RegionID.ValueString(),
 		ProdInstId: state.InstanceID.ValueString(),
-	}
-	if !state.ProjectID.IsNull() {
-		headers.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 
 	tflog.Info(ctx, "删除MongoDB账号", map[string]interface{}{

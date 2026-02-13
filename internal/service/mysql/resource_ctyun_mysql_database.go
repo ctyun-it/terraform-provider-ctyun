@@ -9,7 +9,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -61,16 +60,15 @@ func (c *CtyunMysqlDatabase) ImportState(ctx context.Context, request resource.I
 		}
 	}()
 	var config CtyunMysqlDatabaseConfig
-	var name, regionID, projectID, instID string
+	var name, regionID, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
@@ -91,7 +89,6 @@ func (c *CtyunMysqlDatabase) ImportState(ctx context.Context, request resource.I
 	config.Name = types.StringValue(name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeMysqlDatabase(ctx, &config)
 	if err != nil {
 		return
@@ -114,16 +111,9 @@ func (c *CtyunMysqlDatabase) Schema(ctx context.Context, request resource.Schema
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -299,6 +289,7 @@ func (c *CtyunMysqlDatabase) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -342,9 +333,6 @@ func (c *CtyunMysqlDatabase) createMysqlDatabase(ctx context.Context, config *Ct
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -375,9 +363,6 @@ func (c *CtyunMysqlDatabase) updateDescription(ctx context.Context, config *Ctyu
 	header := &mysql.TeledbUpdateDatabaseRemarkRequestHeader{
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateDatabaseRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -424,9 +409,6 @@ func (c *CtyunMysqlDatabase) getMysqlDatabaseInfo(ctx context.Context, config *C
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetDatabaseSchemaApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -461,9 +443,6 @@ func (c *CtyunMysqlDatabase) checkDBName(ctx context.Context, config *CtyunMysql
 	header := &mysql.TeledbCheckDatabaseNameAvailableRequestHeader{
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCheckDatabaseNameAvailableApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -502,9 +481,6 @@ func (c *CtyunMysqlDatabase) deleteMysqlDatabase(ctx context.Context, config Cty
 	header := &mysql.TeledbDeleteDatabaseRequestHeader{
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteDatabaseApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {

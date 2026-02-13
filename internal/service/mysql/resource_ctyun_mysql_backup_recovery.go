@@ -8,8 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -65,16 +63,9 @@ func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.Project(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -180,7 +171,21 @@ func (c *CtyunMysqlBackupRecovery) Read(ctx context.Context, request resource.Re
 }
 
 func (c *CtyunMysqlBackupRecovery) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunMysqlBackupRecoveryConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlBackupRecoveryConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlBackupRecovery) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -211,9 +216,7 @@ func (c *CtyunMysqlBackupRecovery) CreateMysqlBackupRecovery(ctx context.Context
 		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+
 	// 备份恢复操作前，先轮询确认实例是running的
 	err := c.StartedLoop(ctx, config, 30)
 	if err != nil {
@@ -299,9 +302,7 @@ func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, co
 		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupRecoveryListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -347,9 +348,7 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 				InstID:   state.SrcInstId.ValueString(),
 				RegionID: state.RegionID.ValueString(),
 			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
+
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 			if err2 != nil {
 				err = err2

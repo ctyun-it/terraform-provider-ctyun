@@ -126,10 +126,9 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, _ := s.RootModule().Resources[resourceName]
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},

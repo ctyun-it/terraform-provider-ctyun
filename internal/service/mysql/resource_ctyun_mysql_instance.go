@@ -711,7 +711,6 @@ func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, confi
 	returnOjb, err = c.mysqlService.GetDetailByID(
 		ctx,
 		config.InstID.ValueString(),
-		config.ProjectID.ValueString(),
 		config.RegionID.ValueString(),
 	)
 	if err != nil {
@@ -770,7 +769,6 @@ func (c *CtyunMysqlInstance) updateInfoLoop(ctx context.Context, state *CtyunMys
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {
@@ -801,7 +799,6 @@ func (c *CtyunMysqlInstance) startedLoop(ctx context.Context, state *CtyunMysqlI
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {
