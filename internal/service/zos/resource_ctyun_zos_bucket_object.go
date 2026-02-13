@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -72,9 +73,11 @@ func (c *ctyunZosBucketObject) Schema(_ context.Context, _ resource.SchemaReques
 		MarkdownDescription: utils.FormatDesc("管理对象存储的对象", "对象存储（CT-ZOS，Zettabyte Object Storage）", "https://www.ctyun.cn/document/10026735/10181324"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 
 			"region_id": schema.StringAttribute{
@@ -206,14 +209,23 @@ func (c *ctyunZosBucketObject) Schema(_ context.Context, _ resource.SchemaReques
 				Validators: []validator.Map{
 					mapvalidator.SizeAtMost(10),
 				},
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"etag": schema.StringAttribute{
 				Computed:    true,
 				Description: "该对象生成的实体标签（ETag）（即该对象内容的 MD5 哈希值）",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"version_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "对象版本号",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
