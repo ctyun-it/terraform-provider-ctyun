@@ -46,7 +46,6 @@ func TestAccCtyunSubnet(t *testing.T) {
 				),
 			},
 			{
-
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
@@ -56,22 +55,13 @@ func TestAccCtyunSubnet(t *testing.T) {
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{
-					//"project_id",
-				},
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
+				ResourceName:            resourceName,
+				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{
-					//"project_id",
-				},
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID),
@@ -92,7 +82,6 @@ func TestAccCtyunSubnet(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(datasourceName, "subnets.0.dns_list.*", updatedDns),
 				),
 			},
-
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),

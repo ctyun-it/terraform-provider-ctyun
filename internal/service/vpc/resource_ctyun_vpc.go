@@ -50,11 +50,11 @@ func (c *ctyunVpc) Schema(_ context.Context, _ resource.SchemaRequest, response 
 		MarkdownDescription: utils.FormatDesc("管理虚拟私有云", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "id",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				Computed:    true,
-				Description: "id",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -146,8 +146,6 @@ func (c *ctyunVpc) Create(ctx context.Context, request resource.CreateRequest, r
 	}
 
 	plan.Id = types.StringValue(resp.VpcId)
-	plan.RegionId = types.StringValue(regionId)
-	plan.ProjectId = types.StringValue(projectId)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -199,7 +197,6 @@ func (c *ctyunVpc) Update(ctx context.Context, request resource.UpdateRequest, r
 	_, err := c.meta.Apis.CtVpcApis.VpcUpdateApi.Do(ctx, c.meta.Credential, &ctvpc.VpcUpdateRequest{
 		VpcId:       state.Id.ValueString(),
 		RegionId:    state.RegionId.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 		Name:        plan.Name.ValueString(),
 		Description: plan.Description.ValueString(),
@@ -227,7 +224,6 @@ func (c *ctyunVpc) Delete(ctx context.Context, request resource.DeleteRequest, r
 	_, err := c.meta.Apis.CtVpcApis.VpcDeleteApi.Do(ctx, c.meta.Credential, &ctvpc.VpcDeleteRequest{
 		VpcId:       state.Id.ValueString(),
 		RegionId:    state.RegionId.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 	})
 	if err != nil {
@@ -247,7 +243,6 @@ func (c *ctyunVpc) ImportState(ctx context.Context, request resource.ImportState
 	}()
 	var cfg CtyunVpcConfig
 	var vpcId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		vpcId = request.ID
@@ -257,7 +252,6 @@ func (c *ctyunVpc) ImportState(ctx context.Context, request resource.ImportState
 			return
 		}
 	}
-
 	if vpcId == "" {
 		err = fmt.Errorf("vpc_id不能为空")
 		return
@@ -266,17 +260,12 @@ func (c *ctyunVpc) ImportState(ctx context.Context, request resource.ImportState
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
 	cfg.Id = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
-
 	instance, err := c.getAndMergeVpc(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
-
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
@@ -292,7 +281,6 @@ func (c *ctyunVpc) Configure(_ context.Context, request resource.ConfigureReques
 func (c *ctyunVpc) getAndMergeVpc(ctx context.Context, cfg CtyunVpcConfig) (*CtyunVpcConfig, error) {
 	resp, err := c.meta.Apis.CtVpcApis.VpcQueryApi.Do(ctx, c.meta.Credential, &ctvpc.VpcQueryRequest{
 		RegionId:    cfg.RegionId.ValueString(),
-		ProjectId:   cfg.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 		VpcId:       cfg.Id.ValueString(),
 	})
@@ -308,6 +296,7 @@ func (c *ctyunVpc) getAndMergeVpc(ctx context.Context, cfg CtyunVpcConfig) (*Cty
 	cfg.Description = types.StringValue(resp.Description)
 	cfg.Cidr = types.StringValue(resp.Cidr)
 	cfg.EnableIpv6 = types.BoolValue(resp.Ipv6Enabled)
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	return &cfg, nil
 }
 
