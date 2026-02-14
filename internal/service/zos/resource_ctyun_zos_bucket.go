@@ -90,7 +90,7 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:    true,
 				Description: "名称",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.UseAnotherColumnForUnknown(path.Root("bucket")),
+					explanmodifier.UseDependencyForUnknown(path.Root("bucket")),
 				},
 			},
 			"region_id": schema.StringAttribute{

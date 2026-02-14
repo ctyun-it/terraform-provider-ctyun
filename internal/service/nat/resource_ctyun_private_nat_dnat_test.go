@@ -157,8 +157,7 @@ func TestAccCtyunPrivateDNat2(t *testing.T) {
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
 					natGatewayID := ds.Attributes["nat_gateway_id"]
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, natGatewayID, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, natGatewayID, regionId), nil
 				},
 			},
 			{

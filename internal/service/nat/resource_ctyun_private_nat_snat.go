@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -93,19 +94,23 @@ func (c *ctyunPrivateSnatResource) Schema(_ context.Context, _ resource.SchemaRe
 		MarkdownDescription: utils.FormatDesc("管理私网NAT网关snat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378381"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，同snat_id",
+				Computed:    true,
+				Description: "ID，同snat_id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"snat_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "Snat规则的id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "Snat规则的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -147,22 +152,24 @@ func (c *ctyunPrivateSnatResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
-					validator2.DescNotStartWithHttp()},
+					validator2.DescNotStartWithHttp(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_vpc_name": schema.StringAttribute{
-				Computed:      true,
-				Description:   "源vpc名称",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
-			//"source_subnet_name": schema.StringAttribute{
-			//	Computed:      true,
-			//	Description:   "源Subnet名称",
-			//	PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			//},
 			"state": schema.StringAttribute{
-				Computed:      true,
-				Description:   "SNAT状态: running代表运行中, freeze代表已冻结, expired代表已到期",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "SNAT状态: running代表运行中, freeze代表已冻结, expired代表已到期",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -334,8 +341,7 @@ func (c *ctyunPrivateSnatResource) getAndMergeSnat(ctx context.Context, config *
 	snat := resp.ReturnObj[0]
 	config.SNatID = types.StringValue(snat.SnatID)
 	config.Description = types.StringValue(snat.Description)
-	config.SourceVpcName = types.StringValue(snat.SrcVpcName)
-	//config.SourceSubnetName = types.StringValue(snat.SrcSubnetName)
+	config.SourceVpcName = types.StringValue("")
 	config.State = types.StringValue(snat.State)
 
 	snatIps, diags := types.SetValueFrom(ctx, types.StringType, snat.Addresses)

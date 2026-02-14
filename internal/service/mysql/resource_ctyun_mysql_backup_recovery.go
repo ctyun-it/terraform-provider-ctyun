@@ -53,14 +53,9 @@ func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.
 		MarkdownDescription: utils.FormatDesc("根据备份进行MySQL实例恢复", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
-				Required:    true,
-				Description: "mysql实例id，废弃字段。",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(32, 32),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "mysql实例id",
 			},
 			"project_id": schema.StringAttribute{
 				Optional:           true,
@@ -185,6 +180,7 @@ func (c *CtyunMysqlBackupRecovery) Update(ctx context.Context, request resource.
 	}
 
 	state.ProjectID = plan.ProjectID
+	state.InstID = plan.InstID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
