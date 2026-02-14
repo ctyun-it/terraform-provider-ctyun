@@ -31,14 +31,14 @@ func TestAccCtyunImage_basic(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					imageName,
-					"CentOS",
-					"7.8",
-					"https://jiangsu-10.zos.ctyun.cn/image-import/ecs.iso", // file_source - 实际测试时需要替换为有效值
+					"Ubuntu",
+					"22.04",
+					"https://jiangsu-10.zos.ctyun.cn/bucket-29bf/test-image", // file_source - 实际测试时需要替换为有效值
 				),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", imageName),
-					resource.TestCheckResourceAttr(resourceName, "os_distro", "CentOS"),
-					resource.TestCheckResourceAttr(resourceName, "os_version", "7.8"),
+					resource.TestCheckResourceAttr(resourceName, "os_distro", "Ubuntu"),
+					resource.TestCheckResourceAttr(resourceName, "os_version", "22.04"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "region_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "project_id"),
@@ -79,6 +79,17 @@ func TestAccCtyunImage_basic(t *testing.T) {
 				ImportStateVerifyIgnore: []string{
 					"file_source", // file_source 在导入时不设置
 				},
+			},
+			{
+				// 测试销毁
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					imageName,
+					"Ubuntu",
+					"22.04",
+					"https://jiangsu-10.zos.ctyun.cn/bucket-29bf/test-image", // file_source - 实际测试时需要替换为有效值
+				),
+				Destroy: true,
 			},
 		},
 	})

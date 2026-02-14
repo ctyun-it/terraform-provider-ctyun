@@ -53,9 +53,11 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 		MarkdownDescription: utils.FormatDesc("管理私有镜像（从镜像文件创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"file_source": schema.StringAttribute{
 				Optional:    true,
@@ -101,6 +103,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像系统架构，aarch64：AArch64架构，仅支持UEFI启动方式、x86_64：x86_64架构，支持BIOS和UEFI启动方式，注意：所指定的镜像系统架构应受所指定的资源池支持",
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
@@ -114,6 +117,9 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageBootModes...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
@@ -122,12 +128,16 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"disk_size": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "磁盘容量，单位为GB，取值范围：最小5（默认值），最大1024。注意：磁盘容量不能小于镜像文件的大小；若小于镜像文件的大小，则实际的磁盘容量将使用镜像文件的大小",
 				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 					int64planmodifier.RequiresReplace(),
 				},
 				Validators: []validator.Int64{
@@ -140,6 +150,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像种类，system：系统盘镜像，data：数据盘镜像，默认为系统盘镜像system",
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
@@ -175,24 +186,6 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像状态，accepted：已接受共享镜像，active：正常，deactivated：已弃用，deactivating：弃用中，deleted：已删除，deleting：删除中，error：错误，importing：导入中，killed：上传出错，镜像不可读，pending_delete：等待删除中，queued：排队中，reactivating：取消弃用中，rejected：已拒绝共享镜像，saving：保存中，syncing：同步中，uploading：上传中，waiting：等待接受/拒绝共享镜像",
 			},
-			// "maximum_ram": schema.Int64Attribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "最大内存，单位为GB，取值范围：0（默认值，即不限制）/1/2/4/8/16/32/64/128/256/512。注意：若取值不为0且所指定的最小内存也不为不限制时，则取值应大于或等于所指定的最小内存",
-			// 	Validators: []validator.Int64{
-			// 		int64validator.OneOf(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512),
-			// 	},
-			// 	Default: int64default.StaticInt64(0),
-			// },
-			// "minimum_ram": schema.Int64Attribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "最小内存，单位为GB，取值范围：0（默认值，即不限制）/1/2/4/8/16/32/64/128/256/512。注意：若取值不为0且所指定的最小内存也不为不限制时，则取值应大于或等于所指定的最小内存",
-			// 	Validators: []validator.Int64{
-			// 		int64validator.OneOf(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512),
-			// 	},
-			// 	Default: int64default.StaticInt64(0),
-			// },
 		},
 	}
 }
@@ -400,7 +393,7 @@ func (c *ctyunImage) Configure(_ context.Context, request resource.ConfigureRequ
 // waitForImageDeleted 等待镜像删除成功
 func (c *ctyunImage) waitForImageDeleted(ctx context.Context, cfg CtyunImageConfig) error {
 	executeSuccessFlag := false
-	retryer, _ := business.NewRetryer(time.Second*5, 60)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			response, err := c.meta.Apis.CtImageApis.ImageDetailApi.Do(ctx, c.meta.Credential, &ctimage.ImageDetailRequest{
@@ -441,7 +434,7 @@ func (c *ctyunImage) waitForImageDeleted(ctx context.Context, cfg CtyunImageConf
 // waitForUploadImageActive 等待镜像上传完成
 func (c *ctyunImage) waitForUploadImageActive(ctx context.Context, cfg CtyunImageConfig) error {
 	executeSuccessFlag := false
-	retryer, _ := business.NewRetryer(time.Second*5, 60)
+	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
 			response, err := c.meta.Apis.CtImageApis.ImageDetailApi.Do(ctx, c.meta.Credential, &ctimage.ImageDetailRequest{

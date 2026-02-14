@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -102,7 +103,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池ID",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -218,16 +219,19 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			"vpc_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "虚拟网 ID",
+				Description:        "废弃字段",
 			},
 			"subnet_id": schema.StringAttribute{
 				Optional:           true,
 				DeprecationMessage: "废弃字段，请不要指定",
-				Description:        "子网 ID",
+				Description:        "废弃字段",
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订单ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -239,15 +243,26 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "并行文件状态",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			// 只会因非provider操作产生变化
 			"used_size": schema.Int32Attribute{
 				Computed:    true,
 				Description: "已用大小（MB）",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
+			// 只会因非provider操作产生变化
 			"dataflow_list": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "HPFS文件系统下的数据流动策略ID列表",
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"share_path": schema.StringAttribute{
 				Computed:    true,

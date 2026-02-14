@@ -98,6 +98,9 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 						"描述不能以空格开头或结尾。",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -161,7 +164,6 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 						},
 					},
 				},
-				// TODO 标签变更需重建（暂无无动态更新标签能力）
 				PlanModifiers: []planmodifier.Set{
 					explanmodifier.NullIgnoreSet(),
 				},
@@ -172,7 +174,6 @@ func (c *ctyunImageFromEcs) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "是否启用镜像完整性校验，仅资源池支持时生效。",
-				// 云主机变更需重建
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
 				},
