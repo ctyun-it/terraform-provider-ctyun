@@ -51,9 +51,11 @@ func (c *ctyunEipAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 		MarkdownDescription: utils.FormatDesc("管理弹性IP的绑定", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"eip_id": schema.StringAttribute{
 				Required:    true,

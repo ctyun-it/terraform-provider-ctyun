@@ -74,9 +74,11 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 		MarkdownDescription: utils.FormatDesc("管理弹性IP", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -152,6 +154,9 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"address": schema.StringAttribute{
 				Computed:    true,
 				Description: "ip地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -160,6 +165,9 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -175,6 +183,9 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
