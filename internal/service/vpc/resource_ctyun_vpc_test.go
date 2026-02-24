@@ -70,7 +70,6 @@ func TestAccCtyunVpc(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
@@ -80,26 +79,8 @@ func TestAccCtyunVpc(t *testing.T) {
 				ImportStateVerifyIgnore: []string{},
 			},
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s", id, projectId), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-
-					return fmt.Sprintf("%s", id), nil
-				},
+				ResourceName:            resourceName,
+				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
 			},

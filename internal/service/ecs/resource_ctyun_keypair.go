@@ -47,9 +47,11 @@ func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, respo
 		MarkdownDescription: utils.FormatDesc("管理密钥对", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10230554"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "密钥对的id",
+				Computed:    true,
+				Description: "密钥对的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,

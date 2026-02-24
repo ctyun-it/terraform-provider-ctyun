@@ -58,9 +58,11 @@ func (c *ctyunEcsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.Sche
 		MarkdownDescription: utils.FormatDesc("管理云主机备份存储库和备份策略的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10235038"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"policy_id": schema.StringAttribute{
 				Required:    true,

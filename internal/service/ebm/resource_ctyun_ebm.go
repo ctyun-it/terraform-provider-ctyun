@@ -108,6 +108,9 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("instance_name")),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Computed:    true,
@@ -187,9 +190,6 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"actual_image_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "实际镜像id，重装、集群纳管等操作会导致actual_image_id与image_id不同",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"password": schema.StringAttribute{
 				Sensitive:   true,

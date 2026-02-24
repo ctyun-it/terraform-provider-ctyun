@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -49,18 +51,23 @@ func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 		MarkdownDescription: utils.FormatDesc("管理公网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166499"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，同dnat_id",
+				Computed:    true,
+				Description: "ID，同dnat_id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dnat_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Dnat规则的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -113,6 +120,9 @@ func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "描述，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"dnat_type": schema.StringAttribute{
@@ -169,18 +179,29 @@ func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"external_ip": schema.StringAttribute{
 				Computed:    true,
 				Description: "弹性公网IP地址",
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.UseStringStateIfDependencyUnchanged(path.Root("external_id")),
+				},
 			},
 			"state": schema.StringAttribute{
 				Computed:    true,
 				Description: "运行状态: ACTIVE / FREEZING / CREATING",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ip_expire_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "ip到期时间",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 		},
 	}
@@ -411,7 +432,7 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.ID = utils.SecStringValue(dnat.DNatID)
 	cfg.CreatedAt = types.StringValue(utils.ConvertToUTCZ(time.RFC3339, utils.SecString(dnat.CreationTime)))
 	cfg.Description = utils.SecStringValue(dnat.Description)
-	cfg.IpExpireTime = utils.SecStringValue(dnat.IpExpireTime)
+	cfg.IpExpireTime = types.StringValue("")
 	cfg.ExternalIP = utils.SecStringValue(dnat.ExternalIp)
 	cfg.ExternalID = utils.SecStringValue(dnat.ExternalID)
 	cfg.Protocol = utils.SecStringValue(dnat.Protocol)

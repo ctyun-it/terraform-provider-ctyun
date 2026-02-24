@@ -32,6 +32,21 @@ func (v VpcService) MustExist(ctx context.Context, vpcId, regionId string) error
 	return nil
 }
 
+func (v VpcService) GetVpcDetail(ctx context.Context, vpcId, regionId string) (*ctvpc.VpcQueryResponse, error) {
+	resp, err := v.meta.Apis.CtVpcApis.VpcQueryApi.Do(ctx, v.meta.Credential, &ctvpc.VpcQueryRequest{
+		RegionId:    regionId,
+		ClientToken: uuid.NewString(),
+		VpcId:       vpcId,
+	})
+	if err != nil {
+		if err.ErrorCode() == common.OpenapiVpcNotFound {
+			return nil, fmt.Errorf("vpc %s 不存在", vpcId)
+		}
+		return nil, err
+	}
+	return resp, nil
+}
+
 func (v VpcService) GetVpcID(ctx context.Context, vpcName, regionId, projectId string) (string, error) {
 	params := &ctvpc2.CtvpcNewVpcListRequest{
 		RegionID: regionId,

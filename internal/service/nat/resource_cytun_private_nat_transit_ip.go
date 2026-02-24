@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -55,7 +54,7 @@ func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -101,9 +100,6 @@ func (c *ctyunPrivateNatTransitIpResource) Schema(_ context.Context, _ resource.
 			"snat_count": schema.Int32Attribute{
 				Computed:    true,
 				Description: "在使用此中转IP的snat数量",
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknown(),
-				},
 			},
 		},
 	}
@@ -176,12 +172,6 @@ func (c *ctyunPrivateNatTransitIpResource) Read(ctx context.Context, request res
 }
 
 func (c *ctyunPrivateNatTransitIpResource) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	// 中转IP不支持更新操作，直接将计划状态设置为当前状态
-	// 由于所有属性都需要替换资源，实际上不会执行更新操作
-	response.Diagnostics.AddError(
-		"不支持更新操作",
-		"中转IP不支持更新操作，如需修改请先删除再重新创建",
-	)
 }
 
 func (c *ctyunPrivateNatTransitIpResource) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {

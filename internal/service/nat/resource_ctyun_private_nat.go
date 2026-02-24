@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	types "github.com/hashicorp/terraform-plugin-framework/types"
@@ -52,14 +53,16 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 		MarkdownDescription: utils.FormatDesc("管理私网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378361"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "ID，值与nat_gateway_id相同",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "ID，值与nat_gateway_id相同",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -81,8 +84,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 			},
 			"vpc_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -92,8 +94,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "需要创建私网NAT网关的Subnet的ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -103,8 +104,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				},
 			},
 			"spec": schema.StringAttribute{
-				Optional: true,
-				Computed: true,
+				Required: true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("small", "medium", "large", "xlarge"),
 				},
@@ -128,8 +128,10 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 					validator2.Desc(),
 					validator2.DescNotStartWithHttp(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
 				Description: "订购周期类型，取值范围：year：按年，month：按月，on_demand：按需。当此值为month或year时，cycle_count为必填",
@@ -159,7 +161,6 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 					validator2.CycleCount(1, 11, 1, 3),
 				},
 			},
-			//TODO 添加单元测试
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Description: "是否自动续订，默认为true",
@@ -171,8 +172,7 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Description: "可用区名称",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
+				Default:     defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -188,28 +188,38 @@ func (c *ctyunPrivateNat) Schema(_ context.Context, request resource.SchemaReque
 				},
 			},
 			"nat_gateway_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "网关id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "网关id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"master_order_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "订单id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "订单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vpc_name": schema.StringAttribute{
-				Computed:      true,
-				Description:   "NAT所属的vpc专有网络名字",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"create_time": schema.StringAttribute{
-				Computed:      true,
-				Description:   "NAT网关的创建时间,为UTC格式",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "NAT网关的创建时间,为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -529,7 +539,7 @@ func (c *ctyunPrivateNat) getAndMergeNat(ctx context.Context, cfg *CtyunPrivateN
 	cfg.Name = types.StringValue(natObj.Name)
 	cfg.NatGatewayID = types.StringValue(natObj.NatGatewayID)
 	cfg.Description = types.StringValue(natObj.Description)
-	cfg.VpcName = types.StringValue(natObj.VpcName)
+	cfg.VpcName = types.StringValue("")
 	cfg.CreationTime = types.StringValue(natObj.CreateDate)
 	cfg.ExpiredTime = types.StringValue(natObj.ExpiredTime)
 	cfg.AzName = types.StringValue(natObj.AzName)

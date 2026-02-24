@@ -52,9 +52,11 @@ func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest,
 		MarkdownDescription: utils.FormatDesc("管理安全组", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225459"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vpc_id": schema.StringAttribute{
 				Required:    true,
@@ -80,6 +82,9 @@ func (c *ctyunSecurityGroup) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "描述，长度最大为128，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"project_id": schema.StringAttribute{

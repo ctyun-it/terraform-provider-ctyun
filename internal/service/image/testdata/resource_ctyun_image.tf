@@ -4,4 +4,5 @@ resource "ctyun_image" "%[1]s" {
   os_version   = "%[4]s"
   file_source = "%[5]s"  # 示例文件源，实际使用时需要替换为有效值
   description ="描述"
+  disk_size = 40
 }

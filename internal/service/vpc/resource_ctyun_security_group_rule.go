@@ -54,9 +54,11 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 		MarkdownDescription: utils.FormatDesc("管理安全组规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225510"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"security_group_id": schema.StringAttribute{
 				Required:    true,
@@ -139,12 +141,16 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"range": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "安全组开放的传输层协议相关的源端端口范围，格式如：8000-9000，如果仅开放单一端口则直接填写，如：22，中间不能有空格以及其他特殊字符；如果protocol的值为any，请保证此值留空，如果protocol的值为tcp或udp，此值必填",
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{

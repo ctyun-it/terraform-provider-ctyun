@@ -59,9 +59,11 @@ func (c *ctyunEcsBackupPolicyBindInstances) Schema(_ context.Context, _ resource
 		MarkdownDescription: utils.FormatDesc("管理云主机和备份策略的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033775"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"policy_id": schema.StringAttribute{
 				Required:    true,
@@ -337,16 +339,15 @@ func (c *ctyunEcsBackupPolicyBindInstances) checkBeforeDissociate(ctx context.Co
 // checkAfterDissociation 解绑后检查
 func (c *ctyunEcsBackupPolicyBindInstances) checkAfterDissociation(ctx context.Context, plan CtyunEcsBackupPolicyBindInstancesConfig) (err error) {
 	var executeSuccessFlag bool
-	var bindID string
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
-			bindID, err = c.getBindingInstances(ctx, plan)
+			_, err = c.getBindingInstances(ctx, plan)
 			if err != nil {
-				return false
-			}
-			if bindID != plan.InstanceIDList.ValueString() {
-				executeSuccessFlag = true
+				if errors.Is(err, common.ResourceNotExistError) {
+					err = nil
+					executeSuccessFlag = true
+				}
 				return false
 			}
 			return true

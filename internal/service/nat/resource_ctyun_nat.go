@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -52,14 +53,16 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 		MarkdownDescription: utils.FormatDesc("管理公网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166493"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，值与nat_gateway_id相同",
+				Computed:    true,
+				Description: "ID，值与nat_gateway_id相同",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -84,15 +87,14 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Required:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplaceIfConfigured(),
+					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
 					validator2.VpcValidate(),
 				},
 			},
 			"spec": schema.Int32Attribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 4),
@@ -105,6 +107,9 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
@@ -112,6 +117,9 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Description: "nat描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(512),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"cycle_type": schema.StringAttribute{
@@ -168,26 +176,45 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"nat_gateway_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "网关id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			// 依赖资源的非固定属性不要在schema中出现
 			"vpc_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "NAT所属的vpc专有网络名字",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"vpc_cidr": schema.StringAttribute{
 				Computed:    true,
 				Description: "当前网关所属的vpc cidr",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				//OpenAPI服务端BUG，第一次更新规格后创建时间会后移3-4s
+				//PlanModifiers: []planmodifier.String{
+				//	stringplanmodifier.UseStateForUnknown(),
+				//},
 			},
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -530,7 +557,7 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	cfg.Name = utils.SecStringValue(natObj.Name)
 	cfg.NatGatewayID = utils.SecStringValue(natObj.NatGatewayID)
 	cfg.Description = utils.SecStringValue(natObj.Description)
-	cfg.VpcName = utils.SecStringValue(natObj.VpcName)
+	cfg.VpcName = types.StringValue("")
 	cfg.VpcCidr = utils.SecStringValue(natObj.VpcCidr)
 	cfg.CreationTime = utils.SecStringValue(natObj.CreationTime)
 	cfg.ExpiredTime = utils.SecStringValue(natObj.ExpiredTime)

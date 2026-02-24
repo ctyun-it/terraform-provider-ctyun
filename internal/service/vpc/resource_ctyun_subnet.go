@@ -54,9 +54,11 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 		MarkdownDescription: utils.FormatDesc("管理子网", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10197656"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -82,6 +84,9 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				Description: "描述，长度最大为128，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"dns": schema.SetAttribute{
@@ -310,7 +315,6 @@ func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest
 		ClientToken: uuid.NewString(),
 		RegionId:    state.RegionId.ValueString(),
 		SubnetId:    state.Id.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 	})
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
@@ -372,9 +376,6 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 		ClientToken: uuid.NewString(),
 		SubnetId:    cfg.Id.ValueString(),
 	}
-	if !cfg.ProjectId.IsNull() {
-		params.ProjectId = cfg.ProjectId.ValueString()
-	}
 	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSubnetNotFound {
@@ -413,7 +414,14 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSubnet) checkCreate(ctx context.Context, plan CtyunSubnetConfig) error {
-	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
+	vpc, err := c.vpcService.GetVpcDetail(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
+	if err != nil {
+		return err
+	}
+	if vpc.ProjectID != plan.ProjectId.ValueString() {
+		return fmt.Errorf("子网的企业项目目前只支持和VPC相同")
+	}
+	return nil
 }
 
 type CtyunSubnetConfig struct {

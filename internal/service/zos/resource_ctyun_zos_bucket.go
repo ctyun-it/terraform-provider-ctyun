@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -79,13 +80,18 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 		MarkdownDescription: utils.FormatDesc("管理对象存储桶", "对象存储（CT-ZOS，Zettabyte Object Storage）", "https://www.ctyun.cn/document/10026735/10181237"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("bucket")),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -129,6 +135,9 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "标签，对标aws s3中桶标签，支持更新",
 				Validators: []validator.Map{
 					mapvalidator.SizeAtMost(10),
+				},
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"acl": schema.StringAttribute{

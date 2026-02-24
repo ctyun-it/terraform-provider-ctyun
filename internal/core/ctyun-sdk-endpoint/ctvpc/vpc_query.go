@@ -52,6 +52,7 @@ func (this *VpcQueryApi) Do(ctx context.Context, credential ctyunsdk.Credential,
 		SubnetIds:      resp.SubnetIDs,
 		NatGatewayIds:  resp.NatGatewayIDs,
 		SecondaryCidrs: resp.SecondaryCIDRs,
+		ProjectID:      resp.ProjectID,
 	}, nil
 }
 
@@ -65,6 +66,7 @@ type vpcQueryRealResponse struct {
 	SubnetIDs      []string `json:"subnetIDs"`
 	NatGatewayIDs  []string `json:"natGatewayIDs"`
 	SecondaryCIDRs []string `json:"secondaryCIDRs"`
+	ProjectID      string   `json:"projectID"`
 }
 
 type VpcQueryRequest struct {
@@ -84,4 +86,5 @@ type VpcQueryResponse struct {
 	SubnetIds      []string
 	NatGatewayIds  []string
 	SecondaryCidrs []string
+	ProjectID      string
 }
