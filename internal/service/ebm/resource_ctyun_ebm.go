@@ -1080,7 +1080,11 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 	cfg.Status = utils.SecLowerStringValue(instance.EbmState)
 	cfg.CreateTime = types.StringPointerValue(instance.CreateTime)
 	cfg.UpdateTime = types.StringPointerValue(instance.UpdatedTime)
-	cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
+	if instance.ExpiredTime == nil {
+		cfg.ExpireTime = types.StringValue("")
+	} else {
+		cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
+	}
 	eipAddress := utils.SecString(instance.PublicIP)
 	if len(eipAddress) > 0 {
 		cfg.EipAddress = types.StringValue(eipAddress)
@@ -1091,7 +1095,7 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 		}
 		cfg.BandWidth = types.Int32Value(eip.Bandwidth)
 	} else {
-		cfg.EipAddress = types.StringNull()
+		cfg.EipAddress = types.StringValue("")
 	}
 	if utils.SecString(instance.SystemVolumeRaidID) != "" {
 		cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)

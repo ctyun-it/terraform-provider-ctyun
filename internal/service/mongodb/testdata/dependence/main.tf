@@ -96,6 +96,25 @@ resource "ctyun_mongodb_instance" "mongodb_eip" {
   }
 }
 
+resource "ctyun_mongodb_instance" "mongodb_ei2p" {
+  cycle_type             = "month"
+  cycle_count  = 2
+  vpc_id                 = local.real_vpc_id
+  flavor_name            = "s7.large.2"
+  subnet_id              = local.real_subnet_id
+  security_group_id      =  local.real_security_group_id
+  name                   = "mongodb-${local.random_string}22"
+  prod_id                = "Single34"
+  storage_type           = "SATA"
+  storage_space          = 100
+  backup_storage_type    = "OS"
+  password = var.password
+  project_id = "fbd0403b158d478aabb6dfd11cfaf1b3"
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
 variable "password" {
   type      = string
   sensitive = true

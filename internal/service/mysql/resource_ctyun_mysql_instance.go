@@ -150,6 +150,20 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 					int32planmodifier.RequiresReplace(),
 				},
 			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -717,6 +731,8 @@ func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, confi
 		return
 	}
 	// 处理实例详情
+	config.CreateTime = types.StringValue(utils.FromUnixToUTC(returnOjb.CreateTime))
+	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnOjb.ExpireTime))
 	config.ProdRunningStatus = types.Int32Value(returnOjb.ProdRunningStatus)
 	config.ProdOrderStatus = types.Int32Value(returnOjb.ProdOrderStatus)
 	config.Vip = types.StringValue(returnOjb.Vip)
@@ -1479,6 +1495,8 @@ func (c *CtyunMysqlInstance) encodeBase64(password string) string {
 }
 
 type CtyunMysqlInstanceConfig struct {
+	CreateTime                  types.String `tfsdk:"create_time"`
+	ExpireTime                  types.String `tfsdk:"expire_time"`
 	CycleType                   types.String `tfsdk:"cycle_type"`                     // 计费模式： 支持on_demand和month
 	RegionID                    types.String `tfsdk:"region_id"`                      // 资源池Id
 	VpcID                       types.String `tfsdk:"vpc_id"`                         // 虚拟私有云Id

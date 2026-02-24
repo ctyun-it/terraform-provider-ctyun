@@ -147,7 +147,6 @@ data "ctyun_postgresql_collation_time_zone" "collations" {
 }
 
 resource "ctyun_postgresql_account" "account_test" {
-  project_id = "0"
   instance_id = ctyun_postgresql_instance.test.id
   name = "kqjwyk"
   password = var.password
@@ -161,7 +160,6 @@ data "ctyun_postgresql_accounts" "accounts" {
 }
 
 resource "ctyun_postgresql_database" "test" {
-  project_id   = "0"
   instance_id      = ctyun_postgresql_instance.test.id
   name         = "test"
   charset_name = "UTF8"
@@ -169,7 +167,6 @@ resource "ctyun_postgresql_database" "test" {
 }
 
 resource "ctyun_postgresql_database" "test1" {
-  project_id   = "0"
   instance_id      = ctyun_postgresql_instance.test.id
   name         = "test1"
   charset_name = "UTF8"
