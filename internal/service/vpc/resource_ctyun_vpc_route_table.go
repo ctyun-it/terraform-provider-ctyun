@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -51,6 +52,7 @@ type CtyunVpcRouteTableConfig struct {
 	VpcID        types.String `tfsdk:"vpc_id"`
 	Name         types.String `tfsdk:"name"`
 	ProjectID    types.String `tfsdk:"project_id"`
+	RouteType    types.String `tfsdk:"route_type"`
 }
 
 func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -112,6 +114,15 @@ func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest,
 					stringvalidator.UTF8LengthBetween(2, 32),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}-]+$"), "名称不符合规则"),
 				},
+			},
+			"route_type": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "类型，支持subnet,gateway",
+				Validators: []validator.String{
+					stringvalidator.OneOf("subnet", "gateway"),
+				},
+				Default: stringdefault.StaticString("subnet"),
 			},
 		},
 	}
@@ -286,24 +297,49 @@ func (c *ctyunVpcRouteTable) checkBeforeCreate(ctx context.Context, plan CtyunVp
 // create 创建路由表
 func (c *ctyunVpcRouteTable) create(ctx context.Context, plan CtyunVpcRouteTableConfig) (routeTableID string, err error) {
 	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
-	params := &ctvpc.CtvpcCreateRouteTableRequest{
-		ClientToken: uuid.NewString(),
-		RegionID:    regionID,
-		VpcID:       vpcID,
-		Name:        plan.Name.ValueString(),
-		ProjectID:   plan.ProjectID.ValueStringPointer(),
+
+	if plan.RouteType.ValueString() == "subnet" {
+		params := &ctvpc.CtvpcCreateRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
+	} else {
+		params := &ctvpc.CtvpcCreateGatewayRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateGatewayRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateGatewayRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
 	}
-	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	}
-	routeTableID = *resp.ReturnObj.Id
+
 	return
 }
 
@@ -329,6 +365,11 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 	}
 	plan.VpcID = utils.SecStringValue(resp.ReturnObj.VpcID)
 	plan.Name = utils.SecStringValue(resp.ReturnObj.Name)
+	if resp.ReturnObj.RawType == 2 {
+		plan.RouteType = types.StringValue("gateway") // Gateway
+	} else {
+		plan.RouteType = types.StringValue("subnet") // Subnet
+	}
 	plan.ID = plan.RouteTableID
 	return
 }
