@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	ctvpc2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
@@ -188,6 +189,11 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
+			"route_table_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "路由表ID 可以更新",
+			},
 		},
 	}
 }
@@ -235,15 +241,29 @@ func (c *ctyunSubnet) Create(ctx context.Context, request resource.CreateRequest
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.RouteTableId.ValueString() != "" {
+		uuid := uuid.NewString()
+		params := &ctvpc2.CtvpcReplaceSubnetRouteTableRequest{
+			ClientToken:  &uuid,
+			RegionID:     plan.RegionId.ValueString(),
+			RouteTableID: plan.RouteTableId.ValueString(),
+			SubnetID:     plan.Id.ValueString(),
+		}
+		var resp2 *ctvpc2.CtvpcReplaceSubnetRouteTableResponse
+		resp2, err = c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp2.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp2.Message, *resp2.Description)
+			return
+		}
+	}
 	ctyunRequestError := c.getAndMergeSubnet(ctx, &plan)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	//if instance == nil {
-	//	response.State.RemoveResource(ctx)
-	//}
+
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -295,12 +315,30 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	if plan.RouteTableId.ValueString() != state.RouteTableId.ValueString() && plan.RouteTableId.ValueString() != "" {
+		state.RouteTableId = plan.RouteTableId
+		uuid := uuid.NewString()
+		params := &ctvpc2.CtvpcReplaceSubnetRouteTableRequest{
+			ClientToken:  &uuid,
+			RegionID:     plan.RegionId.ValueString(),
+			RouteTableID: plan.RouteTableId.ValueString(),
+			SubnetID:     plan.Id.ValueString(),
+		}
+		resp2, err2 := c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err2 != nil {
+			return
+		} else if resp2.StatusCode == common.ErrorStatusCode {
+			err2 = fmt.Errorf("API return error. Message: %s Description: %s", *resp2.Message, *resp2.Description)
+			return
+		}
+	}
 
 	ctyunRequestError := c.getAndMergeSubnet(ctx, &state)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -409,6 +447,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetCon
 	cfg.Ipv4End = types.StringValue(resp.End)
 	cfg.Ipv6Start = types.StringValue(resp.Ipv6Start)
 	cfg.Ipv6End = types.StringValue(resp.Ipv6End)
+	cfg.RouteTableId = types.StringValue(resp.RouteTableId)
 	return nil
 }
 
@@ -425,19 +464,20 @@ func (c *ctyunSubnet) checkCreate(ctx context.Context, plan CtyunSubnetConfig) e
 }
 
 type CtyunSubnetConfig struct {
-	Id          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	VpcId       types.String `tfsdk:"vpc_id"`
-	Cidr        types.String `tfsdk:"cidr"`
-	Description types.String `tfsdk:"description"`
-	Dns         types.Set    `tfsdk:"dns"`
-	EnableIpv6  types.Bool   `tfsdk:"enable_ipv6"`
-	Type        types.String `tfsdk:"type"`
-	GatewayIp   types.String `tfsdk:"gateway_ip"`
-	Ipv4Start   types.String `tfsdk:"ipv4_start"`
-	Ipv4End     types.String `tfsdk:"ipv4_end"`
-	Ipv6Start   types.String `tfsdk:"ipv6_start"`
-	Ipv6End     types.String `tfsdk:"ipv6_end"`
-	ProjectId   types.String `tfsdk:"project_id"`
-	RegionId    types.String `tfsdk:"region_id"`
+	Id           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	VpcId        types.String `tfsdk:"vpc_id"`
+	Cidr         types.String `tfsdk:"cidr"`
+	Description  types.String `tfsdk:"description"`
+	Dns          types.Set    `tfsdk:"dns"`
+	EnableIpv6   types.Bool   `tfsdk:"enable_ipv6"`
+	Type         types.String `tfsdk:"type"`
+	GatewayIp    types.String `tfsdk:"gateway_ip"`
+	Ipv4Start    types.String `tfsdk:"ipv4_start"`
+	Ipv4End      types.String `tfsdk:"ipv4_end"`
+	Ipv6Start    types.String `tfsdk:"ipv6_start"`
+	Ipv6End      types.String `tfsdk:"ipv6_end"`
+	ProjectId    types.String `tfsdk:"project_id"`
+	RegionId     types.String `tfsdk:"region_id"`
+	RouteTableId types.String `tfsdk:"route_table_id"`
 }

@@ -101,3 +101,9 @@ resource "ctyun_dhcpoptionset" "test" {
   domain_name  = "www.ctyun.cn"
   dns_list     = ["114.114.114.114"]
 }
+
+
+resource "ctyun_vpc_route_table" "test" {
+  vpc_id =ctyun_vpc.vpc_test.id
+  name = "test_subnet"
+}
