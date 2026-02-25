@@ -104,7 +104,6 @@ resource "ctyun_dhcpoptionset" "test" {
 
 
 resource "ctyun_vpc_route_table" "test" {
-  vpc_id =ctyun_vpc.vpc_test2.id
+  vpc_id =ctyun_vpc.vpc_test.id
   name = "test_subnet"
-  route_type ="gateway"
 }
