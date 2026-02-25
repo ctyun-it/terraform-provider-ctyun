@@ -53,9 +53,11 @@ func (c *ctyunEcsAffinityGroupAssociation) Schema(_ context.Context, _ resource.
 		MarkdownDescription: utils.FormatDesc("管理云主机和主机组的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10028712"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,

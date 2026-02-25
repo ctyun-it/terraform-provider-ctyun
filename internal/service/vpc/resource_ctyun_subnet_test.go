@@ -90,3 +90,93 @@ func TestAccCtyunSubnet(t *testing.T) {
 		},
 	})
 }
+func TestAccCtyunSubnetRoute(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+	dnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_subnet." + rnd
+	datasourceName := "data.ctyun_subnets." + dnd
+	resourceFile := "resource_ctyun_subnet.tf"
+	datasourceFile := "datasource_ctyun_subnets.tf"
+
+	initName := "init"
+	initDescription := "description"
+	initDns := "114.114.114.114"
+	updatedName := "updated"
+	updatedDescription := "updated-description"
+	updatedDns := "8.8.8.8"
+	routeTableID := fmt.Sprintf("route_table_id = \"%s\"", dependence.routeTableID)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, initDescription, initDns, dependence.vpcID, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
+					resource.TestCheckTypeSetElemAttr(resourceName, "dns.*", initDns),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID, ""),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckTypeSetElemAttr(resourceName, "dns.*", updatedDns),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID, routeTableID),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckTypeSetElemAttr(resourceName, "dns.*", updatedDns),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID, routeTableID) +
+					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "subnets.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "subnets.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "subnets.0.description", updatedDescription),
+					resource.TestCheckTypeSetElemAttr(datasourceName, "subnets.0.dns_list.*", updatedDns),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, updatedDns, dependence.vpcID, routeTableID) +
+					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Destroy: true,
+			},
+		},
+	})
+}

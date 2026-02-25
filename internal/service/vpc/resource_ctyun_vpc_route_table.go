@@ -14,9 +14,12 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -51,6 +54,8 @@ type CtyunVpcRouteTableConfig struct {
 	VpcID        types.String `tfsdk:"vpc_id"`
 	Name         types.String `tfsdk:"name"`
 	ProjectID    types.String `tfsdk:"project_id"`
+	RouteType    types.String `tfsdk:"route_type"`
+	BindGateway  types.Bool   `tfsdk:"bind_gateway"`
 }
 
 func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -111,6 +116,29 @@ func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest,
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}-]+$"), "名称不符合规则"),
+				},
+			},
+			"route_type": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "类型，支持subnet,gateway",
+
+				Default: stringdefault.StaticString("subnet"),
+			},
+			"bind_gateway": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否绑定网关，支持更新",
+				Default:     booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					validator2.AlsoRequiresEqualBool(
+						path.MatchRoot("route_type"),
+						types.StringValue("gateway"),
+					),
+					validator2.ConflictsWithEqualBool(
+						path.MatchRoot("route_type"),
+						types.StringValue("subnet"),
+					),
 				},
 			},
 		},
@@ -194,7 +222,7 @@ func (c *ctyunVpcRouteTable) Update(ctx context.Context, request resource.Update
 		return
 	}
 	// 更新
-	err = c.update(ctx, plan, state)
+	err = c.update(ctx, &plan, &state)
 	if err != nil {
 		return
 	}
@@ -286,24 +314,81 @@ func (c *ctyunVpcRouteTable) checkBeforeCreate(ctx context.Context, plan CtyunVp
 // create 创建路由表
 func (c *ctyunVpcRouteTable) create(ctx context.Context, plan CtyunVpcRouteTableConfig) (routeTableID string, err error) {
 	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
-	params := &ctvpc.CtvpcCreateRouteTableRequest{
-		ClientToken: uuid.NewString(),
-		RegionID:    regionID,
-		VpcID:       vpcID,
-		Name:        plan.Name.ValueString(),
-		ProjectID:   plan.ProjectID.ValueStringPointer(),
+
+	if plan.RouteType.ValueString() == "subnet" {
+		params := &ctvpc.CtvpcCreateRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
+	} else {
+		params := &ctvpc.CtvpcCreateGatewayRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateGatewayRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateGatewayRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
+		if plan.BindGateway.ValueBool() {
+			gatewaparams := &ctvpc.CtvpcListIPv4GwRequest{
+				RegionID: regionID,
+				VpcID:    plan.VpcID.ValueStringPointer(),
+			}
+			var respGateway *ctvpc.CtvpcListIPv4GwResponse
+			respGateway, err = c.meta.Apis.SdkCtVpcApis.CtvpcListIPv4GwApi.Do(ctx, c.meta.SdkCredential, gatewaparams)
+			if err != nil {
+				return
+			} else if respGateway.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respGateway.Message, *respGateway.Description)
+				return
+			} else if respGateway.ReturnObj == nil {
+				err = common.InvalidReturnObjError
+				return
+			}
+			ipv4GwID := *respGateway.ReturnObj[0].Id
+			paramsIpv4 := &ctvpc.CtvpcIpv4GwBindRouteTableRequest{
+				ClientToken:  uuid.NewString(),
+				RegionID:     plan.RegionID.ValueString(),
+				Ipv4GwID:     ipv4GwID,
+				RouteTableID: routeTableID,
+			}
+			var respIpv4 *ctvpc.CtvpcIpv4GwBindRouteTableResponse
+			respIpv4, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwBindRouteTableApi.Do(ctx, c.meta.SdkCredential, paramsIpv4)
+			if err != nil {
+				return
+			} else if respIpv4.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respIpv4.Message, *respIpv4.Description)
+				return
+			}
+		}
 	}
-	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	}
-	routeTableID = *resp.ReturnObj.Id
+
 	return
 }
 
@@ -329,29 +414,88 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 	}
 	plan.VpcID = utils.SecStringValue(resp.ReturnObj.VpcID)
 	plan.Name = utils.SecStringValue(resp.ReturnObj.Name)
+	if resp.ReturnObj.RawType == 2 {
+		plan.RouteType = types.StringValue("gateway") // Gateway
+		if resp.ReturnObj.Ipv4Gw != nil {
+			plan.BindGateway = types.BoolValue(true)
+		} else {
+			plan.BindGateway = types.BoolValue(false)
+		}
+	} else {
+		plan.RouteType = types.StringValue("subnet") // Subnet
+	}
 	plan.ID = plan.RouteTableID
 	return
 }
 
 // update 更新路由表
-func (c *ctyunVpcRouteTable) update(ctx context.Context, plan, state CtyunVpcRouteTableConfig) (err error) {
-	if plan.Name.Equal(state.Name) {
-		return
-	}
+func (c *ctyunVpcRouteTable) update(ctx context.Context, plan, state *CtyunVpcRouteTableConfig) (err error) {
 	routeTableID, regionID, name := state.RouteTableID.ValueString(), state.RegionID.ValueString(), plan.Name.ValueString()
-	params := &ctvpc.CtvpcUpdateRouteTableAttributeRequest{
-		ClientToken:  uuid.NewString(),
-		RegionID:     regionID,
-		RouteTableID: routeTableID,
-		Name:         &name,
+	if !plan.Name.Equal(state.Name) {
+		params := &ctvpc.CtvpcUpdateRouteTableAttributeRequest{
+			ClientToken:  uuid.NewString(),
+			RegionID:     regionID,
+			RouteTableID: routeTableID,
+			Name:         &name,
+		}
+		var resp *ctvpc.CtvpcUpdateRouteTableAttributeResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcUpdateRouteTableAttributeApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		}
 	}
-	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcUpdateRouteTableAttributeApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return
+	if plan.BindGateway.ValueBool() != state.BindGateway.ValueBool() {
+		gatewaparams := &ctvpc.CtvpcListIPv4GwRequest{
+			RegionID: regionID,
+			VpcID:    plan.VpcID.ValueStringPointer(),
+		}
+		var respGateway *ctvpc.CtvpcListIPv4GwResponse
+		respGateway, err = c.meta.Apis.SdkCtVpcApis.CtvpcListIPv4GwApi.Do(ctx, c.meta.SdkCredential, gatewaparams)
+		if err != nil {
+			return
+		} else if respGateway.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *respGateway.Message, *respGateway.Description)
+			return
+		} else if respGateway.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		ipv4GwID := *respGateway.ReturnObj[0].Id
+		if plan.BindGateway.ValueBool() {
+			paramsIpv4 := &ctvpc.CtvpcIpv4GwBindRouteTableRequest{
+				ClientToken:  uuid.NewString(),
+				RegionID:     plan.RegionID.ValueString(),
+				Ipv4GwID:     ipv4GwID,
+				RouteTableID: plan.RouteTableID.ValueString(),
+			}
+			var respIpv4 *ctvpc.CtvpcIpv4GwBindRouteTableResponse
+			respIpv4, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwBindRouteTableApi.Do(ctx, c.meta.SdkCredential, paramsIpv4)
+			if err != nil {
+				return
+			} else if respIpv4.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respIpv4.Message, *respIpv4.Description)
+				return
+			}
+		} else {
+			params := &ctvpc.CtvpcIpv4GwUnbindRouteTableRequest{
+				RegionID:    plan.RegionID.ValueString(),
+				Ipv4GwID:    ipv4GwID,
+				ClientToken: uuid.NewString(),
+			}
+			var resp *ctvpc.CtvpcIpv4GwUnbindRouteTableResponse
+			resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwUnbindRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+			if err != nil {
+				return
+			} else if resp.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+				return
+			}
+		}
 	}
+	state.BindGateway = plan.BindGateway
 	return
 }
 

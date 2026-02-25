@@ -78,13 +78,18 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 		MarkdownDescription: utils.FormatDesc("管理云主机", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("display_name")),
+				},
 			},
 			"instance_name": schema.StringAttribute{
 				Required:    true,
@@ -116,6 +121,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("flavor_name")),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
@@ -127,6 +133,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("flavor_id")),
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -238,9 +245,6 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypes...),
 				},
-				PlanModifiers: []planmodifier.String{
-					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
-				},
 			},
 			"cycle_count": schema.Int64Attribute{
 				Optional:    true,
@@ -287,6 +291,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 			"system_disk_id": schema.StringAttribute{
 				Computed:    true,
@@ -438,7 +445,6 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "云主机组ID，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
@@ -598,6 +604,12 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
+	//更新续订开关
+	err = c.updateAutoRenew(ctx, state, plan)
+	if err != nil {
+		return
+	}
+	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	// 更新安全组
 	err = c.updateSecurityGroup(ctx, state, plan)
 	if err != nil {
@@ -628,11 +640,7 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
-	//更新续订开关
-	err = c.updateAutoRenew(ctx, state, plan)
-	if err != nil {
-		return
-	}
+	state.AffinityGroupId = plan.AffinityGroupId
 	// 反查信息
 	err = c.getAndMergeEcs(ctx, &state)
 	if err != nil {
@@ -1453,11 +1461,8 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 	cfg.UpdateTime = types.StringValue(*instance_details_resp.UpdatedTime)
 	cfg.Name = cfg.DisplayName
 	cfg.EipAddress = utils.SecStringValue(instance_details_resp.FloatingIP)
-
 	cfg.FlavorId = types.StringValue(*instance_details_resp.Flavor.FlavorID)
-
 	cfg.FlavorName = types.StringValue(*instance_details_resp.Flavor.FlavorName)
-
 	cfg.ActualImageID = types.StringValue(*instance_details_resp.Image.ImageID)
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
@@ -1570,12 +1575,6 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 		cfg.Labels = []Label{}
 	}
 
-	// 设置云主机组信息
-	if instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
-		cfg.AffinityGroupId = types.StringValue(*instance_details_resp.AffinityGroup.AffinityGroupID)
-	} else {
-		cfg.AffinityGroupId = types.StringNull()
-	}
 	cfg.AzName = types.StringValue(*instance_details_resp.AzName)
 	cfg.KeyPairName = types.StringValue(*instance_details_resp.KeypairName)
 	err = c.getAutoRenew(ctx, cfg)
@@ -2042,7 +2041,7 @@ func (c *ctyunEcs) updateLabels(ctx context.Context, state CtyunEcsConfig, plan 
 }
 
 func (c *ctyunEcs) updateAutoRenew(ctx context.Context, state, plan CtyunEcsConfig) (err error) {
-	if plan.AutoRenew.Equal(state.AutoRenew) {
+	if plan.AutoRenew.Equal(state.AutoRenew) && plan.CycleType.Equal(state.CycleType) {
 		return
 	}
 	params := &ctecs2.CtecsEcsUpdateAutoRenewConfigRequest{

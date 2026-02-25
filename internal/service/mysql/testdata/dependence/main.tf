@@ -117,7 +117,6 @@ resource "ctyun_mysql_instance" "mysql_test" {
 
 resource "ctyun_mysql_backup" "backup_test" {
   instance_id     = ctyun_mysql_instance.mysql_test.id
-  project_id  = "0"
   description = "terraform单元测试"
   task_type   = "full"
   depends_on = [ctyun_mysql_database.db3]
@@ -126,7 +125,6 @@ resource "ctyun_mysql_backup" "backup_test" {
 data "ctyun_mysql_recoverable_time_points" "time_point_test" {
   depends_on = [ctyun_mysql_backup.backup_test]
   instance_id    = ctyun_mysql_instance.mysql_test.id
-  project_id = "0"
 }
 
 data "ctyun_mysql_param_templates" "template"{

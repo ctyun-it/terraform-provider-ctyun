@@ -22,6 +22,7 @@ type Dependence struct {
 	vipId              string
 	vpcID2             string
 	dhcpID             string
+	routeTableID       string
 }
 
 var dependence Dependence
@@ -48,6 +49,7 @@ func TestMain(m *testing.M) {
 		vipId:              outputs["vip_id"].Value,
 		vpcID2:             outputs["vpc_id2"].Value,
 		dhcpID:             outputs["dhcp_id"].Value,
+		routeTableID:       outputs["route_table_id"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 

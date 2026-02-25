@@ -48,9 +48,11 @@ func (c *ctyunEcsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: utils.FormatDesc("管理云主机快照", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10335345"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "云主机快照id",
+				Computed:    true,
+				Description: "云主机快照id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,

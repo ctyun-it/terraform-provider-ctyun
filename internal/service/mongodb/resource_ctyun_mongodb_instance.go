@@ -386,6 +386,13 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
 		},
 	}
 }
@@ -724,7 +731,24 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 			},
 		})
 	}
-
+	listParams := &mongodb.MongodbGetListRequest{
+		ProdInstName: config.Name.ValueStringPointer(),
+	}
+	listHeader := &mongodb.MongodbGetListHeaders{
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkMongodbApis.MongodbGetListApi.Do(ctx, c.meta.Credential, listParams, listHeader)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		return
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.InvalidReturnObjError
+		return
+	}
+	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.List[0].ExpireTime))
+	fmt.Println(1123, resp.ReturnObj.List[0].ExpireTime)
 	return
 }
 
@@ -2702,6 +2726,7 @@ func (c *CtyunMongodbInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Con
 }
 
 type CtyunMongodbInstanceConfig struct {
+	ExpireTime           types.String `tfsdk:"expire_time"`
 	CycleType            types.String `tfsdk:"cycle_type"`             // 计费模式： 1是包周期，2是按需
 	RegionID             types.String `tfsdk:"region_id"`              // 资源池Id
 	VpcID                types.String `tfsdk:"vpc_id"`                 // 虚拟私有云Id
