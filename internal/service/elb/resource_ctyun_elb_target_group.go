@@ -9,6 +9,7 @@ import (
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -96,6 +97,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 					stringvalidator.LengthAtLeast(1),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vpc_id": schema.StringAttribute{
 				Required:    true,
@@ -113,6 +117,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 				Description: "需要关联的健康检查Id，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"algorithm": schema.StringAttribute{
@@ -143,11 +150,10 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目ID",
 			},
-
 			"session_sticky_mode": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新",
+				Description: "会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）、SOURCE_IP（源IP）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新",
 				Default:     stringdefault.StaticString("CLOSE"),
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.TargetGroupSessionStickyModes...),
@@ -161,7 +167,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"cookie_expire": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "cookie过期时间。session_sticky_mode = INSERT模式必填，支持更新",
+				Description: "cookie过期时间。INSERT模式必填，支持更新",
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("session_sticky_mode"),
@@ -173,6 +179,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeSourceIP),
 						types.StringValue(business.TargetGroupSessionStickyModeCLOSE),
 					),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					planmodifier2.SetStateNullIfDependencyChangeInt64(path.Root("session_sticky_mode")),
 				},
 			},
 			"rewrite_cookie_name": schema.StringAttribute{
@@ -191,6 +200,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeINSERT),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.SetStateNullIfDependencyChangeString(path.Root("session_sticky_mode")),
+				},
 			},
 			"source_ip_timeout": schema.Int64Attribute{
 				Optional:    true,
@@ -208,11 +220,16 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeINSERT),
 					),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					planmodifier2.SetStateNullIfDependencyChangeInt64(path.Root("session_sticky_mode")),
+				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "后端服务组ID",
+				Computed:    true,
+				Description: "后端服务组ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -221,6 +238,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -570,23 +590,23 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.Algorithm = types.StringValue(returnObj.Algorithm)
 	plan.Name = types.StringValue(returnObj.Name)
 	plan.SessionStickyMode = types.StringValue(returnObj.SessionSticky.SessionStickyMode)
-	if returnObj.SessionSticky.SessionStickyMode == "CLOSE" {
+	switch returnObj.SessionSticky.SessionStickyMode {
+	case business.TargetGroupSessionStickyModeCLOSE:
 		plan.CookieExpire = types.Int64Null()
 		plan.SourceIpTimeout = types.Int64Null()
 		plan.RewriteCookieName = types.StringNull()
-
-	}
-	if returnObj.SessionSticky.SessionStickyMode == "REWRITE" {
+	case business.TargetGroupSessionStickyModeINSERT:
+		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringNull()
+	case business.TargetGroupSessionStickyModeREWRITE:
 		plan.CookieExpire = types.Int64Null()
 		plan.SourceIpTimeout = types.Int64Null()
 		plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
-	}
-
-	if returnObj.SessionSticky.SessionStickyMode == "INSERT" {
-		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+	case business.TargetGroupSessionStickyModeSourceIP:
+		plan.CookieExpire = types.Int64Null()
 		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
 		plan.RewriteCookieName = types.StringNull()
-
 	}
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
 	if returnObj.Protocol == "" {
