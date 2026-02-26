@@ -143,6 +143,9 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"access_machine_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "访问类型",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,

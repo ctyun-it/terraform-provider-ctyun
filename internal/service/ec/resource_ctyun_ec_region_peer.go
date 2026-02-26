@@ -172,14 +172,23 @@ func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request reso
 			"src_region_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "本端资源池ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dst_region_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "对端资源池ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"peer_type": schema.Int32Attribute{
 				Computed:    true,
 				Description: "互通类型，1：境内，2: 跨境（中国大陆-亚太），3: 境外（亚太），4: 定制",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
