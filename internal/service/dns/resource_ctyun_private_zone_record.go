@@ -180,10 +180,16 @@ func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.Sc
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "内网DNS记录id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,

@@ -153,6 +153,9 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Schema(ctx context.Context, req
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "oceanfs与权限组绑定id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

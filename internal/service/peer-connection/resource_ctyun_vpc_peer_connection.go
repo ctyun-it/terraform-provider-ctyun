@@ -119,7 +119,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
+				Description: "对等连接实例id，跨账号情况下使用。如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
 				Computed:    true,
 			},
 			"region_id": schema.StringAttribute{
@@ -193,10 +193,16 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 			"request_vpc_name": schema.StringAttribute{
 				Description: "本端的vpc名称",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"request_vpc_cidr": schema.StringAttribute{
 				Description: "本端的vpc cidr",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"accept_vpc_name": schema.StringAttribute{
 				Description: "对端的vpc名称",
@@ -220,6 +226,9 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 			"user_type": schema.StringAttribute{
 				Description: "对等连接类型：current(同一个租户) / other(不同租户)",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tags": schema.SetNestedAttribute{
 				Description: "标签，支持更新",
@@ -243,6 +252,9 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 						"id": schema.StringAttribute{
 							Description: "标签id",
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},

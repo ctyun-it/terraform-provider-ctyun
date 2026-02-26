@@ -158,6 +158,7 @@ func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"enabled": schema.BoolAttribute{

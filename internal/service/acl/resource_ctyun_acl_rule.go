@@ -248,6 +248,9 @@ func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,

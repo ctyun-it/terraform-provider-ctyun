@@ -19,6 +19,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -87,6 +89,9 @@ func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "云硬盘备份策略id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -170,6 +175,9 @@ func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Validators: []validator.Int64{
 					int64validator.OneOf(0, 1),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"retention_type": schema.StringAttribute{
 				Required:    true,
@@ -190,6 +198,9 @@ func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 				Default:     booldefault.StaticBool(false),
 				Description: "是否保留每个月第一个备份，在retentionType为num时可设置，默认false，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"retention_num": schema.Int64Attribute{
 				Optional:    true,
@@ -204,6 +215,9 @@ func (c *ctyunEbsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "是否启用周期性全量备份。-1代表不开启，默认为-1；取值范围为[-1,100]，即每执行n次增量备份后，执行一次全量备份；若传入为0，代表每一次均为全量备份。支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(-1, 100),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"adv_retention_status": schema.BoolAttribute{

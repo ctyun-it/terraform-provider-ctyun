@@ -208,6 +208,9 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "弹性文件系统状态",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"used_size": schema.Int32Attribute{
 				Computed:    true,
@@ -241,6 +244,9 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			"expire_time": schema.StringAttribute{
 				Description: "到期时间，为UTC格式，按需时为空",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

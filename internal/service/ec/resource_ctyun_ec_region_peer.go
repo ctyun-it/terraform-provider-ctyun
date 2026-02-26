@@ -165,6 +165,9 @@ func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request reso
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "跨域连接ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"src_region_id": schema.StringAttribute{
 				Computed:    true,

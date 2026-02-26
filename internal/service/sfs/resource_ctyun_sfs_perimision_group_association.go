@@ -150,10 +150,16 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 			"vpc_name": schema.StringAttribute{
 				Computed:    true,
 				Description: "vpc名称",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vpc_cidr": schema.StringAttribute{
 				Computed:    true,
 				Description: "vpc cidr",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"permission_group_name": schema.StringAttribute{
 				Computed:    true,
@@ -170,6 +176,9 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

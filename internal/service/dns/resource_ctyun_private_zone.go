@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -139,6 +140,9 @@ func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRe
 				Validators: []validator.String{
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"proxy_pattern": schema.StringAttribute{
 				Optional:    true,
@@ -185,6 +189,9 @@ func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRe
 						"tag_id": schema.StringAttribute{
 							Computed:    true,
 							Description: "标签id",
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"key": schema.StringAttribute{
 							Required:    true,
@@ -204,6 +211,9 @@ func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRe
 				},
 				Validators: []validator.Set{
 					setvalidator.SizeAtMost(10),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},

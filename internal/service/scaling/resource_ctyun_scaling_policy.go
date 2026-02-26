@@ -420,6 +420,9 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 			"id": schema.Int64Attribute{
 				Computed:    true,
 				Description: "伸缩策略id",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Optional:    true,
@@ -427,6 +430,9 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 				Description: "告警规则状态：enable：启用。disable：停用，支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingPolicyStatuses...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},

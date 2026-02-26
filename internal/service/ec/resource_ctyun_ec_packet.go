@@ -208,10 +208,16 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

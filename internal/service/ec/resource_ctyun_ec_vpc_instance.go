@@ -167,6 +167,7 @@ func (c *CtyunExpressConnectVpcInstance) Schema(ctx context.Context, request res
 					int32validator.OneOf(1, 0),
 				},
 				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 					int32planmodifier.RequiresReplace(),
 				},
 			},
@@ -179,6 +180,7 @@ func (c *CtyunExpressConnectVpcInstance) Schema(ctx context.Context, request res
 					int32validator.OneOf(1, 0),
 				},
 				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 					int32planmodifier.RequiresReplace(),
 				},
 			},

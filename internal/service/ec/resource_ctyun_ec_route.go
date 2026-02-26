@@ -224,6 +224,9 @@ func (c *CtyunExpressConnectRoute) Schema(ctx context.Context, request resource.
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

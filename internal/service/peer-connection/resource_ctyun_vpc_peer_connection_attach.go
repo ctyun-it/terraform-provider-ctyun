@@ -87,6 +87,9 @@ func (c *CtyunVpcPeerConnectionAttach) Schema(ctx context.Context, request resou
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

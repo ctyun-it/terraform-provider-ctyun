@@ -97,6 +97,9 @@ func (c *ctyunNetTags) Schema(_ context.Context, request resource.SchemaRequest,
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
 							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"key": schema.StringAttribute{
 							Required:    true,

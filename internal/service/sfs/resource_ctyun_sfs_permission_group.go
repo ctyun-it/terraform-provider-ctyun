@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -117,6 +118,9 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -136,6 +140,9 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 			"is_default": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否为默认权限组",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
