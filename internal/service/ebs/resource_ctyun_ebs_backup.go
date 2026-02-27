@@ -177,26 +177,44 @@ func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"freeze": schema.BoolAttribute{
 				Computed:    true,
 				Description: "备份是否冻结",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"encrypted": schema.BoolAttribute{
 				Computed:    true,
 				Description: "云硬盘是否加密",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"disk_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "云硬盘类型，取值范围为：SATA：普通IO。SAS：高IO。SSD：超高IO。FAST-SSD：极速型SSD。XSSD-0、XSSD-1、XSSD-2：X系列云硬盘",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"paas": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否支持PAAS",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "云硬盘挂载的云主机ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为\"0\"",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_name": schema.StringAttribute{
 				Computed:    true,

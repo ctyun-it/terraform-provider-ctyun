@@ -286,6 +286,9 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 			"status": schema.StringAttribute{
 				Description: "文件系统状态",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"used_size": schema.Int32Attribute{
 				Description: "已使用大小（GB）",
@@ -305,6 +308,9 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 			"expire_time": schema.StringAttribute{
 				Description: "到期时间，为UTC格式，按需时为空",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"share_path": schema.StringAttribute{
 				Computed:    true,

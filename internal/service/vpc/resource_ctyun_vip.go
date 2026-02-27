@@ -116,10 +116,16 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"ipv4_address": schema.StringAttribute{
 				Computed:    true,
 				Description: "高可用虚IP的IPv4地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_address": schema.StringAttribute{
 				Computed:    true,
 				Description: "高可用虚IP的IPv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

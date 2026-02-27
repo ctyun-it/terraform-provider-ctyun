@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -119,7 +120,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
+				Description: "对等连接实例id，跨账号情况下使用。如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
 				Computed:    true,
 			},
 			"region_id": schema.StringAttribute{
@@ -191,26 +192,28 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"request_vpc_name": schema.StringAttribute{
-				Description: "本端的vpc名称",
-				Computed:    true,
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"request_vpc_cidr": schema.StringAttribute{
-				Description: "本端的vpc cidr",
-				Computed:    true,
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"accept_vpc_name": schema.StringAttribute{
-				Description: "对端的vpc名称",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
+				Computed:           true,
 			},
 			"accept_vpc_cidr": schema.StringAttribute{
-				Description: "对端的vpc cidr",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Computed:           true,
+				Default:            stringdefault.StaticString(""),
 			},
 			"status": schema.StringAttribute{
 				Description: "对等连接状态，agree(已连接)/pending(等待审核)",
@@ -220,6 +223,9 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 			"user_type": schema.StringAttribute{
 				Description: "对等连接类型：current(同一个租户) / other(不同租户)",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tags": schema.SetNestedAttribute{
 				Description: "标签，支持更新",
@@ -243,6 +249,9 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 						"id": schema.StringAttribute{
 							Description: "标签id",
 							Computed:    true,
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -460,10 +469,10 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 	config.Name = types.StringValue(returnObj.Name)
 	config.RequestVpcID = types.StringValue(returnObj.RequestVpcID)
 	config.AcceptVpcID = types.StringValue(returnObj.AcceptVpcID)
-	config.RequestVpcName = types.StringValue(returnObj.RequestVpcName)
-	config.RequestVpcCidr = types.StringValue(returnObj.RequestVpcCidr)
-	config.AcceptVpcCidr = types.StringValue(returnObj.AcceptVpcCidr)
-	config.AcceptVpcName = types.StringValue(returnObj.AcceptVpcName)
+	config.RequestVpcName = types.StringValue("")
+	config.RequestVpcCidr = types.StringValue("")
+	config.AcceptVpcCidr = types.StringValue("")
+	config.AcceptVpcName = types.StringValue("")
 	config.UserType = types.StringValue(returnObj.UserType)
 	config.Status = types.StringValue(returnObj.Status)
 	// 处理tags的id

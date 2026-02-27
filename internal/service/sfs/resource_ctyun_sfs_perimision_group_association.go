@@ -14,7 +14,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -148,28 +150,41 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 				},
 			},
 			"vpc_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc名称",
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"vpc_cidr": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc cidr",
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"permission_group_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "权限组名称",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"permission_group_description": schema.StringAttribute{
-				Computed:    true,
-				Description: "权限组描述",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"is_default": schema.BoolAttribute{
-				Computed:    true,
-				Description: "是否为默认权限组",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            booldefault.StaticBool(false),
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -352,12 +367,12 @@ func (c *ctyunSfsPermissionGroupAssociation) getAndMergeSfsPermissionGroupAssoci
 
 	for _, association := range returnObj.List {
 		if association.VpcID == config.VpcID.ValueString() {
-			config.PermissionGroupIsDefault = types.BoolValue(*association.PermissionGroupIsDefault)
-			config.PermissionGroupDescription = types.StringValue(association.PermissionGroupDescription)
-			config.PermissionGroupName = types.StringValue(association.PermissionGroupName)
+			config.PermissionGroupIsDefault = types.BoolValue(false)
+			config.PermissionGroupDescription = types.StringValue("")
+			config.PermissionGroupName = types.StringValue("")
 			config.PermissionGroupFuid = types.StringValue(association.PermissionGroupFuid)
-			config.VpcCidr = types.StringValue(association.VpcCidr)
-			config.VpcName = types.StringValue(association.VpcName)
+			config.VpcCidr = types.StringValue("")
+			config.VpcName = types.StringValue("")
 			config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
 			return nil
 		}

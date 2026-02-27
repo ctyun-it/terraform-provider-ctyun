@@ -30,15 +30,20 @@ func (c *ctyunDhcpOptionSets) Metadata(_ context.Context, request datasource.Met
 	response.TypeName = request.ProviderTypeName + "_dhcpoptionsets"
 }
 
+type CtyunDhcpVpcListModel struct {
+	VpcID   types.String `tfsdk:"vpc_id"`
+	VpcName types.String `tfsdk:"vpc_name"`
+}
+
 type CtyunDhcpOptionSetsModel struct {
-	ID          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	Description types.String `tfsdk:"description"`
-	DomainName  types.String `tfsdk:"domain_name"`
-	DnsList     []string     `tfsdk:"dns_list"`
-	VpcList     []string     `tfsdk:"vpc_list"`
-	CreatedAt   types.String `tfsdk:"create_time"`
-	UpdatedAt   types.String `tfsdk:"update_time"`
+	ID          types.String            `tfsdk:"id"`
+	Name        types.String            `tfsdk:"name"`
+	Description types.String            `tfsdk:"description"`
+	DomainName  types.String            `tfsdk:"domain_name"`
+	DnsList     []string                `tfsdk:"dns_list"`
+	VpcList     []CtyunDhcpVpcListModel `tfsdk:"vpc_list"`
+	CreatedAt   types.String            `tfsdk:"create_time"`
+	UpdatedAt   types.String            `tfsdk:"update_time"`
 }
 
 type CtyunDhcpOptionSetsConfig struct {
@@ -114,10 +119,21 @@ func (c *ctyunDhcpOptionSets) Schema(_ context.Context, _ datasource.SchemaReque
 							Description: "DNS服务器地址列表",
 							ElementType: types.StringType,
 						},
-						"vpc_list": schema.ListAttribute{
+						"vpc_list": schema.ListNestedAttribute{
 							Computed:    true,
 							Description: "关联的VPC列表",
-							ElementType: types.StringType,
+							NestedObject: schema.NestedAttributeObject{
+								Attributes: map[string]schema.Attribute{
+									"vpc_id": schema.StringAttribute{
+										Computed:    true,
+										Description: "VPC ID",
+									},
+									"vpc_name": schema.StringAttribute{
+										Computed:    true,
+										Description: "VPC名称",
+									},
+								},
+							},
 						},
 						"create_time": schema.StringAttribute{
 							Computed:    true,
@@ -196,10 +212,17 @@ func (c *ctyunDhcpOptionSets) Read(ctx context.Context, request datasource.ReadR
 			Description: utils.SecStringValue(v.Description),
 			DomainName:  utils.SecStringValue(v.DomainName),
 			DnsList:     utils.StrPointerArrayToStrArray(v.DnsList),
-			VpcList:     utils.StrPointerArrayToStrArray(v.VpcList),
 			CreatedAt:   utils.SecStringValue(v.CreatedAt),
 			UpdatedAt:   utils.SecStringValue(v.UpdatedAt),
 		}
+		var vpcList []CtyunDhcpVpcListModel
+		for _, vpc := range v.VpcList {
+			vpcList = append(vpcList, CtyunDhcpVpcListModel{
+				VpcID:   utils.SecStringValue(vpc.VpcID),
+				VpcName: utils.SecStringValue(vpc.VpcName),
+			})
+		}
+		item.VpcList = vpcList
 		config.DhcpOptionSets = append(config.DhcpOptionSets, item)
 	}
 

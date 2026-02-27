@@ -119,6 +119,7 @@ func (c *ctyunEbsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, r
 					int64validator.Between(1, 65535),
 				},
 				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 					int64planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},

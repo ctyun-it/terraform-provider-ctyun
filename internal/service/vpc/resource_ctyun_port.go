@@ -91,6 +91,9 @@ func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaReque
 				Optional:    true,
 				Computed:    true,
 				Description: "弹性网卡描述。支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}|《》？：“”【】、；‘'，。、，不能以http:/https:开头，长度0-128 支持更新",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 				//Validators: []validator.String{
 				//	stringvalidator.UTF8LengthAtMost(128),
 				//	validator2.Desc(),

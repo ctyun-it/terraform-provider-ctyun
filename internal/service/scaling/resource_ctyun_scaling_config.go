@@ -21,6 +21,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -180,6 +182,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 									types.StringValue(business.ScalingVolumeFlagOSStr),
 								),
 							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 						"flag": schema.StringAttribute{
 							Required:    true,
@@ -217,6 +222,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 						types.StringValue(business.ScalingUseFloatingsDisableStr),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"login_mode": schema.StringAttribute{
 				Required:    true,
@@ -228,9 +236,10 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"username": schema.StringAttribute{
 				Computed:    true,
 				Description: "用户名，windows系统为administrator,linux系统为root。不可修改",
-				//PlanModifiers: []planmodifier.String{
-				//	stringplanmodifier.UseStateForUnknown(),
-				//},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"password": schema.StringAttribute{
 				Optional:    true,
@@ -302,6 +311,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"id": schema.Int64Attribute{
 				Computed:    true,
 				Description: "弹性伸缩配置ID",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

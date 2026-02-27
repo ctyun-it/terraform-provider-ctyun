@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -132,14 +133,19 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
 			"access_machine_type": schema.StringAttribute{
-				Computed:    true,
-				Description: "访问类型",
+				Computed:           true,
+				DeprecationMessage: "废除字段",
+				Description:        "废除字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -361,7 +367,7 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 	for _, whileListInfo := range resp.ReturnObj {
 		if whileListInfo.GroupName == config.GroupName.ValueString() {
 			config.GroupWhiteListCount = types.Int32Value(whileListInfo.GroupWhiteListCount)
-			config.AccessMachineType = types.StringValue(whileListInfo.AccessMachineType)
+			config.AccessMachineType = types.StringValue("")
 			config.GroupName = types.StringValue(whileListInfo.GroupName)
 			config.CreatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.CreateTime))
 			config.UpdatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.UpdateTime))

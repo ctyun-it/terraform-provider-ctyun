@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -226,6 +227,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.Int32{
 					validator2.ScalingCountValidate(),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"health_period": schema.Int32Attribute{
 				Required:    true,
@@ -307,6 +311,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlStatus...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"delete_protection": schema.StringAttribute{
 				Optional:    true,
@@ -314,6 +321,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Description: "控制伸缩组保护，开启伸缩组保护，不可删除该伸缩组。取值范围：enable 或 disable，支持更新。可以用于控制伸缩组保护的开启/关闭",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlProtectionStatus...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"add_instance_uuid_list": schema.SetAttribute{

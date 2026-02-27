@@ -147,6 +147,9 @@ func (c *CtyunOceanfsPermissionRule) Schema(ctx context.Context, request resourc
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "权限组规则id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

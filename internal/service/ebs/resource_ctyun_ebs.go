@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -121,6 +122,9 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -141,19 +145,33 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"multi_attach": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否共享云硬盘",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"encrypted": schema.BoolAttribute{
+				Optional:    true,
 				Computed:    true,
 				Description: "是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 			"kms_uuid": schema.StringAttribute{
 				Computed:    true,
 				Description: "加密盘密钥UUID，是加密盘时才返回",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -199,11 +217,17 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"delete_snap_with_ebs": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "设置快照是否随云硬盘删除，true表示随盘删除，false表示不随盘删除",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"image_id": schema.StringAttribute{
 				Optional:    true,
