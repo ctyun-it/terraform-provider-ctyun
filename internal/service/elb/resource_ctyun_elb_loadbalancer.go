@@ -109,6 +109,9 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 					validator2.Desc(),
 					stringvalidator.LengthBetween(0, 128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"eip_id": schema.StringAttribute{
 				Optional:    true,
@@ -154,13 +157,18 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "负载均衡Id",
+				Computed:    true,
+				Description: "负载均衡Id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"port_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡实例默认创建port ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_address": schema.StringAttribute{
 				Computed:    true,
@@ -177,6 +185,9 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -185,6 +196,9 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			"expired_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -223,26 +237,6 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-				},
-			},
-			"eip_info": schema.ListNestedAttribute{
-				Computed:    true,
-				Description: "弹性公网IP信息",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"eip_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "弹性公网IP的Id",
-						},
-						"bandwidth": schema.Float32Attribute{
-							Computed:    true,
-							Description: "弹性公网IP的带宽",
-						},
-						"is_talk_order": schema.BoolAttribute{
-							Computed:    true,
-							Description: "是否按需资源",
-						},
-					},
 				},
 			},
 		},
@@ -598,19 +592,9 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	config.ExpiredTime = types.StringValue(elbObj.ExpiredTime)
 	config.ProjectID = types.StringValue(elbObj.ProjectID)
 	EipInfoList := elbObj.EipInfo
-	var eipInfos []EipInfoModel
 	for _, eipItem := range EipInfoList {
-		var eipInfo EipInfoModel
-		eipInfo.EipID = types.StringValue(eipItem.EipID)
 		config.EipID = types.StringValue(eipItem.EipID)
-		eipInfo.Bandwidth = types.Float32Value(eipItem.Bandwidth)
-		eipInfo.IsTalkOrder = utils.SecBoolValue(eipItem.IsTalkOrder)
-		eipInfos = append(eipInfos, eipInfo)
 	}
-
-	eipInfoType := utils.StructToTFObjectTypes(EipInfoModel{})
-	config.EipInfo, _ = types.ListValueFrom(ctx, eipInfoType, eipInfos)
-
 	return
 }
 
@@ -836,7 +820,6 @@ type CtyunElbLoadBalancerConfig struct {
 	ID               types.String `tfsdk:"id"`                 //负载均衡ID
 	PortID           types.String `tfsdk:"port_id"`            //负载均衡实例默认创建port ID
 	Ipv6Address      types.String `tfsdk:"ipv6_address"`       //负载均衡实例的IPv6地址
-	EipInfo          types.List   `tfsdk:"eip_info"`           //弹性公网IP信息
 	AdminStatus      types.String `tfsdk:"admin_status"`       //管理状态: DOWN / ACTIVE
 	Status           types.String `tfsdk:"status"`             //负载均衡状态: DOWN / ACTIVE
 	CreatedTime      types.String `tfsdk:"create_time"`        //创建时间，为UTC格式

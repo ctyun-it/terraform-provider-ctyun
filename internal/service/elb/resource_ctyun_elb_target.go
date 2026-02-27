@@ -122,7 +122,11 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				Computed:    true,
 				Description: "描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},，支持更新",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1)},
+					stringvalidator.LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_type": schema.StringAttribute{
 				Required:    true,
@@ -171,9 +175,11 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "后端主机服务(elb_target)ID",
+				Computed:    true,
+				Description: "后端主机服务(elb_target)ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"health_check_status": schema.StringAttribute{
 				Computed:    true,
@@ -190,6 +196,9 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,

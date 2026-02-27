@@ -7,6 +7,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 )
 
+// 适用字段A需要满足以下条件：
+// A字段为Optional+Computed或仅Computed
+// A字段可以通过修改A字段本身或修改B字段而产生变化
+
 type useState struct {
 	dependency path.Path
 }

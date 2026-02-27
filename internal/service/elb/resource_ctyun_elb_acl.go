@@ -116,6 +116,9 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 					stringvalidator.LengthAtLeast(1),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_ips": schema.SetAttribute{
 				Required:    true,
@@ -128,13 +131,18 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "访问控制ID",
+				Computed:    true,
+				Description: "访问控制ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:           true,

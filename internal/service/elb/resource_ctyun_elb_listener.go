@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -101,6 +102,9 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 					validator2.Desc(),
 					stringvalidator.RegexMatches(regexp.MustCompile(`^([^h]|h[^t]|ht[^t]|htt[^p]|http[^s]|https.).*$`), "不能以http:或https:开头"),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
@@ -131,12 +135,24 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						path.MatchRoot("protocol"),
 						types.StringValue(business.ListenerProtocolHTTPS),
 					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("protocol"),
+						types.StringValue(business.ListenerProtocolHTTP),
+						types.StringValue(business.ListenerProtocolTCP),
+						types.StringValue(business.ListenerProtocolUDP),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(), // 由于protocol不能更新，所以可以直接使用UseStateForUnknown
 				},
 			},
 			"ca_enabled": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否开启双向认证。true（开启），false（不开启），支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"client_certificate_id": schema.StringAttribute{
 				Optional:    true,
@@ -147,18 +163,32 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						path.MatchRoot("ca_enabled"),
 						types.BoolValue(true),
 					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("ca_enabled"),
+						types.BoolValue(false),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"access_control_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "访问控制ID，当access_control_type=white或者black，必填。支持更新",
+				Description: "访问控制ID，当access_control_type=White或者Black，必填。支持更新",
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
 						path.MatchRoot("access_control_type"),
 						types.StringValue(business.ListenerAccessControlTypeWhite),
 						types.StringValue(business.ListenerAccessControlTypeBlack),
 					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("access_control_type"),
+						types.StringValue(business.ListenerAccessControlTypeClose),
+					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"access_control_type": schema.StringAttribute{
@@ -168,16 +198,24 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ListenerAccessControlTypes...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"forwarded_for_enabled": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "x-forward-for功能。false（未开启）、true（开启），支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "监听器ID",
+				Computed:    true,
+				Description: "监听器ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"default_action_type": schema.StringAttribute{
 				Required:    true,
@@ -212,6 +250,9 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -222,16 +263,18 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 				DeprecationMessage: "废弃字段，请不要指定",
 				Description:        "企业项目ID",
 			},
-
 			"enable_nat_64": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否开启nat64，elb需要支持ipv6能力，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"listener_qps": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "qps 大小，仅支持协议为 HTTP / HTTPS，的监听器，支持更新",
+				Description: "qps 大小，仅支持协议为 HTTP / HTTPS 的监听器，支持更新",
 				Validators: []validator.Int32{
 					validator2.ConflictsWithEqualInt32(
 						path.MatchRoot("protocol"),
@@ -239,11 +282,14 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						types.StringValue(business.ListenerProtocolUDP),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"establish_timeout": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "建立连接超时时间，单位秒，取值范围：1 - 1800。不支持协议为 UDP / HTTP / HTTPS 的监听器，支持更新",
+				Description: "建立连接超时时间，单位秒，取值范围：1 - 1800。仅支持协议为 TCP 的监听器，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 1800),
 					validator2.ConflictsWithEqualInt32(
@@ -253,11 +299,14 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						types.StringValue(business.ListenerProtocolUDP),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"idle_timeout": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "链接空闲断开超时时间，单位秒，取值范围：1 - 300,不支持协议为 TCP / UDP 的监听器，支持更新",
+				Description: "链接空闲断开超时时间，单位秒，取值范围：1 - 300，仅支持协议为 HTTP / HTTPS 的监听器，支持更新，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 300),
 					validator2.ConflictsWithEqualInt32(
@@ -266,11 +315,14 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						types.StringValue(business.ListenerProtocolUDP),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"response_timeout": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "响应超时，单位秒，取值范围：1 - 300。不支持协议为 TCP / UDP 的监听器，支持更新",
+				Description: "响应超时，单位秒，取值范围：1 - 300。仅支持协议为 HTTP / HTTPS 的监听器，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 300),
 					validator2.ConflictsWithEqualInt32(
@@ -278,6 +330,9 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						types.StringValue(business.ListenerProtocolTCP),
 						types.StringValue(business.ListenerProtocolUDP),
 					),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"listener_cps": schema.Int32Attribute{
@@ -290,6 +345,9 @@ func (c *CtyunElbListener) Schema(ctx context.Context, request resource.SchemaRe
 						types.StringValue(business.ListenerProtocolHTTP),
 						types.StringValue(business.ListenerProtocolHTTPS),
 					),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"target_groups": schema.ListNestedAttribute{
@@ -778,7 +836,6 @@ func (c *CtyunElbListener) getAndMergeListener(ctx context.Context, plan *CtyunE
 	plan.CreatedTime = types.StringValue(respObj.CreatedTime)
 	plan.UpdatedTime = types.StringValue(respObj.UpdatedTime)
 
-	plan.ListenerCps = types.Int32Value(respObj.Cps)
 	plan.Name = types.StringValue(respObj.Name)
 	plan.CertificateID = types.StringValue(respObj.CertificateID)
 	plan.ClientCertificateID = types.StringValue(respObj.ClientCertificateID)

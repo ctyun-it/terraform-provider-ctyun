@@ -115,6 +115,9 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"type": schema.StringAttribute{
 				Required:    true,
@@ -154,9 +157,11 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "证书ID",
+				Computed:    true,
+				Description: "证书ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -165,6 +170,9 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,

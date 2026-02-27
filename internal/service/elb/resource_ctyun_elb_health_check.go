@@ -20,7 +20,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -87,6 +89,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
@@ -141,6 +146,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						types.StringValue(business.HealthCheckProtocolTCP),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"http_url_path": schema.StringAttribute{
 				Optional:    true,
@@ -157,6 +165,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						types.StringValue(business.HealthCheckProtocolUDP),
 						types.StringValue(business.HealthCheckProtocolTCP),
 					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"http_expected_codes": schema.SetAttribute{
@@ -178,6 +189,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						stringvalidator.OneOf("http_2xx", "http_3xx", "http_4xx", "http_5xx"),
 					),
 				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"protocol_port": schema.Int32Attribute{
 				Optional:    true,
@@ -186,13 +200,17 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 				Validators: []validator.Int32{
 					int32validator.Between(1, 65535),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "健康检查ID",
+				Computed:    true,
+				Description: "健康检查ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-
 			"status": schema.Int32Attribute{
 				Computed:    true,
 				Description: "状态 1 - UP, 0 - DOWN",
@@ -200,6 +218,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:           true,
