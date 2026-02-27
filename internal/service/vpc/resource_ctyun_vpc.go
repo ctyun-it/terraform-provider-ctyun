@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
@@ -171,7 +172,12 @@ func (c *ctyunVpc) Read(ctx context.Context, request resource.ReadRequest, respo
 
 	instance, err := c.getAndMergeVpc(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		} else {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
 		return
 	}
 	if instance == nil {

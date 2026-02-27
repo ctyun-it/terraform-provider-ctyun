@@ -595,6 +595,9 @@ func (c *ctyunEbm) Update(ctx context.Context, request resource.UpdateRequest, r
 		state.UserData = plan.UserData
 		response.Diagnostics.AddWarning("user_data的更新仅写入状态文件", "在import时，状态文件中user_data为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+	if state.UserData.ValueString() == "" && plan.UserData.ValueString() == "" {
+		state.UserData = plan.UserData
+	}
 	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
 		state.AutoRenew = plan.AutoRenew
 		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")

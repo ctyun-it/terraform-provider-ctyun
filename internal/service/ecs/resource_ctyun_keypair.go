@@ -238,7 +238,6 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	params := ctecs2.CtecsDetailsKeypairV41Request{
 		RegionID:    plan.RegionId.ValueString(),
 		KeyPairName: plan.Name.ValueString(),
-		ProjectID:   plan.ProjectId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDetailsKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
 	if err != nil {
