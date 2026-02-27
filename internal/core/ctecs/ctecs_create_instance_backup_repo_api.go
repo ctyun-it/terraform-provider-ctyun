@@ -71,4 +71,5 @@ type CtecsCreateInstanceBackupRepoReturnObjResponse struct {
 	MasterOrderNO    string `json:"masterOrderNO,omitempty"`    /*  订单号  */
 	RegionID         string `json:"regionID,omitempty"`         /*  资源池ID  */
 	MasterResourceID string `json:"masterResourceID,omitempty"` /*  订单主资源ID  */
+	RepositoryID     string `json:"repositoryID,omitempty"`     /*  订单主资源ID  */
 }

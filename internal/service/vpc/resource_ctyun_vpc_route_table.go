@@ -122,7 +122,9 @@ func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest,
 				Optional:    true,
 				Computed:    true,
 				Description: "类型，支持subnet,gateway",
-
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 				Default: stringdefault.StaticString("subnet"),
 			},
 			"bind_gateway": schema.BoolAttribute{
