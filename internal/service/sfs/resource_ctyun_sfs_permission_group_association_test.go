@@ -38,9 +38,6 @@ func TestAccCtyunSfsPermissionGroupAssociation(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID1),
 					resource.TestCheckResourceAttrSet(resourceName, "vpc_name"),
 					resource.TestCheckResourceAttrSet(resourceName, "vpc_cidr"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_description"),
-					resource.TestCheckResourceAttrSet(resourceName, "is_default"),
 				),
 			},
 			// 2. 资源更新测试（更换为第二个权限组）

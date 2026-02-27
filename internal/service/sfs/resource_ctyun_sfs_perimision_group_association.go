@@ -150,18 +150,16 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 				},
 			},
 			"vpc_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc名称",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"vpc_cidr": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc cidr",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"permission_group_name": schema.StringAttribute{
 				Computed:           true,
@@ -373,8 +371,8 @@ func (c *ctyunSfsPermissionGroupAssociation) getAndMergeSfsPermissionGroupAssoci
 			config.PermissionGroupDescription = types.StringValue("")
 			config.PermissionGroupName = types.StringValue("")
 			config.PermissionGroupFuid = types.StringValue(association.PermissionGroupFuid)
-			config.VpcCidr = types.StringValue(association.VpcCidr)
-			config.VpcName = types.StringValue(association.VpcName)
+			config.VpcCidr = types.StringValue("")
+			config.VpcName = types.StringValue("")
 			config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
 			return nil
 		}
