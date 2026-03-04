@@ -53,6 +53,7 @@ resource "ctyun_subnet" "subnet_test" {
 - `enable_ipv6` (Boolean) 是否开启IPv6网段，false：不开启，true: 开启，默认为不开启false，注意：在子网内开启IPv6网段时，必须保证所在vpc也启用了开启IPv6网段
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `route_table_id` (String) 路由表ID 可以更新
 - `type` (String) 子网类型，common：普通子网，cbm：裸金属子网，默认为普通子网common
 
 ### Read-Only

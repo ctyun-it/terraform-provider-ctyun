@@ -50,6 +50,7 @@ resource "ctyun_ebs" "ebs_test" {
 - `backup_id` (String) 云硬盘备份ID参数，有以下限制：从备份创建盘仅支持VBD模式；新盘容量不能小于备份源盘容量；不支持配置加密属性（自动与备份源盘保持一致）；备份状态必须是可用。
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年
 - `delete_snap_with_ebs` (Boolean) 设置快照是否随云硬盘删除，true表示随盘删除，false表示不随盘删除
+- `encrypted` (Boolean) 是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密
 - `image_id` (String) 镜像ID，如果用镜像创建，只支持数据盘的私有镜像和共享镜像，所创建的数据盘的所在地域要与镜像源一致，容量不可小于镜像对应的磁盘容量。从镜像创建的数据盘不支持加密、ISCSI和FCSAN高级配置。
 - `labels` (Attributes List) 设置云硬盘标签，实际绑定标签的结果请查询云硬盘详情的labels返回值是否如预期。 (see [below for nested schema](#nestedatt--labels))
 - `multi_attach` (Boolean) 是否共享云硬盘
@@ -63,7 +64,6 @@ resource "ctyun_ebs" "ebs_test" {
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
-- `encrypted` (Boolean) 是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 磁盘id
 - `kms_uuid` (String) 加密盘密钥UUID，是加密盘时才返回

@@ -158,8 +158,10 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 ### Read-Only
 
 - `audit_log_status` (Number) 日志审计开关
+- `create_time` (String) 创建时间，为UTC格式
 - `eip` (String) 弹性ip
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 实例Id，同instance_id
 - `inst_release_protection_status` (Number) 实例释放保护开关 1:on,0:off
 - `instance_id` (String) 实例Id

@@ -268,7 +268,7 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [rule_id],[route_table_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[route_table_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -277,7 +277,7 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	cnt := strings.Count(request.ID, common.ImportSeparator)
 	switch cnt {
 	case 0:
-		err = fmt.Errorf("rule_id和route_table_id必须输入")
+		err = fmt.Errorf("id和route_table_id必须输入")
 		return
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
@@ -293,7 +293,7 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	}
 
 	if ruleID == "" {
-		err = fmt.Errorf("rule_id不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if routeTableID == "" {

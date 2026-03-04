@@ -326,7 +326,7 @@ func (c *ctyunPrivateSnatResource) getAndMergeSnat(ctx context.Context, config *
 		NatGatewayID: config.NatGatewayID.ValueString(),
 		SnatID:       config.SNatID.ValueString(),
 		PageNo:       1,
-		PageSize:     10,
+		PageSize:     50,
 	})
 	if err != nil {
 		return

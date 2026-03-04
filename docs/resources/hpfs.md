@@ -49,9 +49,9 @@ resource "ctyun_hpfs" "test" {
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持
 - `cycle_type` (String) 订购周期类型，只支持on_demand
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池ID
-- `subnet_id` (String, Deprecated) 子网 ID
-- `vpc_id` (String, Deprecated) 虚拟网 ID
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String, Deprecated) 废弃字段
+- `vpc_id` (String, Deprecated) 废弃字段
 
 ### Read-Only
 

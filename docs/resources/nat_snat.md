@@ -64,7 +64,7 @@ resource "ctyun_nat_snat" "snat_test" {
 ### Optional
 
 - `description` (String) SNAT描述，支持更新
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `source_cidr` (String) 自定义网段，与source_subnet_id有且只能填写一个，支持更新
 - `source_subnet_id` (String) 子网ID，需要和NAT网关同属一个VPC，与source_cidr有且只能填写一个，支持更新
 
@@ -74,7 +74,7 @@ resource "ctyun_nat_snat" "snat_test" {
 - `eips` (Attributes List) 绑定的 eip 信息 (see [below for nested schema](#nestedatt--eips))
 - `id` (String) ID，同snat_id
 - `snat_id` (String) Snat规则的id
-- `subnet_type` (Number) 子网类型：1-使用子网ID，2-使用自定义网段
+- `subnet_type` (Number, Deprecated) 废弃字段
 
 <a id="nestedatt--eips"></a>
 ### Nested Schema for `eips`

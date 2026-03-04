@@ -54,6 +54,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 ### Required
 
 - `cycle_type` (String) 订购周期类型，取值范围：year：按年，month：按月，on_demand：按需。当此值为month或year时，cycle_count为必填
+- `spec` (Number) 规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新
 - `vpc_id` (String) 需要创建 NAT 网关的 VPC 的 ID
 
 ### Optional
@@ -64,8 +65,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 - `name` (String) nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `pay_voucher_price` (String) 代金券金额，支持到小数点后两位
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
-- `spec` (Number) 规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
@@ -75,7 +75,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 - `master_order_id` (String) 订单id
 - `nat_gateway_id` (String) 网关id
 - `vpc_cidr` (String) 当前网关所属的vpc cidr
-- `vpc_name` (String) NAT所属的vpc专有网络名字
+- `vpc_name` (String, Deprecated) 废弃字段
 ## 导入
 
 使用以下语法支持导入：

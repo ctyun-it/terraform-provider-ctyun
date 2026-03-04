@@ -336,7 +336,7 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [ec_id],[packet_id]", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -344,7 +344,7 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 
 	var ecId, packetId string
 
-	err = terraform_extend.Split(request.ID, &ecId, &packetId)
+	err = terraform_extend.Split(request.ID, &packetId, &ecId)
 	if err != nil {
 		return
 	}
@@ -354,7 +354,7 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 		return
 	}
 	if packetId == "" {
-		err = fmt.Errorf("resource_id不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 

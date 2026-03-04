@@ -42,12 +42,12 @@ resource "ctyun_mysql_white_list" "test" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
-- `access_machine_type` (String) 访问类型
+- `access_machine_type` (String, Deprecated) 废除字段
 - `create_time` (String) 创建时间，为UTC格式
 - `group_white_list_count` (Number) 白名单分组组内数量
 - `id` (String) id 唯一标识
