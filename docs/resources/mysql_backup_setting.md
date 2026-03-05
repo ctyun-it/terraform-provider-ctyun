@@ -92,7 +92,7 @@ resource "ctyun_mysql_backup_setting" "examples" {
 
 - `frequency_backup` (Boolean) 高频备份 true=开启，false=关闭。默认关闭，支持更新。
 - `frequency_backup_unit_time` (Number) 高频备份频率 单位: 秒，最小为1小时，即3600。支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

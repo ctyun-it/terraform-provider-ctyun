@@ -47,8 +47,10 @@ resource "ctyun_vpc_route_table" "route" {
 
 ### Optional
 
+- `bind_gateway` (Boolean) 是否绑定网关，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `route_type` (String) 类型，支持subnet,gateway
 
 ### Read-Only
 

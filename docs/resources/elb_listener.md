@@ -83,22 +83,22 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 
 ### Optional
 
-- `access_control_id` (String) 访问控制ID，当access_control_type=white或者black，必填。支持更新
+- `access_control_id` (String) 访问控制ID，当access_control_type=White或者Black，必填。支持更新
 - `access_control_type` (String) 访问控制类型。取值范围：Close（未启用）、White（白名单）、Black（黑名单），支持更新
 - `ca_enabled` (Boolean) 是否开启双向认证。true（开启），false（不开启），支持更新
 - `certificate_id` (String) 证书ID。当protocol为HTTPS时，此参数必填，支持更新
 - `client_certificate_id` (String) 双向认证的证书ID，当ca_enabled=ture，必填。支持更新
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `enable_nat_64` (Boolean) 是否开启nat64，elb需要支持ipv6能力，支持更新
-- `establish_timeout` (Number) 建立连接超时时间，单位秒，取值范围：1 - 1800。不支持协议为 UDP / HTTP / HTTPS 的监听器，支持更新
+- `establish_timeout` (Number) 建立连接超时时间，单位秒，取值范围：1 - 1800。仅支持协议为 TCP 的监听器，支持更新
 - `forwarded_for_enabled` (Boolean) x-forward-for功能。false（未开启）、true（开启），支持更新
-- `idle_timeout` (Number) 链接空闲断开超时时间，单位秒，取值范围：1 - 300,不支持协议为 TCP / UDP 的监听器，支持更新
+- `idle_timeout` (Number) 链接空闲断开超时时间，单位秒，取值范围：1 - 300，仅支持协议为 HTTP / HTTPS 的监听器，支持更新，支持更新
 - `listener_cps` (Number) cps大小，仅支持协议为 TCP / UDP 的监听器。支持更新
-- `listener_qps` (Number) qps 大小，仅支持协议为 HTTP / HTTPS，的监听器，支持更新
+- `listener_qps` (Number) qps 大小，仅支持协议为 HTTP / HTTPS 的监听器，支持更新
 - `project_id` (String, Deprecated) 企业项目ID
 - `redirect_listener_id` (String) 重定向监听器ID，当default_action_type为redirect时，此字段必填。支持更新
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
-- `response_timeout` (Number) 响应超时，单位秒，取值范围：1 - 300。不支持协议为 TCP / UDP 的监听器，支持更新
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `response_timeout` (Number) 响应超时，单位秒，取值范围：1 - 300。仅支持协议为 HTTP / HTTPS 的监听器，支持更新
 - `status` (String) 监听器状态: DOWN/ACTIVE，可以控制监听器开关。支持更新
 - `target_groups` (Attributes List) 后端服务组，最多只支持添加一个后端服务组。当default_action_type=forward时，target_groups不能为空。支持更新 (see [below for nested schema](#nestedatt--target_groups))
 

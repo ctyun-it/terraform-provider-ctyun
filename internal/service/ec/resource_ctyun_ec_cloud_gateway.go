@@ -242,7 +242,7 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [ec_id],[cgw_id]", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -250,7 +250,7 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 
 	var ecId, cgwID string
 
-	err = terraform_extend.Split(request.ID, &ecId, &cgwID)
+	err = terraform_extend.Split(request.ID, &cgwID, &ecId)
 	if err != nil {
 		return
 	}
@@ -259,7 +259,7 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 		return
 	}
 	if cgwID == "" {
-		err = fmt.Errorf("cgw_id不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 

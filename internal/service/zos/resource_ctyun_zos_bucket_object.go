@@ -380,7 +380,7 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [key],[bucket],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [bucket],[key],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -388,12 +388,12 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 	var key, bucket, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &key, &bucket)
+		err = terraform_extend.Split(request.ID, &bucket, &key)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &key, &bucket, &regionID)
+		err = terraform_extend.Split(request.ID, &bucket, &key, &regionID)
 		if err != nil {
 			return
 		}
@@ -512,8 +512,8 @@ func (c *ctyunZosBucketObject) getAndMerge(ctx context.Context, plan *CtyunZosBu
 	plan.VersionID = utils.SecStringValue(output.VersionId)
 	plan.ID = types.StringValue(
 		fmt.Sprintf("%s,%s,%s",
-			plan.Key.ValueString(),
 			plan.Bucket.ValueString(),
+			plan.Key.ValueString(),
 			plan.RegionID.ValueString(),
 		),
 	)

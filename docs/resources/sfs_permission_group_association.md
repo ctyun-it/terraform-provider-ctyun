@@ -80,9 +80,9 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 
 ### Required
 
-- `permission_group_id` (String) 权限组ID，支持更新
+- `permission_group_id` (String) 权限组ID
 - `sfs_id` (String) 弹性文件系统唯一ID
-- `vpc_id` (String) vpcID
+- `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
@@ -91,11 +91,11 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 ### Read-Only
 
 - `id` (String) ID
-- `is_default` (Boolean) 是否为默认权限组
-- `permission_group_description` (String) 权限组描述
-- `permission_group_name` (String) 权限组名称
-- `vpc_cidr` (String) vpc cidr
-- `vpc_name` (String) vpc名称
+- `is_default` (Boolean, Deprecated) 废弃字段
+- `permission_group_description` (String, Deprecated) 废弃字段
+- `permission_group_name` (String, Deprecated) 废弃字段
+- `vpc_cidr` (String, Deprecated) 废弃字段
+- `vpc_name` (String, Deprecated) 废弃字段
 ## 导入
 
 使用以下语法支持导入：
@@ -104,7 +104,7 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 # 导入SFS权限组关联
 # [] 标记的参数为必填参数
 # <> 标记的参数为可选参数,不填则取值环境变量值
-terraform import ctyun_sfs_permission_group_association.[导入配置名称] [vpc_id],[sfs_uid],<region_id>
+terraform import ctyun_sfs_permission_group_association.[导入配置名称] [sfs_id],[vpc_id],[permission_group_id],<region_id>
 # 示例
-terraform import ctyun_sfs_permission_group_association.permission_group_association_example vpc-123456,sfs-789012,<region-345678>
+terraform import ctyun_sfs_permission_group_association.permission_group_association_example sfs-789012,vpc-123456,xxxxxxxx,<region-345678>
 ```

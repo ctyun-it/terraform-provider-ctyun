@@ -126,7 +126,6 @@ func TestAccCtyunZosBucketObject(t *testing.T) {
 					"content",
 				},
 			},
-
 			{
 				ResourceName:      resourceName,
 				ImportState:       true,
@@ -136,7 +135,7 @@ func TestAccCtyunZosBucketObject(t *testing.T) {
 					key := ds.Attributes["key"]
 					bucket := ds.Attributes["bucket"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", key, bucket, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", bucket, key, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"acl",
@@ -154,7 +153,7 @@ func TestAccCtyunZosBucketObject(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					key := ds.Attributes["key"]
 					bucket := ds.Attributes["bucket"]
-					return fmt.Sprintf("%s,%s", key, bucket), nil
+					return fmt.Sprintf("%s,%s", bucket, key), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"acl",

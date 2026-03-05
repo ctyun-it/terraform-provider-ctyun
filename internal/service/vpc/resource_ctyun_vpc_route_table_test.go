@@ -88,7 +88,7 @@ func TestAccCtyunVpcRouteGatewayTable(t *testing.T) {
 	dnd := utils.GenerateRandomString()
 	resourceName := "ctyun_vpc_route_table." + rnd
 	datasourceName := "data.ctyun_vpc_route_tables." + dnd
-	resourceFile := "resource_ctyun_vpc_route_table.tf"
+	resourceFile := "resource_ctyun_vpc_route_table_gateway.tf"
 	datasourceFile := "datasource_ctyun_vpc_route_tables.tf"
 	routeType := fmt.Sprintf("route_type = \"%s\"", "gateway")
 	bind_gateway := fmt.Sprintf("bind_gateway = %s", "true")

@@ -55,5 +55,5 @@ type ZosListRegionsResponse struct {
 type ZosListRegionsReturnObjResponse struct {
 	RegionID   string `json:"regionID,omitempty"`   /*  区域ID  */
 	RegionName string `json:"regionName,omitempty"` /*  区域名称  */
-	IsPublic   string `json:"isPublic,omitempty"`   /*  是否为公共资源池  */
+	IsPublic   bool   `json:"isPublic,omitempty"`   /*  是否为公共资源池  */
 }

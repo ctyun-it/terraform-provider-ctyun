@@ -107,6 +107,7 @@ variable "password" {
 - `backup_storage_space` (Number) backup节点磁盘空间，当前不支持指定。默认与存储空间相同
 - `create_time` (String) 创建时间，为UTC格式
 - `eip_id` (String) eip Id
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `host_ip` (String) 主机ip
 - `id` (String) mongodb实例id
 - `master_order_id` (String) 订单id

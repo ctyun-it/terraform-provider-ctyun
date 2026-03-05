@@ -84,12 +84,12 @@ resource "ctyun_mongodb_white_list" "example" {
 - `group_name` (String) 白名单分组名 支持更新
 - `instance_id` (String) MongoDB实例ID
 - `ip_list` (Set of String) IP列表 支持更新
-- `ip_type` (String) ip类型 支持更新
-- `white_list_type` (String) 白名单列表类型  支持更新
+- `ip_type` (String) ip类型，取值ipv4或者ipv6。支持更新
+- `white_list_type` (String) 白名单列表类型，1是内网访问，2是公网访问 支持更新
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

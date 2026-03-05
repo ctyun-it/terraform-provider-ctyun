@@ -80,12 +80,12 @@ resource "ctyun_vpc_peer_connection" "cross_example" {
 
 ### Read-Only
 
-- `accept_vpc_cidr` (String) 对端的vpc cidr
-- `accept_vpc_name` (String) 对端的vpc名称
+- `accept_vpc_cidr` (String, Deprecated) 废弃字段
+- `accept_vpc_name` (String, Deprecated) 废弃字段
 - `id` (String) 对等连接id
-- `instance_id` (String) 对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意
-- `request_vpc_cidr` (String) 本端的vpc cidr
-- `request_vpc_name` (String) 本端的vpc名称
+- `instance_id` (String) 对等连接实例id，跨账号情况下使用。如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意
+- `request_vpc_cidr` (String, Deprecated) 废弃字段
+- `request_vpc_name` (String, Deprecated) 废弃字段
 - `status` (String) 对等连接状态，agree(已连接)/pending(等待审核)
 - `user_type` (String) 对等连接类型：current(同一个租户) / other(不同租户)
 

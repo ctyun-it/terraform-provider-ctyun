@@ -96,7 +96,7 @@ func TestAccCtyunSubnetRoute(t *testing.T) {
 
 	resourceName := "ctyun_subnet." + rnd
 	datasourceName := "data.ctyun_subnets." + dnd
-	resourceFile := "resource_ctyun_subnet.tf"
+	resourceFile := "resource_ctyun_subnet_route.tf"
 	datasourceFile := "datasource_ctyun_subnets.tf"
 
 	initName := "init"
