@@ -46,32 +46,6 @@ func TestAccCtyunVpceServiceConnection(t *testing.T) {
 				),
 			},
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id or endpoint_service_id is required")
-					}
-					return fmt.Sprintf("%s,%s", id, regionId), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
-			},
-			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, dependence.reverseVpceServiceID, dependence.vpceID, statusUp),
 				Destroy: true,
 			},

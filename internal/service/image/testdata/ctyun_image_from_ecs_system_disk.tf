@@ -2,17 +2,12 @@
 # 从云主机系统盘创建私有镜像
 resource "ctyun_image_from_ecs" "%[1]s" {
   # 必选参数：镜像名称（2~32字符，仅数字、字母、-组成，不以数字或-开头/结尾）
-
   image_type="system_disk"
   image_name = "%[2]s"
 
   # 必选参数：云主机ID（状态需为stopped，部分资源池支持running）
   description = "%[3]s"
   instance_id = "%[4]s"
-
-
-  # 可选参数：企业项目ID（默认0，即default项目）
-  project_id = "0"
 
   # 可选参数：标签列表（最多10个，键值不可重复）
   labels = [

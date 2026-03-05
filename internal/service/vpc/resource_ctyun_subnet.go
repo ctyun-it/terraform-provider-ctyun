@@ -193,6 +193,12 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				Optional:    true,
 				Computed:    true,
 				Description: "路由表ID 可以更新",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 		},
 	}
@@ -326,9 +332,11 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		}
 		resp2, err2 := c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
 		if err2 != nil {
+			response.Diagnostics.AddError(err2.Error(), err2.Error())
 			return
 		} else if resp2.StatusCode == common.ErrorStatusCode {
 			err2 = fmt.Errorf("API return error. Message: %s Description: %s", *resp2.Message, *resp2.Description)
+			response.Diagnostics.AddError(err2.Error(), err2.Error())
 			return
 		}
 	}

@@ -424,6 +424,7 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 			plan.BindGateway = types.BoolValue(false)
 		}
 	} else {
+		plan.BindGateway = types.BoolValue(false)
 		plan.RouteType = types.StringValue("subnet") // Subnet
 	}
 	plan.ID = plan.RouteTableID

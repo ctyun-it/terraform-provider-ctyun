@@ -47,9 +47,7 @@ func (c useStateNull) PlanModifyString(ctx context.Context, req planmodifier.Str
 		return
 	}
 	// 依赖值没变
-	if dependencyPlan != nil && dependencyState != nil && dependencyPlan.Equal(dependencyState) {
-		resp.PlanValue = req.StateValue
-	} else if dependencyPlan == nil && dependencyState == nil {
+	if dependencyPlan.Equal(dependencyState) {
 		resp.PlanValue = req.StateValue
 	} else {
 		resp.PlanValue = types.StringNull()
@@ -79,9 +77,7 @@ func (c useStateNull) PlanModifyInt64(ctx context.Context, req planmodifier.Int6
 		return
 	}
 	// 依赖值没变
-	if dependencyPlan != nil && dependencyState != nil && dependencyPlan.Equal(dependencyState) {
-		resp.PlanValue = req.StateValue
-	} else if dependencyPlan == nil && dependencyState == nil {
+	if dependencyPlan.Equal(dependencyState) {
 		resp.PlanValue = req.StateValue
 	} else {
 		resp.PlanValue = types.Int64Null()
@@ -111,9 +107,7 @@ func (c useStateNull) PlanModifyInt32(ctx context.Context, req planmodifier.Int3
 		return
 	}
 	// 依赖值没变
-	if dependencyPlan != nil && dependencyState != nil && dependencyPlan.Equal(dependencyState) {
-		resp.PlanValue = req.StateValue
-	} else if dependencyPlan == nil && dependencyState == nil {
+	if dependencyPlan.Equal(dependencyState) {
 		resp.PlanValue = req.StateValue
 	} else {
 		resp.PlanValue = types.Int32Null()
