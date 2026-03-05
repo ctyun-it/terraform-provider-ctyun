@@ -69,6 +69,9 @@ resource "ctyun_private_nat" "private_nat" {
 
 - `cycle_type` (String) 订购周期类型，取值范围：year：按年，month：按月，on_demand：按需。当此值为month或year时，cycle_count为必填
 - `name` (String) nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32 支持更新
+- `spec` (String) 规格，(可传值：small, medium, large, xlarge)，支持更新
+- `subnet_id` (String) 需要创建私网NAT网关的Subnet的ID
+- `vpc_id` (String) 需要创建 NAT 网关的 VPC 的 ID
 
 ### Optional
 
@@ -78,10 +81,7 @@ resource "ctyun_private_nat" "private_nat" {
 - `description` (String) nat描述 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `pay_voucher_price` (String) 代金券金额，支持到小数点后两位，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池id，默认使用provider ctyun总region_id 或者环境变量
-- `spec` (String) 规格，(可传值：small, medium, large, xlarge)，支持更新
-- `subnet_id` (String) 需要创建私网NAT网关的Subnet的ID
-- `vpc_id` (String) 需要创建 NAT 网关的 VPC 的 ID
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
@@ -90,7 +90,7 @@ resource "ctyun_private_nat" "private_nat" {
 - `id` (String) ID，值与nat_gateway_id相同
 - `master_order_id` (String) 订单id
 - `nat_gateway_id` (String) 网关id
-- `vpc_name` (String) NAT所属的vpc专有网络名字
+- `vpc_name` (String, Deprecated) 废弃字段
 ## 导入
 
 使用以下语法支持导入：

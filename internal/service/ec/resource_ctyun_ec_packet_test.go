@@ -48,16 +48,7 @@ func TestAccEcPacket_basic(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", resourceName)
 					}
-
-					ResourceId := rs.Primary.Attributes["id"]
-					if ResourceId == "" {
-						return "", fmt.Errorf("resource_id is not set")
-					}
-					EcId := rs.Primary.Attributes["ec_id"]
-					if EcId == "" {
-						return "", fmt.Errorf("ec_id is not set")
-					}
-					return fmt.Sprintf("%s,%s", EcId, ResourceId), nil
+					return fmt.Sprintf("%s,%s", rs.Primary.Attributes["id"], rs.Primary.Attributes["ec_id"]), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

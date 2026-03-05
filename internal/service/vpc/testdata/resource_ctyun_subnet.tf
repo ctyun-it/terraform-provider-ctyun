@@ -7,5 +7,4 @@ resource "ctyun_subnet" "%[1]s" {
     "%[4]s",
   ]
   enable_ipv6 = true
-  %[6]s
 }

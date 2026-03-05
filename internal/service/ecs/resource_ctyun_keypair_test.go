@@ -45,9 +45,8 @@ func TestAccCtyunKeyPairImport(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					name := ds.Attributes["name"]
-					projectId := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", name, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", name, regionId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

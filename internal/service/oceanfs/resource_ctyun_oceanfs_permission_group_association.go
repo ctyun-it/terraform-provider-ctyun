@@ -58,10 +58,6 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 	}()
 	var config CtyunOceanfsPermissionGroupAssociationConfig
 	var regionID, permissionGroupID, sfsID, vpcID string
-
-	if err != nil {
-		return
-	}
 	if strings.Count(request.ID, common.ImportSeparator) < 3 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		err = terraform_extend.Split(request.ID, &sfsID, &vpcID, &permissionGroupID)
@@ -215,41 +211,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Read(ctx context.Context, reque
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
-		}
-	}()
-	// 读取tf文件中配置
-
-	var plan CtyunOceanfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	// 读取state中的配置
-	var state CtyunOceanfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	err = c.update(ctx, &state, &plan)
-	if err != nil {
-		return
-	}
-
-	// 更新远端后，查询远端并同步一下本地信息
-	err = c.getAndMerge(ctx, &state)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	return
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -341,29 +303,6 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Conte
 		return nil, err
 	}
 	return resp, nil
-}
-
-func (c *CtyunOceanfsPermissionGroupAssociation) update(ctx context.Context, state *CtyunOceanfsPermissionGroupAssociationConfig, plan *CtyunOceanfsPermissionGroupAssociationConfig) error {
-	params := &oceanfs.OceanfsVpcChangePermissionRequest{
-		PermissionGroupFuid: plan.PermissionGroupFuid.ValueString(),
-		RegionID:            state.RegionID.ValueString(),
-		SfsUID:              state.SfsUID.ValueString(),
-		VpcID:               plan.VpcID.ValueString(),
-	}
-	resp, err := c.meta.Apis.SdkOceanfsApis.OceanfsVpcChangePermissionApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return err
-	} else if resp == nil {
-		err = fmt.Errorf("更新权限组绑定vpc失败(permission_group_id = %s, vpc_id = %s)，接口返回为nil。请与研发联系确认问题原因", state.PermissionGroupFuid.ValueString(), plan.VpcID.ValueString())
-		return err
-	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-		return err
-	}
-	// 绑定后需要轮询下
-	err = c.bindLoop(ctx, plan)
-	state.PermissionGroupFuid = plan.PermissionGroupFuid
-	return nil
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) delete(ctx context.Context, config CtyunOceanfsPermissionGroupAssociationConfig) error {

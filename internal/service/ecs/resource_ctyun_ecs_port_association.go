@@ -91,9 +91,7 @@ func (c *ctyunEcsPortAssociation) Schema(_ context.Context, _ resource.SchemaReq
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.Any(
-						validator2.PortValidate(),
-					),
+					validator2.PortValidate(),
 				},
 			},
 			"az_name": schema.StringAttribute{
@@ -138,10 +136,6 @@ func (c *ctyunEcsPortAssociation) Create(ctx context.Context, req resource.Creat
 		return
 	}
 	// 创建前检查
-	err = c.checkBeforeCreate(ctx, &plan)
-	if err != nil {
-		return
-	}
 	err = c.create(ctx, &plan)
 	if err != nil {
 		return
@@ -151,9 +145,6 @@ func (c *ctyunEcsPortAssociation) Create(ctx context.Context, req resource.Creat
 	if err != nil {
 		return
 	}
-	// 设置ID
-	plan.ID = types.StringValue(generateEcsPortAssociationId(plan.RegionID.ValueString(), plan.InstanceID.ValueString(), plan.PortID.ValueString()))
-
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -222,6 +213,7 @@ func (c *ctyunEcsPortAssociation) getAndMerge(ctx context.Context, state *CtyunE
 			if networkCard != nil && utils.SecString(networkCard.NetworkCardID) == state.PortID.ValueString() {
 				state.PortID = types.StringValue(*networkCard.NetworkCardID)
 				state.AzName = types.StringValue(*describeResponse.ReturnObj.AzName)
+				state.ID = types.StringValue(fmt.Sprintf("%s,%s", state.InstanceID.ValueString(), state.PortID.ValueString()))
 				return nil
 			}
 		}
@@ -325,7 +317,6 @@ func (c *ctyunEcsPortAssociation) ImportState(ctx context.Context, req resource.
 		return
 	}
 
-	cfg.ID = types.StringValue(req.ID)
 	cfg.RegionID = types.StringValue(regionId)
 	cfg.InstanceID = types.StringValue(instanceId)
 	cfg.PortID = types.StringValue(networkInterfaceId)
@@ -338,12 +329,4 @@ func (c *ctyunEcsPortAssociation) ImportState(ctx context.Context, req resource.
 	// 设置导入的属性
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 
-}
-
-func (c *ctyunEcsPortAssociation) checkBeforeCreate(ctx context.Context, c2 *CtyunEcsPortAssociationConfig) error {
-	return nil
-}
-
-func generateEcsPortAssociationId(regionId, instanceId, networkInterfaceId string) string {
-	return fmt.Sprintf("%s,%s", instanceId, networkInterfaceId)
 }

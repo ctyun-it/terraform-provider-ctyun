@@ -79,36 +79,21 @@ resource "ctyun_elb_loadbalancer" "elb_test" {
 
 - `admin_status` (String) 管理状态: DOWN / ACTIVE
 - `create_time` (String) 创建时间，为UTC格式
-- `eip_info` (Attributes List) 弹性公网IP信息 (see [below for nested schema](#nestedatt--eip_info))
 - `expired_time` (String) 到期时间，为UTC格式
 - `id` (String) 负载均衡Id
 - `ipv6_address` (String) 负载均衡实例的IPv6地址
 - `port_id` (String) 负载均衡实例默认创建port ID
 - `status` (String) 负载均衡状态: DOWN / ACTIVE
 - `update_time` (String) 更新时间，为UTC格式
-
-<a id="nestedatt--eip_info"></a>
-### Nested Schema for `eip_info`
-
-Read-Only:
-
-- `bandwidth` (Number) 弹性公网IP的带宽
-- `eip_id` (String) 弹性公网IP的Id
-- `is_talk_order` (Boolean) 是否按需资源
 ## 导入
 
 使用以下语法支持导入：
 
 ```shell
-#!/bin/bash
-# 导入ctyun_elb_loadbalancer资源的示例脚本
-# 使用方法: 
-# 1. 将此文件保存为 import.sh
-# 2. 替换下方的 <loadbalancer-id> 和 <region-id> 为实际值
-# 3. 运行命令: bash import.sh
-
-# 示例:
-# terraform import ctyun_elb_loadbalancer.example <loadbalancer-id>,<region-id>
-
-terraform import ctyun_elb_loadbalancer.example <loadbalancer-id>,<region-id>
+# 导入弹性负载均衡
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_loadbalancer.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_loadbalancer.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
 ```

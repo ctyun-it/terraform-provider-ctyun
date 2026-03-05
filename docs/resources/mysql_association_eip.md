@@ -91,7 +91,7 @@ resource "ctyun_mysql_association_eip" "association_eip" {
 
 ### Optional
 
-- `project_id` (String) 企业项目id
+- `project_id` (String, Deprecated) 企业项目id
 - `region_id` (String) 资源池Id
 
 ### Read-Only

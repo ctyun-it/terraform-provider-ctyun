@@ -59,9 +59,7 @@ func TestAccEcCloudGateway_basic(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("not found: %s", resourceName)
 					}
-					ID := rs.Primary.ID
-					EcId := rs.Primary.Attributes["ec_id"]
-					return fmt.Sprintf("%s,%s", EcId, ID), nil
+					return fmt.Sprintf("%s,%s", rs.Primary.ID, rs.Primary.Attributes["ec_id"]), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

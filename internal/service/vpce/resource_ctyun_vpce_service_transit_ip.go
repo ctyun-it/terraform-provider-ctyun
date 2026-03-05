@@ -210,7 +210,7 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [transit_ip],[endpoint_service_id],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [endpoint_service_id],[transit_ip],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -223,12 +223,12 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 		return
 	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID)
+		err = terraform_extend.Split(request.ID, &endpointServiceID, &ip)
 		if err != nil {
 			return
 		}
 	default:
-		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID, &regionID)
+		err = terraform_extend.Split(request.ID, &endpointServiceID, &ip, &regionID)
 		if err != nil {
 			return
 		}

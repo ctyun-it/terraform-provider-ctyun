@@ -417,11 +417,6 @@ func (c *CtyunElbTargetGroup) ImportState(ctx context.Context, request resource.
 }
 
 func (c *CtyunElbTargetGroup) createTargetGroup(ctx context.Context, plan *CtyunElbTargetGroupConfig) (err error) {
-	if plan.RegionID.IsNull() {
-		err = fmt.Errorf("regionId 为空！")
-		return
-	}
-
 	params := &ctelb.CtelbCreateTargetGroupRequest{
 		ClientToken:   uuid.NewString(),
 		RegionID:      plan.RegionID.ValueString(),

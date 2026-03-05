@@ -127,12 +127,12 @@ resource "ctyun_mysql_backup_recovery" "example" {
 ### Required
 
 - `dst_instance_id` (String) 恢复的目标mysql实例id
-- `instance_id` (String) mysql实例id，废弃字段。
 - `src_instance_id` (String) 恢复的源mysql实例id
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `instance_id` (String, Deprecated) mysql实例id
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `task_id` (String) 用来恢复的备份任务集【task_id和to_timepoint不能同时为空，优先取to_timepoint】
 - `to_timepoint` (String) 恢复到的时间点，格式为：YYYY-MM-DDTHH:MM:SSZ【taskId和to_timepoint不能同时为空，优先取to_timepoint】

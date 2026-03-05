@@ -105,7 +105,7 @@ resource "ctyun_elb_target" "elb_target_test" {
 - `description` (String) 描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},，支持更新
 - `instance_ip` (String) 后端实例ip
 - `project_id` (String, Deprecated) 企业项目ID
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `weight` (Number) 后端实例权重。取值范围：1-256，默认为100，支持更新
 
 ### Read-Only

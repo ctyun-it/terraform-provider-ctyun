@@ -7,7 +7,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,13 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
-	_ resource.Resource                = &ctyunVpceServiceConnection{}
-	_ resource.ResourceWithConfigure   = &ctyunVpceServiceConnection{}
-	_ resource.ResourceWithImportState = &ctyunVpceServiceConnection{}
+	_ resource.Resource              = &ctyunVpceServiceConnection{}
+	_ resource.ResourceWithConfigure = &ctyunVpceServiceConnection{}
 )
 
 type ctyunVpceServiceConnection struct {
@@ -207,54 +204,6 @@ func (c *ctyunVpceServiceConnection) Configure(_ context.Context, request resour
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
-}
-
-func (c *ctyunVpceServiceConnection) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [endpoint_service_id],[endpoint_id],[region_id]"
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-	var cfg CtyunVpceServiceConnectionConfig
-	var enpointServiceID, endpointID, regionID string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &enpointServiceID, &endpointID)
-		if err != nil {
-			return
-		}
-	} else {
-		err = terraform_extend.Split(request.ID, &enpointServiceID, &endpointID, &regionID)
-		if err != nil {
-			return
-		}
-	}
-
-	if enpointServiceID == "" {
-		err = fmt.Errorf("endpoint_service_id不能为空")
-		return
-	}
-	if endpointID == "" {
-		err = fmt.Errorf("endpoint_id不能为空")
-		return
-	}
-	if regionID == "" {
-		err = fmt.Errorf("region_id不能为空")
-		return
-	}
-	cfg.RegionID = types.StringValue(regionID)
-	cfg.EndpointID = types.StringValue(endpointID)
-	cfg.EndpointServiceID = types.StringValue(enpointServiceID)
-	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 // getAndMerge 从远端查询

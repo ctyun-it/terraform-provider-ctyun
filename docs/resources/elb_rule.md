@@ -102,7 +102,7 @@ resource "ctyun_elb_rule" "rule_test" {
 - `action_target_groups` (Attributes List) 后端服务组，支持更新 (see [below for nested schema](#nestedatt--action_target_groups))
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={}，支持更新
 - `project_id` (String, Deprecated) 企业项目ID
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
