@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -103,7 +102,7 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	config.RegionID = types.StringValue(regionId)
 	config.AddInstanceUUIDList = types.SetNull(types.StringType)
 	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
-
+	config.ExpectedCount = config.ActualCount
 	err = c.getAndMergeScaling(ctx, &config)
 	if err != nil {
 		return
@@ -227,9 +226,10 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.Int32{
 					validator2.ScalingCountValidate(),
 				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknown(),
-				},
+			},
+			"actual_count": schema.Int32Attribute{
+				Computed:    true,
+				Description: "当前弹性伸缩组内云主机数量",
 			},
 			"health_period": schema.Int32Attribute{
 				Required:    true,
@@ -654,7 +654,7 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 	config.MinCount = types.Int32Value(scalingDetail.MinCount)
 	config.MaxCount = types.Int32Value(scalingDetail.MaxCount)
 	//  todo 考虑是否需要同步
-	config.ExpectedCount = types.Int32Value(scalingDetail.ExpectedCount)
+	config.ActualCount = types.Int32Value(scalingDetail.ExpectedCount)
 	config.RealCount = types.Int32Value(scalingDetail.InstanceCount)
 	config.UseLb = types.Int32Value(scalingDetail.UseLb)
 	config.HealthPeriod = types.Int32Value(scalingDetail.HealthPeriod)
@@ -1610,6 +1610,7 @@ type CtyunScalingConfig struct {
 	MinCount            types.Int32  `tfsdk:"min_count"`              // 最小云主机数
 	MaxCount            types.Int32  `tfsdk:"max_count"`              // 最大云主机数
 	ExpectedCount       types.Int32  `tfsdk:"expected_count"`         // 期望云主机数
+	ActualCount         types.Int32  `tfsdk:"actual_count"`           // 当前实例数量
 	RealCount           types.Int32  `tfsdk:"real_count"`             // 当前云主机数
 	HealthPeriod        types.Int32  `tfsdk:"health_period"`          // 健康检查时间间隔
 	LbList              types.List   `tfsdk:"lb_list"`                // 负载均衡列表
