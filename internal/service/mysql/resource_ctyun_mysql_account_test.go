@@ -21,7 +21,6 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 	datasourceFile := "datasource_ctyun_mysql_accounts.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 	accountPassword := utils.GenerateRandomString() + "&R3?=@"
 	newPassword := utils.GenerateRandomString() + "New2@"
@@ -66,13 +65,12 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 			// 1. 创建测试（带初始权限）
 			{
 				Config: utils.LoadTestCase(resourceFile,
-					rnd, mysqlInstanceID, projectID,
+					rnd, mysqlInstanceID,
 					accountName, accountPassword,
 					initialPrivilegesStr, "Initial description",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", accountName),
 					resource.TestCheckResourceAttr(resourceName, "description", "Initial description"),
 					resource.TestCheckResourceAttr(resourceName, "schema_privilege_list.#", "2"),
@@ -83,13 +81,12 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 			// 2. 更新测试（修改密码、权限和描述）
 			{
 				Config: utils.LoadTestCase(resourceFile,
-					rnd, mysqlInstanceID, projectID,
+					rnd, mysqlInstanceID,
 					accountName, newPassword,
 					updatedPrivilegesStr, "Updated description",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", accountName),
 					resource.TestCheckResourceAttr(resourceName, "description", "Updated description"),
 					resource.TestCheckResourceAttr(resourceName, "schema_privilege_list.#", "2"),
@@ -116,7 +113,7 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description", "project_id"},
+				ImportStateVerifyIgnore: []string{"password", "description"},
 			},
 			// 3. 资源导入测试
 			{
@@ -134,12 +131,12 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description", "project_id"},
+				ImportStateVerifyIgnore: []string{"password", "description"},
 			},
 			{
 
 				Config: utils.LoadTestCase(resourceFile,
-					rnd, mysqlInstanceID, projectID,
+					rnd, mysqlInstanceID,
 					accountName, newPassword,
 					updatedPrivilegesStr, "Updated description",
 				) + utils.LoadTestCase(datasourceFile, dnd, mysqlInstanceID, accountName),
@@ -152,7 +149,7 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 			{
 
 				Config: utils.LoadTestCase(resourceFile,
-					rnd, mysqlInstanceID, projectID,
+					rnd, mysqlInstanceID,
 					accountName, newPassword,
 					updatedPrivilegesStr, "Updated description",
 				),

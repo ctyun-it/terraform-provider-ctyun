@@ -21,7 +21,6 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 	datasourceName := "data.ctyun_mysql_parameters." + dnd
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 	templateID, err := strconv.Atoi(dependence.templateID)
 	if err != nil {
@@ -44,7 +43,7 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					datasourceFile, dnd,
-					projectID, mysqlInstanceID,
+					mysqlInstanceID,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(datasourceName, "parameters.#")),
@@ -53,12 +52,11 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					templateID,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "template_id", fmt.Sprintf("%d", templateID)),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
@@ -67,7 +65,7 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					updateResourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					mapToTFConfigString(initialParameters),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -78,7 +76,7 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					updateResourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					mapToTFConfigString(updatedParameters),
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -89,7 +87,7 @@ func TestAccCtyunMysqlRdsParameterTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					templateID,
 				),
 				Destroy: true,

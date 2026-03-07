@@ -17,7 +17,6 @@ func TestAccCtyunPostgresqlBackup(t *testing.T) {
 
 	// 从环境变量获取测试依赖资源
 
-	projectID := "0"
 	instanceID := dependence.pgsqlID
 
 	// 测试数据
@@ -31,12 +30,10 @@ func TestAccCtyunPostgresqlBackup(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					projectID,
 					instanceID, backupName,
 					description,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "name", backupName),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
@@ -82,7 +79,7 @@ func TestAccCtyunPostgresqlBackup(t *testing.T) {
 			// 3. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, backupName,
 					description,
 				),
