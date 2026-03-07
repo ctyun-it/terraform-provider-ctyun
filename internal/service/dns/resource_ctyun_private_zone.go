@@ -189,9 +189,6 @@ func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRe
 						"tag_id": schema.StringAttribute{
 							Computed:    true,
 							Description: "标签id",
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
-							},
 						},
 						"key": schema.StringAttribute{
 							Required:    true,
@@ -411,7 +408,7 @@ func (c *CtyunPrivateZone) getAndMerge(ctx context.Context, config *CtyunPrivate
 		tag.Value = types.StringValue(*tagItem.LabelValue)
 		tags = append(tags, tag)
 	}
-	tagsTmp, diags := types.SetValueFrom(ctx, utils.StructToTFObjectTypes(CtyunPrivateZoneTagModel{}), tags)
+	tagsTmp, diags := types.SetValueFrom(ctx, utils.StructToTFObjectTypes(CtyunPrivateZoneTagModel{}), &tags)
 	if diags.HasError() {
 		return fmt.Errorf(diags[0].Detail())
 	}

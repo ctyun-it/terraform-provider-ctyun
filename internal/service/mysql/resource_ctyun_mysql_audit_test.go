@@ -15,7 +15,6 @@ func TestAccCtyunMysqlAudit_basic(t *testing.T) {
 	resourceName := "ctyun_mysql_audit." + rnd
 	resourceFile := "resource_ctyun_mysql_audit.tf"
 
-	projectID := "0"
 	instID := dependence.mysqlID // MySQL实例ID
 
 	// 测试数据
@@ -34,12 +33,11 @@ func TestAccCtyunMysqlAudit_basic(t *testing.T) {
 			// 1. 创建MySQL审计（开启审计）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, instID, projectID,
+					resourceFile, rnd, instID,
 					auditSwitch,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// 基本属性验证
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "audit_switch", "true"),
 
 					// 自定义验证函数
@@ -58,7 +56,7 @@ func TestAccCtyunMysqlAudit_basic(t *testing.T) {
 			// 2. 由于不支持更新，重新应用相同配置
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, instID, projectID,
+					resourceFile, rnd, instID,
 					auditSwitch2,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(

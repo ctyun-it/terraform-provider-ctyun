@@ -315,11 +315,10 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 
 func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
 
-	respList, err := c.getPgsqlParameterTemplateList(ctx, config)
+	detail, err := c.getPgsqlParameterTemplateList(ctx, config)
 	if err != nil {
 		return err
 	}
-	detail := respList[0]
 	config.ID = types.Int64Value(detail.PgTemplateId)
 	config.Description = types.StringValue(detail.Description)
 	if config.TemplateParameters.IsNull() {
@@ -406,14 +405,16 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameters(ctx context.Context, sta
 	return nil
 }
 
-func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) ([]pgsql.ParameterTemplateInfo, error) {
+func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) (*pgsql.ParameterTemplateInfo, error) {
 	params := &pgsql.PgsqlGetParameterTemplateListRequest{
-		Name:     config.Name.ValueStringPointer(),
 		PageNow:  1,
 		PageSize: 10,
 	}
 	header := &pgsql.PgsqlGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
+	}
+	if !config.Name.IsNull() && config.Name.IsUnknown() {
+		params.Name = config.Name.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetParameterTemplateListApi.Do(ctx, c.meta.Credential, params, header)
@@ -431,10 +432,13 @@ func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Cont
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) > 1 {
-		err = fmt.Errorf("有多个name=%s的参数模板！", config.Name.ValueString())
-		return nil, err
+		for _, item := range resp.ReturnObj.List {
+			if item.PgTemplateId == config.ID.ValueInt64() {
+				return &item, nil
+			}
+		}
 	}
-	return resp.ReturnObj.List, nil
+	return &resp.ReturnObj.List[0], nil
 }
 
 func (c *CtyunPgsqlParamTemplate) updatePgsqlParameterTemplate(ctx context.Context, state *CtyunPgsqlParameterTemplateConfig, plan *CtyunPgsqlParameterTemplateConfig) error {

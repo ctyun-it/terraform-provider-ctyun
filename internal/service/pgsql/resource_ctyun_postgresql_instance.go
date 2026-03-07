@@ -1968,6 +1968,8 @@ func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.
 			}
 		}
 	}
+	// 暂停等待几秒，防止更新完安全组之前就查询详情
+	time.Sleep(time.Second * 5)
 	return nil
 }
 

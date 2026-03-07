@@ -66,7 +66,6 @@ func TestAccCtyunMysqlAssociationEip(t *testing.T) {
 				},
 				ImportStateVerifyIgnore: []string{
 					"master_order_id",
-					"project_id",
 				},
 			},
 			{
@@ -84,7 +83,7 @@ func TestAccCtyunMysqlAssociationEip(t *testing.T) {
 					), nil
 				},
 				ImportStateVerifyIgnore: []string{
-					"master_order_id", "project_id",
+					"master_order_id",
 				},
 			},
 			{
@@ -102,7 +101,7 @@ func TestAccCtyunMysqlAssociationEip(t *testing.T) {
 					), nil
 				},
 				ImportStateVerifyIgnore: []string{
-					"master_order_id", "project_id", "region_id",
+					"master_order_id", "region_id",
 				},
 			},
 			{

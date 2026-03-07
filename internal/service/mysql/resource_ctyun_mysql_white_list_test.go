@@ -77,10 +77,9 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["group_name"],
 						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},

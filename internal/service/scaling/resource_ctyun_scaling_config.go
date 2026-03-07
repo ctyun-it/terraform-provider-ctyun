@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -223,7 +223,7 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 					),
 				},
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknown(),
+					planmodifier2.SetStateNullIfDependencyChangeInt32(path.Root("use_floatings")),
 				},
 			},
 			"login_mode": schema.StringAttribute{
@@ -238,7 +238,7 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 				Description: "用户名，windows系统为administrator,linux系统为root。不可修改",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+					planmodifier2.UseStringStateIfDependencyUnchanged(path.Root("login_mode")),
 				},
 			},
 			"password": schema.StringAttribute{

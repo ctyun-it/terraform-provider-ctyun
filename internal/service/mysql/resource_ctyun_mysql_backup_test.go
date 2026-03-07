@@ -21,7 +21,6 @@ func TestAccCtyunMysqlBackup(t *testing.T) {
 	backupsDatasourceFile := "datasource_ctyun_mysql_backups.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 	// 备份描述信息
 	description := "Test backup created by Terraform"
@@ -41,13 +40,12 @@ func TestAccCtyunMysqlBackup(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 					resource.TestCheckResourceAttr(resourceName, "task_type", "full"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
@@ -58,11 +56,11 @@ func TestAccCtyunMysqlBackup(t *testing.T) {
 				ResourceName:            resourceName,
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "task_type", "project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"description", "task_type"}, // 不需要忽略任何字段
 			},
 			// 验证 backups datasource
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID, projectID, description, "full") +
+				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID, description, "full") +
 					utils.LoadTestCase(backupsDatasourceFile, dnd, mysqlInstanceID, fmt.Sprintf("%s.name", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(backupsDatasourceName, "backups.#"),
@@ -72,7 +70,7 @@ func TestAccCtyunMysqlBackup(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Destroy: true,
@@ -88,7 +86,6 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 	resourceName := "ctyun_mysql_backup." + rnd
 	resourceFile := "resource_ctyun_mysql_backup.tf"
 
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 	// 备份描述信息
 	description := "Test backup created by Terraform"
@@ -108,13 +105,12 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 					resource.TestCheckResourceAttr(resourceName, "task_type", "full"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
@@ -147,12 +143,12 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"task_type", "description", "project_id"},
+				ImportStateVerifyIgnore: []string{"task_type", "description"},
 			},
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Destroy: true,
@@ -175,7 +171,6 @@ func TestAccCtyunMysqlBackupCanceled(t *testing.T) {
 	backupsDatasourceFile := "datasource_ctyun_mysql_backups.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 	// 备份描述信息
 	description := "Test backup created by Terraform"
@@ -195,13 +190,12 @@ func TestAccCtyunMysqlBackupCanceled(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 					resource.TestCheckResourceAttr(resourceName, "task_type", "full"),
 					resource.TestCheckResourceAttrSet(resourceName, "name"),
@@ -210,9 +204,9 @@ func TestAccCtyunMysqlBackupCanceled(t *testing.T) {
 			// datasource获取backup_record_id
 			// 验证取消备份
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID, projectID, description, "full") +
+				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID, description, "full") +
 					utils.LoadTestCase(backupsDatasourceFile, dnd, mysqlInstanceID, fmt.Sprintf("%s.name", resourceName)) +
-					utils.LoadTestCase(cancelResourceFile, rnd, mysqlInstanceID, projectID, fmt.Sprintf("%s.backups.0.records.0.backup_record_id", backupsDatasourceName)),
+					utils.LoadTestCase(cancelResourceFile, rnd, mysqlInstanceID, fmt.Sprintf("%s.backups.0.records.0.backup_record_id", backupsDatasourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(cancelResourceName, "instance_id", mysqlInstanceID),
 				),
@@ -220,7 +214,7 @@ func TestAccCtyunMysqlBackupCanceled(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					mysqlInstanceID, projectID,
+					mysqlInstanceID,
 					description, "full",
 				),
 				Destroy: true,
@@ -246,7 +240,6 @@ func TestAccCtyunMysqlBackupRecovery(t *testing.T) {
 	timeStamp := dependence.backupTimeStamp
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	srcInstanceID := dependence.mysqlID
 	dstInstanceID := dependence.mysqlID
 	//toTimepoint := os.Getenv("CTYUN_MYSQL_BACKUP_RECOVERY_TIME")
@@ -272,13 +265,12 @@ func TestAccCtyunMysqlBackupRecovery(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					backupResourceFile, rnd,
-					srcInstanceID, projectID,
+					srcInstanceID,
 					description, "full",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(backupResourceName, "id"),
 					resource.TestCheckResourceAttr(backupResourceName, "instance_id", srcInstanceID),
-					resource.TestCheckResourceAttr(backupResourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(backupResourceName, "description", description),
 					resource.TestCheckResourceAttr(backupResourceName, "task_type", "full"),
 					resource.TestCheckResourceAttrSet(backupResourceName, "name"),
@@ -289,7 +281,7 @@ func TestAccCtyunMysqlBackupRecovery(t *testing.T) {
 				Config: utils.LoadTestCase(timePointDatasourceFile, dnd, srcInstanceID) +
 					utils.LoadTestCase(
 						backupResourceName, rnd,
-						srcInstanceID, projectID,
+						srcInstanceID,
 						description, "full",
 					),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -299,12 +291,11 @@ func TestAccCtyunMysqlBackupRecovery(t *testing.T) {
 			// 3. 创建备份恢复任务
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, srcInstanceID, projectID, srcInstanceID, dstInstanceID,
+					resourceFile, rnd, srcInstanceID, srcInstanceID, dstInstanceID,
 					timeStamp,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", srcInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "src_instance_id", srcInstanceID),
 					resource.TestCheckResourceAttr(resourceName, "dst_instance_id", dstInstanceID),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -313,7 +304,7 @@ func TestAccCtyunMysqlBackupRecovery(t *testing.T) {
 			// 2. 销毁
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, srcInstanceID, projectID, srcInstanceID, dstInstanceID,
+					resourceFile, rnd, srcInstanceID, srcInstanceID, dstInstanceID,
 					timeStamp,
 				),
 				Destroy: true,
@@ -333,7 +324,6 @@ func TestAccCtyunMysqlBackupRecoveryByTaskID(t *testing.T) {
 	backupsDatasourceFile := "datasource_ctyun_mysql_backups_none_backup_name.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	srcInstanceID := dependence.mysqlID
 	dstInstanceID := dependence.mysqlID
 
@@ -369,10 +359,9 @@ func TestAccCtyunMysqlBackupRecoveryByTaskID(t *testing.T) {
 			// 1. 创建备份恢复任务
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, srcInstanceID, projectID, srcInstanceID, dstInstanceID, taskID),
+					resourceFile, rnd, srcInstanceID, srcInstanceID, dstInstanceID, taskID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", srcInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "src_instance_id", srcInstanceID),
 					resource.TestCheckResourceAttr(resourceName, "dst_instance_id", dstInstanceID),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
@@ -381,7 +370,7 @@ func TestAccCtyunMysqlBackupRecoveryByTaskID(t *testing.T) {
 			// 2. 销毁
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, srcInstanceID, projectID, srcInstanceID, dstInstanceID, taskID),
+					resourceFile, rnd, srcInstanceID, srcInstanceID, dstInstanceID, taskID),
 				Destroy: true,
 			},
 		},

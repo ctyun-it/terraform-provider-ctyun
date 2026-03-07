@@ -1,7 +1,6 @@
 resource "ctyun_mysql_database" "%[1]s" {
   instance_id      = "%[2]s"
-  project_id   = "%[3]s"
-  name         = "%[4]s"
-  charset_name = %[5]s
-  description  = "%[6]s"
+  name         = "%[3]s"
+  charset_name = %[4]s
+  description  = "%[5]s"
 }

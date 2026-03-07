@@ -18,7 +18,6 @@ func TestAccCtyunMysqlBackupSetting(t *testing.T) {
 	resourceFile := "resource_ctyun_mysql_backup_setting.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	mysqlInstanceID := dependence.mysqlID
 
 	// 初始配置
@@ -50,13 +49,12 @@ func TestAccCtyunMysqlBackupSetting(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1. 创建备份设置（初始配置）
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID, projectID,
+				Config: utils.LoadTestCase(resourceFile, rnd, mysqlInstanceID,
 					initialConfig["storage_day"], initialConfig["frequency_backup"], initialConfig["frequency_backup_unit_time"],
 					initialConfig["allow_earliest_time"], initialConfig["trigger_days_of_week"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "storage_day", "7"),
 					resource.TestCheckResourceAttr(resourceName, "frequency_backup", "false"),
 					resource.TestCheckResourceAttr(resourceName, "allow_earliest_time", "00:01"),
@@ -68,13 +66,12 @@ func TestAccCtyunMysqlBackupSetting(t *testing.T) {
 			},
 			// 2. 更新备份设置
 			{
-				Config: utils.LoadTestCase(frequencyResourceFile, rnd, mysqlInstanceID, projectID,
+				Config: utils.LoadTestCase(frequencyResourceFile, rnd, mysqlInstanceID,
 					updatedConfig["storage_day"], updatedConfig["frequency_backup"], updatedConfig["frequency_backup_unit_time"],
 					updatedConfig["allow_earliest_time"], updatedConfig["trigger_days_of_week"],
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "instance_id", mysqlInstanceID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "storage_day", "14"),
 					resource.TestCheckResourceAttr(resourceName, "frequency_backup", "true"),
 					resource.TestCheckResourceAttr(resourceName, "frequency_backup_unit_time", "7200"),
@@ -96,10 +93,10 @@ func TestAccCtyunMysqlBackupSetting(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,0,%s", id, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
 			},
 			// 4. 导入测试2
 			{
@@ -114,10 +111,10 @@ func TestAccCtyunMysqlBackupSetting(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
 			},
 			{
-				Config: utils.LoadTestCase(frequencyResourceFile, rnd, mysqlInstanceID, projectID,
+				Config: utils.LoadTestCase(frequencyResourceFile, rnd, mysqlInstanceID,
 					updatedConfig["storage_day"], updatedConfig["frequency_backup"], updatedConfig["frequency_backup_unit_time"],
 					updatedConfig["allow_earliest_time"], updatedConfig["trigger_days_of_week"],
 				),
