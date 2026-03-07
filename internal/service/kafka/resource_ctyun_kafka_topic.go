@@ -169,6 +169,7 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"partition_capacity": schema.Int32Attribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制，默认值-1。支持更新",
 				Validators: []validator.Int32{
 					int32validator.Any(
@@ -179,6 +180,7 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"retention_time": schema.Int64Attribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新",
 				Validators: []validator.Int64{
 					int64validator.Any(

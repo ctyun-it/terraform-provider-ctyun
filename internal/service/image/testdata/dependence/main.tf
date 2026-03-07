@@ -20,11 +20,7 @@ resource "ctyun_security_group" "security_group_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-image"
   description = "terraform测试使用"
-  lifecycle {
-    prevent_destroy = true
-  }
 }
-
 
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"

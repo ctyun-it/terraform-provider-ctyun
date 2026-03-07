@@ -1,4 +1,5 @@
 data "ctyun_vpcs" "vpc_test" {
+  project_id = "0"
   page_size = 50
 }
 
@@ -8,6 +9,7 @@ locals {
 }
 
 data "ctyun_subnets" "subnet_test" {
+  project_id = "0"
   vpc_id = local.real_vpc_id
 }
 

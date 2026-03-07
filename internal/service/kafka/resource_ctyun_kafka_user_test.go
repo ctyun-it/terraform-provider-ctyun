@@ -87,11 +87,10 @@ topic = "%s"}]`, topicName, topicName)
 					regionId := ds.Attributes["region_id"]
 					instanceId := ds.Attributes["instance_id"]
 					name := ds.Attributes["name"]
-					password := ds.Attributes["password"]
-					return fmt.Sprintf("%s,%s,%s,%s", instanceId, name, password, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", instanceId, name, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"id", "permission_info"},
+				ImportStateVerifyIgnore: []string{"id", "permission_info", "password"},
 			},
 			{
 				ResourceName: resourceName,
@@ -100,11 +99,10 @@ topic = "%s"}]`, topicName, topicName)
 					ds := s.RootModule().Resources[resourceName].Primary
 					instanceId := ds.Attributes["instance_id"]
 					name := ds.Attributes["name"]
-					password := ds.Attributes["password"]
-					return fmt.Sprintf("%s,%s,%s", instanceId, name, password), nil
+					return fmt.Sprintf("%s,%s", instanceId, name), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"id", "permission_info"},
+				ImportStateVerifyIgnore: []string{"id", "permission_info", "password"},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, initName, instanceId, updatePassword, aclInfoUpdate) +

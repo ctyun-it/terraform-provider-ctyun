@@ -189,7 +189,6 @@ func (c *ctyunCcsePlugin) Read(ctx context.Context, request resource.ReadRequest
 		}
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
