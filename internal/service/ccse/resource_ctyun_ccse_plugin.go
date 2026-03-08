@@ -311,7 +311,7 @@ func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.Impo
 func (c *ctyunCcsePlugin) checkBeforeCreate(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	p, err := c.getByChartName(ctx, plan)
 	if err != nil {
-		if errors.Is(err, common.InvalidReturnObjResultsError) {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 		}
 		return
@@ -334,7 +334,7 @@ func (c *ctyunCcsePlugin) checkAfterCreate(ctx context.Context, plan CtyunCcsePl
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
 			plugin, err = c.getByChartName(ctx, plan)
 			if err != nil {
-				if errors.Is(err, common.InvalidReturnObjResultsError) {
+				if errors.Is(err, common.ResourceNotExistError) {
 					return true
 				}
 				return false

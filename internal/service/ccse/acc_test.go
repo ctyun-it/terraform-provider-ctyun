@@ -36,6 +36,7 @@ func TestMain(m *testing.M) {
 	if skip := os.Getenv("SKIP_CCSE_TEST"); skip != "" {
 		return
 	}
+	os.Setenv("CTYUN_PROJECT_ID", "0")
 	// 初始化依赖资源
 	fmt.Println("开始初始化依赖资源")
 	outputs, err := terraform.ApplyResource(dependenceDir)
