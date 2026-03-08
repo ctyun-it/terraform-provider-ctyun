@@ -501,7 +501,7 @@ func (c *ctyunCcsePlugin) checkAfterDelete(ctx context.Context, plan CtyunCcsePl
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
 			plugin, err = c.getByChartName(ctx, plan)
 			if err != nil {
-				if errors.Is(err, common.InvalidReturnObjResultsError) {
+				if errors.Is(err, common.ResourceNotExistError) {
 					err = nil
 					executeSuccessFlag = true
 				}
