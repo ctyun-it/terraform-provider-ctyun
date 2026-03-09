@@ -33,8 +33,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 4
   ram    = 8
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 locals {
