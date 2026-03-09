@@ -1809,7 +1809,7 @@ func (c *CtyunMongodbInstance) getMongoDetailInfo(ctx context.Context, config *C
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
 		// DDS_83000 =请确认用户下是否有实例, DDS_84000 =请确认prodInstId是否正确
-		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+		if strings.Contains(resp.Error, "DDS_83000") {
 			err = common.ResourceNotExistError
 			return
 		}
