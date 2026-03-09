@@ -26,6 +26,10 @@ output "flavor_name" {
   value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 }
 
+output "flavor_name2" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].id
+}
+
 output "affinity_group_id" {
   value = ctyun_ecs_affinity_group.affinity_group_test.id
 }

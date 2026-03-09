@@ -515,7 +515,7 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	securityProduct := "BasicEdition"
 	cycleType := "on_demand"
 	//更新参数
-	flavorName := "c7.large.4"
+	flavorName := dependence.flavorName2
 
 	//backupStorageType := "SATA"
 
