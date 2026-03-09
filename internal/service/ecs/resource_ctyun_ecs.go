@@ -1280,7 +1280,6 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 		}
 		flavorID = fid
 	}
-
 	// 更新云主机规格
 	resp, err := c.meta.Apis.CtEcsApis.EcsUpdateFlavorSpecApi.Do(ctx, c.meta.Credential, &ctecs.EcsUpdateFlavorSpecRequest{
 		RegionId:    state.RegionId.ValueString(),
