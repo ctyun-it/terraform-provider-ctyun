@@ -51,6 +51,7 @@ type CtvpcUpdateVpcPeerConnectionAttributeRequest struct {
 	Name        *string `json:"name,omitempty"`        /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
 	RegionID    string  `json:"regionID,omitempty"`    /*  String  */
 	Description *string `json:"description,omitempty"`
+	ProjectID   *string `json:"projectID,omitempty"`
 }
 
 type CtvpcUpdateVpcPeerConnectionAttributeResponse struct {

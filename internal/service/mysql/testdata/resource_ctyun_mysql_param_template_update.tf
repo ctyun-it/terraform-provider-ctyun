@@ -4,3 +4,4 @@ resource "ctyun_mysql_param_template" "%[1]s" {
   description  = "%[4]s"
   template_parameters = %[5]s
 }
+

@@ -503,7 +503,7 @@ func (c *CtyunMysqlParamTemplate) deleteMysqlParameterTemplate(ctx context.Conte
 	// 调用列表接口，确认是否已经删除
 	_, err = c.getIDByParameterTemplateName(ctx, &config)
 	if err != nil {
-		if strings.Contains(err.Error(), "未查询到参数模板") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			return nil
 		}
 		return err
@@ -551,7 +551,7 @@ func (c *CtyunMysqlParamTemplate) initParameterMap(ctx context.Context, state *C
 	var parameters []CtyunMysqlParameterModel
 	diags := state.TemplateParameters.ElementsAs(ctx, &parameters, false)
 	if diags.HasError() {
-		err := fmt.Errorf(diags[0].Detail())
+		err := errors.New(diags[0].Detail())
 		return nil, err
 	}
 	for _, parameter := range parameters {
