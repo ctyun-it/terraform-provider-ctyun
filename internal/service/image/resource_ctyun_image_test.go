@@ -6,10 +6,12 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"os"
 	"testing"
 )
 
 func TestAccCtyunImage_basic(t *testing.T) {
+	os.Setenv("CTYUN_REGION_ID", "bb9fdb42056f11eda1610242ac110002")
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_image." + rnd
 	resourceFile := "resource_ctyun_image.tf"

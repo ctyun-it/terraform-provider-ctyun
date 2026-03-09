@@ -498,8 +498,6 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_ecs." + rnd
-	//datasourceName := "data.ctyun_mongodb_instances." + dnd
-
 	resourceFile := "resource_ctyun_ecs_security_product.tf"
 	resourceFile2 := "resource_ctyun_ecs_security_product2.tf"
 	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
@@ -515,7 +513,7 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	securityProduct := "BasicEdition"
 	cycleType := "on_demand"
 	//更新参数
-	flavorName := "c7.large.4"
+	flavorName := dependence.flavorName2
 
 	//backupStorageType := "SATA"
 

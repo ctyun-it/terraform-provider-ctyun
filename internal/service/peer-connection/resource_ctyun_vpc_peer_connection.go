@@ -556,6 +556,9 @@ func (c *CtyunVpcPeerConnection) update(ctx context.Context, state *CtyunVpcPeer
 	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
 		params.Description = plan.Description.ValueStringPointer()
 	}
+	if !plan.ProjectID.IsNull() && !plan.ProjectID.IsUnknown() {
+		params.ProjectID = plan.ProjectID.ValueStringPointer()
+	}
 	err := c.reqModifyPeerConnection(ctx, params)
 	if err != nil {
 		return err
