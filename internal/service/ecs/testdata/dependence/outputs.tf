@@ -27,7 +27,7 @@ output "flavor_name" {
 }
 
 output "flavor_name2" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].id
+  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
 }
 
 output "affinity_group_id" {

@@ -1267,18 +1267,18 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 	if !c.checkInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString(), business.EcsStatusStopped) {
 		return errors.New("变更云主机配置规格，请先将云主机关机")
 	}
+	if flavorID != "" && !plan.FlavorId.Equal(state.FlavorId) {
+		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
+		if err != nil {
+			return err
+		}
+	}
 	if flavorName != "" && !plan.FlavorName.Equal(state.FlavorName) {
 		fid, err := c.ecsService.GetFlavorIDByName(ctx, flavorName, plan.RegionId.ValueString(), plan.AzName.ValueString())
 		if err != nil {
 			return err
 		}
 		flavorID = fid
-	}
-	if flavorID != "" && !plan.FlavorId.Equal(state.FlavorId) {
-		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
-		if err != nil {
-			return err
-		}
 	}
 
 	// 更新云主机规格

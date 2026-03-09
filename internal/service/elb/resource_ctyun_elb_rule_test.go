@@ -144,7 +144,7 @@ func TestAccCtyunElbRule(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "listener_id", listenerId),
 					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_type", "url_path"),
 					resource.TestCheckResourceAttr(resourceName, "action_type", actionType),
-					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "test"),
+					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "/test"),
 					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_match_type", "PREFIX"),
 					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
 				),
