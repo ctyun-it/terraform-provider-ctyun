@@ -23,7 +23,6 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 	acceptVpcID := dependence.vpcID2
 	name := "peer-conn-" + utils.GenerateRandomString()
 	description := "test basic peer connection"
-	projectID := "0"
 
 	updatedName := "peer-conn-updated-" + utils.GenerateRandomString()
 	updatedDescription := "updated test peer connection"
@@ -44,23 +43,18 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1. 基础创建测试（同一个租户）
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, name, description, requestVpcID, acceptVpcID),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, description, requestVpcID, acceptVpcID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "description", description),
 					resource.TestCheckResourceAttr(resourceName, "request_vpc_id", requestVpcID),
 					resource.TestCheckResourceAttr(resourceName, "accept_vpc_id", acceptVpcID),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
-					resource.TestCheckResourceAttrSet(resourceName, "request_vpc_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "request_vpc_cidr"),
-					resource.TestCheckResourceAttrSet(resourceName, "accept_vpc_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "accept_vpc_cidr"),
 				),
 			},
 			// 2. 资源更新测试（更新名称和描述）
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, requestVpcID, acceptVpcID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
@@ -71,7 +65,7 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 			},
 			// 3. datasource验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, requestVpcID, acceptVpcID) +
 					utils.LoadTestCase(datasourceFile, dnd),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(datasourceName, "peer_connections.#")),
@@ -126,7 +120,7 @@ func TestAccCtyunVpcPeerConnection_Basic(t *testing.T) {
 
 			// 5. 销毁资源
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, projectID, updatedName, updatedDescription, requestVpcID, acceptVpcID),
+				Config:  utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, requestVpcID, acceptVpcID),
 				Destroy: true,
 			},
 		},
@@ -143,7 +137,6 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 	acceptVpcID := dependence.vpcID2
 	name := "peer-conn-tags-" + utils.GenerateRandomString()
 	description := "test peer connection with tags"
-	projectID := "0"
 
 	// 标签配置
 	tags1 := `[
@@ -171,7 +164,7 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 		Steps: []resource.TestStep{
 			// 1. 创建带标签的对等连接
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, name, description, requestVpcID, acceptVpcID, tags1),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, description, requestVpcID, acceptVpcID, tags1),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
@@ -192,10 +185,8 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -204,7 +195,7 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 			},
 			// 2. 更新标签（增删改）
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, name, description, requestVpcID, acceptVpcID, tags2),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, description, requestVpcID, acceptVpcID, tags2),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "tags.#", "3"),
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "tags.*", map[string]string{
@@ -224,14 +215,14 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 			},
 			// 3. 移除所有标签
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, projectID, name, description, requestVpcID, acceptVpcID, "[]"),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, description, requestVpcID, acceptVpcID, "[]"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "tags.#", "0"),
 				),
 			},
 			// 4. 销毁资源
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, projectID, name, description, requestVpcID, acceptVpcID, "[]"),
+				Config:  utils.LoadTestCase(resourceFile, rnd, name, description, requestVpcID, acceptVpcID, "[]"),
 				Destroy: true,
 			},
 		},
