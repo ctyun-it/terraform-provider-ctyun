@@ -101,7 +101,6 @@ resource "ctyun_ecs" "ecs_test2" {
 }
 
 resource "ctyun_elb_loadbalancer" "test" {
-  az_name       = local.az1
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-gaokeyong"
   sla_name      = "elb.s2.small"
