@@ -498,8 +498,6 @@ func TestAccCtyunEcsSecurityProduct(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	resourceName := "ctyun_ecs." + rnd
-	//datasourceName := "data.ctyun_mongodb_instances." + dnd
-
 	resourceFile := "resource_ctyun_ecs_security_product.tf"
 	resourceFile2 := "resource_ctyun_ecs_security_product2.tf"
 	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
