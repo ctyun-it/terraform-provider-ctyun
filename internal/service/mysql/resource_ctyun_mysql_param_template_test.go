@@ -61,7 +61,8 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 			},
 			// 4. 参数模板 datasource验证
 			{
-				Config: utils.LoadTestCase(datasourceFile, dnd, templateName),
+				Config: utils.LoadTestCase(updateResourceFile, rnd, templateName, engineVersion, initialDescription, updatedTemplateParametersStr) +
+					utils.LoadTestCase(datasourceFile, dnd, templateName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "param_templates.#", "1"),
 					resource.TestCheckResourceAttr(datasourceName, "param_templates.0.name", templateName),

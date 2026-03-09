@@ -8,11 +8,10 @@ provider "ctyun" {
 
 resource "ctyun_vpc_peer_connection" "%[1]s" {
   # provider = ctyun.default
-  project_id     = "%[2]s"
-  name           = "%[3]s"
-  description    = "%[4]s"
-  request_vpc_id = "%[5]s"
-  accept_vpc_id  = "%[6]s"
-  accept_email   = "%[7]s"
+  name           = "%[2]s"
+  description    = "%[3]s"
+  request_vpc_id = "%[4]s"
+  accept_vpc_id  = "%[5]s"
+  accept_email   = "%[6]s"
 }
 
