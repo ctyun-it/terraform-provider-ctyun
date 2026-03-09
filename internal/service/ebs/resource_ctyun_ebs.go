@@ -80,7 +80,10 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbsDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbsDiskTypes...),
+						stringvalidator.OneOf(business.EbsDiskTypesUpper...),
+					),
 				},
 			},
 			"size": schema.Int64Attribute{
@@ -303,8 +306,8 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 	}
 	diskType, err := business.EbsDiskTypeMap.FromOriginalScene(plan.Type.ValueString(), business.EbsDiskTypeMapScene1)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+		// 尝试小写转大写，失败则表示本来就是大写
+		diskType = plan.Type.ValueString()
 	}
 
 	// 构建标签请求
@@ -614,14 +617,16 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	if err2 != nil {
 		return nil, err2
 	}
-	diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(obj.DiskType, business.EbsDiskTypeMapScene1)
-	if err2 != nil {
-		return nil, err2
+	if cfg.Type.ValueString() != obj.DiskType {
+		diskType, e := business.EbsDiskTypeMap.ToOriginalScene(obj.DiskType, business.EbsDiskTypeMapScene1)
+		if e != nil {
+			return nil, e
+		}
+		cfg.Type = types.StringValue(diskType.(string))
 	}
 	cfg.Name = types.StringValue(obj.DiskName)
 	cfg.Id = types.StringValue(obj.DiskID)
 	cfg.Size = types.Int64Value(obj.DiskSize)
-	cfg.Type = types.StringValue(diskType.(string))
 	cfg.Mode = types.StringValue(diskMode.(string))
 	cfg.Status = types.StringValue(obj.DiskStatus)
 	cfg.ExpireTime = types.StringValue(utils.FromUnixToUTC(obj.ExpireTime))

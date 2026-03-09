@@ -152,12 +152,15 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_type": schema.StringAttribute{
 				Required:    true,
-				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，fast-ssd：极速型SSD",
+				Description: "系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbsDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbsDiskTypes...),
+						stringvalidator.OneOf(business.EbsDiskTypesUpper...),
+					),
 				},
 			},
 			"system_disk_size": schema.Int64Attribute{
@@ -764,7 +767,8 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	// 系统盘类型参数
 	diskType, err2 := business.EbsDiskTypeMap.FromOriginalScene(plan.SystemDiskType.ValueString(), business.EbsDiskTypeMapScene1)
 	if err2 != nil {
-		return err2
+		// 尝试小写转大写，失败则表示本来就是大写
+		diskType = plan.SystemDiskType.ValueString()
 	}
 
 	var securityGroupIds []types.String
@@ -1516,11 +1520,15 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 		return errors.New("查询系统盘信息发生错误，查询到系统盘数量" + strconv.Itoa(len(vs)))
 	}
 	result := vs[0]
-	diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
-	if err2 != nil {
-		return err2
+	// 大小写不同，说明plan用的是小写。
+	// 这里有个隐含case，import时必须要填写小写
+	if cfg.SystemDiskType.ValueString() != result.DiskDataType {
+		diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
+		if err2 != nil {
+			return err2
+		}
+		cfg.SystemDiskType = types.StringValue(diskType.(string))
 	}
-	cfg.SystemDiskType = types.StringValue(diskType.(string))
 	cfg.SystemDiskSize = types.Int64Value(int64(result.DiskSize))
 	cfg.SystemDiskId = types.StringValue(result.DiskId)
 

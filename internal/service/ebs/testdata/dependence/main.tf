@@ -35,7 +35,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name        = "tf-ecs-for-ebs"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id = ctyun_vpc.vpc_test.id
   password            = var.password
@@ -47,7 +47,7 @@ resource "ctyun_ecs" "ecs_test" {
 resource "ctyun_ebs" "ebs_test" {
   name       = "ebs-test25"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SATA"
   size       = 60
   cycle_type = "on_demand"
 }
