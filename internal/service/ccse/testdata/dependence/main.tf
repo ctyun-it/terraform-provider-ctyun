@@ -1,8 +1,5 @@
-provider "ctyun" {
-  project_id = "0"
-}
-
 data "ctyun_vpcs" "vpc_test" {
+  project_id = "0"
   page_size = 50
 }
 
@@ -79,13 +76,13 @@ resource "ctyun_ccse_cluster" "test" {
     ]
 
     sys_disk = {
-      type = "SAS"
+      type = "SSD"
       size = 80
     }
 
     data_disks = [
       {
-        type = "SATA"
+        type = "SSD"
         size = 150
       }
     ]
@@ -172,7 +169,7 @@ resource "ctyun_ecs" "ecs_test" {
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
   security_group_ids  = [ctyun_ccse_cluster.test.base_info.security_group_id]
-  system_disk_type    = "sata"
+  system_disk_type    = "ssd"
   system_disk_size    = 40
   vpc_id              =  local.real_vpc_id
   password            = var.password

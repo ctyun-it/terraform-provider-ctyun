@@ -46,7 +46,7 @@ resource "ctyun_rabbitmq_instance" "test" {
   instance_name = "tf-rabbitmq-${local.random_string}"
   spec_name = local.cluster_spec_name
   node_num = 3
-  zone_list = data.ctyun_zones.test.zones
+  zone_list = [data.ctyun_zones.test.zones[0]]
   disk_type = local.cluster_disk_type
   disk_size = 300
   vpc_id = ctyun_vpc.vpc_test.id

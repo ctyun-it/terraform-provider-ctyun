@@ -148,7 +148,7 @@ func (c *ctyunVpcs) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 						},
 						"project_id": schema.StringAttribute{
 							Computed:    true,
-							Description: "企业项目ID，默认为`0`",
+							Description: "企业项目ID",
 						},
 					},
 				},
@@ -180,7 +180,7 @@ func (c *ctyunVpcs) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	pageNo := config.PageNo.ValueInt32()
 	pageSize := config.PageSize.ValueInt32()
-	projectId := c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId)
+	projectId := config.ProjectID.ValueString()
 	vpcId := config.VpcID.ValueString()
 	if pageNo > 0 {
 		params.PageNo = pageNo
