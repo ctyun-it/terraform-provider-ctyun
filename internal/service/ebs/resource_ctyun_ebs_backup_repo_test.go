@@ -78,10 +78,8 @@ func TestAccCtyunBackupRepo(t *testing.T) {
 					regionId := ds.Attributes["region_id"]
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedSize) +

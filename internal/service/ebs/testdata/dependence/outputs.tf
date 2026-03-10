@@ -5,3 +5,6 @@ output "ecs_id" {
 output "ebs_id" {
   value = ctyun_ebs.ebs_test.id
 }
+output "backup_repo_id" {
+  value = ctyun_ebs_backup_repo.test.id
+}
