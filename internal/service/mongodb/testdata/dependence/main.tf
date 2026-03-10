@@ -109,7 +109,6 @@ resource "ctyun_mongodb_instance" "mongodb_ei2p" {
   storage_space          = 100
   backup_storage_type    = "OS"
   password = var.password
-  project_id = "fbd0403b158d478aabb6dfd11cfaf1b3"
   lifecycle {
     ignore_changes = [name]
   }
