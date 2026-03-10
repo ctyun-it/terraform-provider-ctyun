@@ -26,6 +26,7 @@ type Dependence struct {
 	instanceID              string
 	ecsPortForAssociationId string
 	flavorName              string
+	backupRepoId            string
 }
 
 var dependence Dependence
@@ -56,6 +57,7 @@ func TestMain(m *testing.M) {
 		instanceID:              outputs["instance_id"].Value,
 		ecsPortForAssociationId: outputs["ecs_port_for_association_id"].Value,
 		flavorName:              outputs["flavor_name"].Value,
+		backupRepoId:            outputs["backup_repo_id"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 

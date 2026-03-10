@@ -118,9 +118,9 @@ func (c *ctyunEbsBackupRepo) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
-				Description: "订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年",
+				Description: "订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年 ",
 				Validators: []validator.String{
-					stringvalidator.OneOf("MONTH", "YEAR"),
+					stringvalidator.OneOf(business.OrderCycleTypesMY...),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -268,6 +268,7 @@ func (c *ctyunEbsBackupRepo) getAndMerge(ctx context.Context, cfg *CtyunEbsBacku
 	cfg.Expired = types.BoolValue(*result.Expired)
 	cfg.Freeze = types.BoolValue(*result.Freeze)
 	cfg.Paas = types.BoolValue(*result.Paas)
+	cfg.ProjectID = types.StringValue(result.ProjectID)
 	// 处理备份列表
 	backupList := make([]attr.Value, len(result.BackupList))
 	for i, backupID := range result.BackupList {
@@ -373,7 +374,7 @@ func (c *ctyunEbsBackupRepo) create(ctx context.Context, plan *CtyunEbsBackupRep
 		ProjectID:       plan.ProjectID.ValueString(),
 		RepositoryName:  plan.RepositoryName.ValueString(),
 		CycleCount:      int32(plan.CycleCount.ValueInt64()),
-		CycleType:       plan.CycleType.ValueString(),
+		CycleType:       strings.ToUpper(plan.CycleType.ValueString()),
 		Size:            int32(plan.Size.ValueInt64()),
 		AutoRenewStatus: int32(plan.AutoRenewStatus.ValueInt64()),
 		OnDemand:        plan.OnDemand.ValueString(),
@@ -582,7 +583,7 @@ func (c *ctyunEbsBackupRepo) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
-	cfg.CycleType = types.StringValue(strings.ToUpper(cycleType))
+	cfg.CycleType = types.StringValue(cycleType)
 	if cycleCount > 0 {
 		cfg.CycleCount = types.Int64Value(int64(cycleCount))
 	} else {

@@ -29,7 +29,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 
 	instanceId := dependence.ecsID
 	//TODO 获取存储库ID替换
-	repositoryID := "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
+	repositoryID := dependence.backupRepoId
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {

@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -122,14 +123,43 @@ func (c *ctyunEcsBackupRepo) Schema(_ context.Context, _ resource.SchemaRequest,
 				Validators: []validator.Int64{
 					int64validator.Between(1, 60),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.RequiresReplace(),
+				},
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
-				Description: "订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年",
+				Description: "订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年 ",
 				Validators: []validator.String{
-					stringvalidator.OneOf("MONTH", "YEAR"),
+					stringvalidator.OneOf(business.OrderCycleTypesMY...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			//"cycle_type": schema.StringAttribute{
+			//	Required:    true,
+			//	Description: "订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填，支持更新",
+			//	Validators: []validator.String{
+			//		stringvalidator.OneOf(business.OrderCycleTypesMY...),
+			//	},
+			//},
+			//"cycle_count": schema.Int64Attribute{
+			//	Optional:    true,
+			//	Description: "订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年，支持更新",
+			//	Validators: []validator.Int64{
+			//		validator2.AlsoRequiresEqualInt64(
+			//			path.MatchRoot("cycle_type"),
+			//			types.StringValue(business.OrderCycleTypeMonth),
+			//			types.StringValue(business.OrderCycleTypeYear),
+			//		),
+			//		validator2.ConflictsWithEqualInt64(
+			//			path.MatchRoot("cycle_type"),
+			//			types.StringValue(business.OrderCycleTypeOnDemand),
+			//		),
+			//		validator2.CycleCount(1, 11, 1, 5),
+			//	},
+			//},
 			"size": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
@@ -280,6 +310,7 @@ func (c *ctyunEcsBackupRepo) getAndMerge(ctx context.Context, cfg *CtyunEcsBacku
 	cfg.Freeze = types.BoolValue(*result.Freeze)
 	cfg.Paas = types.BoolValue(*result.Paas)
 	cfg.BackupCount = types.Int64Value(int64(result.BackupCount))
+	cfg.ProjectID = types.StringValue(result.ProjectID)
 	// 处理备份列表
 	backupList := make([]attr.Value, len(result.BackupList))
 	for i, backupID := range result.BackupList {
@@ -378,7 +409,7 @@ func (c *ctyunEcsBackupRepo) create(ctx context.Context, plan *CtyunEcsBackupRep
 		ProjectID:       plan.ProjectID.ValueString(),
 		RepositoryName:  plan.RepositoryName.ValueString(),
 		CycleCount:      int32(plan.CycleCount.ValueInt64()),
-		CycleType:       plan.CycleType.ValueString(),
+		CycleType:       strings.ToUpper(plan.CycleType.ValueString()),
 		Size:            int32(plan.Size.ValueInt64()),
 		AutoRenewStatus: int32(plan.AutoRenewStatus.ValueInt64()),
 		PayVoucherPrice: float32(plan.PayVoucherPrice.ValueFloat64()),
@@ -566,7 +597,7 @@ func (c *ctyunEcsBackupRepo) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
-	cfg.CycleType = types.StringValue(strings.ToUpper(cycleType))
+	cfg.CycleType = types.StringValue(cycleType)
 	if cycleCount > 0 {
 		cfg.CycleCount = types.Int64Value(int64(cycleCount))
 	} else {

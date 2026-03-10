@@ -61,3 +61,9 @@ output "instance_id" {
 output "ecs_port_for_association_id" {
   value = ctyun_port.ecs_port_for_association_test.id
 }
+
+
+
+output "backup_repo_id" {
+  value = ctyun_ecs_backup_repo.test.id
+}
