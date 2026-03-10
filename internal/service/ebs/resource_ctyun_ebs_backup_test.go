@@ -21,7 +21,7 @@ func TestAccCtyunBackup(t *testing.T) {
 
 	initName := "init-backup"
 	diskId := dependence.ebsID
-	repositoryID := "671f67c4-6131-4154-8c1d-7c5b82edd1eb"
+	repositoryID := dependence.backupRepoId
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
