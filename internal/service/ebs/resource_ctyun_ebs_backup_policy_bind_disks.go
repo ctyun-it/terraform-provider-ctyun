@@ -228,23 +228,23 @@ func (c *ctyunEcsBackupPolicyBindDisks) create(ctx context.Context, plan CtyunEc
 }
 
 func (c *ctyunEcsBackupPolicyBindDisks) checkBeforeBindDisks(ctx context.Context, cfg CtyunEcsBackupPolicyBindDisksConfig) (err error) {
-	params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
-		RegionID: cfg.RegionID.ValueString(),
-		PolicyID: cfg.PolicyID.ValueString(),
-	}
-	// 调用API
-	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	} else if resp.ReturnObj.CurrentCount != 1 {
-		return fmt.Errorf("备份策略必须存在")
-	}
+	//params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
+	//	RegionID: cfg.RegionID.ValueString(),
+	//	PolicyID: cfg.PolicyID.ValueString(),
+	//}
+	//// 调用API
+	//resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
+	//if err != nil {
+	//	return
+	//} else if resp.StatusCode == common.ErrorStatusCode {
+	//	err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+	//	return
+	//} else if resp.ReturnObj == nil {
+	//	err = common.InvalidReturnObjError
+	//	return
+	//} else if resp.ReturnObj.CurrentCount != 1 {
+	//	return fmt.Errorf("备份策略必须存在")
+	//}
 
 	if cfg.DiskIDList.ValueString() != "" {
 		// 拆分实例ID列表

@@ -46,8 +46,8 @@ resource "ctyun_ebs" "data_disk_test" {
 
 # 创建ECS实例资源
 resource "ctyun_ecs" "ecs_test" {
-  instance_name      = "tf-test-ecs"
-  display_name       = "tf-test-init-ecs"
+  instance_name      = "tf-test-for-image"
+  display_name       = "tf-test-for-image"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type   = "sata"

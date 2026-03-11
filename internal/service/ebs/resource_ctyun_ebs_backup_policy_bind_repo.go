@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebsbackup"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -52,6 +53,7 @@ type CtyunEbsBackupPolicyBindRepoConfig struct {
 	PolicyID     types.String `tfsdk:"policy_id"`
 	RegionID     types.String `tfsdk:"region_id"`
 	RepositoryID types.String `tfsdk:"repository_id"`
+	ProjectID    types.String `tfsdk:"project_id"`
 }
 
 func (c *ctyunEbsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -95,6 +97,18 @@ func (c *ctyunEbsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.Sche
 					validator2.UUID(),
 				},
 			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
+			},
 		},
 	}
 }
@@ -116,7 +130,6 @@ func (c *ctyunEbsBackupPolicyBindRepo) Create(ctx context.Context, request resou
 	if err != nil {
 		return
 	}
-
 	// 实际创建
 	err = c.create(ctx, plan)
 	if err != nil {
@@ -225,8 +238,9 @@ func (c *ctyunEbsBackupPolicyBindRepo) create(ctx context.Context, plan CtyunEbs
 
 func (c *ctyunEbsBackupPolicyBindRepo) checkBeforeBindRepo(ctx context.Context, cfg CtyunEbsBackupPolicyBindRepoConfig) (err error) {
 	params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
-		RegionID: cfg.RegionID.ValueString(),
-		PolicyID: cfg.PolicyID.ValueString(),
+		RegionID:  cfg.RegionID.ValueString(),
+		PolicyID:  cfg.PolicyID.ValueString(),
+		ProjectID: cfg.ProjectID.ValueString(),
 	}
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
@@ -248,13 +262,14 @@ func (c *ctyunEbsBackupPolicyBindRepo) checkBeforeBindRepo(ctx context.Context, 
 		params := &ctebsbackup.EbsbackupListEbsBackupRepoRequest{
 			RegionID:     cfg.RegionID.ValueString(),
 			RepositoryID: cfg.RepositoryID.ValueString(),
+			ProjectID:    cfg.ProjectID.ValueString(),
 		}
 		// 调用API
 		respRepo, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListEbsBackupRepoApi.Do(ctx, c.meta.SdkCredential, params)
 		if err != nil {
 			return err
 		} else if respRepo.StatusCode == common.ErrorStatusCode {
-			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+			err = fmt.Errorf("API return error. Message: %s Description: %s", respRepo.Message, respRepo.Description)
 			return err
 		} else if respRepo.ReturnObj == nil {
 			err = common.InvalidReturnObjError
@@ -358,10 +373,10 @@ func (c *ctyunEbsBackupPolicyBindRepo) delete(ctx context.Context, plan CtyunEbs
 }
 
 func (c *ctyunEbsBackupPolicyBindRepo) getBindingRepos(ctx context.Context, plan CtyunEbsBackupPolicyBindRepoConfig) (hasBind bool, err error) {
-
 	params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
-		RegionID: plan.RegionID.ValueString(),
-		PolicyID: plan.PolicyID.ValueString(),
+		RegionID:  plan.RegionID.ValueString(),
+		PolicyID:  plan.PolicyID.ValueString(),
+		ProjectID: plan.ProjectID.ValueString(),
 	}
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
@@ -460,7 +475,9 @@ func (c *ctyunEbsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	cfg.RepositoryID = types.StringValue(repositoryID)
 	cfg.PolicyID = types.StringValue(policyID)
 	cfg.RegionID = types.StringValue(regionId)
-
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

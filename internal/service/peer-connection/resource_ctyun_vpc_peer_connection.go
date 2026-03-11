@@ -247,8 +247,8 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 							},
 						},
 						"id": schema.StringAttribute{
-							Description: "标签id",
-							Computed:    true,
+							Description:   "标签id",
+							Computed:      true,
 							PlanModifiers: []planmodifier.String{
 								//stringplanmodifier.UseStateForUnknown(),
 							},
