@@ -148,7 +148,6 @@ func TestAccCtyunOceanfsWithVpce(t *testing.T) {
 	sfsSize := 100
 	cycleType := "on_demand"
 	isVpce := true
-
 	updatedSfsSize := 120
 
 	resource.Test(t, resource.TestCase{
