@@ -216,7 +216,7 @@ func (c *ctyunEbsBackups) Read(ctx context.Context, request datasource.ReadReque
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
+	projectID := c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId)
 	config.RegionID = types.StringValue(regionId)
 	// 组装请求体
 	params := &ctebsbackup.EbsbackupListBackupRequest{
@@ -229,7 +229,7 @@ func (c *ctyunEbsBackups) Read(ctx context.Context, request datasource.ReadReque
 		BackupName:   config.Name.ValueString(),
 		QueryContent: config.QueryContent.ValueString(),
 		BackupStatus: config.BackupStatus.ValueString(),
-		ProjectID:    config.ProjectID.ValueString(),
+		ProjectID:    projectID,
 	}
 
 	// 调用API

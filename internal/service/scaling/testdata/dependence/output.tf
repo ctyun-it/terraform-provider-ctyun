@@ -74,3 +74,7 @@ output "image_id2" {
 output "az_name" {
   value = data.ctyun_zones.test.zones[0]
 }
+
+output "flavor_name" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+}

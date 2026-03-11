@@ -457,7 +457,14 @@ func (c *ctyunZosBucket) checkBeforeCreate(ctx context.Context, plan CtyunZosBuc
 		err = fmt.Errorf("您尚未在该资源池开通对象存储服务，请前往控制台开通后使用")
 		return
 	}
-	return
+	_, err = business.NewZosService(c.meta).GetZosBucketInfo(ctx, plan.Bucket.ValueString(), plan.RegionID.ValueString())
+	if err == nil {
+		err = fmt.Errorf("桶 %s 在资源池 %s 已经存在", plan.Bucket.ValueString(), plan.RegionID.ValueString())
+	} else if errors.Is(err, common.ResourceNotExistError) {
+		err = nil
+		return
+	}
+	return err
 }
 
 // create 创建

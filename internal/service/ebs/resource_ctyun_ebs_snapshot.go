@@ -308,10 +308,13 @@ func (c *ctyunEbsSnapshot) create(ctx context.Context, plan *CtyunEbsSnapshotCon
 	// 创建实例
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsCreateEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
-		return err
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
 	}
 	var masterOrderId, snapshotJobID string
-	if resp != nil && resp.ErrorCode == common.EbsOrderInProgress {
+	if resp.ErrorCode == common.EbsOrderInProgress {
 		if resp.ReturnObj.MasterOrderID != "" {
 			masterOrderId = resp.ReturnObj.MasterOrderID
 		} else if resp.ReturnObj.Resources != nil && len(resp.ReturnObj.Resources) > 0 && resp.ReturnObj.Resources[0].OrderID != "" {
@@ -328,9 +331,9 @@ func (c *ctyunEbsSnapshot) create(ctx context.Context, plan *CtyunEbsSnapshotCon
 		id := loop.Uuid[0]
 		plan.Id = types.StringValue(id)
 	}
-	if resp != nil && resp.ReturnObj.SnapshotJobID != "" {
+	if resp.ReturnObj.SnapshotJobID != "" {
 		snapshotJobID = resp.ReturnObj.SnapshotJobID
-		err := c.queryJob(ctx, plan, snapshotJobID)
+		err = c.queryJob(ctx, plan, snapshotJobID)
 		if err != nil {
 			return err
 		}

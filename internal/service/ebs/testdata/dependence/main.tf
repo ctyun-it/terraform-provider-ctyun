@@ -52,23 +52,10 @@ resource "ctyun_ebs" "ebs_test" {
   cycle_type = "on_demand"
 }
 
-resource "ctyun_ebs_snapshot" "ebs_snapshot_test" {
-  name = "ebs_snapshot_test"
-  disk_id = ctyun_ebs.ebs_test.id
-  retention_policy = "forever"
-}
-
 variable "password" {
   type      = string
   sensitive = true
 }
-
-#
-# data "ctyun_ebs_snapshot_policies" "aaa" {
-#
-# }
-
-
 
 resource "ctyun_ebs_backup_repo" "test" {
   name = "test-repo"

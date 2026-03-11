@@ -236,6 +236,7 @@ func (c *ctyunEbsBackupRepo) getAndMerge(ctx context.Context, cfg *CtyunEbsBacku
 	params := &ctebsbackup.EbsbackupListBackupRepoRequest{
 		RegionID:     cfg.RegionID.ValueString(),
 		RepositoryID: cfg.Id.ValueString(),
+		ProjectID:    cfg.ProjectID.ValueString(),
 	}
 	// 调用API
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupRepoApi.Do(ctx, c.meta.SdkCredential, params)
@@ -247,8 +248,8 @@ func (c *ctyunEbsBackupRepo) getAndMerge(ctx context.Context, cfg *CtyunEbsBacku
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	} else if resp.ReturnObj.TotalCount != 1 {
-		err = common.InvalidReturnObjResultsError
+	} else if resp.ReturnObj.TotalCount == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 
@@ -573,6 +574,9 @@ func (c *ctyunEbsBackupRepo) ImportState(ctx context.Context, request resource.I
 
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.Id = types.StringValue(id)
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	cfg.ProjectID = types.StringValue(projectID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
