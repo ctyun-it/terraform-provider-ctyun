@@ -130,6 +130,12 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   arch   = "x86"
 }
 
+data "ctyun_ecs_flavors" "ecs_flavor_test2" {
+  cpu    = 4
+  ram    = 8
+  arch   = "x86"
+}
+
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-scaling-ecs1"
   display_name        = "tf-ecs-for-scaling-ecs1"

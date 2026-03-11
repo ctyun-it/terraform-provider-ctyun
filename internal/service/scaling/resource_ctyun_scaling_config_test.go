@@ -23,7 +23,7 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 
 	name := "sc-" + utils.GenerateRandomString()
 	imageID := dependence.imageID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	useFloating := "auto"
 	bandwidth := 1
 	loginMode := "password"
@@ -37,7 +37,7 @@ func TestAccCtyunScalingConfig(t *testing.T) {
 
 	updatedName := "scn-" + utils.GenerateRandomString()
 	updatedImageID := dependence.imageID1
-	updatedFlavorName := "c7.large.2"
+	updatedFlavorName := dependence.flavorName2
 	updateduseFloating := "disable"
 	updatedLoginMode := "key_pair"
 	keyPairId := dependence.keyPairID

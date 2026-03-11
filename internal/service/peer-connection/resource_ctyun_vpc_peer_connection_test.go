@@ -206,7 +206,6 @@ func TestAccCtyunVpcPeerConnection_WithTags(t *testing.T) {
 						"key":   "owner",
 						"value": "devops",
 					}),
-
 					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "tags.*", map[string]string{
 						"key":   "version",
 						"value": "v1.0",

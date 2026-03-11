@@ -204,12 +204,13 @@ func (c *ctyunEbsBackupPolicies) Read(ctx context.Context, request datasource.Re
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
+	projectID := c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId)
 	config.RegionID = types.StringValue(regionId)
 	config.BackupPolicies = []ctyunEbsBackupPoliciesModel{}
 	// 组装请求体
 	params := &ctebs2.EbsbackupListBackupPolicyRequest{
 		RegionID:   config.RegionID.ValueString(),
-		ProjectID:  config.ProjectID.ValueString(),
+		ProjectID:  projectID,
 		PolicyName: config.PolicyName.ValueString(),
 		PolicyID:   config.PolicyID.ValueString(),
 		PageNo:     config.PageNo.ValueInt32(),

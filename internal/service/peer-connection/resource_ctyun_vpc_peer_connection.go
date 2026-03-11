@@ -250,7 +250,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 							Description: "标签id",
 							Computed:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.UseStateForUnknown(),
+								//stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 					},
