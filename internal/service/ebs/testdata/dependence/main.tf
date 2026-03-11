@@ -63,7 +63,16 @@ variable "password" {
   sensitive = true
 }
 
+#
+# data "ctyun_ebs_snapshot_policies" "aaa" {
+#
+# }
 
-data "ctyun_ebs_snapshot_policies" "aaa" {
 
+
+resource "ctyun_ebs_backup_repo" "test" {
+  name = "test-repo"
+  size = 100
+  cycle_count = "1"
+  cycle_type  = "month"
 }

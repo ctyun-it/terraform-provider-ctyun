@@ -44,6 +44,7 @@ type ctyunEcsBackupReposModel struct {
 	Freeze         types.Bool     `tfsdk:"freeze"`
 	Paas           types.Bool     `tfsdk:"paas"`
 	BackupList     []types.String `tfsdk:"backup_list"`
+	BackupCount    types.Int64    `tfsdk:"backup_count"`
 }
 
 type ctyunEcsBackupReposConfig struct {
@@ -230,6 +231,7 @@ func (c *ctyunEcsBackupRepos) Read(ctx context.Context, request datasource.ReadR
 			Freeze:         types.BoolValue(*repo.Freeze),
 			Paas:           types.BoolValue(*repo.Paas),
 			BackupList:     backupList,
+			BackupCount:    types.Int64Value(int64(len(repo.BackupList))),
 		}
 
 		config.BackupRepos = append(config.BackupRepos, item)

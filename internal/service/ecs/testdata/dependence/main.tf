@@ -96,3 +96,9 @@ resource "ctyun_port" "ecs_port_for_association_test" {
   security_group_ids        = [ctyun_security_group.security_group_test.id]
   secondary_private_ip_count = 1
 }
+
+resource "ctyun_ecs_backup_repo" "test" {
+  name = "ctyun_ecs_backup_repo_test_for_terraform"
+  cycle_count = "1"
+  cycle_type  = "month"
+}
