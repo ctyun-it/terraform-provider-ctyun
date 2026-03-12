@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
+	"time"
 )
 
 type ctyunSfsPermissionGroupRule struct {
@@ -171,7 +172,6 @@ func (c *ctyunSfsPermissionGroupRule) Create(ctx context.Context, request resour
 	if err != nil {
 		return
 	}
-
 	// 创建后反查创建的信息
 	err = c.getAndMergeSfsPermissionGroupRule(ctx, &plan)
 	if err != nil {
@@ -300,6 +300,7 @@ func (c *ctyunSfsPermissionGroupRule) createSfsPermissionRule(ctx context.Contex
 		err = common.InvalidReturnObjError
 		return err
 	}
+	time.Sleep(1 * time.Second)
 	// 通过查询权限组列表，获取权限组规则id
 	ruleList, err := c.getRuleList(ctx, config)
 	if err != nil {

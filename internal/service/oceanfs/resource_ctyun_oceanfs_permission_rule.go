@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
+	"time"
 )
 
 type CtyunOceanfsPermissionRule struct {
@@ -286,7 +287,7 @@ func (c *CtyunOceanfsPermissionRule) create(ctx context.Context, config *CtyunOc
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return err
 	}
-
+	time.Sleep(1 * time.Second)
 	// 通过查询权限组列表，获取权限组规则id
 	ruleList, err := c.getRuleList(ctx, config)
 	if err != nil {
