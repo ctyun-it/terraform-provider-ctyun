@@ -25,7 +25,7 @@ func (v VpcService) MustExist(ctx context.Context, vpcId, regionId string) error
 	})
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiVpcNotFound {
-			return fmt.Errorf("vpc %s 不存在", vpcId)
+			return fmt.Errorf("%s 在 %s 不存在", vpcId, regionId)
 		}
 		return err
 	}

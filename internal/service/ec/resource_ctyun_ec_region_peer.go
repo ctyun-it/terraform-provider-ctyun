@@ -183,13 +183,6 @@ func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request reso
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"peer_type": schema.Int32Attribute{
-				Computed:    true,
-				Description: "互通类型，1：境内，2: 跨境（中国大陆-亚太），3: 境外（亚太），4: 定制",
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.UseStateForUnknown(),
-				},
-			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
@@ -387,12 +380,6 @@ func (c *CtyunExpressConnectRegionPeer) getAndMerge(ctx context.Context, config 
 			} else {
 				config.DstRegionID = types.StringNull()
 			}
-
-			if regionPeer.PeerType != nil {
-				config.PeerType = types.Int32Value(*regionPeer.PeerType)
-			} else {
-				config.PeerType = types.Int32Null()
-			}
 			if regionPeer.UpdateDate != nil {
 				config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
 			} else {
@@ -483,6 +470,5 @@ type CtyunExpressConnectRegionPeerConfig struct {
 	ID          types.String `tfsdk:"id"`
 	SrcRegionID types.String `tfsdk:"src_region_id"`
 	DstRegionID types.String `tfsdk:"dst_region_id"`
-	PeerType    types.Int32  `tfsdk:"peer_type"`
 	UpdateTime  types.String `tfsdk:"update_time"`
 }

@@ -118,10 +118,6 @@ func (c *CtyunExpressConnectionRegionPeer) Schema(ctx context.Context, request d
 							Computed:    true,
 							Description: "对端资源池名称",
 						},
-						"peer_type": schema.Int32Attribute{
-							Computed:    true,
-							Description: "互通类型（1：境内，2：跨境（中国大陆-亚太），3：境外（亚太），4：定制）",
-						},
 						"rate": schema.Int32Attribute{
 							Computed:    true,
 							Description: "带宽值（MB）",
@@ -193,7 +189,6 @@ func (c *CtyunExpressConnectionRegionPeer) Read(ctx context.Context, request dat
 		regionPeer.DstRegionID = types.StringValue(*peerItem.DstDcID)
 		regionPeer.SrcRegionName = types.StringValue(*peerItem.SrcDcName)
 		regionPeer.DstRegionName = types.StringValue(*peerItem.DstDcName)
-		regionPeer.PeerType = types.Int32Value(*peerItem.PeerType)
 		regionPeer.Rate = types.Int32Value(*peerItem.Rate)
 		regionPeer.Status = types.StringValue(*peerItem.Status)
 		regionPeer.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*peerItem.UpdateDate))
@@ -221,7 +216,6 @@ type CtyunEcRegionPeerModel struct {
 	DstRegionID   types.String `tfsdk:"dst_region_id"`
 	SrcRegionName types.String `tfsdk:"src_region_name"`
 	DstRegionName types.String `tfsdk:"dst_region_name"`
-	PeerType      types.Int32  `tfsdk:"peer_type"`
 	Rate          types.Int32  `tfsdk:"rate"`
 	Status        types.String `tfsdk:"status"`
 	UpdateTime    types.String `tfsdk:"update_time"`
