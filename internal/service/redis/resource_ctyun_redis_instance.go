@@ -986,6 +986,7 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 		plan.TlsVersion = types.StringValue(ssl.TlsVersion)
 		plan.ProtectedConn = types.StringValue(ssl.ProtectedConn)
 	} else {
+		plan.SslEnabled = types.BoolValue(false)
 		plan.TlsVersion = types.StringNull()
 		plan.ProtectedConn = types.StringNull()
 	}
@@ -1019,9 +1020,11 @@ func (c *ctyunRedisInstance) update(ctx context.Context, plan, state CtyunRedisI
 	}
 
 	if !plan.SslEnabled.Equal(state.SslEnabled) {
-		err = c.updateSSL(ctx, plan)
-		if err != nil {
-			return
+		if plan.SslEnabled.ValueBool() || state.SslEnabled.ValueBool() {
+			err = c.updateSSL(ctx, plan)
+			if err != nil {
+				return
+			}
 		}
 	}
 	if !plan.TemplateID.Equal(state.TemplateID) && plan.TemplateID.ValueString() != "" {
