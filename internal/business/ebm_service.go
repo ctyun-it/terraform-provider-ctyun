@@ -68,6 +68,7 @@ func (c EbmService) GetDeviceType(ctx context.Context, deviceType, regionID, azN
 }
 
 func (c EbmService) GetDeviceTypeStock(ctx context.Context, regionID, azName string) (stocks map[string]int32, err error) {
+	stocks = make(map[string]int32)
 	params := ctebm.EbmDeviceStockListRequest{
 		RegionID: regionID,
 		AzName:   azName,
@@ -82,10 +83,8 @@ func (c EbmService) GetDeviceTypeStock(ctx context.Context, regionID, azName str
 		err = common.InvalidReturnObjError
 		return
 	} else if len(resp.ReturnObj.Results) == 0 {
-		err = common.InvalidReturnObjResultsError
 		return
 	}
-	stocks = make(map[string]int32)
 	for _, d := range resp.ReturnObj.Results[0].Stocks {
 		stocks[utils.SecString(d.DeviceType)] = d.Available
 	}

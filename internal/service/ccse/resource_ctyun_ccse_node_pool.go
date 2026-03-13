@@ -321,7 +321,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 						Required:    true,
 						Description: "系统盘类型，支持SATA、SAS、SSD，支持更新",
 						Validators: []validator.String{
-							stringvalidator.OneOf(business.CcseDiskTypes...),
+							stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 						},
 					},
 					"size": schema.Int32Attribute{
@@ -375,7 +375,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 							Required:    true,
 							Description: "数据盘类型，支持SATA、SAS、SSD，支持更新",
 							Validators: []validator.String{
-								stringvalidator.OneOf(business.CcseDiskTypes...),
+								stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 							},
 						},
 						"size": schema.Int32Attribute{
