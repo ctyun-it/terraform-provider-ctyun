@@ -1,13 +1,13 @@
 output "vpc_id" {
-  value = local.real_vpc_id
+  value = ctyun_vpc.vpc_test.id
 }
 
 output "subnet_id" {
-  value = local.real_subnet_id
+  value = ctyun_subnet.subnet_test.id
 }
 
 output "security_group_id" {
-  value = local.real_security_group_id
+  value = ctyun_security_group.security_group_test.id
 }
 
 output "eip_id" {
@@ -32,4 +32,12 @@ output "task_id" {
 
 output "backup_timestamp" {
   value = data.ctyun_mysql_recoverable_time_points.time_point_test.backup_time_points.0.end_time
+}
+
+output "flavor_name" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+}
+
+output "flavor_name2" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
 }

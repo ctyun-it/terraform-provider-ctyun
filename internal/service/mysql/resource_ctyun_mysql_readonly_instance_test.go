@@ -21,9 +21,9 @@ func TestAccCtyunMysqlReadOnlyInstance(t *testing.T) {
 	//cycleCount := 1
 	// 测试数据
 	instanceName := "test-ro-" + rnd
-	flavorName := "c7.large.2" // 示例规格，根据实际情况调整
-	storageType := "SATA"      // 存储类型
-	storageSpace := 100        // 存储空间(GB)
+	flavorName := dependence.flavorName // 示例规格，根据实际情况调整
+	storageType := "SATA"               // 存储类型
+	storageSpace := 100                 // 存储空间(GB)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
@@ -100,9 +100,9 @@ func TestAccCtyunMysqlReadOnlyInstanceImportState(t *testing.T) {
 	//cycleCount := 1
 	// 测试数据
 	instanceName := "test-ros-" + rnd
-	flavorName := "c7.large.2" // 示例规格，根据实际情况调整
-	storageType := "SATA"      // 存储类型
-	storageSpace := 100        // 存储空间(GB)
+	flavorName := dependence.flavorName // 示例规格，根据实际情况调整
+	storageType := "SATA"               // 存储类型
+	storageSpace := 100                 // 存储空间(GB)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
