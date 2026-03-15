@@ -623,7 +623,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Required:    true,
 								Description: "系统盘类型，支持SATA、SAS、SSD",
 								Validators: []validator.String{
-									stringvalidator.OneOf(business.CcseDiskTypes...),
+									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -653,7 +653,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 									Required:    true,
 									Description: "数据盘类型，支持SATA、SAS、SSD",
 									Validators: []validator.String{
-										stringvalidator.OneOf(business.CcseDiskTypes...),
+										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.RequiresReplace(),
@@ -823,7 +823,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 								Required:    true,
 								Description: "系统盘类型，支持SATA、SAS、SSD",
 								Validators: []validator.String{
-									stringvalidator.OneOf(business.CcseDiskTypes...),
+									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -853,7 +853,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 									Required:    true,
 									Description: "数据盘类型，支持SATA、SAS、SSD",
 									Validators: []validator.String{
-										stringvalidator.OneOf(business.CcseDiskTypes...),
+										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.RequiresReplace(),
@@ -1088,17 +1088,24 @@ func (c *ctyunCcseCluster) Configure(_ context.Context, request resource.Configu
 // checkBeforeCreate 创建前检查
 func (c *ctyunCcseCluster) checkBeforeCreate(ctx context.Context, plan CtyunCcseClusterConfig) (err error) {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
-	vpc, regionID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
+	vpcID, regionID, projectID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString(), plan.BaseInfo.ProjectID.ValueString()
+	vpcInfo, err := c.vpcService.GetVpcDetail(ctx, vpcID, regionID)
+	if err != nil {
+		return err
+	}
+	if vpcInfo.ProjectID != projectID {
+		return fmt.Errorf("%s 的企业项目是 %s，ccse指定的企业项目必须和其相同", vpcID, vpcInfo.ProjectID)
+	}
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, regionID)
 	if err != nil {
 		return err
 	}
 	if _, ok := subnets[plan.BaseInfo.SubnetID.ValueString()]; !ok {
-		return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpc)
+		return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpcID)
 	}
 	for s, _ := range subnets {
 		if _, ok := subnets[s]; !ok {
-			return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpc)
+			return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpcID)
 		}
 	}
 	return

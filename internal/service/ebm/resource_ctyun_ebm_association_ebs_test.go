@@ -30,15 +30,27 @@ func TestAccCtyunEbmAssociationEbs(t *testing.T) {
 					resourceFile, rnd,
 					dependence.ebsID,
 					dependence.ebmID,
-					dependence.az3,
+					dependence.ebsAz,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["ebs_id"],
+						rs.Primary.Attributes["az_name"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
 			},
@@ -64,7 +76,7 @@ func TestAccCtyunEbmAssociationEbs(t *testing.T) {
 					resourceFile, rnd,
 					dependence.ebsID,
 					dependence.ebmID,
-					dependence.az3,
+					dependence.ebsAz,
 				),
 				Destroy: true,
 			},

@@ -28,8 +28,10 @@ import (
 )
 
 type CtyunExpressConnectVpcInstance struct {
-	meta *common.CtyunMetadata
-	name string
+	meta       *common.CtyunMetadata
+	name       string
+	ecService  *business.EcService
+	vpcService *business.VpcService
 }
 
 func (c *CtyunExpressConnectVpcInstance) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -43,7 +45,8 @@ func (c *CtyunExpressConnectVpcInstance) Configure(_ context.Context, request re
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
-
+	c.ecService = business.NewEcService(c.meta)
+	c.vpcService = business.NewVpcService(c.meta)
 }
 
 func NewCtyunExpressConnectVpcInstance() resource.Resource {
@@ -216,6 +219,11 @@ func (c *CtyunExpressConnectVpcInstance) Create(ctx context.Context, request res
 	if response.Diagnostics.HasError() {
 		return
 	}
+
+	err = c.checkBeforeCreate(ctx, plan)
+	if err != nil {
+		return
+	}
 	err = c.create(ctx, &plan)
 	if err != nil {
 		return
@@ -325,7 +333,6 @@ func (c *CtyunExpressConnectVpcInstance) Delete(ctx context.Context, request res
 }
 
 func (c *CtyunExpressConnectVpcInstance) create(ctx context.Context, config *CtyunExpressConnectVpcInstanceConfig) error {
-
 	// todo cgw 和vpc和subnet建议做个判断兜底
 	params := &ec.EcEcAddVPCNetworkRequest{
 		EcID:       config.EcID.ValueString(),
@@ -378,6 +385,23 @@ func (c *CtyunExpressConnectVpcInstance) create(ctx context.Context, config *Cty
 		return err
 	}
 	return nil
+}
+
+func (c *CtyunExpressConnectVpcInstance) checkBeforeCreate(ctx context.Context, config CtyunExpressConnectVpcInstanceConfig) (err error) {
+	cgw, err := c.ecService.GetCgw(ctx, config.EcID.ValueString(), config.CgwID.ValueString())
+	if err != nil {
+		return err
+	}
+	cgwRegionID := utils.SecString(cgw.DcID)
+	if cgwRegionID != config.RegionID.ValueString() {
+		err = fmt.Errorf("云企业路由器的资源池为 %s, 与指定资源池 %s 不符", cgwRegionID, config.RegionID.ValueString())
+		return err
+	}
+	err = c.vpcService.MustExist(ctx, config.VpcID.ValueString(), cgwRegionID)
+	if err != nil {
+		return err
+	}
+	return
 }
 
 // flushVpcRoute 刷新路由

@@ -24,7 +24,7 @@ func TestAccCtyunEbmInterface(t *testing.T) {
 					dependence.ebmID,
 					dependence.securityGroupID,
 					dependence.subnetID,
-					dependence.az3,
+					dependence.ebsAz,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "security_group_ids.#", "1"),
@@ -39,7 +39,7 @@ func TestAccCtyunEbmInterface(t *testing.T) {
 					dependence.ebmID,
 					dependence.securityGroupID2,
 					dependence.subnetID,
-					dependence.az3,
+					dependence.ebsAz,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "security_group_ids.#", "1"),
@@ -90,7 +90,7 @@ func TestAccCtyunEbmInterface(t *testing.T) {
 					dependence.ebmID,
 					dependence.securityGroupID2,
 					dependence.subnetID,
-					dependence.az3,
+					dependence.ebsAz,
 				),
 				Destroy: true,
 			},

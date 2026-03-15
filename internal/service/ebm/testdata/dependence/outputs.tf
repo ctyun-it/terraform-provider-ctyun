@@ -38,14 +38,35 @@ output "ebm_id" {
   value = ctyun_ebm.ebm_test.id
 }
 
-output "az1" {
-  value = local.az1
+output "ebs_az" {
+  value = ctyun_ebs.ebs_test.az_name
 }
 
-output "az2" {
-  value = local.az2
+output "raid_az" {
+  value = local.first_cloud_boot_false.az_name
 }
 
-output "az3" {
-  value = local.az3
+output "standard_az" {
+  value = local.standard.az_name
 }
+
+output "standard_subnet_id" {
+  value = ctyun_subnet.subnet_ebm.id
+}
+
+output "standard_device_type" {
+  value = local.standard.device_type
+}
+
+output "standard_image" {
+  value = data.ctyun_ebm_device_images.standard_test.images[0].image_uuid
+}
+
+output "standard_system_raid" {
+  value = local.standard_system_raid_id
+}
+
+output "standard_data_raid" {
+  value = local.standard_data_raid_id
+}
+

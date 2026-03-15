@@ -390,7 +390,7 @@ func (c *ctyunCcseNamespace) getNamespace(ctx context.Context, plan CtyunCcseNam
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		if resp.Error == common.OpenapiCCSENotExist || strings.Contains(resp.Message, "not found") {
+		if resp.Error == common.OpenapiCCSENotExist || strings.Contains(resp.Message, "not found") || strings.Contains(resp.Message, "不存在") {
 			err = common.ResourceNotExistError
 		} else {
 			err = fmt.Errorf("API return error. Message: %s", resp.Message)
