@@ -16,13 +16,12 @@ func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_readonly_instance_on_demand.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"                 // 默认项目ID
 	instanceID := dependence.pgsqlID // 主实例ID
 	cycleType := "on_demand"
 
 	// 测试数据
 	instanceName := "test-pg-ro-" + rnd
-	flavorName := "c7.xlarge.2" // PostgreSQL 规格
+	flavorName := dependence.flavorName // PostgreSQL 规格
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
@@ -32,12 +31,11 @@ func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, instanceName,
+					instanceName,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", "on_demand"),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", instanceName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
@@ -83,7 +81,7 @@ func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, instanceName,
+					instanceName,
 				),
 				Destroy: true,
 			},

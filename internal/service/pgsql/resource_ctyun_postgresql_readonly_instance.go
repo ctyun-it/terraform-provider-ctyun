@@ -380,9 +380,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceDetail(ctx contex
 	detailHeaders := &pgsql.PgsqlDetailRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return nil, err
