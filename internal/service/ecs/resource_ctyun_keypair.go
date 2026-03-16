@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -33,8 +34,9 @@ func NewCtyunKeypair() resource.Resource {
 }
 
 type ctyunKeypair struct {
-	meta *common.CtyunMetadata
-	name string
+	meta    *common.CtyunMetadata
+	name    string
+	service *business.KeyPairService
 }
 
 func (c *ctyunKeypair) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -130,6 +132,10 @@ func (c *ctyunKeypair) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
+	err = c.checkBeforeCreate(ctx, plan)
+	if err != nil {
+		return
+	}
 	// 实际创建
 	if plan.PublicKey.ValueString() == "" {
 		err = c.createKeyPair(ctx, &plan)
@@ -231,6 +237,7 @@ func (c *ctyunKeypair) Configure(_ context.Context, request resource.ConfigureRe
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.service = business.NewKeyPairService(c.meta)
 }
 
 // getAndMergeKeypair 查询密钥对
@@ -313,4 +320,16 @@ func (c *ctyunKeypair) importKeyPair(ctx context.Context, plan CtyunKeypairConfi
 		return
 	}
 	return
+}
+
+// 创建前检查
+func (c *ctyunKeypair) checkBeforeCreate(ctx context.Context, plan CtyunKeypairConfig) (err error) {
+	_, err = c.service.GetKeyPairID(ctx, plan.Name.ValueString(), plan.RegionId.ValueString(), "")
+	if err != nil {
+		if strings.Contains(err.Error(), "不存在") {
+			return nil
+		}
+		return err
+	}
+	return fmt.Errorf("密钥对 %s 在资源池 %s 已经存在，请修改名称后重试", plan.Name.ValueString(), plan.RegionId.ValueString())
 }
