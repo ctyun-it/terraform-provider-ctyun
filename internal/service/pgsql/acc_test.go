@@ -23,8 +23,6 @@ type Dependence struct {
 	collateName      string
 	collateType      string
 	accountName      string
-	flavorName       string
-	flavorName2      string
 }
 
 var dependence Dependence
@@ -55,8 +53,6 @@ func TestMain(m *testing.M) {
 		collateName:      outputs["collate_name"].Value,
 		collateType:      outputs["collate_type"].Value,
 		accountName:      outputs["account_name"].Value,
-		flavorName:       outputs["flavor_name"].Value,
-		flavorName2:      outputs["flavor_name2"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

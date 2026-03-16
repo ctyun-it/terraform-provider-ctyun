@@ -22,6 +22,7 @@ func TestAccCtyunPostgresqlParamTemplate(t *testing.T) {
 	datasourceName := "data.ctyun_postgresql_param_templates." + dnd
 	datasourceFile := "datasource_ctyun_postgresql_parameter_templates.tf"
 	// 从环境变量获取测试依赖资源
+	projectID := "0"
 	sourceTemplateIDStr := dependence.paramTemplateID
 	sourceTemplateID, err := strconv.Atoi(sourceTemplateIDStr)
 	if err != nil {
@@ -53,11 +54,13 @@ func TestAccCtyunPostgresqlParamTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					templateName,
 					sourceTemplateID,
 					initialDescription,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", templateName),
 					resource.TestCheckResourceAttr(resourceName, "source_template_id", fmt.Sprintf("%d", sourceTemplateID)),
 					resource.TestCheckResourceAttr(resourceName, "description", initialDescription),
@@ -69,6 +72,7 @@ func TestAccCtyunPostgresqlParamTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					templateName,
 					sourceTemplateID,
 					updatedDescription,
@@ -81,6 +85,7 @@ func TestAccCtyunPostgresqlParamTemplate(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile1, rnd,
+					projectID,
 					templateName,
 					sourceTemplateID,
 					updatedDescription,
@@ -121,13 +126,14 @@ func TestAccCtyunPostgresqlParamTemplate(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"template_parameters", "source_template_id", "description", "name"}, // 参数可能变化，忽略验证
+				ImportStateVerifyIgnore: []string{"template_parameters", "source_template_id", "description", "name", "project_id"}, // 参数可能变化，忽略验证
 
 			},
 			// 6. 清理资源
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					templateName,
 					sourceTemplateID,
 					updatedDescription,

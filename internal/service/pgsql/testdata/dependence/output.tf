@@ -1,20 +1,20 @@
 output "vpc_id" {
-  value = ctyun_vpc.vpc_test.id
+  value = local.real_vpc_id
 }
 
 output "subnet_id" {
-  value = ctyun_subnet.subnet_test.id
+  value = local.real_subnet_id
 }
 
 output "security_group_id1" {
-  value = ctyun_security_group.security_group_test1.id
+  value = local.real_security_group_id1
 }
 output "security_group_id2" {
-  value = ctyun_security_group.security_group_test2.id
+  value = local.real_security_group_id2
 }
 
 output "security_group_id3" {
-  value = ctyun_security_group.security_group_test3.id
+  value = local.real_security_group_id3
 }
 
 output "eip_id" {
@@ -46,13 +46,4 @@ output "collate_type" {
 
 output "account_name" {
   value = data.ctyun_postgresql_accounts.accounts.accounts[0].name
-}
-
-
-output "flavor_name" {
-  value = local.flavor_name
-}
-
-output "flavor_name2" {
-  value = local.flavor_name2
 }

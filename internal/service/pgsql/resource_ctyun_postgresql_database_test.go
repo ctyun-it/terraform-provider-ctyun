@@ -27,6 +27,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 	databasesDatasourceFile := "datasource_ctyun_postgresql_databases.tf"
 
 	// 从环境变量获取测试依赖资源
+	projectID := "0"
 	instanceID := dependence.pgsqlID
 	ownerAccount := "kqjwyk"
 
@@ -47,7 +48,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 		Steps: []resource.TestStep{
 			// collation datasource 验证
 			{
-				Config: utils.LoadTestCase(collationDatasourceFile, dnd, instanceID),
+				Config: utils.LoadTestCase(collationDatasourceFile, dnd, instanceID, projectID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(collationDatasourceName, "standard_time_offset"),
 					resource.TestCheckResourceAttrSet(collationDatasourceName, "time_zone"),
@@ -65,11 +66,13 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					instanceID, dbName,
 					charset,
 					ownerAccount, initialDescription,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "name", dbName),
 					resource.TestCheckResourceAttr(resourceName, "charset_name", charset),
@@ -81,7 +84,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 			// 2. 更新数据库描述测试
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					resourceFile, rnd, projectID,
 					instanceID, dbName,
 					charset,
 					ownerAccount, updatedDescription,
@@ -93,7 +96,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 			// datasource 验证
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					resourceFile, rnd, projectID,
 					instanceID, dbName,
 					charset,
 					ownerAccount, updatedDescription,
@@ -138,7 +141,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"charset_collate", "charset_type", "owner", "charset_name", "description"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{"charset_collate", "charset_type", "owner", "charset_name", "description", "project_id"}, // 可选忽略
 				PreConfig: func() {
 					wait20Seconds()
 				},
@@ -146,7 +149,7 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 			// 4. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					resourceFile, rnd, projectID,
 					instanceID, dbName,
 					charset,
 					ownerAccount, updatedDescription,
@@ -168,6 +171,7 @@ func TestAccCtyunPostgresqlDatabaseWithOtherCharset(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_database.tf"
 
 	// 从环境变量获取测试依赖资源
+	projectID := "0"
 	instanceID := dependence.pgsqlID
 	ownerAccount := dependence.accountName
 
@@ -191,11 +195,13 @@ func TestAccCtyunPostgresqlDatabaseWithOtherCharset(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					instanceID, dbName,
 					charset, collate, charType,
 					ownerAccount, description,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "name", dbName),
 					resource.TestCheckResourceAttr(resourceName, "charset_name", charset),
@@ -213,6 +219,7 @@ func TestAccCtyunPostgresqlDatabaseWithOtherCharset(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
+					projectID,
 					instanceID, dbName,
 					charset, collate, charType,
 					ownerAccount, description,
