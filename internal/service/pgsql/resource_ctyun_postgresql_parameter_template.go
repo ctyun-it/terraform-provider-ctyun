@@ -181,6 +181,7 @@ func (c *CtyunPgsqlParamTemplate) Create(ctx context.Context, request resource.C
 	if err != nil {
 		return
 	}
+
 	//plan.ID = types.StringValue(plan.BackupName.ValueString())
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -314,7 +315,6 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 }
 
 func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
-
 	detail, err := c.getPgsqlParameterTemplateList(ctx, config)
 	if err != nil {
 		return err
@@ -408,7 +408,7 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameters(ctx context.Context, sta
 func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) (*pgsql.ParameterTemplateInfo, error) {
 	params := &pgsql.PgsqlGetParameterTemplateListRequest{
 		PageNow:  1,
-		PageSize: 10,
+		PageSize: 500,
 	}
 	header := &pgsql.PgsqlGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
@@ -433,7 +433,10 @@ func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Cont
 	}
 	if len(resp.ReturnObj.List) > 1 {
 		for _, item := range resp.ReturnObj.List {
-			if item.PgTemplateId == config.ID.ValueInt64() {
+			if !config.ID.IsNull() && !config.ID.IsUnknown() && config.ID.ValueInt64() == item.PgTemplateId {
+				return &item, nil
+			}
+			if item.Name == config.Name.ValueString() && item.Description == config.Description.ValueString() {
 				return &item, nil
 			}
 		}
