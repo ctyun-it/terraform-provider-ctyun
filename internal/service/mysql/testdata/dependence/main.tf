@@ -95,7 +95,6 @@ data "ctyun_mysql_param_templates" "template"{
 }
 
 locals {
-  # 生成当前时间戳的哈希值
   random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }
 
