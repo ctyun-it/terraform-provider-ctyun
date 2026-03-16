@@ -35,9 +35,9 @@ output "backup_timestamp" {
 }
 
 output "flavor_name" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  value = local.flavor_name
 }
 
 output "flavor_name2" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
+  value = local.flavor_name2
 }

@@ -39,15 +39,20 @@ locals {
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
+  cpu    = 2
+  ram    = 4
+  arch   = "x86"
+}
+
+data "ctyun_ecs_flavors" "ecs_flavor_test2" {
   cpu    = 4
   ram    = 8
   arch   = "x86"
 }
 
-data "ctyun_ecs_flavors" "ecs_flavor_test2" {
-  cpu    = 8
-  ram    = 16
-  arch   = "x86"
+locals {
+  flavor_name = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f.name if f.available == true][0]
+  flavor_name2 = [for f in data.ctyun_ecs_flavors.ecs_flavor_test2.flavors : f.name if f.available == true][0]
 }
 
 data "ctyun_mysql_backups" "backup_test" {
@@ -60,7 +65,7 @@ data "ctyun_mysql_backups" "backup_test" {
 resource "ctyun_mysql_instance" "mysql_test" {
   cycle_type            = "on_demand"
   vpc_id                = ctyun_vpc.vpc_test.id
-  flavor_name           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  flavor_name           = local.flavor_name
   prod_id               = "Single57"
   subnet_id             = ctyun_subnet.subnet_test.id
   security_group_id     = ctyun_security_group.security_group_test.id
@@ -91,17 +96,7 @@ data "ctyun_mysql_param_templates" "template"{
 
 locals {
   # 生成当前时间戳的哈希值
-  hash = sha256(timestamp())
-
-  # 从哈希结果中截取字符（转为小写并移除特殊字符）
-  random_string = substr(
-    replace(
-      lower(local.hash),
-      "/[^a-z0-9]/",
-      ""  # 移除所有非字母数字的字符
-    ),
-    0, 5  # 截取前10个字符
-  )
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }
 
 resource "ctyun_mysql_database" "db1" {

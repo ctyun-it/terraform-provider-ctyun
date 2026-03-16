@@ -1,7 +1,10 @@
 
 resource "ctyun_express_connect" "express_connect_dependence" {
-  name        = "express_connect_dependence"
+  name        = "express_connect_dependence_${local.random_string}"
   description = "云间高速开发测试专用"
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "ctyun_vpc" "vpc_test" {
@@ -131,4 +134,8 @@ resource "ctyun_sdwan" "ctyun_sdwan_test" {
   name = "ctyun_sdwan_test"
   description = "terraform-ecsdwan测试使用"
   project_id = "0"
+}
+
+locals {
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }
