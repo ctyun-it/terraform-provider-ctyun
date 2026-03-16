@@ -20,7 +20,7 @@ func TestAccCtyunMysqlInstanceUpdatePassword(t *testing.T) {
 	name := "tf-mysql-" + utils.GenerateRandomString()
 	password := "Kyk111*" + utils.GenerateRandomString()
 	prodID := "Single57"
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	storageType := "SATA"
 	storageSpace := 100
 	updatePassword := "Kyk111**" + utils.GenerateRandomString()
@@ -102,7 +102,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 	name := "tf-mysql-" + utils.GenerateRandomString()
 	password := "Kyk111*" + utils.GenerateRandomString()
 	prodID := "Single57"
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 
 	storageType := "SATA"
 	storageSpace := 100
@@ -114,7 +114,7 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 	// 磁盘、规格升配
 	updatedStorageSpace := 120
 	updatedBackupStorageSpace := `backup_storage_space=150`
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	// 单机到一主一备
 	updatedProdID := "MasterSlave57"
 	resource.Test(t, resource.TestCase{
@@ -214,7 +214,7 @@ func TestAccCtyunMysqlInstanceMonth(t *testing.T) {
 	cycleCount := "cycle_count=1"
 	autoRenewStatus := `auto_renew=false`
 
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 
 	storageType := "SATA"
 	storageSpace := 100

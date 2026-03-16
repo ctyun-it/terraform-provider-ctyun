@@ -20,7 +20,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c8.large.4"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -125,7 +125,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -141,7 +141,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 1500
@@ -240,7 +240,7 @@ func TestAccCtyunMongodbInstanceSingleOnDemand_Updatepassword(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -311,7 +311,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 	cycleType := "month"
 	cycleCount := 1
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -326,7 +326,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -401,7 +401,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -416,7 +416,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	updatedProdId := "Replica5R34"
 
@@ -515,7 +515,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -532,7 +532,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -610,7 +610,7 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -710,7 +710,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -728,7 +728,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	mongosNum := 2
 
 	//更新参数
-	updatedFlavorName := "c7.xlarge.2"
+	updatedFlavorName := dependence.flavorName
 
 	updatedMongosSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"mongos"}]`, azName)
 	updatedShardSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"}]`, azName)
@@ -832,7 +832,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -949,7 +949,7 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -1047,7 +1047,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -1061,7 +1061,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
@@ -1144,7 +1144,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
@@ -1158,7 +1158,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
@@ -1253,7 +1253,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()

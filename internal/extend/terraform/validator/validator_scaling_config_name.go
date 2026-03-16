@@ -10,9 +10,9 @@ import (
 const (
 	ScalingConfigNameError  = "不满足scaling config name格式"
 	ScalingConfigNameLength = "名称长度必须为2～15个字符"
-	ScalingConfigNameStart  = "不能以点号(.)或连字符(-)开头"
-	ScalingConfigNameEnd    = "不能以点号(.)或连字符(-)结尾"
-	ScalingConfigNameNum    = "不能仅使用数字"
+	ScalingConfigNameStart  = "名称不能以点号(.)或连字符(-)开头"
+	ScalingConfigNameEnd    = "名称不能以点号(.)或连字符(-)结尾"
+	ScalingConfigNameNum    = "名称不能仅使用数字"
 )
 
 type validatorScalingConfigName struct {

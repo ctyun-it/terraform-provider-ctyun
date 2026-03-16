@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SecurityGroupError = "不满足SecurityGroup格式"
+	SecurityGroupError = "安全组ID格式不正确"
 )
 
 type validatorSecurityGroup struct {

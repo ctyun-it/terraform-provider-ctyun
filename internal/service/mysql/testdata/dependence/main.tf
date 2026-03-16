@@ -1,41 +1,13 @@
-// main.tf负责创建或查询单测依赖的前置资源
-data "ctyun_vpcs" "vpc_test" {
-  page_size = 50
-}
-
-locals {
-  vpcs        = [for vpc in data.ctyun_vpcs.vpc_test.vpcs : vpc if vpc.name == "tf-vpc-for-paas"]
-  data_vpc_id = length(local.vpcs) > 0 ? local.vpcs[0].vpc_id : ""
-}
-
 resource "ctyun_vpc" "vpc_test" {
-  count       = local.data_vpc_id == "" ? 1 : 0
-  name        = "tf-vpc-for-paas"
+  name        = "tf-vpc-for-mysql"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
 }
 
-locals {
-  real_vpc_id = local.data_vpc_id == "" ? try(ctyun_vpc.vpc_test[0].id, "") : local.data_vpc_id
-}
-
-
-data "ctyun_subnets" "subnet_test" {
-  vpc_id = local.real_vpc_id
-}
-
-locals {
-  subnets = [
-    for subnet in data.ctyun_subnets.subnet_test.subnets : subnet if subnet.name == "tf-subnet-for-paas"
-  ]
-  data_subnet_id = length(local.subnets) > 0 ? local.subnets[0].subnet_id : ""
-}
-
 resource "ctyun_subnet" "subnet_test" {
-  count       = local.data_vpc_id=="" ? 1 : 0
-  vpc_id      = local.real_vpc_id
-  name        = "tf-subnet-for-paas"
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tf-subnet-for-mysql"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -44,33 +16,10 @@ resource "ctyun_subnet" "subnet_test" {
   ]
 }
 
-locals {
-  real_subnet_id = local.data_subnet_id == "" ? try(ctyun_subnet.subnet_test[0].id, "") : local.data_subnet_id
-}
-
-data "ctyun_security_groups" "security_group_test" {
-  vpc_id = local.real_vpc_id
-}
-
-locals {
-  security_groups = [
-    for security_group in data.ctyun_security_groups.security_group_test.security_groups :security_group if security_group.name == "tf-sg-for-paas"
-  ]
-  data_security_group_id = length(local.security_groups) > 0 ? local.security_groups[0].security_group_id : ""
-}
-
 resource "ctyun_security_group" "security_group_test" {
-  count       = local.data_vpc_id=="" ? 1 : 0
-  vpc_id      = local.real_vpc_id
-  name        = "tf-sg-for-paas"
+  vpc_id = ctyun_vpc.vpc_test.id
+  name        = "tf-sg-for-mysql"
   description = "terraform测试使用"
-  lifecycle {
-    prevent_destroy = false
-  }
-}
-
-locals {
-  real_security_group_id = local.data_security_group_id == "" ? try(ctyun_security_group.security_group_test[0].id, "") : local.data_security_group_id
 }
 
 resource "ctyun_eip" "eip_test" {
@@ -89,8 +38,21 @@ locals {
   az_name    = data.ctyun_zones.test.zones[0]
 }
 
-data "ctyun_mysql_specs" "mysql_specs"{
-  instance_series = "S"
+data "ctyun_ecs_flavors" "ecs_flavor_test" {
+  cpu    = 2
+  ram    = 4
+  arch   = "x86"
+}
+
+data "ctyun_ecs_flavors" "ecs_flavor_test2" {
+  cpu    = 4
+  ram    = 8
+  arch   = "x86"
+}
+
+locals {
+  flavor_name = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f.name if f.available == true][0]
+  flavor_name2 = [for f in data.ctyun_ecs_flavors.ecs_flavor_test2.flavors : f.name if f.available == true][0]
 }
 
 data "ctyun_mysql_backups" "backup_test" {
@@ -102,13 +64,13 @@ data "ctyun_mysql_backups" "backup_test" {
 
 resource "ctyun_mysql_instance" "mysql_test" {
   cycle_type            = "on_demand"
-  vpc_id                = local.real_vpc_id
-  flavor_name           = "c7.large.2"
+  vpc_id                = ctyun_vpc.vpc_test.id
+  flavor_name           = local.flavor_name
   prod_id               = "Single57"
-  subnet_id             = local.real_subnet_id
-  security_group_id     = local.real_security_group_id
+  subnet_id             = ctyun_subnet.subnet_test.id
+  security_group_id     = ctyun_security_group.security_group_test.id
   name                  = local.mysql_name
-  storage_type          = "SATA"
+  storage_type          = "SSD"
   storage_space         = 100
   lifecycle {
     ignore_changes = [name]
@@ -133,18 +95,7 @@ data "ctyun_mysql_param_templates" "template"{
 }
 
 locals {
-  # 生成当前时间戳的哈希值
-  hash = sha256(timestamp())
-
-  # 从哈希结果中截取字符（转为小写并移除特殊字符）
-  random_string = substr(
-    replace(
-      lower(local.hash),
-      "/[^a-z0-9]/",
-      ""  # 移除所有非字母数字的字符
-    ),
-    0, 5  # 截取前10个字符
-  )
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }
 
 resource "ctyun_mysql_database" "db1" {
