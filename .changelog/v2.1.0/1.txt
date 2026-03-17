@@ -1,0 +1,11 @@
+release-note:enhancement
+most iaas resources support import
+
+release-note:enhancement
+most computed fields have handled redundant "known after apply" issues
+
+release-note:enhancement
+all resources have optimized the Read method and fixed errors caused by empty deletion
+
+release-note:enhancement
+unused project_id fields in some resources have been marked as deprecated

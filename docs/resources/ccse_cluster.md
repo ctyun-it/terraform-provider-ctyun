@@ -341,7 +341,7 @@ Required:
 Required:
 
 - `size` (Number) 数据盘大小，单位为G，支持范围10-20000
-- `type` (String) 数据盘类型，支持SATA、SAS、SSD
+- `type` (String) 数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2
 
 
 <a id="nestedatt--slave_host--sys_disk"></a>
@@ -350,7 +350,7 @@ Required:
 Required:
 
 - `size` (Number) 系统盘大小，单位为G，支持范围80-2040
-- `type` (String) 系统盘类型，支持SATA、SAS、SSD
+- `type` (String) 系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2
 
 
 
@@ -382,7 +382,7 @@ Required:
 Required:
 
 - `size` (Number) 数据盘大小，单位为G，支持范围10-20000
-- `type` (String) 数据盘类型，支持SATA、SAS、SSD
+- `type` (String) 数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2
 
 
 <a id="nestedatt--master_host--sys_disk"></a>
@@ -391,4 +391,4 @@ Required:
 Required:
 
 - `size` (Number) 系统盘大小，单位为G，支持范围80-2040
-- `type` (String) 系统盘类型，支持SATA、SAS、SSD
+- `type` (String) 系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2

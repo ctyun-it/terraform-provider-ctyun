@@ -135,7 +135,7 @@ Required:
 
 Required:
 
-- `type` (String) 数据盘类型，支持SATA、SAS、SSD，支持更新
+- `type` (String) 数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新
 
 Optional:
 
@@ -148,4 +148,4 @@ Optional:
 Required:
 
 - `size` (Number) 系统盘大小，单位为G，支持范围40-2040，支持更新
-- `type` (String) 系统盘类型，支持SATA、SAS、SSD，支持更新
+- `type` (String) 系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新
