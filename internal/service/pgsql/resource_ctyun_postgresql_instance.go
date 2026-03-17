@@ -648,7 +648,7 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 	// 处理MysqlNodeInfoList
 	var pgsqlNodeInfoList []pgsql.PgsqlCreateRequestNodeInfoList
 	pgsqlNodeInfo := pgsql.PgsqlCreateRequestNodeInfoList{}
-	pgsqlNodeInfo.InstSpec = business.PgsqlInstanceSeriesDict[config.instanceSeries]
+	pgsqlNodeInfo.InstSpec = business.MysqlInstanceSeriesDict[config.instanceSeries]
 	pgsqlNodeInfo.StorageType = config.StorageType.ValueString()
 	pgsqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
 	pgsqlNodeInfo.ProdPerformanceSpec = config.prodPerformanceSpec
@@ -712,7 +712,6 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 			return
 		}
 		config.ID = types.StringValue(id)
-
 	}
 	if config.ID.ValueString() == "" {
 		err = errors.New("实例id为空")

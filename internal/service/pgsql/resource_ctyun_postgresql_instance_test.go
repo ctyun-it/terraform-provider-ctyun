@@ -25,6 +25,9 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 	caseCensitive := true
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
+	if dependence.securityGroupID == "" || dependence.securityGroupID2 == "" || dependence.securityGroupID3 == "" {
+		t.Skip("security_group_id is required")
+	}
 	securityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID2)
 	updatedSecurityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID3)
 	backupStorageType := "OS"
