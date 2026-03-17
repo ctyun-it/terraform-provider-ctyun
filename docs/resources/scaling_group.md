@@ -180,6 +180,7 @@ resource "ctyun_scaling_group" "scaling_group_test" {
 
 ### Read-Only
 
+- `actual_count` (Number) 当前弹性伸缩组内云主机数量
 - `id` (Number) 伸缩组ID
 - `real_count` (Number) 当前的云主机数量，直接通过接口获取，一般为expected_count + 手动添加（+）/移除（-）云主机数量。
 

@@ -621,7 +621,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: "系统盘类型，支持SATA、SAS、SSD",
+								Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 								Validators: []validator.String{
 									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
@@ -651,7 +651,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Required:    true,
-									Description: "数据盘类型，支持SATA、SAS、SSD",
+									Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 									Validators: []validator.String{
 										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},
@@ -821,7 +821,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: "系统盘类型，支持SATA、SAS、SSD",
+								Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 								Validators: []validator.String{
 									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
@@ -851,7 +851,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Required:    true,
-									Description: "数据盘类型，支持SATA、SAS、SSD",
+									Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 									Validators: []validator.String{
 										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},

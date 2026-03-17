@@ -319,7 +319,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Required:    true,
-						Description: "系统盘类型，支持SATA、SAS、SSD，支持更新",
+						Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新",
 						Validators: []validator.String{
 							stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 						},
@@ -373,7 +373,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
 							Required:    true,
-							Description: "数据盘类型，支持SATA、SAS、SSD，支持更新",
+							Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新",
 							Validators: []validator.String{
 								stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 							},
