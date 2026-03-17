@@ -50,6 +50,10 @@ output "ctyun_ebm_device_types_test" {
 <a id="nestedatt--device_types"></a>
 ### Nested Schema for `device_types`
 
+Optional:
+
+- `available` (Boolean) 是否可用（true：可用；false：不可用，已售罄）
+
 Read-Only:
 
 - `az_name` (String) 可用区
