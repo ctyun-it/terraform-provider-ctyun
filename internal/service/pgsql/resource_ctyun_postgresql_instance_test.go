@@ -17,7 +17,7 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 	resourceName := "ctyun_postgresql_instance." + rnd
 	cycleType := "on_demand"
 	prodId := "Single1222"
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	storageType := "SSD"
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
@@ -25,6 +25,9 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 	caseCensitive := true
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
+	if dependence.securityGroupID == "" || dependence.securityGroupID2 == "" || dependence.securityGroupID3 == "" {
+		t.Skip("security_group_id is required")
+	}
 	securityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID2)
 	updatedSecurityGroupID := fmt.Sprintf("%s,%s", dependence.securityGroupID, dependence.securityGroupID3)
 	backupStorageType := "OS"
@@ -93,7 +96,7 @@ func TestAccCtyunPgsqlInstanceProjectId(t *testing.T) {
 	resourceName := "ctyun_postgresql_instance." + rnd
 	cycleType := "on_demand"
 	prodId := "Single1222"
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	storageType := "SSD"
 	storageSpace := 100
 	name := "pgsql-" + utils.GenerateRandomString()
@@ -159,8 +162,8 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 	//password := "VqOcfgJ6Nf2houSe5C9sxgM4ycExVK+F0bBZwBGdiy8DCVXoSyck0lPxw9XMRgHur2lQYenOJ5K/FxZ30qlwbKG3NfgNoPq+AXDeSDdycGTqa1TzLdGnYwAeC/hEa8pyUKS9LdlW7nnM1nGUvGCXkGdzJP8lbHCwonzazEnF3RI="
 	password := "Kyk123=2" + utils.GenerateRandomString()
 	caseCensitive := true
-	flavorName := "c7.xlarge.2"
-	updatedFlavorName := "c7.xlarge.4"
+	flavorName := dependence.flavorName
+	updatedFlavorName := dependence.flavorName2
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -305,7 +308,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	resourceFile := "resource_ctyun_pgsql_instance.tf"
 
 	cycleType := "on_demand"
-	flavorName := "c7.large.2"
+	flavorName := dependence.flavorName
 	prodId := "Single1417"
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type = "SATA"`
@@ -320,7 +323,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	updatedProdId := "MasterSlave1417"
 	updatedStorageSpace := 150
 	updatedBackupStorageSpace := `backup_storage_space = 200`
-	updatedFlavorName := "c7.xlarge.2"
+	updatedFlavorName := dependence.flavorName2
 	caseCensitive := true
 
 	resource.Test(t, resource.TestCase{
@@ -400,7 +403,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 	resourceFile := "resource_ctyun_pgsql_instance.tf"
 
 	cycleType := "on_demand"
-	flavorName := "c7.large.2"
+	flavorName := dependence.flavorName
 	prodId := "Master2Slave1512"
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SAS"`
@@ -414,7 +417,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 
 	updatedStorageSpace := 150
 	updatedBackupStorageSpace := `backup_storage_space=200`
-	updatedFlavorName := "c7.large.4"
+	updatedFlavorName := dependence.flavorName2
 	caseCensitive := false
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {

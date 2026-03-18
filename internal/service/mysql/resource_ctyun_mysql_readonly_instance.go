@@ -40,6 +40,7 @@ type CtyunMysqlReadOnlyInstance struct {
 	name         string
 	ecsService   *business.EcsService
 	mysqlService *business.MysqlService
+	orderLooper  *business.OrderLooper
 }
 
 func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -52,13 +53,12 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 		}
 	}()
 	var config CtyunMysqlReadOnlyInstanceConfig
-	var ID, regionId, projectId string
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -73,7 +73,6 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -97,6 +96,7 @@ func (c *CtyunMysqlReadOnlyInstance) Configure(ctx context.Context, request reso
 	c.meta = meta
 	c.ecsService = business.NewEcsService(c.meta)
 	c.mysqlService = business.NewMysqlService(c.meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -324,12 +324,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 		return
 	}
 
-	//// 确保主机在退订之前是处于running状态
-	//err = c.StartedLoop(ctx, &state)
-	//if err != nil {
-	//	return
-	//}
-
 	err = c.refund(ctx, state)
 	if err != nil {
 		return
@@ -344,10 +338,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 	if err != nil {
 		return
 	}
-	//err = c.destroyLoop(ctx, state)
-	//if err != nil {
-	//	return
-	//}
 	response.Diagnostics.AddWarning("删除MySql集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -363,10 +353,11 @@ func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunM
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持此规格：%s，请联系研发确认！", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
 		ctx,
@@ -402,9 +393,6 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceDetail(ctx context.Context,
 	detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
 		InstID:   id,
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() {
-		detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
@@ -448,6 +436,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 	header := &mysql.TeledbCreateRequestHeader{}
 	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	if cycleType == business.OnDemandCycleType {
 		params.AutoRenewStatus = 0
@@ -494,6 +483,18 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		err2 := fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return err2
 	}
+	// 查询订单是否完成
+	masterOrderID := utils.SecString(resp.ReturnObj.Data.NewOrderId)
+	err2 := c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err2 != nil {
+		return err2
+	}
+
+	id, err2 := c.acquireAndSetIdIfOrderNotFinished(ctx, config, masterOrderID)
+	if err2 != nil {
+		return err2
+	}
+	config.ID = types.StringValue(id)
 	return nil
 }
 
@@ -502,9 +503,6 @@ func (c *CtyunMysqlReadOnlyInstance) getAzInfoByRegion(ctx context.Context, conf
 		RegionId: config.RegionID.ValueString(),
 	}
 	header := &mysql.TeledbGetAvailabilityZoneRequestHeader{}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetAvailabilityZone.Do(ctx, c.meta.Credential, params, header)
 	if err2 != nil {
 		err = err2
@@ -554,6 +552,7 @@ func (c *CtyunMysqlReadOnlyInstance) getAndMerge(ctx context.Context, config *Ct
 		return err
 	}
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
+	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
 	return nil
 }
 
@@ -567,9 +566,6 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceList(ctx context.Context, c
 	}
 	mysqlListHeaders := &mysql.TeledbGetListHeaders{
 		RegionID: config.RegionID.ValueString(),
-	}
-	if config.ProjectID.ValueString() != "" {
-		mysqlListHeaders.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, mysqlListParams, mysqlListHeaders)
@@ -633,9 +629,6 @@ func (c *CtyunMysqlReadOnlyInstance) refund(ctx context.Context, state CtyunMysq
 		InstId: state.ID.ValueString(),
 	}
 	headers := &mysql.TeledbRefundRequestHeader{}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		headers.ProjectID = state.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbRefundApi.Do(ctx, c.meta.Credential, params, headers)
 	if err != nil {
 		return err
@@ -684,9 +677,6 @@ func (c *CtyunMysqlReadOnlyInstance) destroy(ctx context.Context, state CtyunMys
 		InstId: state.ID.ValueString(),
 	}
 	deleteHeader := &mysql.TeledbDestroyRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		deleteHeader.ProjectID = state.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDestroyApi.Do(ctx, c.meta.Credential, deleteParams, deleteHeader)
 	if err != nil {
 		return err
@@ -695,6 +685,29 @@ func (c *CtyunMysqlReadOnlyInstance) destroy(ctx context.Context, state CtyunMys
 		return err
 	}
 	return nil
+}
+
+func (c *CtyunMysqlReadOnlyInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Context, config *CtyunMysqlReadOnlyInstanceConfig, masterOrderID string) (id string, err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
+	if err != nil {
+		return
+	}
+	result := retryer.Start(
+		func(currentTime int) bool {
+			id, err = c.mysqlService.GetIDByOrder(ctx, masterOrderID, "")
+			if err != nil {
+				return false
+			}
+			if id != "" {
+				return false
+			}
+			return true
+		},
+	)
+	if result.ReturnReason == business.ReachMaxLoopTime {
+		return "", fmt.Errorf("实例 %s 创建超时", config.Name.ValueString())
+	}
+	return
 }
 
 type CtyunMysqlReadOnlyInstanceConfig struct {

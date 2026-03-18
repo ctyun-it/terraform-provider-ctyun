@@ -581,7 +581,6 @@ func (c *CtyunMongodbInstance) Delete(ctx context.Context, request resource.Dele
 
 	masterOrderID := resp.ReturnObj.Data.NewOrderId
 	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
-
 	err = c.destroy(ctx, state)
 	if err != nil {
 		return
