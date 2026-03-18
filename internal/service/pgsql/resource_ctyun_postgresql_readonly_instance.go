@@ -53,13 +53,12 @@ func (c *CtyunPostgresqlReadOnlyInstance) ImportState(ctx context.Context, reque
 		}
 	}()
 	var config CtyunPostgresqlReadOnlyInstanceConfig
-	var ID, regionId, projectId string
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -74,7 +73,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) ImportState(ctx context.Context, reque
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -305,12 +303,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) Delete(ctx context.Context, request re
 		return
 	}
 
-	//// 确保主机在退订之前是处于running状态
-	//err = c.StartedLoop(ctx, &state)
-	//if err != nil {
-	//	return
-	//}
-
 	err = c.refund(ctx, state)
 	if err != nil {
 		return
@@ -325,10 +317,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) Delete(ctx context.Context, request re
 	if err != nil {
 		return
 	}
-	//err = c.destroyLoop(ctx, state)
-	//if err != nil {
-	//	return
-	//}
 	response.Diagnostics.AddWarning("删除MySql集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -533,9 +521,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) getAzInfoByRegion(ctx context.Context,
 		RegionId: config.RegionID.ValueString(),
 	}
 	header := &mysql.TeledbGetAvailabilityZoneRequestHeader{}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetAvailabilityZone.Do(ctx, c.meta.Credential, params, header)
 	if err2 != nil {
 		err = err2
@@ -585,6 +570,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) getAndMerge(ctx context.Context, confi
 		return err
 	}
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
+	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
 	return nil
 }
 
@@ -599,10 +585,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceList(ctx context.
 	header := &pgsql.PgsqlListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() && config.ProjectID.ValueString() != "" {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
-
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -659,9 +641,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) refund(ctx context.Context, state Ctyu
 		InstId: state.ID.ValueString(),
 	}
 	headers := &pgsql.PgsqlRefundRequestHeader{}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		headers.ProjectID = state.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlRefundApi.Do(ctx, c.meta.Credential, params, headers)
 	if err != nil {
 		return err
@@ -710,9 +689,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) destroy(ctx context.Context, state Cty
 		InstId: state.ID.ValueString(),
 	}
 	deleteHeader := &pgsql.TeledbDestroyRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		deleteHeader.ProjectID = state.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDestroyApi.Do(ctx, c.meta.Credential, deleteParams, deleteHeader)
 	if err != nil {
 		return err

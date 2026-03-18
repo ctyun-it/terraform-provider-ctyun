@@ -53,7 +53,6 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 		}
 	}()
 	var config CtyunMysqlReadOnlyInstanceConfig
-	//var ID, regionId, projectId string
 	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
@@ -74,7 +73,6 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	//config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -326,12 +324,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 		return
 	}
 
-	//// 确保主机在退订之前是处于running状态
-	//err = c.StartedLoop(ctx, &state)
-	//if err != nil {
-	//	return
-	//}
-
 	err = c.refund(ctx, state)
 	if err != nil {
 		return
@@ -346,10 +338,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 	if err != nil {
 		return
 	}
-	//err = c.destroyLoop(ctx, state)
-	//if err != nil {
-	//	return
-	//}
 	response.Diagnostics.AddWarning("删除MySql集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -406,9 +394,6 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceDetail(ctx context.Context,
 		InstID:   id,
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if !config.ProjectID.IsNull() {
-	//	detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return nil, err
@@ -518,9 +503,6 @@ func (c *CtyunMysqlReadOnlyInstance) getAzInfoByRegion(ctx context.Context, conf
 		RegionId: config.RegionID.ValueString(),
 	}
 	header := &mysql.TeledbGetAvailabilityZoneRequestHeader{}
-	//if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetAvailabilityZone.Do(ctx, c.meta.Credential, params, header)
 	if err2 != nil {
 		err = err2
@@ -570,6 +552,7 @@ func (c *CtyunMysqlReadOnlyInstance) getAndMerge(ctx context.Context, config *Ct
 		return err
 	}
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
+	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
 	return nil
 }
 
@@ -584,9 +567,6 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceList(ctx context.Context, c
 	mysqlListHeaders := &mysql.TeledbGetListHeaders{
 		RegionID: config.RegionID.ValueString(),
 	}
-	//if config.ProjectID.ValueString() != "" {
-	//	mysqlListHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, mysqlListParams, mysqlListHeaders)
 	if err != nil {
@@ -649,9 +629,6 @@ func (c *CtyunMysqlReadOnlyInstance) refund(ctx context.Context, state CtyunMysq
 		InstId: state.ID.ValueString(),
 	}
 	headers := &mysql.TeledbRefundRequestHeader{}
-	//if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-	//	headers.ProjectID = state.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbRefundApi.Do(ctx, c.meta.Credential, params, headers)
 	if err != nil {
 		return err
@@ -700,9 +677,6 @@ func (c *CtyunMysqlReadOnlyInstance) destroy(ctx context.Context, state CtyunMys
 		InstId: state.ID.ValueString(),
 	}
 	deleteHeader := &mysql.TeledbDestroyRequestHeader{}
-	//if state.ProjectID.ValueString() != "" {
-	//	deleteHeader.ProjectID = state.ProjectID.ValueString()
-	//}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDestroyApi.Do(ctx, c.meta.Credential, deleteParams, deleteHeader)
 	if err != nil {
 		return err
