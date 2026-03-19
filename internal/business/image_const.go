@@ -44,11 +44,13 @@ const (
 	ImageAssociationUserTypeShare   = "share"
 	ImageAssociationUserTypeReceive = "receive"
 
-	ImageVisibilityPrivate = "private"
-	ImageVisibilityPublic  = "public"
-	ImageVisibilityShared  = "shared"
-	ImageVisibilitySafe    = "safe"
-	ImageVisibilityApp     = "app"
+	ImageVisibilityPrivate   = "private"
+	ImageVisibilityPublic    = "public"
+	ImageVisibilityShared    = "shared"
+	ImageVisibilitySafe      = "safe"
+	ImageVisibilityCommunity = "community"
+	ImageVisibilityApp       = "app"
+	ImageVisibilityMarket    = "market"
 )
 
 const (
@@ -103,7 +105,9 @@ var ImageVisibilities = []string{
 	ImageVisibilityPublic,
 	ImageVisibilityShared,
 	ImageVisibilitySafe,
+	ImageVisibilityCommunity,
 	ImageVisibilityApp,
+	ImageVisibilityMarket,
 }
 
 var ImageTypeMap = utils.Must(
@@ -119,21 +123,12 @@ var ImageTypeMap = utils.Must(
 	},
 )
 
-var ImageVisibilityMap = utils.Must(
-	[]any{
-		ImageVisibilityPrivate,
-		ImageVisibilityPublic,
-		ImageVisibilityShared,
-		ImageVisibilitySafe,
-		ImageVisibilityApp,
-	},
-	map[utils.Scene][]any{
-		ImageVisibilityMapScene1: {
-			0,
-			1,
-			2,
-			3,
-			4,
-		},
-	},
-)
+var ImageVisibilityMap = map[string]int{
+	ImageVisibilityPrivate:   0,
+	ImageVisibilityPublic:    1,
+	ImageVisibilityShared:    2,
+	ImageVisibilitySafe:      3,
+	ImageVisibilityCommunity: 4,
+	ImageVisibilityApp:       5,
+	ImageVisibilityMarket:    6,
+}

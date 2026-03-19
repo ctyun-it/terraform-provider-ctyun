@@ -744,9 +744,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	if err != nil {
 		return err
 	}
-	imageVisibility, err2 := business.ImageVisibilityMap.FromOriginalScene(imageResponse.Images[0].Visibility, business.ImageVisibilityMapScene1)
-	if err2 != nil {
-		return err2
+	imageVisibility, exist := business.ImageVisibilityMap[imageResponse.Images[0].Visibility]
+	if !exist {
+		return fmt.Errorf("不支持的镜像种类：%s", imageResponse.Images[0].Visibility)
 	}
 
 	// 是否按需参数
@@ -783,7 +783,6 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	azName := plan.AzName.ValueString()
 	projectId := plan.ProjectId.ValueString()
 
-	image_type := imageVisibility.(int)
 	boot_disk_size := int32(plan.SystemDiskSize.ValueInt64())
 	cycle_count := int32(plan.CycleCount.ValueInt64())
 	nic_is_master := true
@@ -816,7 +815,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		DisplayName:     plan.DisplayName.ValueString(),
 		FlavorName:      plan.FlavorName.ValueStringPointer(),
 		FlavorID:        plan.FlavorId.ValueStringPointer(),
-		ImageType:       int32(image_type),
+		ImageType:       int32(imageVisibility),
 		ImageID:         plan.ImageId.ValueString(),
 		BootDiskType:    diskType.(string),
 		BootDiskSize:    boot_disk_size,
