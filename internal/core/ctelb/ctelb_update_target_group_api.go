@@ -54,7 +54,7 @@ type CtelbUpdateTargetGroupRequest struct {
 	Name          string                                      `json:"name,omitempty"`          /*  唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
 	HealthCheckID string                                      `json:"healthCheckID,omitempty"` /*  健康检查ID  */
 	Algorithm     string                                      `json:"algorithm,omitempty"`     /*  调度算法。取值范围：rr（轮询）、wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希）  */
-	ProxyProtocol int32                                       `json:"proxyProtocol,omitempty"` /*  1 开启，0 关闭  */
+	ProxyProtocol int32                                       `json:"proxyProtocol"`           /*  1 开启，0 关闭  */
 	SessionSticky *CtelbUpdateTargetGroupSessionStickyRequest `json:"sessionSticky"`           /*  会话保持配置  */
 	Protocol      string                                      `json:"protocol,omitempty"`      /*  协议，支持 TCP / UDP / HTTP / HTTPS / GENEVE  */
 }

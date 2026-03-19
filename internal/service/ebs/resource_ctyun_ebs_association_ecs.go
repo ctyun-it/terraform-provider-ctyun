@@ -266,17 +266,16 @@ func (c *ctyunEbsAssociation) getAndMergeEbsAssociationEcs(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.Attachments) == 0 {
-		return nil, nil
+	if resp.IsSystemVolume {
+		return nil, fmt.Errorf("不支持系统盘")
 	}
 	for _, each := range resp.Attachments {
 		if each.InstanceId == cfg.InstanceId.ValueString() {
-			cfg.InstanceId = types.StringValue(each.InstanceId)
-			break
+			cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString()))
+			return &cfg, nil
 		}
 	}
-	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString()))
-	return &cfg, err
+	return nil, nil
 }
 
 type CtyunEbsAssociationConfig struct {

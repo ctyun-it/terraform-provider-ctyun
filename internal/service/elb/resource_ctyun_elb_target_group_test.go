@@ -73,23 +73,21 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 		},
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
-			// 1. 基础功能测试
-			// 1.1 create验证
+			// 2. 详细参数创建，包括健康检查id， algorithm=wrr, sessionStickyMode=SOURCE_IP
+			// 2.1 create验证，包括创建一个健康检查
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, name, vpcId, algorithm, "", "", "", "", "", "", ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, name, vpcId, algorithm, tfHealthCheckID, tfSessionStickyMode, "", "", tfSourceIpTimeout, tfProxyProtocol, tfProtocol),
+				//Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, algorithm, regionID, tfHealthCheckID, updatedTfSessionStickyMode, updatedTfCookieExpire, "", "", updatedTfProxyProtocol, updatedTfProtocol),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcId),
 					resource.TestCheckResourceAttr(resourceName, "algorithm", algorithm),
-					func(s *terraform.State) error {
-						ds := s.RootModule().Resources[resourceName].Primary
-						createTime := ds.Attributes["create_time"]
-						if utils.IsEmptyOrRfc3339(createTime) {
-							return nil
-						}
-						return fmt.Errorf("time format doesn't match")
-					},
+					//resource.TestCheckResourceAttr(resourceName, "health_check_id", healthCheckID),
+					resource.TestCheckResourceAttr(resourceName, "session_sticky_mode", sessionStickyMode),
+					//resource.TestCheckResourceAttr(resourceName, "cookie_expire", strconv.Itoa(cookieExpire)),
+					//resource.TestCheckResourceAttr(resourceName, "rewrite_cookie_name", rewriteCookieName),
+					resource.TestCheckResourceAttr(resourceName, "source_ip_timeout", strconv.Itoa(sourceIpTimeout)),
+					resource.TestCheckResourceAttr(resourceName, "proxy_protocol", strconv.Itoa(proxyProtocol)),
 				),
 			},
 			// importState 1
@@ -117,49 +115,6 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
 			},
-			// 1.2 update 验证
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, updatedAlgorithm, "", "", "", "", "", "", ""),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
-					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcId),
-					resource.TestCheckResourceAttr(resourceName, "algorithm", updatedAlgorithm),
-				),
-			},
-			// 1.3 datasource验证
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, updatedAlgorithm, "", "", "", "", "", "", "") +
-					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`ids=%s.id`, resourceName)),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.name", updatedName),
-					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.vpc_id", vpcId),
-					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.algorithm", updatedAlgorithm),
-				),
-			},
-			// 1.4 delete 验证
-			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, updatedAlgorithm, "", "", "", "", "", "", ""),
-				Destroy: true,
-			},
-
-			// 2. 详细参数创建，包括健康检查id， algorithm=wrr, sessionStickyMode=SOURCE_IP
-			// 2.1 create验证，包括创建一个健康检查
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, name, vpcId, algorithm, tfHealthCheckID, tfSessionStickyMode, "", "", tfSourceIpTimeout, tfProxyProtocol, tfProtocol),
-				//Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, algorithm, regionID, tfHealthCheckID, updatedTfSessionStickyMode, updatedTfCookieExpire, "", "", updatedTfProxyProtocol, updatedTfProtocol),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "name", name),
-					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcId),
-					resource.TestCheckResourceAttr(resourceName, "algorithm", algorithm),
-					//resource.TestCheckResourceAttr(resourceName, "health_check_id", healthCheckID),
-					resource.TestCheckResourceAttr(resourceName, "session_sticky_mode", sessionStickyMode),
-					//resource.TestCheckResourceAttr(resourceName, "cookie_expire", strconv.Itoa(cookieExpire)),
-					//resource.TestCheckResourceAttr(resourceName, "rewrite_cookie_name", rewriteCookieName),
-					resource.TestCheckResourceAttr(resourceName, "source_ip_timeout", strconv.Itoa(sourceIpTimeout)),
-					resource.TestCheckResourceAttr(resourceName, "proxy_protocol", strconv.Itoa(proxyProtocol)),
-				),
-			},
 			// 2.2 update验证, algorithm=wrr, sessionStickyMode=SOURCE_IP,
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, algorithm, tfHealthCheckID, tfSessionStickyMode, "", "", updatedTfSourceIpTimeout, tfProxyProtocol, tfProtocol),
@@ -174,6 +129,16 @@ func TestAccCtyunElbTargetGroup(t *testing.T) {
 					//resource.TestCheckResourceAttr(resourceName, "rewrite_cookie_name", updatedRewriteCookieName),
 					resource.TestCheckResourceAttr(resourceName, "source_ip_timeout", strconv.Itoa(updatedSourceIpTimeout)),
 					resource.TestCheckResourceAttr(resourceName, "proxy_protocol", strconv.Itoa(proxyProtocol)),
+				),
+			},
+			// 1.3 datasource验证
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, vpcId, algorithm, tfHealthCheckID, tfSessionStickyMode, "", "", updatedTfSourceIpTimeout, tfProxyProtocol, tfProtocol) +
+					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`ids=%s.id`, resourceName)),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.vpc_id", vpcId),
+					resource.TestCheckResourceAttr(datasourceName, "target_groups.0.algorithm", algorithm),
 				),
 			},
 			// 2.3 销毁

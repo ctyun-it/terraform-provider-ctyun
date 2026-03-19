@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
@@ -426,6 +427,16 @@ func (c *ctyunEbmAssociationEbs) checkAfterDissociation(ctx context.Context, pla
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbmAssociationEbsConfig) (err error) {
+	resp, err := c.meta.Apis.CtEbsApis.EbsShowApi.Do(ctx, c.meta.Credential, &ctebs.EbsShowRequest{
+		RegionId: plan.RegionID.ValueString(),
+		DiskId:   plan.EbsID.ValueString(),
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsSystemVolume {
+		return fmt.Errorf("不支持系统盘")
+	}
 	instance, err := business.NewEbmService(c.meta).GetEbmInfo(
 		ctx,
 		plan.InstanceID.ValueString(),
