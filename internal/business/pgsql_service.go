@@ -22,7 +22,7 @@ func (u PgsqlService) GetPgsqlFlavorByProdIdAndFlavorName(ctx context.Context, p
 		ProdType:     "1",
 		ProdCode:     "POSTGRESQL",
 		RegionID:     regionID,
-		InstanceType: PgsqlInstanceSeriesDict[series],
+		InstanceType: MysqlInstanceSeriesDict[series],
 	}
 	headers := &mysql.TeledbMysqlSpecsRequestHeader{}
 	resp, err := u.meta.Apis.SdkCtMysqlApis.TeledbMysqlSpecsApi.Do(ctx, u.meta.Credential, params, headers)

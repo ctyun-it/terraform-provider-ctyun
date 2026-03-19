@@ -109,4 +109,5 @@ type PgsqlDetailResponseReturnObj struct {
 	BackupUsageDiskSize string `json:"backupUsageDiskSize"` // 备份已使用空间
 	BackupFreeSpace     string `json:"backupFreeSpace"`     // 备份免费空间
 	BillMode            int32  `json:"billMode"`            // 计费模式,1包周期,2按需
+	ProjectId           string `json:"projectId"`
 }

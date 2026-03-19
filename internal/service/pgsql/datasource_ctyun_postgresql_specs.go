@@ -191,7 +191,7 @@ func (c *CtyunPgsqlSpecs) Read(ctx context.Context, request datasource.ReadReque
 		ProdType:     "1",
 		ProdCode:     "POSTGRESQL",
 		RegionID:     regionId,
-		InstanceType: business.PgsqlInstanceSeriesDict[config.InstanceSeries.ValueString()],
+		InstanceType: business.MysqlInstanceSeriesDict[config.InstanceSeries.ValueString()],
 	}
 	headers := &mysql.TeledbMysqlSpecsRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
