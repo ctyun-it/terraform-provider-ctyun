@@ -1,12 +1,12 @@
 resource "ctyun_vpc" "vpc_test" {
-  name        = "tf-vpc-for-oceanfs"
+  name        = "tf-vpc-for-oceanfs-1${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
 }
 
 resource "ctyun_vpc" "vpc_test1" {
-  name        = "tf-vpc-for-oceanfs1"
+  name        = "tf-vpc-for-oceanfs-2${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
@@ -15,7 +15,7 @@ resource "ctyun_vpc" "vpc_test1" {
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-subnet-for-sfs"
+  name        = "tf-subnet-for-oceanfs-1${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -26,7 +26,7 @@ resource "ctyun_subnet" "subnet_test" {
 
 resource "ctyun_subnet" "subnet_test1" {
   vpc_id      = ctyun_vpc.vpc_test1.id
-  name        = "tf-subnet-for-sfs1"
+  name        = "tf-subnet-for-oceanfs-2${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -53,4 +53,8 @@ resource "ctyun_oceanfs" "test" {
   cycle_type   = "on_demand"
   vpc_id       = ctyun_vpc.vpc_test.id
   subnet_id    = ctyun_subnet.subnet_test.id
+}
+
+locals {
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }

@@ -613,6 +613,9 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 		return nil, fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 	}
 	obj := resp.ReturnObj
+	if utils.SecBool(obj.IsSystemVolume) {
+		return nil, fmt.Errorf("不支持系统盘")
+	}
 	diskMode, err2 := business.EbsDiskModeMap.ToOriginalScene(obj.DiskMode, business.EbsDiskModeMapScene1)
 	if err2 != nil {
 		return nil, err2
