@@ -120,6 +120,8 @@ resource "ctyun_elb_target_group" "target_group_test" {
   name      = "tf-target-group"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 1
 }
 
 resource "ctyun_elb_target" "target" {

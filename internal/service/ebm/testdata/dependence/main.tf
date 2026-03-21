@@ -63,15 +63,15 @@ locals {
 
   # 支持云盘的弹性裸金属
   cloud_boot_true_list = [for dt in local.all_device_types : dt if dt.cloud_boot == true]
-  first_cloud_boot_true = length(local.cloud_boot_true_list) > 0 ? local.cloud_boot_true_list[0] : null
+  first_cloud_boot_true = length(local.cloud_boot_true_list) > 0 ? local.cloud_boot_true_list[0] : "null"
 
   # 不支持云盘的弹性裸金属
   cloud_boot_false_list = [for dt in local.all_device_types : dt if dt.cloud_boot == false]
-  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : null
+  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : "null"
 
   # 标准裸金属
   standard_list = [for dt in local.all_device_types : dt if dt.smart_nic_exist == false]
-  standard = length(local.standard_list) > 0 ? local.standard_list[0] : null
+  standard = length(local.standard_list) > 0 ? local.standard_list[0] : "null"
 }
 
 locals {
