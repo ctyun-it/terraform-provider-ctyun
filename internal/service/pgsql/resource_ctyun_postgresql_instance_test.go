@@ -309,7 +309,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 
 	cycleType := "on_demand"
 	flavorName := dependence.flavorName
-	prodId := "Single1417"
+	prodId := "Single1419"
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type = "SATA"`
 	storageSpace := 100
@@ -320,7 +320,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	securityGroupID := dependence.securityGroupID
 	backupStorageSpace := `backup_storage_space=100`
 
-	updatedProdId := "MasterSlave1417"
+	updatedProdId := "MasterSlave1419"
 	updatedStorageSpace := 150
 	updatedBackupStorageSpace := `backup_storage_space = 200`
 	updatedFlavorName := dependence.flavorName2
@@ -404,7 +404,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 
 	cycleType := "on_demand"
 	flavorName := dependence.flavorName
-	prodId := "Master2Slave1512"
+	prodId := "Master2Slave1514"
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SAS"`
 	storageSpace := 100
