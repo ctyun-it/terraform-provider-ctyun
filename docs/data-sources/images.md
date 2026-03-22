@@ -38,7 +38,7 @@ output "ctyun_image" {
 
 - `page_no` (Number) 当前页码
 - `page_size` (Number) 每页显示数量，取值范围1-50
-- `visibility` (String) 镜像可见类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，app：甄选应用镜像
+- `visibility` (String) 镜像类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，community：甄选镜像，app：应用镜像，market：云市场镜像
 
 ### Optional
 

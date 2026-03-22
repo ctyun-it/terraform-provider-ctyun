@@ -9,6 +9,7 @@ output "subnet_id" {
 output "security_group_id1" {
   value = ctyun_security_group.security_group_test1.id
 }
+
 output "security_group_id2" {
   value = ctyun_security_group.security_group_test2.id
 }
@@ -47,7 +48,6 @@ output "collate_type" {
 output "account_name" {
   value = data.ctyun_postgresql_accounts.accounts.accounts[0].name
 }
-
 
 output "flavor_name" {
   value = local.flavor_name

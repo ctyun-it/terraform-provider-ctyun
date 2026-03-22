@@ -1,12 +1,9 @@
-
-
 resource "ctyun_vpc" "vpc_test" {
   name        = "tf-vpc-for-pgsql"
   cidr        = "192.168.0.0/16"
   description = "terraform-paas测试使用"
   enable_ipv6 = true
 }
-
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id = ctyun_vpc.vpc_test.id
@@ -19,7 +16,6 @@ resource "ctyun_subnet" "subnet_test" {
   ]
 }
 
-
 resource "ctyun_security_group" "security_group_test1" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-pgsql"
@@ -28,6 +24,7 @@ resource "ctyun_security_group" "security_group_test1" {
     prevent_destroy = false
   }
 }
+
 resource "ctyun_security_group" "security_group_test2" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-pgsql2"
@@ -36,6 +33,7 @@ resource "ctyun_security_group" "security_group_test2" {
     prevent_destroy = false
   }
 }
+
 resource "ctyun_security_group" "security_group_test3" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-pgsql3"
@@ -55,7 +53,7 @@ resource "ctyun_eip" "eip_test" {
 resource "ctyun_postgresql_instance" "test" {
   cycle_type            = "on_demand"
   prod_id               = "Single1222"
-  flavor_name           = "s7.large.2"
+  flavor_name           = local.flavor_name
   storage_type          = "SSD"
   storage_space         = 100
   name                  = "pgsql-test-tf3"
@@ -116,8 +114,6 @@ resource "ctyun_postgresql_database" "test1" {
   owner        = ctyun_postgresql_account.account_test.name
   depends_on = [ctyun_postgresql_database.test]
 }
-
-
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
