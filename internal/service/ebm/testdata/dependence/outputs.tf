@@ -39,15 +39,15 @@ output "ebm_id" {
 }
 
 output "ebs_az" {
-  value = ctyun_ebs.ebs_test.az_name
+  value =  local.first_cloud_boot_true_az
 }
 
 output "raid_az" {
-  value = local.first_cloud_boot_false.az_name
+  value = local.first_cloud_boot_false_az
 }
 
 output "standard_az" {
-  value = local.standard.az_name
+  value = local.standard_az
 }
 
 output "standard_subnet_id" {
@@ -55,7 +55,7 @@ output "standard_subnet_id" {
 }
 
 output "standard_device_type" {
-  value = local.standard.device_type
+  value = local.standard_device_type
 }
 
 output "standard_image" {

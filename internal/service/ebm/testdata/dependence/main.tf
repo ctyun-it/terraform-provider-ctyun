@@ -62,57 +62,62 @@ locals {
   ])
 
   # 支持云盘的弹性裸金属
-  cloud_boot_true_list = [for dt in local.all_device_types : dt if dt.cloud_boot == true]
-  first_cloud_boot_true = length(local.cloud_boot_true_list) > 0 ? local.cloud_boot_true_list[0] : "null"
+  cloud_boot_true_list = [for dt in local.all_device_types : dt if dt.cloud_boot == true && dt.smart_nic_exist == true]
+  first_cloud_boot_true = length(local.cloud_boot_true_list) > 0 ? local.cloud_boot_true_list[0] : null
 
   # 不支持云盘的弹性裸金属
-  cloud_boot_false_list = [for dt in local.all_device_types : dt if dt.cloud_boot == false]
-  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : "null"
+  cloud_boot_false_list = [for dt in local.all_device_types : dt if dt.cloud_boot == false && dt.smart_nic_exist == true]
+  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : null
 
   # 标准裸金属
   standard_list = [for dt in local.all_device_types : dt if dt.smart_nic_exist == false]
-  standard = length(local.standard_list) > 0 ? local.standard_list[0] : "null"
+  standard = length(local.standard_list) > 0 ? local.standard_list[0] : null
 }
 
 locals {
-  device_type1 = local.first_cloud_boot_false.device_type
-  device_type2 = local.first_cloud_boot_true.device_type
+  device_type1 = local.first_cloud_boot_false != null ? local.first_cloud_boot_false.device_type : ""
+  device_type2 = local.first_cloud_boot_true != null ? local.first_cloud_boot_true.device_type : ""
+  standard_device_type = local.standard != null ? local.standard.device_type : ""
+
+  first_cloud_boot_true_az = local.first_cloud_boot_true != null ? local.first_cloud_boot_true.az_name : ""
+  first_cloud_boot_false_az = local.first_cloud_boot_false != null ? local.first_cloud_boot_false.az_name : ""
+  standard_az = local.standard != null ? local.standard.az_name : ""
 }
 
 data "ctyun_ebm_device_raids" "system_raid" {
-  az_name = local.first_cloud_boot_false.az_name
+  az_name = local.first_cloud_boot_false_az
   device_type = local.device_type1
   volume_type = "system"
 }
 
 data "ctyun_ebm_device_raids" "data_raid" {
-  az_name = local.first_cloud_boot_false.az_name
+  az_name = local.first_cloud_boot_false_az
   device_type = local.device_type1
   volume_type = "data"
 }
 
 data "ctyun_ebm_device_raids" "system_raid_standard" {
-  az_name = local.standard.az_name
-  device_type = local.standard.device_type
+  az_name = local.standard_az
+  device_type = local.standard_device_type
   volume_type = "system"
 }
 
 data "ctyun_ebm_device_raids" "data_raid_standard" {
-  az_name = local.standard.az_name
-  device_type = local.standard.device_type
+  az_name = local.standard_az
+  device_type = local.standard_device_type
   volume_type = "data"
 }
 
 data "ctyun_ebm_device_images" "test" {
-  az_name = local.first_cloud_boot_false.az_name
+  az_name = local.first_cloud_boot_false_az
   device_type = local.device_type1
   os_type = "linux"
   image_type = "standard"
 }
 
 data "ctyun_ebm_device_images" "standard_test" {
-  az_name = local.standard.az_name
-  device_type = local.standard.device_type
+  az_name = local.standard_az
+  device_type = local.standard_device_type
   os_type = "linux"
   image_type = "standard"
 }
@@ -129,13 +134,13 @@ locals {
 
 data "ctyun_ebm_device_images" "dependence" {
   device_type = local.device_type2
-  az_name = local.first_cloud_boot_true.az_name
+  az_name = local.first_cloud_boot_true_az
   os_type = "linux"
   image_type = "standard"
 }
 
 resource "ctyun_ebs" "ebs_test" {
-  az_name   = local.first_cloud_boot_true.az_name
+  az_name = local.first_cloud_boot_true_az
   name       = "tf-ebs-for-ebm"
   mode       = "vbd"
   type       = "sata"
@@ -144,7 +149,7 @@ resource "ctyun_ebs" "ebs_test" {
 }
 
 resource "ctyun_ebm" "ebm_test" {
-  az_name   = local.first_cloud_boot_true.az_name
+  az_name = local.first_cloud_boot_true_az
   instance_name = "tf-ebm-for-ebm"
   hostname = "tf-ebm-for-ebm"
   password = var.password
