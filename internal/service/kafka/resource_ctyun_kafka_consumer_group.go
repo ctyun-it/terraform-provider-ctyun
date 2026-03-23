@@ -32,6 +32,7 @@ var (
 
 type ctyunKafkaConsumerGroup struct {
 	meta       *common.CtyunMetadata
+	name       string
 	vpcService *business.VpcService
 	sgService  *business.SecurityGroupService
 }
@@ -42,6 +43,7 @@ func NewCtyunKafkaConsumerGroup() resource.Resource {
 
 func (c *ctyunKafkaConsumerGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kafka_consumer_group"
+	c.name = response.TypeName
 }
 
 type CtyunKafkaConsumerGroupConfig struct {
@@ -68,7 +70,7 @@ type CtyunKafkaConsumerGroupResetConfig struct {
 
 func (c *ctyunKafkaConsumerGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145103`,
+		MarkdownDescription: utils.FormatDesc("管理KAFKA的消费组", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10145103"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int32Attribute{
 				PlanModifiers: []planmodifier.Int32{int32planmodifier.UseStateForUnknown()},
@@ -235,6 +237,10 @@ func (c *ctyunKafkaConsumerGroup) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -313,8 +319,8 @@ func (c *ctyunKafkaConsumerGroup) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceId],[groupName],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -336,15 +342,15 @@ func (c *ctyunKafkaConsumerGroup) ImportState(ctx context.Context, request resou
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if groupName == "" {
-		err = fmt.Errorf("groupName不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 
@@ -512,17 +518,16 @@ func (c *ctyunKafkaConsumerGroup) getAndMerge(ctx context.Context, plan *CtyunKa
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if len(resp.ReturnObj.Data) == 0 {
+		err = fmt.Errorf("kafka consumer group %s not found", plan.Name.ValueString())
+		return
 	}
-	if len(resp.ReturnObj.Data) > 0 {
-		plan.ID = types.Int32Value(resp.ReturnObj.Data[0].Id)
-		plan.Ctime = types.StringValue(utils.ConvertToUTCZ(utils.Layout2, resp.ReturnObj.Data[0].Ctime))
-		plan.State = types.StringValue(resp.ReturnObj.Data[0].State)
-		plan.CoordinatorId = types.Int32Value(resp.ReturnObj.Data[0].CoordinatorId)
-		plan.Description = types.StringValue(resp.ReturnObj.Data[0].Description)
-		plan.Name = types.StringValue(resp.ReturnObj.Data[0].Name)
-		if plan.ID.IsNull() {
-			err = common.InvalidReturnObjResultsError
-		}
-	}
+
+	plan.ID = types.Int32Value(resp.ReturnObj.Data[0].Id)
+	plan.Ctime = types.StringValue(utils.ConvertToUTCZ(utils.Layout2, resp.ReturnObj.Data[0].Ctime))
+	plan.State = types.StringValue(resp.ReturnObj.Data[0].State)
+	plan.CoordinatorId = types.Int32Value(resp.ReturnObj.Data[0].CoordinatorId)
+	plan.Description = types.StringValue(resp.ReturnObj.Data[0].Description)
+	plan.Name = types.StringValue(resp.ReturnObj.Data[0].Name)
 	return
 }

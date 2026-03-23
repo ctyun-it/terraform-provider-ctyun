@@ -66,7 +66,6 @@ func TestAccCtyunBandwidthAssociationEip(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					BandwidthId := ds.Attributes["bandwidth_id"]
-
 					EipId := ds.Attributes["eip_id"]
 					return fmt.Sprintf("%s,%s", BandwidthId, EipId), nil
 				},

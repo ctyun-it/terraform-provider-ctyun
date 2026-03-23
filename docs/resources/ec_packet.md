@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_packet"
+---
+
 # ctyun_ec_packet (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
+-> 管理云间高速带宽包
 
 
 
@@ -40,7 +45,7 @@ resource "ctyun_ec_packet" "example" {
 
 ### Required
 
-- `bandwidth` (Number) 带宽，单位MB
+- `bandwidth` (Number) 带宽，单位MB 支持更新
 - `cycle_count` (Number) 订购时长，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-3年
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，year：按年
 - `ec_id` (String) 云间高速ID
@@ -51,13 +56,26 @@ resource "ctyun_ec_packet" "example" {
 - `area_a` (String) 区域A类型，取值如下：china: 中国大陆, APAC:亚太，默认china
 - `area_b` (String) 区域B类型，取值如下：china: 中国大陆, APAC:亚太，默认china
 - `pay_voucher_price` (String) 代金券金额，只适用于预付费客户自动支付，若代金券支付金额传0或者控制符，则不适用代金券支付（小数会只保留2位，非负）
-- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `resource_id` (String) 云间高速带宽包资源ID，用于升配、续订、退订等操作
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 资源ID
 - `master_order_id` (String) 订单ID。调用方在拿到masterOrderID之后，在若干错误情况下，可以使用materOrderID进一步确认订单状态及资源状态
 - `master_order_no` (String) 订单号
 - `master_resource_id` (String) 主资源ID
 - `master_resource_status` (String) 主资源状态，只有主订单资源会返回
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云间高速带宽包
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_packet.[导入配置名称] [id],[ec_id]
+# 示例
+terraform import ctyun_ec_packet.ec_packet_example pkt-87654321,ec-12345678
+```

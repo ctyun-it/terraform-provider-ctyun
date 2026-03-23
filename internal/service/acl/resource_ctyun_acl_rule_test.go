@@ -15,7 +15,6 @@ func TestAccCtyunAclRule(t *testing.T) {
 	resourceName := "ctyun_acl_rule." + rnd
 	resourceFile := "resource_ctyun_acl_rule.tf"
 
-	projectID := ""
 	aclID := dependence.aclID
 
 	// 测试数据
@@ -32,7 +31,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			// 1. 创建入站规则测试
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv4",
 					initialPortRange, initialPortRange,
@@ -40,7 +39,6 @@ func TestAccCtyunAclRule(t *testing.T) {
 					"accept", true, "Ingress rule description",
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "acl_id", aclID),
 					resource.TestCheckResourceAttr(resourceName, "direction", "ingress"),
 					resource.TestCheckResourceAttr(resourceName, "protocol", "tcp"),
@@ -58,7 +56,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			// 2. 更新入站规则测试
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv4",
 					updatedPortRange, updatedPortRange,
@@ -77,7 +75,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			},
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv4",
 					updatedPortRange, updatedPortRange,
@@ -89,7 +87,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			// 3. 创建出站规则测试
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "egress",
 					"udp", "ipv4",
 					initialPortRange, initialPortRange,
@@ -105,7 +103,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			// 4. 更新出站规则测试
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "egress",
 					"udp", "ipv4",
 					updatedPortRange, updatedPortRange,
@@ -131,11 +129,9 @@ func TestAccCtyunAclRule(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
 						rs.Primary.Attributes["acl_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -150,27 +146,8 @@ func TestAccCtyunAclRule(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
-						rs.Primary.Attributes["acl_id"],
-						rs.Primary.Attributes["project_id"],
-					), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"project_id"}, // 可选忽略
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["direction"],
 						rs.Primary.Attributes["acl_id"],
 					), nil
 				},
@@ -180,7 +157,7 @@ func TestAccCtyunAclRule(t *testing.T) {
 			// 6. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "egress",
 					"udp", "ipv4",
 					updatedPortRange, updatedPortRange,
@@ -204,7 +181,6 @@ func TestAccCtyunAclRuleIPv6(t *testing.T) {
 	datasourceName := "data.ctyun_acl_rules." + dnd
 	datasourceFile := "datasource_acl_rules.tf"
 
-	projectID := "0"
 	aclID := dependence.aclID
 
 	// 测试数据
@@ -218,7 +194,7 @@ func TestAccCtyunAclRuleIPv6(t *testing.T) {
 			// 1. 创建IPv6入站规则
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv6",
 					portRange, portRange,
@@ -235,13 +211,13 @@ func TestAccCtyunAclRuleIPv6(t *testing.T) {
 			// 2. datasource验证
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv6",
 					portRange, portRange,
 					sourceIP, destIP,
 					"accept", true, "IPv6 ingress rule",
-				) + utils.LoadTestCase(datasourceFile, dnd, aclID, projectID),
+				) + utils.LoadTestCase(datasourceFile, dnd, aclID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "in_policy_id.#", "3"),
 				),
@@ -249,7 +225,7 @@ func TestAccCtyunAclRuleIPv6(t *testing.T) {
 			// 3. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					aclID, "ingress",
 					"tcp", "ipv6",
 					portRange, portRange,
@@ -271,7 +247,6 @@ func TestAccCtyunAclRuleProtocols(t *testing.T) {
 	resourceFile := "resource_ctyun_acl_rule_priority.tf"
 	resourceFile1 := "resource_ctyun_acl_rule_none_port.tf"
 
-	projectID := "0"
 	aclID := dependence.aclID
 
 	// 测试数据
@@ -290,13 +265,13 @@ func TestAccCtyunAclRuleProtocols(t *testing.T) {
 					// 1. 创建规则
 					{
 						Config: utils.LoadTestCase(
-							resourceFile, rnd, projectID,
+							resourceFile, rnd,
 							aclID, "ingress",
 							protocol, "ipv4",
 							portRange, portRange,
 							sourceIP, destIP,
 							"accept", true, "accept Protocol test: "+protocol, 1,
-						) + utils.LoadTestCase(resourceFile, rnd1, projectID,
+						) + utils.LoadTestCase(resourceFile, rnd1,
 							aclID, "ingress",
 							protocol, "ipv4",
 							portRange, portRange,
@@ -311,13 +286,13 @@ func TestAccCtyunAclRuleProtocols(t *testing.T) {
 					// 2. 清理资源
 					{
 						Config: utils.LoadTestCase(
-							resourceFile, rnd, projectID,
+							resourceFile, rnd,
 							aclID, "ingress",
 							protocol, "ipv4",
 							portRange, portRange,
 							sourceIP, destIP,
 							"accept", true, "accept Protocol test: "+protocol, 1,
-						) + utils.LoadTestCase(resourceFile, rnd1, projectID,
+						) + utils.LoadTestCase(resourceFile, rnd1,
 							aclID, "ingress",
 							protocol, "ipv4",
 							portRange, portRange,
@@ -339,12 +314,12 @@ func TestAccCtyunAclRuleProtocols(t *testing.T) {
 					// 1. 创建规则
 					{
 						Config: utils.LoadTestCase(
-							resourceFile1, rnd, projectID,
+							resourceFile1, rnd,
 							aclID, "ingress",
 							protocol, "ipv4",
 							sourceIP, destIP,
 							"accept", true, "accept Protocol test: "+protocol, 1,
-						) + utils.LoadTestCase(resourceFile1, rnd1, projectID,
+						) + utils.LoadTestCase(resourceFile1, rnd1,
 							aclID, "ingress",
 							protocol, "ipv4",
 							sourceIP, destIP,
@@ -358,12 +333,12 @@ func TestAccCtyunAclRuleProtocols(t *testing.T) {
 					// 2. 清理资源
 					{
 						Config: utils.LoadTestCase(
-							resourceFile1, rnd, projectID,
+							resourceFile1, rnd,
 							aclID, "ingress",
 							protocol, "ipv4",
 							sourceIP, destIP,
 							"accept", true, "accept Protocol test: "+protocol, 1,
-						) + utils.LoadTestCase(resourceFile1, rnd1, projectID,
+						) + utils.LoadTestCase(resourceFile1, rnd1,
 							aclID, "ingress",
 							protocol, "ipv4",
 							sourceIP, destIP,

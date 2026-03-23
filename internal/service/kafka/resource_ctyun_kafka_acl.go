@@ -8,6 +8,7 @@ import (
 	ctgkafka "github.com/ctyun-it/terraform-provider-ctyun/internal/core/kafka"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -29,6 +30,7 @@ var (
 
 type ctyunKafkaAcl struct {
 	meta       *common.CtyunMetadata
+	name       string
 	vpcService *business.VpcService
 	sgService  *business.SecurityGroupService
 }
@@ -39,6 +41,7 @@ func NewCtyunKafkaAcl() resource.Resource {
 
 func (c *ctyunKafkaAcl) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kafka_acl"
+	c.name = response.TypeName
 }
 
 type CtyunKafkaAclConfig struct {
@@ -61,7 +64,7 @@ type CtyunKafkaAclRule struct {
 
 func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/11078051`,
+		MarkdownDescription: utils.FormatDesc("管理KAFKA的访问控制", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/11078051"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -176,13 +179,11 @@ func (c *ctyunKafkaAcl) Create(ctx context.Context, request resource.CreateReque
 	if err != nil {
 		return
 	}
-
 	// 反查信息
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -201,9 +202,11 @@ func (c *ctyunKafkaAcl) Read(ctx context.Context, request resource.ReadRequest, 
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		return
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -275,8 +278,8 @@ func (c *ctyunKafkaAcl) ImportState(ctx context.Context, request resource.Import
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceId],[name],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -298,11 +301,11 @@ func (c *ctyunKafkaAcl) ImportState(ctx context.Context, request resource.Import
 	}
 
 	if instanceId == "" {
-		err = fmt.Errorf("instanceId不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if name == "" {
@@ -430,7 +433,7 @@ func (c *ctyunKafkaAcl) getAndMerge(ctx context.Context, plan *CtyunKafkaAclConf
 	}
 
 	// 设置基本属性
-	plan.Id = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.InstanceId.ValueString(), plan.RegionId.ValueString(), plan.Name.ValueString()))
+	plan.Id = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.Name.ValueString()))
 	if resp.ReturnObj.TopicNum > 0 {
 		// 设置topics
 		topicsSet, diags := types.SetValueFrom(ctx, types.StringType, resp.ReturnObj.Topics)

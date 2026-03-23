@@ -48,10 +48,8 @@ func TestAccCtyunKeyPairImport(t *testing.T) {
 					regionId := ds.Attributes["region_id"]
 					return fmt.Sprintf("%s,%s", name, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				ResourceName: resourceName,
@@ -61,10 +59,8 @@ func TestAccCtyunKeyPairImport(t *testing.T) {
 					name := ds.Attributes["name"]
 					return fmt.Sprintf("%s", name), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, keyName, publicKey),
@@ -114,7 +110,6 @@ func TestAccCtyunKeyPairCreate(t *testing.T) {
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
-					"project_id",
 					"private_key",
 				},
 			},

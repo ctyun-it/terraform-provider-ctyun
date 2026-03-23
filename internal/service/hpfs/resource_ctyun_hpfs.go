@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -35,6 +37,7 @@ var (
 
 type CtyunHpfs struct {
 	meta        *common.CtyunMetadata
+	name        string
 	orderLooper *business.OrderLooper
 }
 
@@ -42,34 +45,32 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunHpfsConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeHpfs(ctx, &config)
 	if err != nil {
 		return
@@ -79,6 +80,7 @@ func (c *CtyunHpfs) ImportState(ctx context.Context, request resource.ImportStat
 
 func (c *CtyunHpfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_hpfs"
+	c.name = response.TypeName
 }
 
 func (c *CtyunHpfs) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -96,12 +98,12 @@ func NewCtyunHpfsInstance() resource.Resource {
 
 func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437`,
+		MarkdownDescription: utils.FormatDesc("管理并行文件服务实例", "并行文件服务HPFS（CT-HPFS，High Performance File Storage）", "https://www.ctyun.cn/document/10088932/10090437"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池ID",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -115,7 +117,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -146,7 +148,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			},
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
-				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36",
+				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持",
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
@@ -215,28 +217,21 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 				},
 			},
 			"vpc_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "虚拟网 ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.VpcValidate(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "废弃字段",
 			},
 			"subnet_id": schema.StringAttribute{
-				Optional:    true,
-				Description: "子网 ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.SubnetValidate(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "废弃字段",
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订单ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -248,15 +243,26 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "并行文件状态",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			// 只会因非provider操作产生变化
 			"used_size": schema.Int32Attribute{
 				Computed:    true,
 				Description: "已用大小（MB）",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
+			// 只会因非provider操作产生变化
 			"dataflow_list": schema.SetAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "HPFS文件系统下的数据流动策略ID列表",
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"share_path": schema.StringAttribute{
 				Computed:    true,
@@ -342,7 +348,7 @@ func (c *CtyunHpfs) Read(ctx context.Context, request resource.ReadRequest, resp
 	// 查询远端
 	err = c.getAndMergeHpfs(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotExists") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -439,18 +445,14 @@ func (c *CtyunHpfs) createHpfs(ctx context.Context, config *CtyunHpfsConfig) (*h
 		CycleType:   config.CycleType.ValueString(),
 		SfsName:     config.Name.ValueString(),
 		SfsSize:     config.SfsSize.ValueInt32(),
-		Vpc:         config.VpcID.ValueString(),
-		Subnet:      config.SubnetID.ValueString(),
 		AzName:      config.AzName.ValueString(),
+		ProjectID:   config.ProjectID.ValueString(),
 	}
 	if config.CycleType.ValueString() == business.HpfsCycleTypeOnDemand {
 		onDemand := true
 		params.OnDemand = &onDemand
 	} else {
 		params.CycleCount = config.CycleCount.ValueInt32()
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueString()
 	}
 	if !config.ClusterName.IsNull() && !config.ClusterName.IsUnknown() {
 		params.ClusterName = config.ClusterName.ValueString()
@@ -476,7 +478,6 @@ func (c *CtyunHpfs) createHpfs(ctx context.Context, config *CtyunHpfsConfig) (*h
 		return nil, err
 	}
 	config.MasterOrderID = types.StringValue(resp.ReturnObj.MasterOrderID)
-	//config.ID = types.StringValue(resp.ReturnObj.Resources[0].SfsUID)
 	return params, nil
 }
 
@@ -487,6 +488,7 @@ func (c *CtyunHpfs) getAndMergeHpfs(ctx context.Context, config *CtyunHpfsConfig
 		return err
 	}
 	hpfsDetail := hpfsResp.ReturnObj
+	config.ProjectID = types.StringValue(hpfsDetail.ProjectID)
 	config.Name = types.StringValue(hpfsDetail.SfsName)
 	config.SfsSize = types.Int32Value(hpfsDetail.SfsSize)
 	config.SfsStatus = types.StringValue(hpfsDetail.SfsStatus)
@@ -498,6 +500,8 @@ func (c *CtyunHpfs) getAndMergeHpfs(ctx context.Context, config *CtyunHpfsConfig
 	config.SfsProtocol = types.StringValue(hpfsDetail.SfsProtocol)
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(hpfsDetail.CreateTime))
 	config.UpdateTime = types.StringValue(utils.FromUnixToUTC(hpfsDetail.UpdateTime))
+	config.AzName = types.StringValue(hpfsDetail.AzName)
+	config.CycleType = types.StringValue(business.OnDemandCycleType)
 	dataFlowList, diags := types.SetValueFrom(ctx, types.StringType, hpfsDetail.DataflowList)
 	if diags.HasError() {
 		err = errors.New(diags[0].Detail())
@@ -517,6 +521,9 @@ func (c *CtyunHpfs) getHpfsDetail(ctx context.Context, config *CtyunHpfsConfig) 
 		return nil, err
 	} else if resp == nil {
 		err = errors.New("获取hpfs详情失败，返回为nil")
+		return nil, err
+	} else if resp.ErrorCode == common.OpenapiSfsNotExists {
+		err = common.ResourceNotExistError
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
@@ -650,7 +657,7 @@ func (c *CtyunHpfs) deleteLoop(ctx context.Context, config *CtyunHpfsConfig, loo
 		func(currentTime int) bool {
 			resp, err2 := c.getHpfsDetail(ctx, config)
 			if err2 != nil {
-				if strings.Contains(err2.Error(), "资源不存在") {
+				if errors.Is(err2, common.ResourceNotExistError) {
 					err = nil
 				} else {
 					err = err2

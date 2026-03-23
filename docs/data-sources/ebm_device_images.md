@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm_device_images"
+---
+
 # ctyun_ebm_device_images (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10173844
+-> 查询物理机镜像
 
 
 

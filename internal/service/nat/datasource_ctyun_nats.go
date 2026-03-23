@@ -37,7 +37,7 @@ func (c *ctyunNats) Metadata(_ context.Context, request datasource.MetadataReque
 
 func (c *ctyunNats) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10033140`,
+		MarkdownDescription: utils.FormatDesc("查询公网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10033140"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -143,7 +143,7 @@ func (c *ctyunNats) Read(ctx context.Context, request datasource.ReadRequest, re
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

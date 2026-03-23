@@ -45,6 +45,14 @@ func TestAccCtyunVpceServiceTransitIP(t *testing.T) {
 						id = rs.Primary.ID
 						return nil
 					},
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -74,13 +82,11 @@ func TestAccCtyunVpceServiceTransitIP(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id = ds.ID
-					regionId := ds.Attributes["region_id"]
-					endpointServiceID := ds.Attributes["endpoint_service_id"]
-					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id or endpoint_service_id is required")
-					}
-					return fmt.Sprintf("%s,%s,%s", id, endpointServiceID, regionId), nil
+					return fmt.Sprintf("%s,%s,%s",
+						ds.Attributes["endpoint_service_id"],
+						ds.Attributes["transit_ip"],
+						ds.Attributes["region_id"],
+					), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
@@ -90,9 +96,9 @@ func TestAccCtyunVpceServiceTransitIP(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id = ds.ID
-					endpointServiceID := ds.Attributes["endpoint_service_id"]
-					return fmt.Sprintf("%s,%s", id, endpointServiceID), nil
+					return fmt.Sprintf("%s,%s",
+						ds.Attributes["endpoint_service_id"],
+						ds.Attributes["transit_ip"]), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

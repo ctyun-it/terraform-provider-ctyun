@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_idp"
+---
+
 # ctyun_idp (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452
+-> 管理身份认证信息
 
 
 
@@ -48,3 +53,15 @@ resource "ctyun_idp" "idp_test" {
 
 - `account_id` (String) 账号id
 - `id` (Number) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入身份提供商资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_idp.[导入配置名称] [id]
+# 示例
+terraform import ctyun_idp.idp_example 123
+```

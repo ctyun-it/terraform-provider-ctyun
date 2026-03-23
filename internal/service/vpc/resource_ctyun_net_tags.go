@@ -2,11 +2,12 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -19,17 +20,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	types "github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
-	_ resource.Resource                = &ctyunNetTags{}
-	_ resource.ResourceWithConfigure   = &ctyunNetTags{}
-	_ resource.ResourceWithImportState = &ctyunNetTags{}
+	_ resource.Resource              = &ctyunNetTags{}
+	_ resource.ResourceWithConfigure = &ctyunNetTags{}
 )
 
 type ctyunNetTags struct {
 	meta        *common.CtyunMetadata
+	name        string
 	tagsService *business.TagsService
 }
 
@@ -39,21 +39,22 @@ func NewCtyunNetTagsResource() resource.Resource {
 
 func (c *ctyunNetTags) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_net_tags"
+	c.name = response.TypeName
 }
 
 func (c *ctyunNetTags) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975`,
+		MarkdownDescription: utils.FormatDesc("管理网络资源的标签", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
-				Description:   "ID，值",
+				Description:   "ID",
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -95,6 +96,9 @@ func (c *ctyunNetTags) Schema(_ context.Context, request resource.SchemaRequest,
 							Description: "标签id。",
 							Validators: []validator.String{
 								stringvalidator.LengthBetween(1, 32),
+							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 						"key": schema.StringAttribute{
@@ -166,7 +170,7 @@ func (c *ctyunNetTags) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -242,46 +246,6 @@ func (c *ctyunNetTags) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.tagsService = business.NewTagsService(c.meta)
-}
-
-func (c *ctyunNetTags) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [resourceType],[resourceID],[region_id]"
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-
-	var config CtyunNetTagsConfig
-	var regionID, resourceType, resourceID string
-	// 根据分隔符数量判断是否输入了regionID,
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &resourceType, &resourceID)
-		if err != nil {
-			return
-		}
-	} else {
-		err = terraform_extend.Split(request.ID, &resourceType, &resourceID, &regionID)
-		if err != nil {
-			return
-		}
-	}
-
-	err = terraform_extend.Split(request.ID, &regionID, &resourceType, &resourceID)
-	if err != nil {
-		return
-	}
-	config.RegionID = types.StringValue(regionID)
-	config.ResourceType = types.StringValue(resourceType)
-	config.ResourceID = types.StringValue(resourceID)
-	err = c.getAndMergeNat(ctx, &config)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunNetTags) getAndMergeNat(ctx context.Context, plan *CtyunNetTagsConfig) (err error) {

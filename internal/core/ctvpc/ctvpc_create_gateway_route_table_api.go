@@ -46,10 +46,11 @@ func (a *CtvpcCreateGatewayRouteTableApi) Do(ctx context.Context, credential cor
 }
 
 type CtvpcCreateGatewayRouteTableRequest struct {
-	ClientToken string `json:"clientToken,omitempty"` /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
-	RegionID    string `json:"regionID,omitempty"`    /*  区域id  */
-	VpcID       string `json:"vpcID,omitempty"`       /*  关联的vpcID  */
-	Name        string `json:"name,omitempty"`        /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	ClientToken string  `json:"clientToken,omitempty"` /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	RegionID    string  `json:"regionID,omitempty"`    /*  区域id  */
+	VpcID       string  `json:"vpcID,omitempty"`       /*  关联的vpcID  */
+	Name        string  `json:"name,omitempty"`        /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	ProjectID   *string `json:"projectID,omitempty"`   /*  企业项目 ID，默认为0  */
 }
 
 type CtvpcCreateGatewayRouteTableResponse struct {

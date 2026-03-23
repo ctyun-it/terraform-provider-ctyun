@@ -2,12 +2,14 @@ package vpce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,6 +36,7 @@ var (
 
 type ctyunVpceService struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceService() resource.Resource {
@@ -41,6 +45,7 @@ func NewCtyunVpceService() resource.Resource {
 
 func (c *ctyunVpceService) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceConfig struct {
@@ -69,12 +74,14 @@ type CtyunVpceServiceRule struct {
 
 func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013`,
+		MarkdownDescription: utils.FormatDesc("管理终端节点服务", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10217013"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -118,7 +125,6 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"instance_type": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,当type为interface时必填。支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf("vm", "bm", "vip", "lb"),
@@ -134,7 +140,6 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"instance_id": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "服务后端实例ID，当type为interface时必填，支持更新",
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
@@ -148,10 +153,10 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Required:    true,
-				Description: "服务后端子网id",
+				Optional:    true,
+				Description: "子网ID，创建反向终端节点服务时必填",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -169,6 +174,9 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.Set{
 					setvalidator.ValueStringsAre(validator2.Email()),
 					setvalidator.SizeAtMost(10),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"create_time": schema.StringAttribute{
@@ -194,6 +202,10 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 						path.MatchRoot("type"),
 						types.StringValue(business.VpceServiceTypeReverse),
 					),
+					setvalidator.SizeAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 				Description: "节点服务规则，当type为interface时必填，支持更新",
 				NestedObject: schema.NestedAttributeObject{
@@ -282,7 +294,7 @@ func (c *ctyunVpceService) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "resource not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -342,7 +354,10 @@ func (c *ctyunVpceService) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
+		state.SubnetID = plan.SubnetID
+		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -378,8 +393,8 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [endpointServiceID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -397,11 +412,11 @@ func (c *ctyunVpceService) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -571,6 +586,9 @@ func (c *ctyunVpceService) show(ctx context.Context, plan CtyunVpceServiceConfig
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointServiceApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceServiceNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)

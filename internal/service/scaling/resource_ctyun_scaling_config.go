@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -20,6 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -36,12 +39,14 @@ var (
 
 type ctyunScalingConfig struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	imageService  *business.ImageService
 }
 
 func (c *ctyunScalingConfig) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_scaling_config"
+	c.name = response.TypeName
 }
 
 func (c *ctyunScalingConfig) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -62,8 +67,8 @@ func (c *ctyunScalingConfig) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -86,11 +91,11 @@ func (c *ctyunScalingConfig) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -106,7 +111,7 @@ func (c *ctyunScalingConfig) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241446`,
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩配置", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10241446"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -173,14 +178,17 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 							Description: "磁盘模式: VBD（虚拟块存储设备）/ISCSI（小型计算机系统接口）。当flag=OS情况下，不可填写。数据盘磁盘模式，默认为VBD，支持更新",
 							Validators: []validator.String{
 								validator2.ConflictsWithEqualString(
-									path.MatchRoot("flag"),
+									path.MatchRelative().AtParent().AtName("flag"),
 									types.StringValue(business.ScalingVolumeFlagOSStr),
 								),
+							},
+							PlanModifiers: []planmodifier.String{
+								stringplanmodifier.UseStateForUnknown(),
 							},
 						},
 						"flag": schema.StringAttribute{
 							Required:    true,
-							Description: "磁盘类型: OS-系统盘, DATA-数据盘，系统盘限制1块。，支持更新",
+							Description: "磁盘类型: OS-系统盘, DATA-数据盘，系统盘限制1块。支持更新",
 							Validators: []validator.String{
 								stringvalidator.OneOf(business.ScalingVolumeFlag...),
 							},
@@ -214,6 +222,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 						types.StringValue(business.ScalingUseFloatingsDisableStr),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					planmodifier2.SetStateNullIfDependencyChangeInt32(path.Root("use_floatings")),
+				},
 			},
 			"login_mode": schema.StringAttribute{
 				Required:    true,
@@ -225,42 +236,41 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"username": schema.StringAttribute{
 				Computed:    true,
 				Description: "用户名，windows系统为administrator,linux系统为root。不可修改",
-				//PlanModifiers: []planmodifier.String{
-				//	stringplanmodifier.UseStateForUnknown(),
-				//},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+					planmodifier2.UseStringStateIfDependencyUnchanged(path.Root("login_mode")),
+				},
 			},
 			"password": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Sensitive:   true,
 				Description: "密码，login_mode为password时必填。密码规则：（1）8～30 个字符（2）必须同时包含三项（大写字母、小写字母、数字、 ()`~!@#$%^&*_-+=|{}[]:;'<>,.?/ 中的特殊符号）（3）不能以斜线号（/）开头 （4）不能包含3个及以上连续字符，如abc、123 （5）Windows镜像不能包含镜像用户名（Administrator）、用户名大小写变化（adminiSTrator），支持更新",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(8, 30),
-					validator2.AlsoRequiresEqualString(
-						path.MatchRoot("login_mode"),
-						types.StringValue(business.ScalingLoginModePasswordStr),
-					),
-					validator2.ConflictsWithEqualString(
-						path.MatchRoot("login_mode"),
-						types.StringValue(business.ScalingLoginModeKeyPairStr),
-					),
-					validator2.ScalingConfigPasswordValidate(),
-				},
+				//Validators: []validator.String{
+				//	stringvalidator.LengthBetween(8, 30),
+				//	validator2.AlsoRequiresEqualString(
+				//		path.MatchRoot("login_mode"),
+				//		types.StringValue(business.ScalingLoginModePasswordStr),
+				//	),
+				//	validator2.ConflictsWithEqualString(
+				//		path.MatchRoot("login_mode"),
+				//		types.StringValue(business.ScalingLoginModeKeyPairStr),
+				//	),
+				//	validator2.ScalingConfigPasswordValidate(),
+				//},
 			},
 			"key_pair_id": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "密钥对ID，login_mode为key_pair时必填，支持更新",
-				Validators: []validator.String{
-					validator2.AlsoRequiresEqualString(
-						path.MatchRoot("login_mode"),
-						types.StringValue(business.ScalingLoginModeKeyPairStr),
-					),
-					validator2.ConflictsWithEqualString(
-						path.MatchRoot("login_mode"),
-						types.StringValue(business.ScalingLoginModePasswordStr),
-					),
-				},
+				//Validators: []validator.String{
+				//	validator2.AlsoRequiresEqualString(
+				//		path.MatchRoot("login_mode"),
+				//		types.StringValue(business.ScalingLoginModeKeyPairStr),
+				//	),
+				//	validator2.ConflictsWithEqualString(
+				//		path.MatchRoot("login_mode"),
+				//		types.StringValue(business.ScalingLoginModePasswordStr),
+				//	),
+				//},
 			},
 			"tags": schema.ListNestedAttribute{
 				Optional:    true,
@@ -301,6 +311,9 @@ func (c *ctyunScalingConfig) Schema(ctx context.Context, request resource.Schema
 			"id": schema.Int64Attribute{
 				Computed:    true,
 				Description: "弹性伸缩配置ID",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -360,7 +373,7 @@ func (c *ctyunScalingConfig) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingConfig(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -401,6 +414,10 @@ func (c *ctyunScalingConfig) Update(ctx context.Context, request resource.Update
 		return
 	}
 
+	if !plan.KeyPairID.IsUnknown() && !plan.KeyPairID.IsNull() && state.KeyPairID.IsNull() {
+		state.KeyPairID = plan.KeyPairID
+		response.Diagnostics.AddWarning("key_pair_id的更新仅写入状态文件", "在import时，状态文件中vpc_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -522,11 +539,12 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 		if err != nil {
 			return err
 		}
-		if imageInfo.OsType == "linux" {
-			config.Username = types.StringValue("root")
-		} else if imageInfo.OsType == "windows" {
-			config.Username = types.StringValue("administrator")
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", config.ImageID.ValueString())
+			return err
 		}
+		config.Username = types.StringValue(username)
 		params.Username = config.Username.ValueString()
 
 		//if !config.Username.IsNull() {
@@ -547,7 +565,7 @@ func (c *ctyunScalingConfig) createScalingConfig(ctx context.Context, config *Ct
 				return err
 			}
 		} else {
-			err := errors.New("当login_mode取值范围为password。password必填")
+			err = errors.New("当login_mode取值范围为password。password必填")
 			return err
 		}
 	} else if config.LoginMode.ValueString() == business.ScalingLoginModeKeyPairStr {
@@ -651,13 +669,24 @@ func (c *ctyunScalingConfig) getAndMergeScalingConfig(ctx context.Context, confi
 	}
 
 	if config.LoginMode.ValueString() == business.ScalingLoginModePasswordStr {
-		config.KeyPairID = types.StringValue("")
+		config.KeyPairID = types.StringNull()
+
+		imageInfo, err2 := c.imageService.GetImageInfo(ctx, config.ImageID.ValueString(), config.RegionID.ValueString())
+		if err2 != nil {
+			return err2
+		}
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", config.ImageID.ValueString())
+			return err
+		}
+		config.Username = types.StringValue(username)
 	} else if config.LoginMode.ValueString() == business.ScalingLoginModeKeyPairStr {
-		config.Password = types.StringValue("")
-		config.Username = types.StringValue("")
+		config.Password = types.StringNull()
+		config.Username = types.StringNull()
 	}
 	if config.UseFloatings.ValueString() == business.ScalingUseFloatingsDisableStr {
-		config.BandWidth = types.Int32Value(0)
+		config.BandWidth = types.Int32Null()
 	}
 	return nil
 
@@ -677,6 +706,10 @@ func (c *ctyunScalingConfig) getScalingDetail(ctx context.Context, config *Ctyun
 		err = fmt.Errorf("获取id为 %d 的伸缩配置详情失败，接口返回nil。请稍后重试！", config.ID.ValueInt64())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Scaling.Config.NotFound") || strings.Contains(resp.Message, "scaling config info not found") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -688,7 +721,7 @@ func (c *ctyunScalingConfig) getScalingDetail(ctx context.Context, config *Ctyun
 		return resp, err
 	}
 	if len(resp.ReturnObj) < 1 {
-		err = fmt.Errorf("根据id：%d查询绳索配置详细信息，返回条数为0", config.ID.ValueInt64())
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	return resp, nil
@@ -725,14 +758,15 @@ func (c *ctyunScalingConfig) updateScalingConfig(ctx context.Context, state *Cty
 		if err != nil {
 			return err
 		}
-		if imageInfo.OsType == "linux" {
-			state.Username = types.StringValue("root")
-		} else if imageInfo.OsType == "windows" {
-			state.Username = types.StringValue("administrator")
+		username := c.getUserName(imageInfo)
+		if username == "" {
+			err = fmt.Errorf("根据image_id: %s 获取用户名失败", state.ImageID.ValueString())
+			return err
 		}
+		state.Username = types.StringValue(username)
 		params.Username = state.Username.ValueString()
-
 		params.Password = plan.Password.ValueString()
+		state.Password = plan.Password
 	} else if params.LoginMode == business.ScalingLoginModeKeyPair {
 		params.KeyPairID = plan.KeyPairID.ValueString()
 		state.KeyPairID = plan.KeyPairID
@@ -824,6 +858,16 @@ func (c *ctyunScalingConfig) checkPassword(password string, username types.Strin
 		return false, err
 	}
 	return true, nil
+}
+
+func (c *ctyunScalingConfig) getUserName(imageInfo ctimage.ImageDetailImagesResponse) string {
+	username := ""
+	if imageInfo.OsType == "linux" {
+		username = "root"
+	} else if imageInfo.OsType == "windows" {
+		username = "administrator"
+	}
+	return username
 }
 
 type CtyunScalingConfigModel struct {

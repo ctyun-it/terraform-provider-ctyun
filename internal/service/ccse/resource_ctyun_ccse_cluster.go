@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -41,6 +42,7 @@ var (
 
 type ctyunCcseCluster struct {
 	meta          *common.CtyunMetadata
+	name          string
 	ccseService   *business.CcseService
 	ecsService    *business.EcsService
 	ebmService    *business.EbmService
@@ -55,6 +57,7 @@ func NewCtyunCcseCluster() resource.Resource {
 
 func (c *ctyunCcseCluster) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ccse_cluster"
+	c.name = response.TypeName
 }
 
 type CtyunCcseClusterConfig struct {
@@ -138,7 +141,7 @@ type CtyunCcseClusterDisk struct {
 
 func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137`,
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎集群", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10656137"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -211,7 +214,7 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 						Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							explanmodifier.Project(),
 						},
 						Validators: []validator.String{
 							validator2.Project(),
@@ -618,9 +621,9 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: "系统盘类型，支持SATA、SAS、SSD",
+								Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 								Validators: []validator.String{
-									stringvalidator.OneOf(business.CcseDiskTypes...),
+									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -648,9 +651,9 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Required:    true,
-									Description: "数据盘类型，支持SATA、SAS、SSD",
+									Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 									Validators: []validator.String{
-										stringvalidator.OneOf(business.CcseDiskTypes...),
+										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.RequiresReplace(),
@@ -818,9 +821,9 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 						Attributes: map[string]schema.Attribute{
 							"type": schema.StringAttribute{
 								Required:    true,
-								Description: "系统盘类型，支持SATA、SAS、SSD",
+								Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 								Validators: []validator.String{
-									stringvalidator.OneOf(business.CcseDiskTypes...),
+									stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 								},
 								PlanModifiers: []planmodifier.String{
 									stringplanmodifier.RequiresReplace(),
@@ -848,9 +851,9 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 							Attributes: map[string]schema.Attribute{
 								"type": schema.StringAttribute{
 									Required:    true,
-									Description: "数据盘类型，支持SATA、SAS、SSD",
+									Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2",
 									Validators: []validator.String{
-										stringvalidator.OneOf(business.CcseDiskTypes...),
+										stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 									},
 									PlanModifiers: []planmodifier.String{
 										stringplanmodifier.RequiresReplace(),
@@ -1028,8 +1031,8 @@ func (c *ctyunCcseCluster) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [clusterID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -1050,11 +1053,11 @@ func (c *ctyunCcseCluster) ImportState(ctx context.Context, request resource.Imp
 	}
 
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -1085,17 +1088,24 @@ func (c *ctyunCcseCluster) Configure(_ context.Context, request resource.Configu
 // checkBeforeCreate 创建前检查
 func (c *ctyunCcseCluster) checkBeforeCreate(ctx context.Context, plan CtyunCcseClusterConfig) (err error) {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
-	vpc, regionID, projectID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString(), plan.BaseInfo.ProjectID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	vpcID, regionID, projectID := plan.BaseInfo.VpcID.ValueString(), plan.RegionID.ValueString(), plan.BaseInfo.ProjectID.ValueString()
+	vpcInfo, err := c.vpcService.GetVpcDetail(ctx, vpcID, regionID)
+	if err != nil {
+		return err
+	}
+	if vpcInfo.ProjectID != projectID {
+		return fmt.Errorf("%s 的企业项目是 %s，ccse指定的企业项目必须和其相同", vpcID, vpcInfo.ProjectID)
+	}
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, regionID)
 	if err != nil {
 		return err
 	}
 	if _, ok := subnets[plan.BaseInfo.SubnetID.ValueString()]; !ok {
-		return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpc)
+		return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpcID)
 	}
 	for s, _ := range subnets {
 		if _, ok := subnets[s]; !ok {
-			return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpc)
+			return fmt.Errorf("子网 %s 不在 %s 内", plan.BaseInfo.SubnetID.ValueString(), vpcID)
 		}
 	}
 	return

@@ -51,7 +51,7 @@ package ccse
 //
 //func (c *ctyunCcseNodePoolScalingPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 //	response.Schema = schema.Schema{
-//		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10269202`,
+//		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10269202`,
 //		Attributes: map[string]schema.Attribute{
 //			"id": schema.StringAttribute{
 //				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -256,11 +256,11 @@ package ccse
 //		return
 //	}
 //	if clusterID == "" {
-//		err = fmt.Errorf("clusterID不能为空")
+//		err = fmt.Errorf("cluster_id不能为空")
 //		return
 //	}
 //	if regionID == "" {
-//		err = fmt.Errorf("regionID不能为空")
+//		err = fmt.Errorf("region_id不能为空")
 //		return
 //	}
 //
@@ -337,7 +337,7 @@ package ccse
 //		return
 //	}
 //	plan.ActualConfig = types.StringValue(config)
-//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.NodePoolName.ValueString(), plan.ClusterID.ValueString()))
 //	return
 //}
 //

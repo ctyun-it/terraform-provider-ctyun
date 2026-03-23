@@ -2,11 +2,13 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,14 +32,15 @@ func NewCtyunDhcpOptionSetAssociationVpc() resource.Resource {
 
 type ctyunDhcpOptionSetAssociationVpc struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunDhcpOptionSetAssociationVpc) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [dhcp_option_sets_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -46,7 +49,6 @@ func (c *ctyunDhcpOptionSetAssociationVpc) ImportState(ctx context.Context, requ
 	// 根据分隔符数量判断是否输入了regionID,
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-
 		ID = request.ID
 	} else {
 		err = terraform_extend.Split(request.ID, &ID, &regionId)
@@ -56,35 +58,36 @@ func (c *ctyunDhcpOptionSetAssociationVpc) ImportState(ctx context.Context, requ
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("dhcp_option_sets_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
 	config.DhcpOptionSetsId = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
 
-	instance, err := c.getAndMerge(ctx, &config)
+	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunDhcpOptionSetAssociationVpc) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_dhcpoptionset_association_vpc"
+	c.name = response.TypeName
 }
 
 func (c *ctyunDhcpOptionSetAssociationVpc) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10381274`,
+		MarkdownDescription: utils.FormatDesc("管理DHCP选项集和VPC的绑定关系", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10381274"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "资源唯一标识，格式为 region_id:dhcp_option_sets_id",
+				Description: "资源唯一标识，格式为dhcp_option_sets_id,region_id",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -114,9 +117,9 @@ func (c *ctyunDhcpOptionSetAssociationVpc) Schema(_ context.Context, _ resource.
 			"vpc_ids": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "VPC ID列表 支持更新",
+				Description: "VPC ID列表 支持更新，至少输入一个，最大支持10个",
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(0),
+					setvalidator.SizeBetween(1, 10),
 				},
 			},
 		},
@@ -147,6 +150,14 @@ func (c *ctyunDhcpOptionSetAssociationVpc) Create(ctx context.Context, request r
 		)
 		return
 	}
+	err = c.getAndMerge(ctx, &plan)
+	if err != nil {
+		response.Diagnostics.AddError(
+			"绑定DHCP选项集和VPC失败",
+			err.Error(),
+		)
+		return
+	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
@@ -158,21 +169,16 @@ func (c *ctyunDhcpOptionSetAssociationVpc) Read(ctx context.Context, request res
 		return
 	}
 
-	instance, err := c.getAndMerge(ctx, &state)
+	err := c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(
-			"读取DHCP选项集和VPC绑定关系失败",
-			err.Error(),
-		)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			return
+		}
+		response.Diagnostics.AddError("读取DHCP选项集和VPC绑定关系失败", err.Error())
 		return
 	}
-
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunDhcpOptionSetAssociationVpc) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -228,42 +234,38 @@ func (c *ctyunDhcpOptionSetAssociationVpc) create(ctx context.Context, plan *Cty
 			return err
 		}
 
-		if resp.StatusCode != 800 {
-			return fmt.Errorf("API返回错误: %s (%s)", *resp.Message, *resp.Description)
+		if resp.StatusCode != common.NormalStatusCode {
+			return fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		}
 	}
-
-	// 设置资源ID
-	plan.Id = types.StringValue(fmt.Sprintf("%s:%s",
-		plan.RegionId.ValueString(),
-		plan.DhcpOptionSetsId.ValueString()))
-
 	return nil
 }
 
 // getAndMerge 查询DHCP选项集和VPC绑定关系并合并状态
-func (c *ctyunDhcpOptionSetAssociationVpc) getAndMerge(ctx context.Context, state *CtyunDhcpOptionSetAssociationVpcConfig) (*CtyunDhcpOptionSetAssociationVpcConfig, error) {
+func (c *ctyunDhcpOptionSetAssociationVpc) getAndMerge(ctx context.Context, state *CtyunDhcpOptionSetAssociationVpcConfig) error {
 	// 调用API获取绑定的VPC列表
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcDhcplistvpcApi.Do(ctx, c.meta.SdkCredential, &ctvpc.CtvpcDhcplistvpcRequest{
 		RegionID:         state.RegionId.ValueString(),
 		DhcpOptionSetsID: state.DhcpOptionSetsId.ValueString(),
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if resp.StatusCode != 800 {
-		return nil, fmt.Errorf("API返回错误: %s (%s)", *resp.Message, *resp.Description)
+	if resp.StatusCode != common.NormalStatusCode {
+		msg := utils.SecString(resp.Message)
+		if strings.Contains(msg, "do not exists") {
+			return common.ResourceNotExistError
+		}
+		return fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 	}
 
 	if resp.ReturnObj == nil {
-		return nil, nil
+		return common.ResourceNotExistError
 	}
 
 	// 更新状态
-	state.Id = types.StringValue(fmt.Sprintf("%s:%s",
-		state.RegionId.ValueString(),
-		state.DhcpOptionSetsId.ValueString()))
+	state.Id = types.StringValue(fmt.Sprintf("%s,%s", state.DhcpOptionSetsId.ValueString(), state.RegionId.ValueString()))
 
 	// 更新VPC ID列表
 	state.VpcIds = []string{}
@@ -273,7 +275,7 @@ func (c *ctyunDhcpOptionSetAssociationVpc) getAndMerge(ctx context.Context, stat
 		}
 	}
 
-	return state, nil
+	return nil
 }
 
 // update 更新DHCP选项集和VPC绑定关系
@@ -314,9 +316,7 @@ func (c *ctyunDhcpOptionSetAssociationVpc) update(ctx context.Context, plan *Cty
 	}
 
 	// 设置资源ID
-	plan.Id = types.StringValue(fmt.Sprintf("%s:%s",
-		plan.RegionId.ValueString(),
-		plan.DhcpOptionSetsId.ValueString()))
+	plan.Id = types.StringValue(fmt.Sprintf("%s,%s", plan.DhcpOptionSetsId.ValueString(), plan.RegionId.ValueString()))
 
 	return nil
 }

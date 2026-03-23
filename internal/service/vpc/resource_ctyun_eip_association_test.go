@@ -30,12 +30,10 @@ func TestAccCtyunEipAssociation(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.ecsID, dependence.eipID),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				ResourceName: resourceName,
@@ -46,13 +44,8 @@ func TestAccCtyunEipAssociation(t *testing.T) {
 					eipId := ds.Attributes["eip_id"]
 					return fmt.Sprintf("%s,%s", eipId, regionId), nil // eipId is not used
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-					"cycle_type",
-					"master_order_id",
-					"demand_billing_type",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				ResourceName: resourceName,
@@ -62,13 +55,8 @@ func TestAccCtyunEipAssociation(t *testing.T) {
 					eipId := ds.Attributes["eip_id"]
 					return fmt.Sprintf("%s", eipId), nil // eipId is not used
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-					"cycle_type",
-					"master_order_id",
-					"demand_billing_type",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, dependence.ecsID, dependence.eipID),

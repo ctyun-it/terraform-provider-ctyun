@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -32,10 +33,12 @@ var (
 type CtyunPrefix struct {
 	meta          *common.CtyunMetadata
 	regionService *business.RegionService
+	name          string
 }
 
 func (c *CtyunPrefix) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_prefix_list"
+	c.name = response.TypeName
 }
 
 func (c *CtyunPrefix) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -56,8 +59,8 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -78,11 +81,11 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -97,7 +100,7 @@ func (c *CtyunPrefix) ImportState(ctx context.Context, request resource.ImportSt
 
 func (c *CtyunPrefix) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321",
+		MarkdownDescription: utils.FormatDesc("管理前缀列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10298321"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -244,8 +247,10 @@ func (c *CtyunPrefix) Read(ctx context.Context, request resource.ReadRequest, re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -322,14 +327,13 @@ func (c *CtyunPrefix) getAndMerge(ctx context.Context, config *CtyunPrefixConfig
 	if err != nil {
 		return err
 	} else if resp == nil {
-		err = fmt.Errorf("获取prefix失败，接口返回nil，请联系研发确认问题原因！")
-		return err
+		return fmt.Errorf("获取prefix失败，接口返回nil，请联系研发确认问题原因！")
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiPrefixListAccessFailed {
+		return common.ResourceNotExistError
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
-		return err
+		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return err
+		return common.InvalidReturnObjError
 	}
 	returnObj := resp.ReturnObj
 	config.Name = types.StringValue(*returnObj.Name)

@@ -45,7 +45,11 @@ func (a *EcEcListCloudHighSubnetApi) Do(ctx context.Context, credential core.Cre
 
 type EcEcListCloudHighSubnetRequest struct {
 	EcID      string `json:"ecID"`      /*  云间高速实例ID  */
+	CgwID     string `json:"cgwID"`     /*  云企业路由器ID  */
+	RtbID     string `json:"rtbID"`     /*  路由表ID  */
+	VpcID     string `json:"vpcID"`     /*  vpcID  */
 	IPVersion string `json:"IPVersion"` /*  ip类型<br/>取值如下:<br/>IPV4：IPV4类型<br/>IPV6:IPV6类型  */
+	RgID      string `json:"rgID"`      /* 冗余组ID */
 }
 
 type EcEcListCloudHighSubnetResponse struct {
@@ -58,8 +62,17 @@ type EcEcListCloudHighSubnetResponse struct {
 }
 
 type EcEcListCloudHighSubnetReturnObjResponse struct {
-	CurrentCount *int32    `json:"currentCount"` /*  当前页记录数  */
-	TotalCount   *int32    `json:"totalCount"`   /*  查询的总记录数  */
-	TotalPage    *int32    `json:"totalPage"`    /*  总页数  */
-	Results      []*string `json:"results"`      /*  返回查询结果，字符串数组，值类型为String   */
+	CurrentCount *int32        `json:"currentCount"` /*  当前页记录数  */
+	TotalCount   *int32        `json:"totalCount"`   /*  查询的总记录数  */
+	TotalPage    *int32        `json:"totalPage"`    /*  总页数  */
+	Results      []*EcEcSubnet `json:"results"`      /*  返回查询结果，字符串数组，值类型为String   */
+}
+
+/* 创建云间高速实例
+ */
+type EcEcSubnet struct {
+	CidrV4   []*string `json:"cidrV4"`   /*  Ipv4路由列表  */
+	CidrV6   []*string `json:"cidrV6"`   /*  Ipv6路由列表  */
+	StrongV4 []*string `json:"strongV4"` /*  强校验v4路由列表  */
+	StrongV6 []*string `json:"strongV6"` /*  强校验v6路由列表   */
 }

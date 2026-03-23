@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"strings"
 )
 
@@ -24,7 +25,10 @@ func (c EbmService) GetEbmInfo(ctx context.Context, id, regionID, azName string)
 	})
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiEbmNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -60,5 +64,29 @@ func (c EbmService) GetDeviceType(ctx context.Context, deviceType, regionID, azN
 		return
 	}
 	spec = *resp.ReturnObj.Results[0]
+	return
+}
+
+func (c EbmService) GetDeviceTypeStock(ctx context.Context, regionID, azName string) (stocks map[string]int32, err error) {
+	stocks = make(map[string]int32)
+	params := ctebm.EbmDeviceStockListRequest{
+		RegionID: regionID,
+		AzName:   azName,
+	}
+	resp, err := c.meta.Apis.CtEbmApis.EbmDeviceStockListApi.Do(ctx, c.meta.SdkCredential, &params)
+	if err != nil {
+		return
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	} else if len(resp.ReturnObj.Results) == 0 {
+		return
+	}
+	for _, d := range resp.ReturnObj.Results[0].Stocks {
+		stocks[utils.SecString(d.DeviceType)] = d.Available
+	}
 	return
 }

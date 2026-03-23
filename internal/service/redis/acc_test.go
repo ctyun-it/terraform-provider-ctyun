@@ -5,6 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+	"time"
 )
 
 const dependenceDir = "testdata/dependence"
@@ -66,6 +67,12 @@ func TestMain(m *testing.M) {
 	fmt.Println("开始清理依赖资源")
 	// 清理依赖资源
 	terraform.DestroyResource(dependenceDir)
+	time.Sleep(3 * time.Minute)
+	err = terraform.DestroyResource(dependenceDir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	fmt.Println("依赖资源清理完毕")
 
 	os.Exit(code)

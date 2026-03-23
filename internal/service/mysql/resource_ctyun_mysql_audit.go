@@ -8,7 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,11 +27,13 @@ var (
 
 type CtyunMysqlAudit struct {
 	meta         *common.CtyunMetadata
+	name         string
 	mysqlService *business.MysqlService
 }
 
 func (c *CtyunMysqlAudit) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_audit"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlAudit() resource.Resource {
 	return &CtyunMysqlAudit{}
@@ -48,7 +50,7 @@ func (c *CtyunMysqlAudit) Configure(ctx context.Context, request resource.Config
 
 func (c *CtyunMysqlAudit) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133568",
+		MarkdownDescription: utils.FormatDesc("设置MySQL实例的审计开关状态", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133568"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -61,16 +63,9 @@ func (c *CtyunMysqlAudit) Schema(ctx context.Context, request resource.SchemaReq
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -128,7 +123,22 @@ func (c *CtyunMysqlAudit) Read(ctx context.Context, request resource.ReadRequest
 }
 
 func (c *CtyunMysqlAudit) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	//暂无可更新内容
+	var plan CtyunMysqlAuditConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlAuditConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlAudit) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -148,9 +158,6 @@ func (c *CtyunMysqlAudit) create(ctx context.Context, config *CtyunMysqlAuditCon
 	header := &mysql.TeledbStartAuditRequestHeader{
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbStartAuditApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -185,9 +192,6 @@ func (c *CtyunMysqlAudit) getMysqlAuditStatus(ctx context.Context, config *Ctyun
 	header := &mysql.TeledbGetAuditStatusRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 		InstID:   config.InstID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	// 先确保mysql实例状态running
 
@@ -224,7 +228,6 @@ func (c *CtyunMysqlAudit) startedLoop(ctx context.Context, state *CtyunMysqlAudi
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {

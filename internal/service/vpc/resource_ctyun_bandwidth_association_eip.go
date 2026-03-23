@@ -8,7 +8,9 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -28,6 +30,7 @@ var (
 
 type ctyunBandwidthAssociationEip struct {
 	meta             *common.CtyunMetadata
+	name             string
 	bandwidthService *business.BandwidthService
 	eipService       *business.EipService
 }
@@ -38,11 +41,12 @@ func NewCtyunBandwidthAssociationEip() resource.Resource {
 
 func (c *ctyunBandwidthAssociationEip) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_bandwidth_association_eip"
+	c.name = response.TypeName
 }
 
 func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026761/10030030`,
+		MarkdownDescription: utils.FormatDesc("管理共享带宽和弹性IP的绑定关系", "共享流量包（SDP，Shared Data Package）", "https://www.ctyun.cn/document/10026761/10030030"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -70,13 +74,13 @@ func (c *ctyunBandwidthAssociationEip) Schema(_ context.Context, _ resource.Sche
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Optional:           true,
+				Computed:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
 					validator2.Project(),
 				},
@@ -105,7 +109,7 @@ func (c *ctyunBandwidthAssociationEip) Create(ctx context.Context, request resou
 	}
 
 	// 校验带宽必须存在
-	err := c.bandwidthService.MustExist(ctx, plan.BandwidthId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	err := c.bandwidthService.MustExist(ctx, plan.BandwidthId.ValueString(), plan.RegionId.ValueString())
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
@@ -188,32 +192,52 @@ func (c *ctyunBandwidthAssociationEip) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bandwidthId],[eipId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [bandwidth_id],[eip_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunBandwidAssociationEipConfig
-	var bandwidthId, eipId, regionId string
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &bandwidthId, &eipId)
+	var bandwidthID, eipID, regionID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("bandwidth_id和eip_id必须输入")
+		return
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID)
 		if err != nil {
 			return
 		}
-	} else {
-		err = terraform_extend.Split(request.ID, &bandwidthId, &eipId, &regionId)
+	default:
+		err = terraform_extend.Split(request.ID, &bandwidthID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
 	}
-	cfg.BandwidthId = types.StringValue(bandwidthId)
-	cfg.EipId = types.StringValue(eipId)
-	cfg.RegionId = types.StringValue(regionId)
+	if bandwidthID == "" {
+		err = fmt.Errorf("bandwidth_id不能为空")
+		return
+	}
+	if eipID == "" {
+		err = fmt.Errorf("eip_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 
+	cfg.BandwidthId = types.StringValue(bandwidthID)
+	cfg.EipId = types.StringValue(eipID)
+	cfg.RegionId = types.StringValue(regionID)
 	instance, err := c.getAndMergeBandwidthAssociationEip(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+	if instance == nil {
+		err = common.ResourceNotExistError
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -236,16 +260,27 @@ func (c *ctyunBandwidthAssociationEip) getAndMergeBandwidthAssociationEip(ctx co
 		BandwidthId: cfg.BandwidthId.ValueString(),
 	})
 	if err != nil {
+		if err.ErrorCode() == common.OpenapiSharedbandwidthNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if len(result.Eips) == 0 {
 		return nil, nil
 	}
+	var bind bool
 	for _, eip := range result.Eips {
 		if eip.EipId == cfg.EipId.ValueString() {
 			cfg.EipId = types.StringValue(eip.EipId)
+			bind = true
 			break
 		}
+	}
+	if !bind {
+		return nil, nil
+	}
+	if cfg.ProjectId.IsUnknown() {
+		cfg.ProjectId = types.StringNull()
 	}
 	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.BandwidthId.ValueString(), cfg.EipId.ValueString(), cfg.RegionId.ValueString()))
 	return &cfg, nil

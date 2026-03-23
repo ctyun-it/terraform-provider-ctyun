@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,6 +30,7 @@ var (
 
 type ctyunCrsVpcAttach struct {
 	meta       *common.CtyunMetadata
+	name       string
 	vpcService *business.VpcService
 }
 
@@ -49,7 +51,7 @@ type CtyunCrsVpcAttachConfig struct {
 
 func (c *ctyunCrsVpcAttach) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10007018/10007025`,
+		MarkdownDescription: utils.FormatDesc("将虚拟私有云接入容器镜像服务", "容器镜像服务（CRS）", "https://www.ctyun.cn/document/10007018/10007025"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -182,8 +184,8 @@ func (c *ctyunCrsVpcAttach) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vpcID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [vpc_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -201,11 +203,11 @@ func (c *ctyunCrsVpcAttach) ImportState(ctx context.Context, request resource.Im
 	}
 
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -252,7 +254,7 @@ func (c *ctyunCrsVpcAttach) attach(ctx context.Context, plan CtyunCrsVpcAttachCo
 // checkBeforeAttach 接入前检查
 func (c *ctyunCrsVpcAttach) checkBeforeAttach(ctx context.Context, plan CtyunCrsVpcAttachConfig) error {
 	vpcID, subnetID := plan.VpcID.ValueString(), plan.SubnetID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, plan.RegionID.ValueString(), "")
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpcID, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -335,12 +337,15 @@ func (c *ctyunCrsVpcAttach) getAttach(ctx context.Context, plan CtyunCrsVpcAttac
 func (c *ctyunCrsVpcAttach) getAndMerge(ctx context.Context, plan *CtyunCrsVpcAttachConfig) (err error) {
 	state, err := c.getAttach(ctx, *plan)
 	if err != nil {
+		if strings.Contains(err.Error(), "不存在") {
+			err = common.ResourceNotExistError
+		}
 		return
 	}
 	if state != "ACTIVE" {
 		err = common.ResourceNotExistError
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.VpcID.ValueString(), plan.RegionID.ValueString()))
+	plan.ID = plan.VpcID
 	return
 }

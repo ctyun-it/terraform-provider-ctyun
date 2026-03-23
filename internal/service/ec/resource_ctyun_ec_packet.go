@@ -2,14 +2,14 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
-	"github.com/google/uuid"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"strings"
+	"time"
 )
 
 var (
@@ -37,12 +38,12 @@ func NewCtyunEcPacket() resource.Resource {
 
 type CtyunEcPacket struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEcPacketConfig struct {
 	ID                   types.String `tfsdk:"id"`
 	EcID                 types.String `tfsdk:"ec_id"`
-	RegionID             types.String `tfsdk:"region_id"`
 	Name                 types.String `tfsdk:"name"`
 	Bandwidth            types.Int64  `tfsdk:"bandwidth"`
 	CycleType            types.String `tfsdk:"cycle_type"`
@@ -55,15 +56,18 @@ type CtyunEcPacketConfig struct {
 	MasterResourceID     types.String `tfsdk:"master_resource_id"`
 	MasterResourceStatus types.String `tfsdk:"master_resource_status"`
 	ResourceID           types.String `tfsdk:"resource_id"` // 添加ResourceID字段用于后续操作
+	ExpireTime           types.String `tfsdk:"expire_time"`
+	CreateTime           types.String `tfsdk:"create_time"`
 }
 
 func (c *CtyunEcPacket) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ec_packet"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220`,
+		MarkdownDescription: utils.FormatDesc("管理云间高速带宽包", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -82,18 +86,6 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
-			},
 			"name": schema.StringAttribute{
 				Required:    true,
 				Description: "带宽包名字",
@@ -106,10 +98,7 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 			},
 			"bandwidth": schema.Int64Attribute{
 				Required:    true,
-				Description: "带宽，单位MB",
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-				},
+				Description: "带宽，单位MB 支持更新",
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
@@ -118,7 +107,7 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Required:    true,
 				Description: "订购周期类型，取值范围：month：按月，year：按年",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.OrderCycleTypes...),
+					stringvalidator.OneOf(business.OrderCycleTypesMY...),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -216,6 +205,20 @@ func (c *CtyunEcPacket) Schema(ctx context.Context, req resource.SchemaRequest, 
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				//PlanModifiers: []planmodifier.String{
+				//	stringplanmodifier.UseStateForUnknown(),
+				//},
+			},
 		},
 	}
 }
@@ -266,9 +269,12 @@ func (c *CtyunEcPacket) Read(ctx context.Context, req resource.ReadRequest, resp
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
-	// 读取操作成功，保持当前状态
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 
 }
@@ -299,7 +305,7 @@ func (c *CtyunEcPacket) Update(ctx context.Context, req resource.UpdateRequest, 
 		}
 	}
 
-	err = c.getAndMerge(ctx, &state)
+	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
 	}
@@ -329,41 +335,78 @@ func (c *CtyunEcPacket) ImportState(ctx context.Context, request resource.Import
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[resourceId]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcPacketConfig
 
-	var ecId, resourceId string
+	var ecId, packetId string
 
-	err = terraform_extend.Split(request.ID, &ecId, &resourceId)
+	err = terraform_extend.Split(request.ID, &packetId, &ecId)
 	if err != nil {
 		return
 	}
 
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
-	if resourceId == "" {
-		err = fmt.Errorf("resourceId不能为空")
+	if packetId == "" {
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 
 	config.EcID = types.StringValue(ecId)
-	config.ResourceID = types.StringValue(resourceId)
+	config.ID = types.StringValue(packetId)
 
 	// 查询远端
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
+	// 在调用CalculateMonthOnlyDiff之前添加时间格式验证
+	createTimeStr := config.CreateTime.ValueString()
+	expireTimeStr := config.ExpireTime.ValueString()
 
-	// 设置ID字段，确保导入时有正确的ID（修复：保持与Create中一致的格式）
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s", ecId, resourceId))
+	// 确保时间格式是RFC3339
+	if createTimeStr != "" && expireTimeStr != "" {
+		// 验证是否已经是RFC3339格式，如果不是则转换
+		_, err1 := time.Parse(time.RFC3339, createTimeStr)
+		if err1 != nil {
+			// 尝试解析其他常见格式并转换为RFC3339
+			parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", createTimeStr)
+			if parseErr != nil {
+				err = fmt.Errorf("无法解析创建时间: %v", parseErr.Error())
+				return
+			}
+			createTimeStr = parsedTime.Format(time.RFC3339)
+		}
 
+		_, err = time.Parse(time.RFC3339, expireTimeStr)
+		if err != nil {
+			// 尝试解析其他常见格式并转换为RFC3339
+			parsedTime, parseErr := time.Parse("2006-01-02 15:04:05", expireTimeStr)
+			if parseErr != nil {
+				err = fmt.Errorf("无法解析到期时间: %v", parseErr)
+				return
+			}
+			expireTimeStr = parsedTime.Format(time.RFC3339)
+		}
+		var cycleType string
+		var cycleCount int32
+		cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(createTimeStr, expireTimeStr)
+		if err != nil {
+			return
+		}
+		config.CycleType = types.StringValue(cycleType)
+		if cycleCount > 0 {
+			config.CycleCount = types.Int64Value(int64(cycleCount))
+		} else {
+			config.CycleCount = types.Int64Null()
+		}
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -377,7 +420,9 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 	if !state.ResourceID.IsNull() && !state.ResourceID.IsUnknown() {
 		listReq.ResourceID = state.ResourceID.ValueStringPointer()
 	}
-
+	if !state.ID.IsNull() && !state.ID.IsUnknown() {
+		listReq.PacketID = state.ID.ValueStringPointer()
+	}
 	tflog.Info(ctx, "查询云间高速带宽包信息", map[string]interface{}{
 		"ec_id":       state.EcID.ValueString(),
 		"resource_id": state.ResourceID.ValueString(),
@@ -391,6 +436,9 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
+	} else if len(resp.ReturnObj.Results) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 
@@ -414,6 +462,32 @@ func (c *CtyunEcPacket) getAndMerge(ctx context.Context, state *CtyunEcPacketCon
 		if result.PacketID != nil {
 			state.ID = types.StringValue(*result.PacketID)
 		}
+		if result.AreaB != nil {
+			state.AreaB = types.StringValue(*result.AreaB)
+		}
+		if result.AreaA != nil {
+			state.AreaA = types.StringValue(*result.AreaA)
+		}
+		if result.PacketName != nil {
+			state.Name = types.StringValue(*result.PacketName)
+		}
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
+		}
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
+		}
+		if result.Rate != nil {
+			state.Bandwidth = types.Int64Value(int64(*result.Rate))
+		}
+		if result.CreateDate != nil {
+			state.CreateTime = types.StringValue(*result.CreateDate) // Use CreateTime instead of CreateTimeUTC
+
+		}
+		if result.DeleteDate != nil {
+			state.ExpireTime = types.StringValue(*result.DeleteDate)
+		}
+
 	}
 
 	return
@@ -425,13 +499,13 @@ func (c *CtyunEcPacket) upgrade(ctx context.Context, plan, state *CtyunEcPacketC
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行升配操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	upgradeReq := &ec.EcEcOrderPacketUpgradeRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
-		ResourceID:  state.ResourceID.ValueString(),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   "bb9fdb42056f11eda1610242ac110002",
+		Bandwidth:  int32(plan.Bandwidth.ValueInt64()),
+		ResourceID: state.ResourceID.ValueString(),
+		//ClientToken: &clientToken,
 	}
 
 	tflog.Info(ctx, "升配云间高速带宽包", map[string]interface{}{
@@ -453,10 +527,10 @@ func (c *CtyunEcPacket) upgrade(ctx context.Context, plan, state *CtyunEcPacketC
 	// 更新状态信息
 	if resp.ReturnObj != nil {
 		if resp.ReturnObj.MasterOrderID != nil {
-			plan.MasterOrderID = types.StringValue(*resp.ReturnObj.MasterOrderID)
+			state.MasterOrderID = types.StringValue(*resp.ReturnObj.MasterOrderID)
 		}
 		if resp.ReturnObj.MasterOrderNO != nil {
-			plan.MasterOrderNO = types.StringValue(*resp.ReturnObj.MasterOrderNO)
+			state.MasterOrderNO = types.StringValue(*resp.ReturnObj.MasterOrderNO)
 		}
 	}
 
@@ -469,14 +543,14 @@ func (c *CtyunEcPacket) renew(ctx context.Context, plan, state *CtyunEcPacketCon
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行续订操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	renewReq := &ec.EcEcOrderPacketRenewRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		ResourceID:  state.ResourceID.ValueString(),
-		CycleType:   plan.CycleType.ValueString(),
-		CycleCount:  int32(plan.CycleCount.ValueInt64()),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   "bb9fdb42056f11eda1610242ac110002",
+		ResourceID: state.ResourceID.ValueString(),
+		CycleType:  plan.CycleType.ValueString(),
+		CycleCount: int32(plan.CycleCount.ValueInt64()),
+		//ClientToken: &clientToken,
 	}
 
 	tflog.Info(ctx, "续订云间高速带宽包", map[string]interface{}{
@@ -516,12 +590,12 @@ func (c *CtyunEcPacket) refund(ctx context.Context, state *CtyunEcPacketConfig) 
 	if state.ResourceID.IsNull() || state.ResourceID.IsUnknown() {
 		return fmt.Errorf("无法执行退订操作：ResourceID为空")
 	}
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	refundReq := &ec.EcEcOrderPacketRefundRequest{
-		EcID:        state.EcID.ValueString(),
-		RegionID:    state.RegionID.ValueString(),
-		ResourceID:  state.ResourceID.ValueString(),
-		ClientToken: &clientToken,
+		EcID:       state.EcID.ValueString(),
+		RegionID:   "bb9fdb42056f11eda1610242ac110002",
+		ResourceID: state.ResourceID.ValueString(),
+		//ClientToken: &clientToken,
 	}
 	tflog.Info(ctx, "退订云间高速带宽包", map[string]interface{}{
 		"ec_id":       state.EcID.ValueString(),
@@ -553,17 +627,17 @@ func (c *CtyunEcPacket) refund(ctx context.Context, state *CtyunEcPacketConfig) 
 
 func (c *CtyunEcPacket) create(ctx context.Context, plan *CtyunEcPacketConfig) (err error) {
 	// 创建云间高速带宽包订购订单
-	clientToken := uuid.NewString()
+	//clientToken := uuid.NewString()
 	newReq := &ec.EcEcOrderPacketNewRequest{
-		EcID:        plan.EcID.ValueString(),
-		RegionID:    plan.RegionID.ValueString(),
-		PacketName:  plan.Name.ValueString(),
-		Bandwidth:   int32(plan.Bandwidth.ValueInt64()),
-		AreaA:       plan.AreaA.ValueStringPointer(),
-		CycleType:   strings.ToUpper(plan.CycleType.ValueString()),
-		CycleCount:  int32(plan.CycleCount.ValueInt64()),
-		AreaB:       plan.AreaB.ValueStringPointer(),
-		ClientToken: &clientToken,
+		EcID:       plan.EcID.ValueString(),
+		RegionID:   "bb9fdb42056f11eda1610242ac110002",
+		PacketName: plan.Name.ValueString(),
+		Bandwidth:  int32(plan.Bandwidth.ValueInt64()),
+		AreaA:      plan.AreaA.ValueStringPointer(),
+		CycleType:  strings.ToUpper(plan.CycleType.ValueString()),
+		CycleCount: int32(plan.CycleCount.ValueInt64()),
+		AreaB:      plan.AreaB.ValueStringPointer(),
+		//ClientToken: &clientToken,
 	}
 
 	if !plan.AreaA.IsNull() {

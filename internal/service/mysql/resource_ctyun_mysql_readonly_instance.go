@@ -9,7 +9,9 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -35,42 +37,42 @@ var (
 
 type CtyunMysqlReadOnlyInstance struct {
 	meta         *common.CtyunMetadata
+	name         string
 	ecsService   *business.EcsService
 	mysqlService *business.MysqlService
+	orderLooper  *business.OrderLooper
 }
 
 func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunMysqlReadOnlyInstanceConfig
-	var ID, regionId, projectId string
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -80,6 +82,7 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 
 func (c *CtyunMysqlReadOnlyInstance) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_readonly_instance"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlReadOnlyInstance() resource.Resource {
 	return &CtyunMysqlReadOnlyInstance{}
@@ -93,11 +96,12 @@ func (c *CtyunMysqlReadOnlyInstance) Configure(ctx context.Context, request reso
 	c.meta = meta
 	c.ecsService = business.NewEcsService(c.meta)
 	c.mysqlService = business.NewMysqlService(c.meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10148056",
+		MarkdownDescription: utils.FormatDesc("管理MySQL只读实例", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10148056"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -179,7 +183,7 @@ func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resourc
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -289,7 +293,7 @@ func (c *CtyunMysqlReadOnlyInstance) Read(ctx context.Context, request resource.
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -320,12 +324,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 		return
 	}
 
-	//// 确保主机在退订之前是处于running状态
-	//err = c.StartedLoop(ctx, &state)
-	//if err != nil {
-	//	return
-	//}
-
 	err = c.refund(ctx, state)
 	if err != nil {
 		return
@@ -340,10 +338,6 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 	if err != nil {
 		return
 	}
-	//err = c.destroyLoop(ctx, state)
-	//if err != nil {
-	//	return
-	//}
 	response.Diagnostics.AddWarning("删除MySql集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -359,10 +353,11 @@ func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunM
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持此规格：%s，请联系研发确认！", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
 		ctx,
@@ -399,13 +394,14 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceDetail(ctx context.Context,
 		InstID:   id,
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		detailHeaders.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -440,6 +436,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 	header := &mysql.TeledbCreateRequestHeader{}
 	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	if cycleType == business.OnDemandCycleType {
 		params.AutoRenewStatus = 0
@@ -469,6 +466,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
+			return err
 		}
 		azInfo.AvailabilityZoneName = regionAzList[0].AvailabilityZoneId
 	}
@@ -486,6 +484,18 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		err2 := fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return err2
 	}
+	// 查询订单是否完成
+	masterOrderID := utils.SecString(resp.ReturnObj.Data.NewOrderId)
+	err2 := c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err2 != nil {
+		return err2
+	}
+
+	id, err2 := c.acquireAndSetIdIfOrderNotFinished(ctx, config, masterOrderID)
+	if err2 != nil {
+		return err2
+	}
+	config.ID = types.StringValue(id)
 	return nil
 }
 
@@ -494,9 +504,6 @@ func (c *CtyunMysqlReadOnlyInstance) getAzInfoByRegion(ctx context.Context, conf
 		RegionId: config.RegionID.ValueString(),
 	}
 	header := &mysql.TeledbGetAvailabilityZoneRequestHeader{}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbGetAvailabilityZone.Do(ctx, c.meta.Credential, params, header)
 	if err2 != nil {
 		err = err2
@@ -546,6 +553,7 @@ func (c *CtyunMysqlReadOnlyInstance) getAndMerge(ctx context.Context, config *Ct
 		return err
 	}
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
+	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
 	return nil
 }
 
@@ -559,9 +567,6 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceList(ctx context.Context, c
 	}
 	mysqlListHeaders := &mysql.TeledbGetListHeaders{
 		RegionID: config.RegionID.ValueString(),
-	}
-	if config.ProjectID.ValueString() != "" {
-		mysqlListHeaders.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetListApi.Do(ctx, c.meta.Credential, mysqlListParams, mysqlListHeaders)
@@ -625,9 +630,6 @@ func (c *CtyunMysqlReadOnlyInstance) refund(ctx context.Context, state CtyunMysq
 		InstId: state.ID.ValueString(),
 	}
 	headers := &mysql.TeledbRefundRequestHeader{}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		headers.ProjectID = state.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbRefundApi.Do(ctx, c.meta.Credential, params, headers)
 	if err != nil {
 		return err
@@ -676,9 +678,6 @@ func (c *CtyunMysqlReadOnlyInstance) destroy(ctx context.Context, state CtyunMys
 		InstId: state.ID.ValueString(),
 	}
 	deleteHeader := &mysql.TeledbDestroyRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		deleteHeader.ProjectID = state.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDestroyApi.Do(ctx, c.meta.Credential, deleteParams, deleteHeader)
 	if err != nil {
 		return err
@@ -687,6 +686,29 @@ func (c *CtyunMysqlReadOnlyInstance) destroy(ctx context.Context, state CtyunMys
 		return err
 	}
 	return nil
+}
+
+func (c *CtyunMysqlReadOnlyInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Context, config *CtyunMysqlReadOnlyInstanceConfig, masterOrderID string) (id string, err error) {
+	retryer, err := business.NewRetryer(time.Second*30, 60)
+	if err != nil {
+		return
+	}
+	result := retryer.Start(
+		func(currentTime int) bool {
+			id, err = c.mysqlService.GetIDByOrder(ctx, masterOrderID, "")
+			if err != nil {
+				return false
+			}
+			if id != "" {
+				return false
+			}
+			return true
+		},
+	)
+	if result.ReturnReason == business.ReachMaxLoopTime {
+		return "", fmt.Errorf("实例 %s 创建超时", config.Name.ValueString())
+	}
+	return
 }
 
 type CtyunMysqlReadOnlyInstanceConfig struct {

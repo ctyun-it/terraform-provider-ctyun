@@ -52,6 +52,7 @@ func (a *EcEcCreateApi) Do(ctx context.Context, credential core.Credential, req 
 type EcEcCreateRequest struct {
 	EcName        string  `json:"ecName"`                  /*  名称  */
 	EcDescription *string `json:"ecDescription,omitempty"` /*  描述信息  */
+	ProjectID     *string `json:"project,omitempty"`       /*  描述信息  */
 }
 
 type EcEcCreateResponse struct {

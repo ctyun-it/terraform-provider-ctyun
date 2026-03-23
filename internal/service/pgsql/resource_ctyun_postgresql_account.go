@@ -31,10 +31,12 @@ var (
 
 type CtyunPostgresqlAccount struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunPostgresqlAccount) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_postgresql_account"
+	c.name = response.TypeName
 }
 func NewCtyunPostgresqlAccount() resource.Resource {
 	return &CtyunPostgresqlAccount{}
@@ -52,32 +54,31 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[instanceID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunPostgresqlAccountConfig
-	var regionID, projectID, name, instID string
+	var regionID, name, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instdID不能为空")
+		err = fmt.Errorf("instd_id不能为空")
 		return
 	}
 	if name == "" {
@@ -87,7 +88,6 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMergePostgresqlAccount(ctx, &config)
 	if err != nil {
@@ -98,7 +98,7 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 
 func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161317",
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的账户", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10161317"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -123,16 +123,9 @@ func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -282,8 +275,10 @@ func (c *CtyunPostgresqlAccount) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMergePostgresqlAccount(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -324,6 +319,7 @@ func (c *CtyunPostgresqlAccount) Update(ctx context.Context, request resource.Up
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -352,9 +348,6 @@ func (c *CtyunPostgresqlAccount) Delete(ctx context.Context, request resource.De
 	header := &pgsql.PgsqlDeleteAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -382,9 +375,7 @@ func (c *CtyunPostgresqlAccount) CreatePostgresqlAccount(ctx context.Context, co
 	header := &pgsql.PgsqlCreateAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -438,9 +429,7 @@ func (c *CtyunPostgresqlAccount) updateInstanceDescription(ctx context.Context, 
 	header := &pgsql.PgsqlUpdateAccountRemarkRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateAccountRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -488,9 +477,7 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 	header := &pgsql.PgsqlGetAccountListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetAccountListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -498,6 +485,11 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 		err = fmt.Errorf("查询postgresql实例(id=%s)的账户信息(account_name=%s)失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		// PG_2001 = 未找到实例
+		if strings.Contains(*resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -505,7 +497,7 @@ func (c *CtyunPostgresqlAccount) getPgsqlAccountDetail(ctx context.Context, conf
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) <= 0 {
-		err = fmt.Errorf("查询postgresql实例(id=%s)的账户信息失败，接口未查询到任何(account_name=%s)信息。", config.InstID.ValueString(), config.Name.ValueString())
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) > 1 {
@@ -629,9 +621,7 @@ func (c *CtyunPostgresqlAccount) grantSchemaPrivilege(ctx context.Context, privi
 		header := &pgsql.PgsqlGrantPrivilegeRequestHeader{
 			RegionID: config.RegionID.ValueString(),
 		}
-		if !config.ProjectID.IsNull() {
-			header.ProjectID = config.ProjectID.ValueStringPointer()
-		}
+
 		resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGrantPrivilegeApi.Do(ctx, c.meta.Credential, params, header)
 		if err != nil {
 			return err
@@ -656,9 +646,7 @@ func (c *CtyunPostgresqlAccount) revokeSchemaPrivilege(ctx context.Context, priv
 		header := &pgsql.PgsqlRevokePrivilegeRequestHeader{
 			RegionID: config.RegionID.ValueString(),
 		}
-		if !config.ProjectID.IsNull() {
-			header.ProjectID = config.ProjectID.ValueStringPointer()
-		}
+
 		resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlRevokePrivilegeApi.Do(ctx, c.meta.Credential, params, header)
 		if err != nil {
 			return err
@@ -681,9 +669,7 @@ func (c *CtyunPostgresqlAccount) lockAccount(ctx context.Context, config *CtyunP
 	header := &pgsql.PgsqlLockAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlLockAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -705,9 +691,7 @@ func (c *CtyunPostgresqlAccount) unlockAccount(ctx context.Context, config *Ctyu
 	header := &pgsql.PgsqlUnLockAccountRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUnLockAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -730,9 +714,7 @@ func (c *CtyunPostgresqlAccount) updatePassword(ctx context.Context, state *Ctyu
 	header := &pgsql.PgsqlResetPasswordRequestHeader{
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlResetPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

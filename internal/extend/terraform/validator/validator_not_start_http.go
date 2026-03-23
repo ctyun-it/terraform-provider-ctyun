@@ -32,6 +32,6 @@ func (v validatorDescNotStartWithHttp) ValidateString(_ context.Context, request
 		return
 	}
 	if !descNotStartWithHttpRegex.MatchString(request.ConfigValue.ValueString()) {
-		response.Diagnostics.AddError(DescNotStartWithHttpError, DescNotStartWithHttpError)
+		response.Diagnostics.AddError(request.Path.String()+DescNotStartWithHttpError, request.Path.String()+DescNotStartWithHttpError)
 	}
 }

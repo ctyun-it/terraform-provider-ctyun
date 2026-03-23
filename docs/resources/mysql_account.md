@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_account"
+---
+
 # ctyun_mysql_account (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133363
+-> 管理MySQL实例的账户
 
 
 
@@ -66,12 +71,8 @@ variable "password" {
 
 resource "ctyun_mysql_account" "example" {
   instance_id = ctyun_mysql_instance.mysql_account.id
-  name        = "tf_example-user"
+  name        = "example"
   password    = var.password
-  schema_privilege_list = [
-    { "grant_schema" : "testDB1", "privilege" : "read_only" },
-    { "grant_schema" : "testDB3", "privilege" : "dml" }
-  ]
   description = "mysql 账号resource样例"
 }
 ```
@@ -88,7 +89,7 @@ resource "ctyun_mysql_account" "example" {
 ### Optional
 
 - `description` (String) 备注，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `schema_privilege_list` (Attributes Set) 数据库权限配置列表，支持更新。 (see [below for nested schema](#nestedatt--schema_privilege_list))
 

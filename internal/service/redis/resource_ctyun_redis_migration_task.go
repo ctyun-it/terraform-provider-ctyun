@@ -61,7 +61,7 @@ type InstanceDbInfo struct {
 
 func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10518385`,
+		MarkdownDescription: utils.FormatDesc("管理Redis迁移任务", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10518385"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -85,7 +85,7 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:    true,
 				Description: "同步模式 1：全量同步+增量同步 2：全量同步",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.OneOf(1, 2),
@@ -96,7 +96,7 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 				Computed:    true,
 				Description: "数据冲突时的处理办法 1：中断迁移 2：跳过目标key，继续执行 3：覆盖目标key，继续执行",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.OneOf(1, 2, 3),
@@ -368,7 +368,7 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [regionID]/[taskID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -388,11 +388,11 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 	}
 
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if taskId == "" {
-		err = fmt.Errorf("taskID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)
@@ -501,7 +501,6 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 		RegionId: state.RegionId.ValueString(),
 		TaskId:   state.ID.ValueString(),
 	}
-
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2GetTransferTaskInfoApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
@@ -511,12 +510,13 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ReturnObj.TaskId == "" {
+		err = common.ResourceNotExistError
+		return
 	}
 
 	// 更新state中的信息
-	state.ID = types.StringValue(resp.ReturnObj.TaskId)
 	state.Status = types.Int32Value(resp.ReturnObj.Status)
-
 	state.CreateTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.CreateTime))
 	state.CompleteTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.CompleteTime))
 	state.SyncMode = types.Int32Value(resp.ReturnObj.SyncMode)
@@ -525,7 +525,7 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	if resp.ReturnObj.Detail != nil && resp.ReturnObj.Detail.SourceDbInfo != nil {
 		sourceDbInfo := resp.ReturnObj.Detail.SourceDbInfo
 		state.SourceDbInfo.SpuInstId = types.StringValue(sourceDbInfo.SpuInstId)
-		state.SourceDbInfo.IpAddr = types.StringValue(sourceDbInfo.IpAddr)
+		//state.SourceDbInfo.IpAddr = types.StringValue(sourceDbInfo.IpAddr)
 		state.SourceDbInfo.AccountName = types.StringValue(sourceDbInfo.AccountName)
 		// 处理 OriginalCluster 字段
 		if sourceDbInfo.OriginalCluster != nil {
@@ -539,7 +539,7 @@ func (c *ctyunRedisMigrationTask) getAndMerge(ctx context.Context, state *CtyunR
 	if resp.ReturnObj.Detail != nil && resp.ReturnObj.Detail.TargetDbInfo != nil {
 		targetDbInfo := resp.ReturnObj.Detail.TargetDbInfo
 		state.TargetDbInfo.SpuInstId = types.StringValue(targetDbInfo.SpuInstId)
-		state.TargetDbInfo.IpAddr = types.StringValue(targetDbInfo.IpAddr)
+		//state.TargetDbInfo.IpAddr = types.StringValue(targetDbInfo.IpAddr)
 		state.TargetDbInfo.AccountName = types.StringValue(targetDbInfo.AccountName)
 		// 处理 OriginalCluster 字段
 		if targetDbInfo.OriginalCluster != nil {

@@ -1,5 +1,10 @@
+---
+subcategory: "NAT网关（CT-NAT Gateway）"
+page_title: "CTYUN: ctyun_private_nat_transit_ip"
+---
+
 # ctyun_private_nat_transit_ip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378390
+-> 管理私网NAT网关的中转IP
 
 
 
@@ -76,12 +81,23 @@ resource "ctyun_private_nat_transit_ip" "transit_ip2" {
 
 ### Optional
 
-- `region_id` (String) 资源池id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
-- `dnat_count` (Number) 在使用此中转IP的dnat数量
-- `id` (String) 中转IP的ID，格式为regionID:natGatewayID:address
+- `id` (String) 中转IP的ID，格式为nat_gateway_id,address
 - `is_default` (Boolean) 是否为默认中转地址
 - `snat_count` (Number) 在使用此中转IP的snat数量
 - `status` (String) 中转IP状态: running代表运行中, freeze代表已冻结, expired代表已到期
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入私网NAT中转IP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_private_nat_transit_ip.[导入配置名称] [nat_gateway_id],[address],<region_id>
+# 示例
+terraform import ctyun_private_nat_transit_ip.transit_ip_example nat-67890,192.168.1.100,region-bb9fdb42056f11eda1610242ac110002
+```

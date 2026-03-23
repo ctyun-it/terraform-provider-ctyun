@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_instance"
+---
+
 # ctyun_redis_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10029727
+-> 管理Redis实例
 
 
 

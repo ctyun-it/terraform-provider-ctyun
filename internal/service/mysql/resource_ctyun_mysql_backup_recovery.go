@@ -8,7 +8,6 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -30,10 +29,12 @@ var (
 
 type CtyunMysqlBackupRecovery struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlBackupRecovery) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_backup_recovery"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlBackupRecovery() resource.Resource {
 	return &CtyunMysqlBackupRecovery{}
@@ -49,29 +50,17 @@ func (c *CtyunMysqlBackupRecovery) Configure(ctx context.Context, request resour
 
 func (c *CtyunMysqlBackupRecovery) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797",
+		MarkdownDescription: utils.FormatDesc("根据备份进行MySQL实例恢复", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
-				Required:    true,
-				Description: "mysql实例id",
-				Validators: []validator.String{
-					stringvalidator.LengthBetween(32, 32),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "mysql实例id",
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -177,7 +166,22 @@ func (c *CtyunMysqlBackupRecovery) Read(ctx context.Context, request resource.Re
 }
 
 func (c *CtyunMysqlBackupRecovery) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunMysqlBackupRecoveryConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlBackupRecoveryConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	state.InstID = plan.InstID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlBackupRecovery) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -205,12 +209,10 @@ func (c *CtyunMysqlBackupRecovery) CreateMysqlBackupRecovery(ctx context.Context
 		params.ToTimepoint = &a
 	}
 	header := &mysql.TeledbCreateRecoveryJobRequestHeader{
-		InstID:   config.InstID.ValueString(),
+		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+
 	// 备份恢复操作前，先轮询确认实例是running的
 	err := c.StartedLoop(ctx, config, 30)
 	if err != nil {
@@ -287,23 +289,21 @@ func (c *CtyunMysqlBackupRecovery) BackupRecoveryLoop(ctx context.Context, confi
 
 func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, config *CtyunMysqlBackupRecoveryConfig) ([]mysql.BrRecoveryRecordVo, error) {
 	params := &mysql.TeledbGetBackupRecoveryListRequest{
-		OuterProdInstId: config.InstID.ValueString(),
+		OuterProdInstId: config.SrcInstId.ValueString(),
 		ID:              config.ID.ValueInt64Pointer(),
 		PageSize:        10,
 		PageNow:         1,
 	}
 	header := &mysql.TeledbGetBackupRecoveryListRequestHeader{
-		InstID:   config.InstID.ValueString(),
+		InstID:   config.SrcInstId.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupRecoveryListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%d)列表失败，接口返回nil，请联系研发确认问题原因。", config.InstID.ValueString(), config.ID.ValueInt64())
+		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%d)列表失败，接口返回nil，请联系研发确认问题原因。", config.SrcInstId.ValueString(), config.ID.ValueInt64())
 		return nil, err
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
@@ -318,7 +318,7 @@ func (c *CtyunMysqlBackupRecovery) getBackupRecoveryList(ctx context.Context, co
 		return nil, err
 	}
 	if len(recoveryList) > 1 {
-		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%s)列表长度不为1。", config.InstID.ValueString(), config.ID)
+		err = fmt.Errorf("查询mysql实例(id=%s)的备份恢复任务(id=%s)列表长度不为1。", config.SrcInstId.ValueString(), config.ID)
 		return nil, err
 	}
 	return recoveryList, nil
@@ -338,21 +338,19 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 		func(currentTime int) bool {
 			// 获取实例详情
 			detailParams := &mysql.TeledbQueryDetailRequest{
-				OuterProdInstId: state.InstID.ValueString(),
+				OuterProdInstId: state.SrcInstId.ValueString(),
 			}
 			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
-				InstID:   state.InstID.ValueString(),
+				InstID:   state.SrcInstId.ValueString(),
 				RegionID: state.RegionID.ValueString(),
 			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
-			}
+
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 			if err2 != nil {
 				err = err2
 				return false
 			} else if resp == nil {
-				err = fmt.Errorf("查询mysql实例(id=%s)的详情失败，接口返回nil。请与研发联系确认问题原因。", state.InstID.ValueString())
+				err = fmt.Errorf("查询mysql实例(id=%s)的详情失败，接口返回nil。请与研发联系确认问题原因。", state.SrcInstId.ValueString())
 				return false
 			} else if resp.StatusCode != 0 {
 				err = fmt.Errorf("API return error. Message: %s", resp.Message)
@@ -365,7 +363,7 @@ func (c *CtyunMysqlBackupRecovery) StartedLoop(ctx context.Context, state *Ctyun
 			orderStatus := resp.ReturnObj.ProdOrderStatus
 			// 若变配前，发现数据库已冻结，将其恢复
 			if orderStatus == business.MysqlOrderStatusPause {
-				err = fmt.Errorf("mysql实例(id=%s)当前处理冻结状态", state.InstID.ValueString())
+				err = fmt.Errorf("mysql实例(id=%s)当前处理冻结状态", state.SrcInstId.ValueString())
 				if err != nil {
 					return false
 				}

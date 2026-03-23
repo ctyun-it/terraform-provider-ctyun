@@ -69,18 +69,15 @@ func TestAccCtyunOceanfs(t *testing.T) {
 						if !ok {
 							return "", fmt.Errorf("resource not found: %s", resourceName)
 						}
-						return fmt.Sprintf("%s,%s,%s",
+						return fmt.Sprintf("%s,%s",
 							rs.Primary.Attributes["id"],
-							rs.Primary.Attributes["project_id"],
 							rs.Primary.Attributes["region_id"],
 						), nil
 					},
 					ImportStateVerify: true,
 					ImportStateVerifyIgnore: []string{
 						"tags",
-						"cycle_type",
 						"subnet_id",
-						"vpc_id",
 						"update_time",
 					},
 				},
@@ -100,11 +97,28 @@ func TestAccCtyunOceanfs(t *testing.T) {
 					ImportStateVerify: true,
 					ImportStateVerifyIgnore: []string{
 						"tags",
-						"cycle_type",
 						"subnet_id",
-						"vpc_id",
 						"update_time",
-						"project_id",
+					},
+				},
+				// 4. import state验证 3
+				{
+					ResourceName: resourceName,
+					ImportState:  true,
+					ImportStateIdFunc: func(s *terraform.State) (string, error) {
+						rs, ok := s.RootModule().Resources[resourceName]
+						if !ok {
+							return "", fmt.Errorf("resource not found: %s", resourceName)
+						}
+						return fmt.Sprintf("%s",
+							rs.Primary.Attributes["id"],
+						), nil
+					},
+					ImportStateVerify: true,
+					ImportStateVerifyIgnore: []string{
+						"tags",
+						"subnet_id",
+						"update_time",
 					},
 				},
 				// 5.销毁资源
@@ -134,7 +148,6 @@ func TestAccCtyunOceanfsWithVpce(t *testing.T) {
 	sfsSize := 100
 	cycleType := "on_demand"
 	isVpce := true
-
 	updatedSfsSize := 120
 
 	resource.Test(t, resource.TestCase{
@@ -224,6 +237,14 @@ func TestAccCtyunOceanfsCycle(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
 					resource.TestCheckResourceAttrSet(resourceName, "expire_time"),
 					resource.TestCheckResourceAttr(resourceName, "tags.#", "2"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 资源更新测试（仅更新大小）

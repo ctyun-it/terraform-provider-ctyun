@@ -26,13 +26,14 @@ func NewVpcCreateApi(client *ctyunsdk.CtyunClient) *VpcCreateApi {
 func (this *VpcCreateApi) Do(ctx context.Context, credential ctyunsdk.Credential, req *VpcCreateRequest) (*VpcCreateResponse, ctyunsdk.CtyunRequestError) {
 	builder := this.WithCredential(&credential)
 	realRequest := vpcCreateRealRequest{
-		RegionID:    req.RegionId,
-		ClientToken: req.ClientToken,
-		CIDR:        req.Cidr,
-		Name:        req.Name,
-		Description: req.Description,
-		EnableIpv6:  req.EnableIpv6,
-		ProjectID:   req.ProjectId,
+		RegionID:            req.RegionId,
+		ClientToken:         req.ClientToken,
+		CIDR:                req.Cidr,
+		Name:                req.Name,
+		Description:         req.Description,
+		EnableIpv6:          req.EnableIpv6,
+		ProjectID:           req.ProjectId,
+		DnsHostnamesEnabled: req.DnsHostnamesEnabled,
 	}
 	_, err := builder.WriteJson(realRequest)
 	if err != nil {
@@ -55,13 +56,14 @@ func (this *VpcCreateApi) Do(ctx context.Context, credential ctyunsdk.Credential
 }
 
 type vpcCreateRealRequest struct {
-	RegionID    string `json:"regionID"`
-	ClientToken string `json:"clientToken"`
-	CIDR        string `json:"CIDR"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	EnableIpv6  bool   `json:"enableIpv6"`
-	ProjectID   string `json:"projectID,omitempty"`
+	RegionID            string `json:"regionID"`
+	ClientToken         string `json:"clientToken"`
+	CIDR                string `json:"CIDR"`
+	Name                string `json:"name"`
+	Description         string `json:"description"`
+	EnableIpv6          bool   `json:"enableIpv6"`
+	ProjectID           string `json:"projectID,omitempty"`
+	DnsHostnamesEnabled int    `json:"dnsHostnamesEnabled"`
 }
 
 type vpcCreateRealResponse struct {
@@ -69,13 +71,14 @@ type vpcCreateRealResponse struct {
 }
 
 type VpcCreateRequest struct {
-	RegionId    string // 资源池id
-	ClientToken string // 客户端存根，用于保证订单幂等性, 长度 1 - 64
-	Name        string // 虚拟私有云名称
-	Cidr        string // VPC的网段。建议您使用 192.168.0.0/16、172.16.0.0/12、10.0.0.0/8 三个 RFC 标准私网网段及其子网作为专有网络的主 IPv4 网段，网段掩码有效范围为 8~28 位
-	Description string // 描述
-	EnableIpv6  bool   // 是否开启 IPv6 网段。取值：false（默认值）:不开启，true: 开启
-	ProjectId   string // 企业项目id
+	RegionId            string // 资源池id
+	ClientToken         string // 客户端存根，用于保证订单幂等性, 长度 1 - 64
+	Name                string // 虚拟私有云名称
+	Cidr                string // VPC的网段。建议您使用 192.168.0.0/16、172.16.0.0/12、10.0.0.0/8 三个 RFC 标准私网网段及其子网作为专有网络的主 IPv4 网段，网段掩码有效范围为 8~28 位
+	Description         string // 描述
+	EnableIpv6          bool   // 是否开启 IPv6 网段。取值：false（默认值）:不开启，true: 开启
+	ProjectId           string // 企业项目id
+	DnsHostnamesEnabled int
 }
 
 type VpcCreateResponse struct {

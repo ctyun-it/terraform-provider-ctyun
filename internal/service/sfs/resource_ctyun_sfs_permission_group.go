@@ -9,9 +9,11 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -22,11 +24,13 @@ import (
 
 type ctyunSfsPermissionGroup struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *ctyunSfsPermissionGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs_permission_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfsPermissionGroup) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,8 +51,8 @@ func (c *ctyunSfsPermissionGroup) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -64,11 +68,11 @@ func (c *ctyunSfsPermissionGroup) ImportState(ctx context.Context, request resou
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -82,7 +86,7 @@ func (c *ctyunSfsPermissionGroup) ImportState(ctx context.Context, request resou
 
 func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622`,
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务权限组", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192622"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -114,6 +118,9 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -133,6 +140,9 @@ func (c *ctyunSfsPermissionGroup) Schema(ctx context.Context, request resource.S
 			"is_default": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否为默认权限组",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -184,8 +194,10 @@ func (c *ctyunSfsPermissionGroup) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroup(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -312,12 +324,12 @@ func (c *ctyunSfsPermissionGroup) getAndMergeSfsPermissionGroup(ctx context.Cont
 		err = common.InvalidReturnObjError
 		return err
 	}
-
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("弹性文件查询有误，通过id=%s查询，结果大于一条，当前条数为%d。", config.ID.ValueString(), len(resp.ReturnObj.List))
-		return err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("弹性文件查询有误，通过id=%s查询，结果为空。", config.ID.ValueString())
 		return err
 	}
 	groupItem := resp.ReturnObj.List[0]

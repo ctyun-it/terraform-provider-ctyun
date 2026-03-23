@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_instance_whitelists"
+---
+
 # ctyun_redis_instance_whitelists (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10398174
+-> 查询Redis实例的白名单
 
 
 

@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_migration_tasks"
+---
+
 # ctyun_redis_migration_tasks (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10518385
+-> 查询Redis迁移任务
 
 
 

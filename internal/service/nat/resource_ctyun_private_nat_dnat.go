@@ -7,13 +7,16 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctnat"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -28,6 +31,7 @@ var (
 
 type ctyunPrivateDnatResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunPrivateDnatResource() resource.Resource {
@@ -36,26 +40,31 @@ func NewCtyunPrivateDnatResource() resource.Resource {
 
 func (c *ctyunPrivateDnatResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_private_nat_dnat"
+	c.name = response.TypeName
 }
 
 func (c *ctyunPrivateDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378362`,
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378362"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "ID，同dnat_id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "ID，同dnat_id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dnat_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "PrivateDnat规则的id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "PrivateDnat规则的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -100,7 +109,11 @@ func (c *ctyunPrivateDnatResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 				Description: "对应的内部IP(和port_id二选一) 支持更新",
 				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("port_id")),
 					stringvalidator.ConflictsWith(path.MatchRoot("port_id")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("port_id")),
 				},
 			},
 			"port_id": schema.StringAttribute{
@@ -108,7 +121,11 @@ func (c *ctyunPrivateDnatResource) Schema(_ context.Context, _ resource.SchemaRe
 				Computed:    true,
 				Description: "对应的网卡ID(和internal_ip二选一) 支持更新",
 				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("internal_ip")),
 					stringvalidator.ConflictsWith(path.MatchRoot("internal_ip")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("internal_ip")),
 				},
 			},
 			"protocol": schema.StringAttribute{
@@ -127,26 +144,35 @@ func (c *ctyunPrivateDnatResource) Schema(_ context.Context, _ resource.SchemaRe
 					validator2.Desc(),
 					validator2.DescNotStartWithHttp(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"state": schema.StringAttribute{
-				Computed:      true,
-				Description:   "运行状态: running代表运行中, freeze代表已冻结, expired代表已到期",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "运行状态: running代表运行中, freeze代表已冻结, expired代表已到期",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
-				Computed:      true,
-				Description:   "创建时间，为UTC格式",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"port_name": schema.StringAttribute{
-				Computed:      true,
-				Description:   "网卡名称",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"device_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "网卡对应的设备ID",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 		},
 	}
@@ -342,36 +368,35 @@ func (c *ctyunPrivateDnatResource) ImportState(ctx context.Context, request reso
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[nat_gateway_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunPrivateDnatConfig
-	var ID, projectID, regionID, natGateWayID string
+	var ID, regionID, natGateWayID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &ID, &natGateWayID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DnatID = types.StringValue(ID)
@@ -440,7 +465,7 @@ func (c *ctyunPrivateDnatResource) getAndMergePrivateDnat(ctx context.Context, p
 	if !plan.InternalIP.IsNull() || targetDnat.InternalIP != "" {
 		plan.InternalIP = types.StringValue(targetDnat.InternalIP)
 	} else {
-		plan.InternalIP = types.StringValue("")
+		plan.InternalIP = types.StringNull()
 	}
 
 	// 处理可能为null的字段
@@ -450,8 +475,8 @@ func (c *ctyunPrivateDnatResource) getAndMergePrivateDnat(ctx context.Context, p
 		plan.PortID = types.StringValue(targetDnat.PortID)
 	}
 
-	plan.PortName = types.StringValue(targetDnat.PortName)
-	plan.DeviceID = types.StringValue(targetDnat.DeviceID)
+	plan.PortName = types.StringValue("")
+	plan.DeviceID = types.StringValue("")
 	plan.Protocol = types.StringValue(targetDnat.Protocol)
 
 	// 处理描述字段

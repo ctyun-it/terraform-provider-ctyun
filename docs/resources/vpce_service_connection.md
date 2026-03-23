@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce_service_connection"
+---
+
 # ctyun_vpce_service_connection (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10043026
+-> 接受或拒绝终端节点连接申请
 
 
 
@@ -118,3 +123,15 @@ resource "ctyun_vpce_service_connection" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPCE Service Connection
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpce_service_connection.[导入配置名称] [endpoint_service_id],[endpoint_id],<region_id>
+# 示例
+terraform import ctyun_vpce_service_connection.example service-123,endpoint-123,region-123
+```

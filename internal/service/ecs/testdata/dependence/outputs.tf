@@ -26,6 +26,10 @@ output "flavor_name" {
   value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 }
 
+output "flavor_name2" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
+}
+
 output "affinity_group_id" {
   value = ctyun_ecs_affinity_group.affinity_group_test.id
 }
@@ -60,4 +64,10 @@ output "instance_id" {
 
 output "ecs_port_for_association_id" {
   value = ctyun_port.ecs_port_for_association_test.id
+}
+
+
+
+output "backup_repo_id" {
+  value = ctyun_ecs_backup_repo.test.id
 }

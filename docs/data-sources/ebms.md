@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebms"
+---
+
 # ctyun_ebms (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040106
+-> 查询物理机列表
 
 
 

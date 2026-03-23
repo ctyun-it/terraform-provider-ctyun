@@ -1,36 +1,88 @@
-data "ctyun_vpcs" "vpc_test" {
-  page_size = 50
+resource "ctyun_vpc" "vpc_test" {
+  name        = "tfvpc-ccse-${local.random_string}"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
-locals {
-  vpcs = [for vpc in data.ctyun_vpcs.vpc_test.vpcs : vpc if vpc.name == "tf-vpc-for-ccse"]
-  real_vpc_id = local.vpcs[0].vpc_id
+resource "ctyun_subnet" "subnet_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsubnet-ccse1-${local.random_string}"
+  cidr        = "192.168.1.0/24"
+  description = "terraform测试使用"
+  dns         = [
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
-data "ctyun_subnets" "subnet_test" {
-  vpc_id = local.real_vpc_id
-}
-
-locals {
-  subnets = [for subnet in data.ctyun_subnets.subnet_test.subnets : subnet if subnet.name == "tf-subnet-for-ccse"]
-  real_subnet_id = local.subnets[0].subnet_id
-
-  subnets2 = [for subnet in data.ctyun_subnets.subnet_test.subnets : subnet if subnet.name == "tf-subnet-for-ccse2"]
-  real_subnet_id2 = local.subnets2[0].subnet_id
+resource "ctyun_subnet" "subnet_test2" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsubnet-ccse2-${local.random_string}"
+  cidr        = "192.168.2.0/24"
+  description = "terraform测试使用"
+  dns         = [
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "ctyun_security_group" "security_group_test" {
-  vpc_id      = local.real_vpc_id
-  name        = "tf-sg-for-ccse"
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsg-ccse-${local.random_string}"
   description = "terraform测试使用"
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+locals {
+  real_vpc_id = ctyun_vpc.vpc_test.id
+  real_subnet_id = ctyun_subnet.subnet_test.id
+  real_subnet_id2 = ctyun_subnet.subnet_test2.id
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 4
   ram    = 8
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
+}
+
+data "ctyun_ccse_images" "ccse_images" {
+  instance_type = "ecs"
+  flavor_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+}
+
+data "ctyun_zones" "test" {
+
+}
+
+data "ctyun_ebm_device_types" "test" {
+  for_each = { for az in data.ctyun_zones.test.zones: az => az }
+  az_name = each.value
+}
+
+locals {
+  # 筛选全部有余量的规格
+  all_device_types = flatten([
+    for device_type_inst in values(data.ctyun_ebm_device_types.test) : [
+      for dt in device_type_inst.device_types : dt
+      # if dt.available == true # 核心过滤条件
+    ]
+  ])
+
+  # 不支持云盘的弹性裸金属
+  cloud_boot_false_list  = [for dt in local.all_device_types : dt if dt.cloud_boot == false]
+  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : null
 }
 
 locals {
@@ -65,25 +117,25 @@ resource "ctyun_ccse_cluster" "test" {
 
   slave_host = {
     instance_type = "ecs"
-    mirror_id     = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+    mirror_id     = data.ctyun_ccse_images.ccse_images.images[0].id
     mirror_type   = 1
     item_def_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 
     az_infos = [
       {
-        az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+        az_name = data.ctyun_zones.test.zones[0]
         size    = 1
       }
     ]
 
     sys_disk = {
-      type = "SAS"
+      type = "XSSD-1"
       size = 80
     }
 
     data_disks = [
       {
-        type = "SATA"
+        type = "XSSD-1"
         size = 150
       }
     ]
@@ -170,7 +222,7 @@ resource "ctyun_ecs" "ecs_test" {
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
   security_group_ids  = [ctyun_ccse_cluster.test.base_info.security_group_id]
-  system_disk_type    = "sata"
+  system_disk_type    = "ssd"
   system_disk_size    = 40
   vpc_id              =  local.real_vpc_id
   password            = var.password
@@ -186,15 +238,6 @@ variable "password" {
 }
 
 #### 物理机
-#
-# data "ctyun_zones" "test" {
-#
-# }
-#
-locals {
-  device_type1 = "physical.s5.2xlarge4"      // az2、有本地盘、弹性、不支持云硬盘
-  # az2 = data.ctyun_zones.test.zones[1]
-}
 #
 # data "ctyun_ebm_device_raids" "system_raid" {
 #   az_name = local.az2

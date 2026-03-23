@@ -1,5 +1,10 @@
+---
+subcategory: "分布式消息服务Kafka"
+page_title: "CTYUN: ctyun_kafka_users"
+---
+
 # ctyun_kafka_users (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10145597
+-> 查询KAFKA实例的用户列表
 
 
 

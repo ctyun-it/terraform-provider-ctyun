@@ -2,12 +2,15 @@ package zos
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctzos"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
@@ -18,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/mapplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -36,6 +40,7 @@ var (
 
 type ctyunZosBucket struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunZosBucket() resource.Resource {
@@ -44,6 +49,7 @@ func NewCtyunZosBucket() resource.Resource {
 
 func (c *ctyunZosBucket) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_zos_bucket"
+	c.name = response.TypeName
 }
 
 type CtyunZosBucketConfig struct {
@@ -66,20 +72,26 @@ type CtyunZosBucketConfig struct {
 	RetentionDay   types.Int64  `tfsdk:"retention_day"`
 	RetentionYear  types.Int64  `tfsdk:"retention_year"`
 	CreateTime     types.String `tfsdk:"create_time"`
+	client         *s3.S3
 }
 
 func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237`,
+		MarkdownDescription: utils.FormatDesc("管理对象存储桶", "对象存储（CT-ZOS，Zettabyte Object Storage）", "https://www.ctyun.cn/document/10026735/10181237"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("bucket")),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -99,7 +111,7 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -123,6 +135,9 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Description: "标签，对标aws s3中桶标签，支持更新",
 				Validators: []validator.Map{
 					mapvalidator.SizeAtMost(10),
+				},
+				PlanModifiers: []planmodifier.Map{
+					mapplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"acl": schema.StringAttribute{
@@ -183,8 +198,6 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"retention_mode": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString(""),
 				Description: "合规保留模式，创建后不支持修改。默认为空，表示不开启合规保留，若填写，目前只支持为COMPLIANCE，且version_enabled必须为true",
 				Validators: []validator.String{
 					stringvalidator.OneOf("COMPLIANCE"),
@@ -218,6 +231,9 @@ func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"cmk_uuid": schema.StringAttribute{
 				Computed:    true,
 				Description: "密钥管理服务中创建的密钥ID，当is_encrypted为true时，会自动创建密钥",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"is_encrypted": schema.BoolAttribute{
 				Optional:    true,
@@ -317,7 +333,7 @@ func (c *ctyunZosBucket) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found bucket") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -350,10 +366,6 @@ func (c *ctyunZosBucket) Update(ctx context.Context, request resource.UpdateRequ
 	if err != nil {
 		return
 	}
-	state.RetentionMode = plan.RetentionMode
-	state.RetentionDay = plan.RetentionDay
-	state.RetentionYear = plan.RetentionYear
-	state.ACL = plan.ACL // 没有接口查询acl，所以只能这样更新
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
@@ -393,31 +405,30 @@ func (c *ctyunZosBucket) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [bucket],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [bucket],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunZosBucketConfig
 	var bucket, regionID string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraProjectId)
 		bucket = request.ID
-	} else {
+	default:
 		err = terraform_extend.Split(request.ID, &bucket, &regionID)
 		if err != nil {
 			return
 		}
 	}
-
 	if bucket == "" {
 		err = fmt.Errorf("bucket不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -446,7 +457,14 @@ func (c *ctyunZosBucket) checkBeforeCreate(ctx context.Context, plan CtyunZosBuc
 		err = fmt.Errorf("您尚未在该资源池开通对象存储服务，请前往控制台开通后使用")
 		return
 	}
-	return
+	_, err = business.NewZosService(c.meta).GetZosBucketInfo(ctx, plan.Bucket.ValueString(), plan.RegionID.ValueString())
+	if err == nil {
+		err = fmt.Errorf("桶 %s 在资源池 %s 已经存在", plan.Bucket.ValueString(), plan.RegionID.ValueString())
+	} else if errors.Is(err, common.ResourceNotExistError) {
+		err = nil
+		return
+	}
+	return err
 }
 
 // create 创建
@@ -624,7 +642,7 @@ func (c *ctyunZosBucket) setLogConfig(ctx context.Context, plan CtyunZosBucketCo
 	return
 }
 
-// getLog 查询转存日志配置
+// getLogConfig 查询转存日志配置
 func (c *ctyunZosBucket) getLogConfig(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
 	params := &ctzos.ZosGetBucketLoggingRequest{
 		Bucket:   plan.Bucket.ValueString(),
@@ -647,6 +665,39 @@ func (c *ctyunZosBucket) getLogConfig(ctx context.Context, plan *CtyunZosBucketC
 		plan.LogPrefix = types.StringValue(resp.ReturnObj.LoggingEnabled.TargetPrefix)
 	}
 
+	return
+}
+
+// getLockConfig 查询合规保留策略
+func (c *ctyunZosBucket) getLockConfig(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
+	params := &ctzos.ZosGetObjectLockConfRequest{
+		Bucket:   plan.Bucket.ValueString(),
+		RegionID: plan.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtZosApis.ZosGetObjectLockConfApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
+	}
+	if resp.ReturnObj.ObjectLockConfiguration.ObjectLockEnabled != "Enabled" {
+		plan.RetentionMode = types.StringNull()
+		plan.RetentionDay = types.Int64Null()
+		plan.RetentionYear = types.Int64Null()
+	} else {
+		plan.RetentionMode = types.StringValue(resp.ReturnObj.ObjectLockConfiguration.Rule.DefaultRetention.Mode)
+		if resp.ReturnObj.ObjectLockConfiguration.Rule.DefaultRetention.Days > 0 {
+			plan.RetentionDay = types.Int64Value(resp.ReturnObj.ObjectLockConfiguration.Rule.DefaultRetention.Days)
+		} else {
+			plan.RetentionDay = types.Int64Null()
+		}
+		if resp.ReturnObj.ObjectLockConfiguration.Rule.DefaultRetention.Years > 0 {
+			plan.RetentionYear = types.Int64Value(resp.ReturnObj.ObjectLockConfiguration.Rule.DefaultRetention.Years)
+		} else {
+			plan.RetentionYear = types.Int64Null()
+		}
+	}
 	return
 }
 
@@ -778,6 +829,7 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	plan.AzPolicy = types.StringValue(b.AZPolicy)
 	plan.StorageType = types.StringValue(b.StorageType)
 	plan.CmkUUID = utils.SecStringValue(b.CmkUUID)
+	plan.ProjectID = types.StringValue(b.ProjectID)
 	plan.CreateTime = types.StringValue(utils.ConvertToUTCZ(utils.Layout4, b.Ctime))
 	if b.CmkUUID != nil {
 		plan.IsEncrypted = types.BoolValue(true)
@@ -801,9 +853,46 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	if err != nil {
 		return
 	}
+	// 获取ACL
+	err = c.getAcl(ctx, plan)
+	if err != nil {
+		return
+	}
+	// 获取合规保留策略
+	err = c.getLockConfig(ctx, plan)
+	if err != nil {
+		return
+	}
+	return
+}
 
-	// 以下字段无接口查询
-	// plan.Acl
+// initClient 获取s3 client
+func (c *ctyunZosBucket) initClient(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
+	if plan.client == nil {
+		// 获取s3 client
+		plan.client, err = business.NewZosService(c.meta).BuildS3Client(ctx, plan.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (c *ctyunZosBucket) getAcl(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
+	err = c.initClient(ctx, plan)
+	if err != nil {
+		return
+	}
+	input := &s3.GetBucketAclInput{
+		Bucket: plan.Bucket.ValueStringPointer(),
+	}
+	output, err := plan.client.GetBucketAcl(input)
+	if err != nil {
+		return
+	}
+	grants := output.Grants
+	acl := utils.ParseAcl(grants)
+	plan.ACL = types.StringValue(acl)
 	return
 }
 

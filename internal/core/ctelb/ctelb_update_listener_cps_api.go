@@ -46,9 +46,9 @@ func (a *CtelbUpdateListenerCpsApi) Do(ctx context.Context, credential core.Cred
 }
 
 type CtelbUpdateListenerCpsRequest struct {
-	RegionID    string `json:"regionID,omitempty"`    /*  区域ID  */
-	ListenerID  string `json:"listenerID,omitempty"`  /*  监听器ID  */
-	ListenerCps int32  `json:"listenerCps,omitempty"` /*  cps 大小  */
+	RegionID    string `json:"regionID,omitempty"`   /*  区域ID  */
+	ListenerID  string `json:"listenerID,omitempty"` /*  监听器ID  */
+	ListenerCps int32  `json:"listenerCps"`          /*  cps 大小  */
 }
 
 type CtelbUpdateListenerCpsResponse struct {

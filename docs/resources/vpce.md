@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce"
+---
+
 # ctyun_vpce (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217121
+-> 管理终端节点
 
 
 
@@ -88,3 +93,15 @@ resource "ctyun_vpce" "test" {
 - `master_order_id` (String) 主订单号
 - `status` (Number) endpoint状态, 1 表示已链接，2 表示未链接
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPCE
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpce.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vpce.example 12345678-1234-1234-1234-123456789012,region-123
+```

@@ -37,7 +37,7 @@ func (c IamService) QueryAkList(ctx context.Context, userID string) (aks []*ctia
 			return
 		}
 	}
-	err = fmt.Errorf("not found userID %s", userID)
+	err = common.ResourceNotExistError
 	return
 }
 

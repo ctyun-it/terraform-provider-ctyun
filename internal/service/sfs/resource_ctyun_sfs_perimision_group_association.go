@@ -2,6 +2,7 @@ package sfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,10 +10,13 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -28,12 +32,14 @@ var (
 
 type ctyunSfsPermissionGroupAssociation struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	vpcService    *business.VpcService
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs_permission_group_association"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -55,43 +61,47 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [vpcID],[sfsUid],[regionId]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sfs_id],[vpc_id],[permission_group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunSfsPermissionGroupAssociationConfig
-	var vpcID, regionId, sfsUid string
-	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid)
+	var regionID, permissionGroupID, sfsID, vpcID string
+	if strings.Count(request.ID, common.ImportSeparator) < 3 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &sfsID, &vpcID, &permissionGroupID)
 		if err != nil {
 			return
 		}
+
 	} else {
-		err = terraform_extend.Split(request.ID, &vpcID, &sfsUid, &regionId)
+		err = terraform_extend.Split(request.ID, &sfsID, &vpcID, &permissionGroupID, &regionID)
 		if err != nil {
 			return
 		}
 	}
-
+	if sfsID == "" {
+		err = fmt.Errorf("oceanfs_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 	if vpcID == "" {
-		err = fmt.Errorf("vpcID不能为空")
+		err = fmt.Errorf("vpc_id不能为空")
 		return
 	}
-	if sfsUid == "" {
-		err = fmt.Errorf("sfsUid不能为空")
-		return
-	}
-	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+	if permissionGroupID == "" {
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 
-	cfg.RegionID = types.StringValue(regionId)
+	cfg.RegionID = types.StringValue(regionID)
 	cfg.VpcID = types.StringValue(vpcID)
-	cfg.SfsUID = types.StringValue(sfsUid)
+	cfg.SfsUID = types.StringValue(sfsID)
+	cfg.PermissionGroupFuid = types.StringValue(permissionGroupID)
 
 	err = c.getAndMergeSfsPermissionGroupAssociation(ctx, &cfg)
 	if err != nil {
@@ -102,7 +112,7 @@ func (c *ctyunSfsPermissionGroupAssociation) ImportState(ctx context.Context, re
 
 func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192625`,
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务和权限组的绑定关系", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192625"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -118,9 +128,12 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 			},
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,
-				Description: "权限组ID，支持更新",
+				Description: "权限组ID",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"sfs_id": schema.StringAttribute{
@@ -135,7 +148,7 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 			},
 			"vpc_id": schema.StringAttribute{
 				Required:    true,
-				Description: "vpcID",
+				Description: "虚拟私有云ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -144,28 +157,41 @@ func (c *ctyunSfsPermissionGroupAssociation) Schema(ctx context.Context, request
 				},
 			},
 			"vpc_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc名称",
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"vpc_cidr": schema.StringAttribute{
-				Computed:    true,
-				Description: "vpc cidr",
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"permission_group_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "权限组名称",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"permission_group_description": schema.StringAttribute{
-				Computed:    true,
-				Description: "权限组描述",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"is_default": schema.BoolAttribute{
-				Computed:    true,
-				Description: "是否为默认权限组",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            booldefault.StaticBool(false),
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -218,48 +244,17 @@ func (c *ctyunSfsPermissionGroupAssociation) Read(ctx context.Context, request r
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroupAssociation(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
-		}
-	}()
-
-	// 读取 plan -tf文件中配置
-	var plan CtyunSfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	// 读取state中的配置
-	var state CtyunSfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-	err = c.updateSfsPermissionGroupAssociation(ctx, plan, state)
-	if err != nil {
-		return
-	}
-	// 更新远端数据，并同步本地state
-	err = c.getAndMergeSfsPermissionGroupAssociation(ctx, &state)
-	if err != nil {
-		return
-	}
-
-	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	return
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -299,7 +294,7 @@ func (c *ctyunSfsPermissionGroupAssociation) Delete(ctx context.Context, request
 
 func (c *ctyunSfsPermissionGroupAssociation) checkBeforeBind(ctx context.Context, plan CtyunSfsPermissionGroupAssociationConfig) error {
 	vpc, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, "")
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}
@@ -345,18 +340,17 @@ func (c *ctyunSfsPermissionGroupAssociation) getAndMergeSfsPermissionGroupAssoci
 	returnObj := resp.ReturnObj
 
 	for _, association := range returnObj.List {
-		if association.VpcID == config.VpcID.ValueString() {
-			config.PermissionGroupIsDefault = types.BoolValue(*association.PermissionGroupIsDefault)
-			config.PermissionGroupDescription = types.StringValue(association.PermissionGroupDescription)
-			config.PermissionGroupName = types.StringValue(association.PermissionGroupName)
-			config.PermissionGroupFuid = types.StringValue(association.PermissionGroupFuid)
-			config.VpcCidr = types.StringValue(association.VpcCidr)
-			config.VpcName = types.StringValue(association.VpcName)
-			break
+		if association.VpcID == config.VpcID.ValueString() && association.PermissionGroupFuid == config.PermissionGroupFuid.ValueString() {
+			config.PermissionGroupIsDefault = types.BoolValue(false)
+			config.PermissionGroupDescription = types.StringValue("")
+			config.PermissionGroupName = types.StringValue("")
+			config.VpcCidr = types.StringValue("")
+			config.VpcName = types.StringValue("")
+			config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
+			return nil
 		}
 	}
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
-	return nil
+	return common.ResourceNotExistError
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) requestSfsVpcList(ctx context.Context, config CtyunSfsPermissionGroupAssociationConfig) (*sfs.SfsSfsListVpcSfsResponse, error) {
@@ -371,43 +365,21 @@ func (c *ctyunSfsPermissionGroupAssociation) requestSfsVpcList(ctx context.Conte
 		err = fmt.Errorf("查询文件系统（id=%s）下的vpc列表、vpc绑定的权限组列表表失败， 接口返回nil。请与研发联系确认问题原因。 ", config.SfsUID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExists") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
+	} else if resp.ReturnObj.TotalCount == 0 || resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
 	}
+
 	return resp, nil
-}
-
-func (c *ctyunSfsPermissionGroupAssociation) updateSfsPermissionGroupAssociation(ctx context.Context, plan, state CtyunSfsPermissionGroupAssociationConfig) error {
-	if plan.PermissionGroupFuid.Equal(state.PermissionGroupFuid) {
-		return nil
-	}
-
-	params := &sfs.SfsSfsChangeVpcSfsRequest{
-		PermissionGroupFuid: plan.PermissionGroupFuid.ValueString(),
-		RegionID:            state.RegionID.ValueString(),
-		SfsUID:              state.SfsUID.ValueString(),
-		VpcID:               state.VpcID.ValueString(),
-	}
-
-	resp, err := c.meta.Apis.SdkSfsApi.SfsSfsChangeVpcSfsApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return err
-	} else if resp == nil {
-		err = fmt.Errorf("换绑弹性文件服务（id=%s）的权限组（id=%s）失败，接口返回为nil。请与研发联系确认问题原因", plan.SfsUID.ValueString(), plan.PermissionGroupFuid.ValueString())
-		return err
-	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-		return err
-	}
-	// 轮询确认更新完成
-	err = c.bindLoop(ctx, plan)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func (c *ctyunSfsPermissionGroupAssociation) bindLoop(ctx context.Context, config CtyunSfsPermissionGroupAssociationConfig) error {

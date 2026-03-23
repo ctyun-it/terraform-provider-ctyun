@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"strings"
 	"time"
 )
 
@@ -136,4 +137,40 @@ func (u EcsService) CheckEcsStatus(ctx context.Context, id, regionId string) err
 		return fmt.Errorf("云主机当前状态异常：%s", status)
 	}
 	return nil
+}
+
+// 遍历规格族列表，判定当前规格族的类型：
+// 测试结果：
+// S7.SMALL.1: S
+// S7.MEDIUM.2: S
+// C8A.LARGE.4: C
+// S8E.LARGE.4: S
+// M7.LARGE.8: M
+// KS1.MEDIUM.2: KS1
+// C7.LARGE.2: C
+// C7.LARGE.4: C
+// KC1SE.16XLARGE.4: KC1
+// HS1.XLARGE.2: HS1
+// HS1.XLARGE.4: HS1
+// HM1.LARGE.8: HM1
+// HC1.LARGE.4: HC1
+// HC1.XLARGE.4: HC1
+// KC1.LARGE.4: KC1
+// KM1.XLARGE.8: KM1
+// KC1.LARGE.2: KC1
+// KS1.XLARGE.4: KS1
+// KS1.MEDIUM.2: KS1
+// KS2NE.MEDIUM.2: KS2NE
+// KM2NE.XLARGE.8: KM2NE
+// KM2X.LARGE.8:
+// HS3.LARGE.2:
+// HS3X.XLARGE.4:
+// HS3.MEDIUM.4:
+func (u EcsService) GetInstanceSeries(_ context.Context, hostType string) string {
+	for key, _ := range MysqlInstanceSeriesDict {
+		if len(hostType) >= len(key) && strings.HasPrefix(hostType, key) {
+			return key
+		}
+	}
+	return ""
 }

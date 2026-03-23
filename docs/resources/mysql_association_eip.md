@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_association_eip"
+---
+
 # ctyun_mysql_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927
+-> 管理MySQL实例和弹性IP的绑定关系
 
 
 
@@ -86,7 +91,7 @@ resource "ctyun_mysql_association_eip" "association_eip" {
 
 ### Optional
 
-- `project_id` (String) 企业项目id
+- `project_id` (String, Deprecated) 企业项目id
 - `region_id` (String) 资源池Id
 
 ### Read-Only

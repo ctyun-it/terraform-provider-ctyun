@@ -9,7 +9,9 @@ import (
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -34,6 +35,7 @@ var (
 
 type CtyunElbTargetGroup struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunElbTargetGroup) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -50,16 +52,17 @@ func NewCtyunElbTargetGroup() resource.Resource {
 
 func (c *CtyunElbTargetGroup) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_target_group"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡后端服务组", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155289"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -93,6 +96,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 					stringvalidator.LengthAtLeast(1),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vpc_id": schema.StringAttribute{
 				Required:    true,
@@ -111,6 +117,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"algorithm": schema.StringAttribute{
 				Required:    true,
@@ -122,7 +131,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"proxy_protocol": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。不支持更改",
+				Description: "1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。",
 				Default:     int32default.StaticInt32(0),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 1),
@@ -131,14 +140,16 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.ListenerProtocolTCP),
 					),
 				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
-				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"session_sticky_mode": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新",
+				Description: "会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）、SOURCE_IP（源IP）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新",
 				Default:     stringdefault.StaticString("CLOSE"),
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.TargetGroupSessionStickyModes...),
@@ -152,7 +163,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"cookie_expire": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "cookie过期时间。session_sticky_mode = INSERT模式必填，支持更新",
+				Description: "cookie过期时间。INSERT模式必填，支持更新",
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("session_sticky_mode"),
@@ -164,6 +175,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeSourceIP),
 						types.StringValue(business.TargetGroupSessionStickyModeCLOSE),
 					),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					planmodifier2.SetStateNullIfDependencyChangeInt64(path.Root("session_sticky_mode")),
 				},
 			},
 			"rewrite_cookie_name": schema.StringAttribute{
@@ -182,6 +196,9 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeINSERT),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.SetStateNullIfDependencyChangeString(path.Root("session_sticky_mode")),
+				},
 			},
 			"source_ip_timeout": schema.Int64Attribute{
 				Optional:    true,
@@ -199,11 +216,16 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						types.StringValue(business.TargetGroupSessionStickyModeINSERT),
 					),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					planmodifier2.SetStateNullIfDependencyChangeInt64(path.Root("session_sticky_mode")),
+				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "后端服务组ID",
+				Computed:    true,
+				Description: "后端服务组ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -212,22 +234,13 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
 			},
 		},
 	}
@@ -280,7 +293,7 @@ func (c *CtyunElbTargetGroup) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeTargetGroup(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -322,6 +335,7 @@ func (c *CtyunElbTargetGroup) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -365,34 +379,32 @@ func (c *CtyunElbTargetGroup) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbTargetGroupConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeTargetGroup(ctx, &config)
 	if err != nil {
 		return
@@ -401,11 +413,6 @@ func (c *CtyunElbTargetGroup) ImportState(ctx context.Context, request resource.
 }
 
 func (c *CtyunElbTargetGroup) createTargetGroup(ctx context.Context, plan *CtyunElbTargetGroupConfig) (err error) {
-	if plan.RegionID.IsNull() {
-		err = fmt.Errorf("regionId 为空！")
-		return
-	}
-
 	params := &ctelb.CtelbCreateTargetGroupRequest{
 		ClientToken:   uuid.NewString(),
 		RegionID:      plan.RegionID.ValueString(),
@@ -414,8 +421,11 @@ func (c *CtyunElbTargetGroup) createTargetGroup(ctx context.Context, plan *Ctyun
 		Algorithm:     plan.Algorithm.ValueString(),
 		SessionSticky: nil,
 	}
-	if !plan.Protocol.IsNull() {
+	if plan.Protocol.ValueString() != "" {
 		params.Protocol = plan.Protocol.ValueString()
+	} else {
+		err = fmt.Errorf("protocol不能为空")
+		return
 	}
 	if !plan.HealthCheckID.IsNull() {
 		params.HealthCheckID = plan.HealthCheckID.ValueString()
@@ -481,32 +491,18 @@ func (c *CtyunElbTargetGroup) updateTargetGroupInfo(ctx context.Context, state *
 	params := &ctelb.CtelbUpdateTargetGroupRequest{
 		ClientToken:   uuid.NewString(),
 		RegionID:      state.RegionID.ValueString(),
-		ProjectID:     state.ProjectID.ValueString(),
 		ID:            state.ID.ValueString(),
 		TargetGroupID: state.ID.ValueString(),
-		Name:          state.Name.ValueString(),
-		HealthCheckID: state.HealthCheckID.ValueString(),
-		Algorithm:     state.Algorithm.ValueString(),
-		ProxyProtocol: state.ProxyProtocol.ValueInt32(),
+		Name:          plan.Name.ValueString(),
+		HealthCheckID: plan.HealthCheckID.ValueString(),
+		Algorithm:     plan.Algorithm.ValueString(),
+		ProxyProtocol: plan.ProxyProtocol.ValueInt32(),
 		SessionSticky: &ctelb.CtelbUpdateTargetGroupSessionStickyRequest{
 			SessionStickyMode: state.SessionStickyMode.ValueString(),
 			CookieExpire:      int32(state.CookieExpire.ValueInt64()),
 			RewriteCookieName: state.RewriteCookieName.ValueString(),
 			SourceIpTimeout:   int32(state.SourceIpTimeout.ValueInt64()),
 		},
-	}
-
-	if !state.ProjectID.IsNull() {
-		params.ProjectID = plan.ProjectID.ValueString()
-	}
-	if !plan.Name.Equal(state.Name) {
-		params.Name = plan.Name.ValueString()
-	}
-	if !plan.HealthCheckID.IsNull() && !plan.HealthCheckID.Equal(state.HealthCheckID) {
-		params.HealthCheckID = plan.HealthCheckID.ValueString()
-	}
-	if !plan.Algorithm.IsNull() && !plan.Algorithm.Equal(state.Algorithm) {
-		params.Algorithm = plan.Algorithm.ValueString()
 	}
 
 	if !plan.SessionStickyMode.IsNull() {
@@ -556,6 +552,9 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbShowTargetGroupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
+	} else if resp.ErrorCode == common.OpenapiTargetGroupNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
@@ -575,12 +574,34 @@ func (c *CtyunElbTargetGroup) getAndMergeTargetGroup(ctx context.Context, plan *
 	plan.Algorithm = types.StringValue(returnObj.Algorithm)
 	plan.Name = types.StringValue(returnObj.Name)
 	plan.SessionStickyMode = types.StringValue(returnObj.SessionSticky.SessionStickyMode)
-	plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
-	plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
-	plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
+	switch returnObj.SessionSticky.SessionStickyMode {
+	case business.TargetGroupSessionStickyModeCLOSE:
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringNull()
+	case business.TargetGroupSessionStickyModeINSERT:
+		plan.CookieExpire = types.Int64Value(int64(returnObj.SessionSticky.CookieExpire))
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringNull()
+	case business.TargetGroupSessionStickyModeREWRITE:
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Null()
+		plan.RewriteCookieName = types.StringValue(returnObj.SessionSticky.RewriteCookieName)
+	case business.TargetGroupSessionStickyModeSourceIP:
+		plan.CookieExpire = types.Int64Null()
+		plan.SourceIpTimeout = types.Int64Value(int64(returnObj.SessionSticky.SourceIpTimeout))
+		plan.RewriteCookieName = types.StringNull()
+	}
 	plan.ProxyProtocol = types.Int32Value(returnObj.ProxyProtocol)
+	if returnObj.Protocol == "" {
+		plan.Protocol = types.StringNull()
+	} else {
+		plan.Protocol = types.StringValue(returnObj.Protocol)
+
+	}
 	plan.HealthCheckID = types.StringValue(returnObj.HealthCheckID)
 	plan.VpcID = types.StringValue(returnObj.VpcID)
+
 	return
 }
 
@@ -598,8 +619,8 @@ type CtyunElbTargetGroupConfig struct {
 	RewriteCookieName types.String `tfsdk:"rewrite_cookie_name"` //cookie重写名称，REWRITE模式必填
 	SourceIpTimeout   types.Int64  `tfsdk:"source_ip_timeout"`   //源IP会话保持超时时间。SOURCE_IP模式必填
 	ID                types.String `tfsdk:"id"`                  //后端服务组ID
-	ProjectID         types.String `tfsdk:"project_id"`          //项目ID
 	Status            types.String `tfsdk:"status"`              //状态: ACTIVE / DOWN
 	CreatedTime       types.String `tfsdk:"create_time"`         //创建时间，为UTC格式
 	UpdatedTime       types.String `tfsdk:"update_time"`         //更新时间，为UTC格式
+	ProjectId         types.String `tfsdk:"project_id"`          //企业项目ID
 }

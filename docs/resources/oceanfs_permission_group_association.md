@@ -1,5 +1,10 @@
+---
+subcategory: "海量文件服务OceanFS"
+page_title: "CTYUN: ctyun_oceanfs_permission_group_association"
+---
+
 # ctyun_oceanfs_permission_group_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853
+-> 管理海量文件服务和权限组的绑定关系
 
 
 
@@ -39,7 +44,7 @@ resource "ctyun_subnet" "subnet_test" {
 }
 
 resource "ctyun_oceanfs_permission_group" "test" {
-  name        = "pg-for-tf1"
+  name        = "vpc-for-oceanfs"
   description = "terraform测试使用1"
 }
 
@@ -56,8 +61,6 @@ resource "ctyun_oceanfs_permission_group_association" "example" {
   permission_group_id = ctyun_oceanfs_permission_group.test.id
   oceanfs_id          = ctyun_oceanfs.test.id
   vpc_id              = ctyun_vpc.vpc_test.id
-  subnet_id           = ctyun_subnet.subnet_test.id
-  is_vpce             = false
 }
 ```
 
@@ -68,17 +71,24 @@ resource "ctyun_oceanfs_permission_group_association" "example" {
 
 - `oceanfs_id` (String) 文件系统ID
 - `permission_group_id` (String) oceanfs 权限组ID
-- `subnet_id` (String) 子网ID
 - `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
-- `is_vpce` (Boolean) 文件系统绑定VPC时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。取值：
-true：创建VPC终端节点（推荐）
-false：不创建VPC终端节点
-注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) oceanfs与权限组绑定id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入OceanFS权限组关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_oceanfs_permission_group_association.[导入配置名称] [oceanfs_id],[vpc_id],[permission_group_id],<region_id>
+# 示例
+terraform import ctyun_oceanfs_permission_group_association.permission_group_association_example oceanfs-123,vpc-456,perm-789,region-bb9fdb42056f11eda1610242ac110002
+```

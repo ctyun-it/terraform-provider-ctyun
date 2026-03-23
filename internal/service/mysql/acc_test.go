@@ -21,6 +21,8 @@ type Dependence struct {
 	taskID          string
 	templateID      string
 	backupTimeStamp string
+	flavorName      string
+	flavorName2     string
 }
 
 var dependence Dependence
@@ -48,6 +50,8 @@ func TestMain(m *testing.M) {
 		taskID:          outputs["task_id"].Value,
 		templateID:      outputs["template_id"].Value,
 		backupTimeStamp: outputs["backup_timestamp"].Value,
+		flavorName:      outputs["flavor_name"].Value,
+		flavorName2:     outputs["flavor_name2"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

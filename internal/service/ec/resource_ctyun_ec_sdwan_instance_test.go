@@ -47,6 +47,25 @@ func TestAccCtyunEcSdwanInstance_basic(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			// 4. 导入测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["sdwan_id"],
+						rs.Primary.Attributes["ec_id"],
+						rs.Primary.Attributes["cgw_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"rtb_id"}, // 子网列表可能变化
+
+			},
 			// 2. 更新权重测试
 			{
 				Config: utils.LoadTestCase(
@@ -66,24 +85,7 @@ func TestAccCtyunEcSdwanInstance_basic(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(datasourceName, "instances.#")),
 			},
-			// 4. 导入测试
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					rs, ok := s.RootModule().Resources[resourceName]
-					if !ok {
-						return "", fmt.Errorf("resource not found: %s", resourceName)
-					}
-					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["id"],
-						rs.Primary.Attributes["ec_id"],
-					), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"cgw_id", "rtb_id", "sdwan_id"}, // 子网列表可能变化
 
-			},
 			// 5. 清理资源
 			{
 				Config: utils.LoadTestCase(

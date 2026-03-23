@@ -62,7 +62,6 @@ func TestAccCtyunDhcpOptionSet_basic(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "dns_list.2", "8.8.4.4"),
 				),
 			},
-
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedDescription, updatedDomainName, updatedDnsList) +
 					utils.LoadTestCase(datasourceFile, dnd),

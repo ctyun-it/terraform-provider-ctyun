@@ -2,12 +2,14 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -32,15 +34,17 @@ func NewCtyunVip() resource.Resource {
 
 type CtyunVip struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunVip) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vip"
+	c.name = response.TypeName
 }
 
 func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10224288`,
+		MarkdownDescription: utils.FormatDesc("管理虚拟IP", "VIP", "https://www.ctyun.cn/document/10026730/10224288"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -50,16 +54,9 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "临时废弃，定义无效",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -119,10 +116,16 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"ipv4_address": schema.StringAttribute{
 				Computed:    true,
 				Description: "高可用虚IP的IPv4地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_address": schema.StringAttribute{
 				Computed:    true,
 				Description: "高可用虚IP的IPv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -164,9 +167,9 @@ func (c *CtyunVip) Read(ctx context.Context, request resource.ReadRequest, respo
 
 	err := c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -174,8 +177,20 @@ func (c *CtyunVip) Read(ctx context.Context, request resource.ReadRequest, respo
 }
 
 func (c *CtyunVip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	// HaVip资源不支持更新操作，直接返回
-	return
+	// 读取tf文件中配置
+	var plan CtyunVipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 读取state中的配置
+	var state CtyunVipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.ProjectId = plan.ProjectId
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunVip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -196,8 +211,8 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id],[projectID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -214,20 +229,18 @@ func (c *CtyunVip) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if vipId == "" {
-		err = fmt.Errorf("vipId不能为空")
+		err = fmt.Errorf("vip_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
 	state.Id = types.StringValue(vipId)
 	state.RegionId = types.StringValue(regionId)
-
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
@@ -294,6 +307,9 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.ErrorCode == common.OpenapiHavipNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -308,13 +324,17 @@ func (c *CtyunVip) getAndMerge(ctx context.Context, state *CtyunVipConfig) (err 
 		state.Id = types.StringValue(*returnObj.Id)
 	}
 
-	if returnObj.Ipv4 != nil {
+	if returnObj.Ipv4 != nil && *returnObj.Ipv4 != "" {
 		state.Ipv4Address = types.StringValue(*returnObj.Ipv4)
+		state.IpAddress = types.StringValue(*returnObj.Ipv4)
+		state.VipType = types.StringValue("v4")
 	}
 
-	//if returnObj.Ipv6 != nil {
-	//	state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
-	//}
+	if returnObj.Ipv6 != nil && *returnObj.Ipv6 != "" {
+		state.Ipv6Address = types.StringValue(*returnObj.Ipv6)
+		state.IpAddress = types.StringValue(*returnObj.Ipv6)
+		state.VipType = types.StringValue("v6")
+	}
 
 	if returnObj.VpcID != nil {
 		state.VpcId = types.StringValue(*returnObj.VpcID)

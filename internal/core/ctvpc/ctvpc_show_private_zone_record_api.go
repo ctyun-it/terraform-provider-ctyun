@@ -68,4 +68,6 @@ type CtvpcShowPrivateZoneRecordReturnObjResponse struct {
 	TTL          int32     `json:"TTL"`                    /*  zone ttl, default is 300  */
 	CreatedAt    *string   `json:"createdAt,omitempty"`    /*  创建时间  */
 	UpdatedAt    *string   `json:"updatedAt,omitempty"`    /*  更新时间  */
+	Enabled      int32     `json:"enabled,omitempty"`      /*  更新时间  */
+
 }

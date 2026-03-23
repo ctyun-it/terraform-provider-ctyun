@@ -2,11 +2,13 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -66,7 +68,7 @@ type ParamReturnModel struct {
 
 func (c *ctyunRedisParamTemplate) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10156164`,
+		MarkdownDescription: utils.FormatDesc("管理Redis参数模板", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10156164"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -227,7 +229,13 @@ func (c *ctyunRedisParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMerge(ctx, nil, &state)
 	if err != nil {
-		return
+		if err != nil {
+			if errors.Is(err, common.ResourceNotExistError) {
+				err = nil
+				response.State.RemoveResource(ctx)
+			}
+			return
+		}
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
@@ -320,11 +328,11 @@ func (c *ctyunRedisParamTemplate) ImportState(ctx context.Context, request resou
 	}
 
 	if templateId == "" {
-		err = fmt.Errorf("templateID不能为空")
+		err = fmt.Errorf("template_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)
@@ -455,7 +463,12 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if msg == "未找到模板数据" {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Template == nil {
 		err = common.InvalidReturnObjError

@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -33,6 +35,7 @@ var (
 
 type ctyunDnatResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunDnatResource) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
@@ -45,21 +48,26 @@ func NewCtyunDnatResource() resource.Resource {
 
 func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166499`,
+		MarkdownDescription: utils.FormatDesc("管理公网NAT网关dnat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166499"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，同dnat_id",
+				Computed:    true,
+				Description: "ID，同dnat_id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dnat_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "Dnat规则的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -112,6 +120,9 @@ func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "描述，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"dnat_type": schema.StringAttribute{
@@ -168,18 +179,29 @@ func (c *ctyunDnatResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			"external_ip": schema.StringAttribute{
 				Computed:    true,
 				Description: "弹性公网IP地址",
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.UseStringStateIfDependencyUnchanged(path.Root("external_id")),
+				},
 			},
 			"state": schema.StringAttribute{
 				Computed:    true,
 				Description: "运行状态: ACTIVE / FREEZING / CREATING",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ip_expire_time": schema.StringAttribute{
-				Computed:    true,
-				Description: "ip到期时间",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 		},
 	}
@@ -246,7 +268,7 @@ func (c *ctyunDnatResource) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMergeDnat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -345,8 +367,8 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[nat_gateway_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -365,15 +387,15 @@ func (c *ctyunDnatResource) ImportState(ctx context.Context, request resource.Im
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.DNatID = types.StringValue(ID)
@@ -396,6 +418,9 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if *resp.ErrorCode == common.OpenapiDnatNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -407,13 +432,32 @@ func (c *ctyunDnatResource) getAndMergeDnat(ctx context.Context, cfg *CtyunDnatC
 	cfg.ID = utils.SecStringValue(dnat.DNatID)
 	cfg.CreatedAt = types.StringValue(utils.ConvertToUTCZ(time.RFC3339, utils.SecString(dnat.CreationTime)))
 	cfg.Description = utils.SecStringValue(dnat.Description)
-	cfg.IpExpireTime = utils.SecStringValue(dnat.IpExpireTime)
+	cfg.IpExpireTime = types.StringValue("")
 	cfg.ExternalIP = utils.SecStringValue(dnat.ExternalIp)
 	cfg.ExternalID = utils.SecStringValue(dnat.ExternalID)
 	cfg.Protocol = utils.SecStringValue(dnat.Protocol)
 	cfg.State = utils.SecStringValue(dnat.State)
 	cfg.ExternalPort = types.Int32Value(dnat.ExternalPort)
 	cfg.InternalPort = types.Int32Value(dnat.InternalPort)
+	if dnat.VirtualMachineID != nil && *dnat.VirtualMachineID != "" {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCloud)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			// 在 ImportState 方法中添加判断逻辑
+			if strings.HasPrefix(*dnat.VirtualMachineID, "ss-") {
+				// 如果以 ss- 开头，可以认为是某种特定类型的资源
+				// 例如设置 resourceType 为 "VM" 或其他适当的类型
+				cfg.ServerType = types.StringValue("BM")
+			} else {
+				cfg.ServerType = types.StringValue("VM")
+
+			}
+		}
+	} else {
+		cfg.DnatType = types.StringValue(business.VirtualMachineTypeCustom)
+		if cfg.ServerType.IsUnknown() || cfg.ServerType.IsNull() {
+			cfg.ServerType = types.StringNull()
+		}
+	}
 	switch cfg.DnatType.ValueString() {
 	case business.VirtualMachineTypeCloud:
 		cfg.InstanceID = utils.SecStringValue(dnat.VirtualMachineID)

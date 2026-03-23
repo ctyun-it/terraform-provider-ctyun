@@ -2,11 +2,12 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -33,6 +34,7 @@ func NewCtyunEcCloudGateway() resource.Resource {
 
 type CtyunEcCloudGateway struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEcCloudGatewayConfig struct {
@@ -49,11 +51,12 @@ type CtyunEcCloudGatewayConfig struct {
 
 func (c *CtyunEcCloudGateway) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ec_cloud_gateway"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220`,
+		MarkdownDescription: utils.FormatDesc("管理云企业路由器", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -87,8 +90,7 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"description": schema.StringAttribute{
-				Optional: true,
-
+				Optional:    true,
 				Description: "云网关描述  支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(255),
@@ -106,28 +108,19 @@ func (c *CtyunEcCloudGateway) Schema(ctx context.Context, req resource.SchemaReq
 				},
 			},
 			"region_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "资源池名称",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
-				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
-			},
-			"region_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
+					stringvalidator.LengthAtLeast(1),
 				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+			},
+			"region_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "资源池ID",
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -196,6 +189,10 @@ func (c *CtyunEcCloudGateway) Read(ctx context.Context, req resource.ReadRequest
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			resp.State.RemoveResource(ctx)
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -244,8 +241,8 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecId],[cgwID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[ec_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -253,16 +250,16 @@ func (c *CtyunEcCloudGateway) ImportState(ctx context.Context, request resource.
 
 	var ecId, cgwID string
 
-	err = terraform_extend.Split(request.ID, &ecId, &cgwID)
+	err = terraform_extend.Split(request.ID, &cgwID, &ecId)
 	if err != nil {
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if cgwID == "" {
-		err = fmt.Errorf("cgwID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 
@@ -281,11 +278,20 @@ func (c *CtyunEcCloudGateway) checkBeforeCreate(ctx context.Context, c2 *CtyunEc
 	return nil
 }
 func (c *CtyunEcCloudGateway) create(ctx context.Context, plan *CtyunEcCloudGatewayConfig) (err error) {
+	responseRegion, err := c.meta.Apis.CtEcsApis.RegionListApi.Do(ctx, c.meta.Credential, &ctecs.RegionListRequest{
+		RegionName: plan.DcName.ValueString(),
+	})
+	if err != nil {
+		return
+	}
+	if len(responseRegion.RegionList) == 0 {
+		return fmt.Errorf("资源池名称 %s 不存在", plan.DcName.ValueString())
+	}
 	// 创建云网关实例
 	createReq := &ec.EcEcCreateGatewayRequest{
 		CgwName: plan.Name.ValueString(),
 		DcName:  plan.DcName.ValueString(),
-		DcID:    plan.RegionID.ValueString(),
+		DcID:    responseRegion.RegionList[0].RegionId,
 		EcID:    plan.EcID.ValueString(),
 		DcType:  "CNP",
 	}
@@ -331,8 +337,10 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 		return
 	} else if *resp.StatusCode != common.NormalStatusCode {
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
-	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Results) == 0 {
+	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if len(resp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
 	result := resp.ReturnObj.Results[0]
 	if result.CgwID == nil {
@@ -347,10 +355,6 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 		return fmt.Errorf("API return error. EcID is nil")
 	}
 
-	if result.DcID == nil {
-		return fmt.Errorf("API return error. RegionID is nil")
-	}
-
 	if result.DcName == nil {
 		return fmt.Errorf("API return error. DcName is nil")
 	}
@@ -358,17 +362,14 @@ func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcClou
 	plan.ID = types.StringValue(*result.CgwID)
 	plan.Name = types.StringValue(*result.CgwName)
 	plan.EcID = types.StringValue(*result.EcID)
-	plan.RegionID = types.StringValue(*result.DcID)
+	//plan.RegionID = types.StringValue(*result.DcID)
 	plan.DcName = types.StringValue(*result.DcName)
 	plan.Region = types.Int64Value(*result.Region)
-	plan.Description = types.StringValue(*resp.Description)
-	//
-
 	if result.Region != nil {
-		plan.Region = types.Int64Value(int64(*result.Region))
+		plan.Region = types.Int64Value(*result.Region)
 	}
 
-	if result.CgwDescription != nil {
+	if result.CgwDescription != nil && *result.CgwDescription != "" {
 		plan.Description = types.StringValue(*result.CgwDescription)
 	}
 
@@ -442,9 +443,10 @@ func (c *CtyunEcCloudGateway) createCgwBill(ctx context.Context, plan *CtyunEcCl
 		return fmt.Errorf("API return error. Message: %s", *queryResp.Message)
 	} else if queryResp.ReturnObj == nil || len(queryResp.ReturnObj.Results) == 0 {
 		// 构造请求参数（这里需要根据实际业务需求进行调整）
+		regionID := "bb9fdb42056f11eda1610242ac110002"
 		req := &ec.EcEcCgwBillNewRequest{
-			EcID: plan.EcID.ValueString(),
-			// RegionID, ClientToken, PayVoucherPrice 等参数根据实际需求添加
+			EcID:     plan.EcID.ValueString(),
+			RegionID: &regionID,
 		}
 
 		tflog.Info(ctx, "创建云网关计费", map[string]interface{}{

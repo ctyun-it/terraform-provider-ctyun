@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_net_tagss"
+---
+
 # ctyun_net_tagss (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询网络资源的标签
 
 
 
@@ -41,12 +46,12 @@ output "ctyun_net_tagss_example" {
 
 - `page_no` (Number) 页码，从1开始，默认为1
 - `page_size` (Number) 每页记录数，取值范围1-50，默认为10
-- `region_id` (String) 资源池id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `tags` (Attributes Set) 标签列表。最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾。 (see [below for nested schema](#nestedatt--tags))
 
 ### Read-Only
 
-- `id` (String) ID，值
+- `id` (String) ID值
 
 <a id="nestedatt--tags"></a>
 ### Nested Schema for `tags`

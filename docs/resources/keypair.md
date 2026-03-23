@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_keypair"
+---
+
 # ctyun_keypair (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10230554
+-> 管理密钥对
 
 
 
@@ -43,3 +48,15 @@ resource "ctyun_keypair" "keypair_test" {
 - `finger_print` (String) 密钥对的指纹，采用MD5信息摘要算法
 - `id` (String) 密钥对的id
 - `private_key` (String) 私钥，创建密钥对场景下才有值
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入密钥对
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_keypair.[导入配置名称] [name],<region_id>
+# 示例
+terraform import ctyun_keypair.keypair_example my-keypair,<region_id>
+```

@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -37,15 +39,17 @@ type CtyunEcsDataVolume struct {
 	ecsService *business.EcsService
 	ebsService *business.EbsService
 	jobLooper  *business.GeneralJobHelper
+	name       string
 }
 
 func (c *CtyunEcsDataVolume) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_data_volume"
+	c.name = response.TypeName
 }
 
 func (c *CtyunEcsDataVolume) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10169293`,
+		MarkdownDescription: utils.FormatDesc("配置云主机挂载的云硬盘，支持多块盘", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10027696/10169293"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -139,13 +143,12 @@ func (c *CtyunEcsDataVolume) Read(ctx context.Context, request resource.ReadRequ
 
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -177,8 +180,8 @@ func (c *CtyunEcsDataVolume) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ecsId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -196,11 +199,11 @@ func (c *CtyunEcsDataVolume) ImportState(ctx context.Context, request resource.I
 	}
 
 	if ecsId == "" {
-		err = fmt.Errorf("ecsId不能为空")
+		err = fmt.Errorf("ecs_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -295,7 +298,7 @@ func (c *CtyunEcsDataVolume) getAndMerge(ctx context.Context, cfg *CtyunEcsDataV
 		return
 	}
 	if len(volumes) == 0 {
-		err = fmt.Errorf("can't find any attached volumes")
+		err = common.ResourceNotExistError
 	}
 	cfg.EbsIDs = volumes[1:]
 	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", cfg.InstanceID.ValueString(), cfg.RegionID.ValueString()))

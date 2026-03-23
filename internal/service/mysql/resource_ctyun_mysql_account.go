@@ -31,6 +31,7 @@ var (
 
 type CtyunMysqlAccount struct {
 	meta         *common.CtyunMetadata
+	name         string
 	mysqlService *business.MysqlService
 }
 
@@ -54,32 +55,31 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[instanceID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunMysqlAccountConfig
-	var regionID, projectID, instID, name string
+	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instdID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if name == "" {
@@ -89,7 +89,6 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMergeMysqlAccount(ctx, &config)
 	if err != nil {
@@ -100,7 +99,7 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 
 func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133363",
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的账户", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133363"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -125,16 +124,9 @@ func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaR
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -249,8 +241,10 @@ func (c *CtyunMysqlAccount) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMergeMysqlAccount(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -291,6 +285,7 @@ func (c *CtyunMysqlAccount) Update(ctx context.Context, request resource.UpdateR
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -320,9 +315,6 @@ func (c *CtyunMysqlAccount) Delete(ctx context.Context, request resource.DeleteR
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteAccountApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -349,9 +341,6 @@ func (c *CtyunMysqlAccount) createMysqlAccount(ctx context.Context, config *Ctyu
 	header := &mysql.TeledbCreateAccountRequestHeader{
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
-	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
 	}
 	if !config.SchemaPrivilegeList.IsNull() {
 		var privilegeList []MysqlSchemaPrivilegeModel
@@ -430,16 +419,18 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetAccountInfoApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("查询mysql实例(id=%s)的用户权限列表失败", config.InstID.ValueString())
+		err = fmt.Errorf("查询mysql实例(id=%s)的用户信息失败", config.InstID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		// MYSQL_10002=实例id不存在 || message: accountName not exist
+		if strings.Contains(*resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "accountName not exist") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("get mysql account failed, API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -452,7 +443,7 @@ func (c *CtyunMysqlAccount) getMysqlAccountInfo(ctx context.Context, config *Cty
 			return &accountPrivilege, nil
 		}
 	}
-	return nil, fmt.Errorf("mysql实例(id=%s)不存在account_name=%s的权限配置", config.InstID.ValueString(), config.Name.ValueString())
+	return nil, common.ResourceNotExistError
 }
 
 func (c *CtyunMysqlAccount) updateMysqlAccount(ctx context.Context, state *CtyunMysqlAccountConfig, plan *CtyunMysqlAccountConfig) error {
@@ -491,9 +482,6 @@ func (c *CtyunMysqlAccount) updatePassword(ctx context.Context, state *CtyunMysq
 	header := &mysql.TeledbResetPasswordRequestHeader{
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
-	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbResetPasswordApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -609,9 +597,6 @@ func (c *CtyunMysqlAccount) requestGrantAndUpdateSchemaPrivilege(ctx context.Con
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
-	}
 
 	var schemaPrivilegeVOList []mysql.SchemaPrivilegeVO
 	for schemaName, privilege := range privilegeMap {
@@ -654,9 +639,7 @@ func (c *CtyunMysqlAccount) revokeSchemaPrivilege(ctx context.Context, state *Ct
 		InstID:   state.InstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueString()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbRevokeSchemaApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -679,9 +662,7 @@ func (c *CtyunMysqlAccount) updateRemark(ctx context.Context, config *CtyunMysql
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateAccountRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

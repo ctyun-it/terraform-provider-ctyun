@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_loadbalancer"
+---
+
 # ctyun_elb_loadbalancer (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703
+-> 管理弹性负载均衡
 
 
 
@@ -62,7 +67,7 @@ resource "ctyun_elb_loadbalancer" "elb_test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称
+- `az_name` (String, Deprecated) 可用区
 - `cycle_count` (Number) 订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `eip_id` (String) 弹性公网IP的ID。当resource_type=external为必填
@@ -75,18 +80,21 @@ resource "ctyun_elb_loadbalancer" "elb_test" {
 
 - `admin_status` (String) 管理状态: DOWN / ACTIVE
 - `create_time` (String) 创建时间，为UTC格式
-- `eip_info` (Attributes List) 弹性公网IP信息 (see [below for nested schema](#nestedatt--eip_info))
+- `expired_time` (String) 到期时间，为UTC格式
 - `id` (String) 负载均衡Id
 - `ipv6_address` (String) 负载均衡实例的IPv6地址
 - `port_id` (String) 负载均衡实例默认创建port ID
 - `status` (String) 负载均衡状态: DOWN / ACTIVE
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
 
-<a id="nestedatt--eip_info"></a>
-### Nested Schema for `eip_info`
+使用以下语法支持导入：
 
-Read-Only:
-
-- `bandwidth` (Number) 弹性公网IP的带宽
-- `eip_id` (String) 弹性公网IP的Id
-- `is_talk_order` (Boolean) 是否按需资源
+```shell
+# 导入弹性负载均衡
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_loadbalancer.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_loadbalancer.example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

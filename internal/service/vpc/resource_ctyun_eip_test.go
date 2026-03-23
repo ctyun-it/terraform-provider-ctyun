@@ -44,6 +44,33 @@ func TestAccCtyunEip(t *testing.T) {
 				),
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
+				},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedBandwidth),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
@@ -60,42 +87,7 @@ func TestAccCtyunEip(t *testing.T) {
 					resource.TestCheckResourceAttr(datasourceName, "eips.0.bandwidth", updatedBandwidth),
 				),
 			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id is required")
-					}
-					return fmt.Sprintf("%s,%s", id, regionId), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-					"cycle_type",
-					"master_order_id",
-					"demand_billing_type",
-				},
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-					"cycle_type",
-					"master_order_id",
-					"demand_billing_type",
-				},
-			},
+
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedBandwidth) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),

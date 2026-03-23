@@ -24,6 +24,8 @@ func TestMain(m *testing.M) {
 		return
 	}
 	// 初始化依赖资源
+	os.Setenv("CTYUN_REGION_ID", "bb9fdb42056f11eda1610242ac110002")
+	os.Setenv("CTYUN_AZ_NAME", "cn-huadong1-jsnj1A-public-ctcloud")
 	fmt.Println("开始初始化依赖资源")
 	outputs, err := terraform.ApplyResource(dependenceDir)
 	if err != nil {
@@ -45,7 +47,11 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("开始清理依赖资源")
 	// 清理依赖资源
-	terraform.DestroyResource(dependenceDir)
+	err = terraform.DestroyResource(dependenceDir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	fmt.Println("依赖资源清理完毕")
 
 	os.Exit(code)

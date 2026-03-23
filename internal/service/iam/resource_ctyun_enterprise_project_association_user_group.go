@@ -3,10 +3,13 @@ package iam
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -22,8 +25,9 @@ import (
 )
 
 var (
-	_ resource.Resource              = &ctyunEnterpriseProjectAssociationUserGroup{}
-	_ resource.ResourceWithConfigure = &ctyunEnterpriseProjectAssociationUserGroup{}
+	_ resource.Resource                = &ctyunEnterpriseProjectAssociationUserGroup{}
+	_ resource.ResourceWithConfigure   = &ctyunEnterpriseProjectAssociationUserGroup{}
+	_ resource.ResourceWithImportState = &ctyunEnterpriseProjectAssociationUserGroup{}
 )
 
 func NewCtyunEnterpriseProjectAssociationUserGroup() resource.Resource {
@@ -35,15 +39,17 @@ type ctyunEnterpriseProjectAssociationUserGroup struct {
 	enterpriseProjectService *business.EnterpriseProjectService
 	userGroupService         *business.UserGroupService
 	policyService            *business.PolicyService
+	name                     string
 }
 
 func (c *ctyunEnterpriseProjectAssociationUserGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_enterprise_project_association_user_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEnterpriseProjectAssociationUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10356399`,
+		MarkdownDescription: utils.FormatDesc("管理企业项目和用户组的绑定关系", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10356399"),
 		Attributes: map[string]schema.Attribute{
 			"enterprise_project_id": schema.StringAttribute{
 				Required:    true,
@@ -161,6 +167,47 @@ func (c *ctyunEnterpriseProjectAssociationUserGroup) Delete(ctx context.Context,
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+}
+
+func (c *ctyunEnterpriseProjectAssociationUserGroup) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [enterprise_project_id],[user_group_id]", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var cfg CtyunEnterpriseProjectAssociationUserGroupConfig
+	var enterpriseProjectId, userGroupId string
+	err = terraform_extend.Split(request.ID, &enterpriseProjectId, &userGroupId)
+	if err != nil {
+		return
+	}
+
+	cfg.EnterpriseProjectId = types.StringValue(enterpriseProjectId)
+	cfg.UserGroupId = types.StringValue(userGroupId)
+
+	// 读取当前策略信息
+	resp, err := c.meta.Apis.CtIamApis.EnterpriseProjectGetPolicyApi.Do(ctx, c.meta.Credential, &ctiam.EnterpriseProjectGetPolicyRequest{
+		GroupId:   userGroupId,
+		ProjectId: enterpriseProjectId,
+	})
+	if err != nil {
+		return
+	}
+
+	if len(resp.List) == 0 {
+		return
+	}
+
+	var rawPolicyId []attr.Value
+	for _, l := range resp.List {
+		rawPolicyId = append(rawPolicyId, types.StringValue(l.Id))
+	}
+	cfg.PolicyIds = types.SetValueMust(types.StringType, rawPolicyId)
+
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 func (c *ctyunEnterpriseProjectAssociationUserGroup) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {

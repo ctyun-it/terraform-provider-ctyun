@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -31,21 +34,26 @@ func NewCtyunKeypair() resource.Resource {
 }
 
 type ctyunKeypair struct {
-	meta *common.CtyunMetadata
+	meta    *common.CtyunMetadata
+	name    string
+	service *business.KeyPairService
 }
 
 func (c *ctyunKeypair) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_keypair"
+	c.name = response.TypeName
 }
 
 func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10230554`,
+		MarkdownDescription: utils.FormatDesc("管理密钥对", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10230554"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "密钥对的id",
+				Computed:    true,
+				Description: "密钥对的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -88,7 +96,7 @@ func (c *ctyunKeypair) Schema(_ context.Context, _ resource.SchemaRequest, respo
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -124,6 +132,10 @@ func (c *ctyunKeypair) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
+	err = c.checkBeforeCreate(ctx, plan)
+	if err != nil {
+		return
+	}
 	// 实际创建
 	if plan.PublicKey.ValueString() == "" {
 		err = c.createKeyPair(ctx, &plan)
@@ -152,7 +164,7 @@ func (c *ctyunKeypair) Read(ctx context.Context, request resource.ReadRequest, r
 			response.State.RemoveResource(ctx)
 			err = nil
 		} else {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			response.Diagnostics.AddError(fmt.Sprintf("Failed to Read Ctyun KeyPair"), err.Error())
 		}
 		return
 	}
@@ -184,8 +196,8 @@ func (c *ctyunKeypair) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [keyPairName],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -195,18 +207,17 @@ func (c *ctyunKeypair) ImportState(ctx context.Context, request resource.ImportS
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		keyPairName = request.ID
 	} else {
-
 		err = terraform_extend.Split(request.ID, &keyPairName, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	if keyPairName == "" {
-		err = fmt.Errorf("keyPairName不能为空")
+		err = fmt.Errorf("key_pair_name不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -226,6 +237,7 @@ func (c *ctyunKeypair) Configure(_ context.Context, request resource.ConfigureRe
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.service = business.NewKeyPairService(c.meta)
 }
 
 // getAndMergeKeypair 查询密钥对
@@ -233,7 +245,6 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	params := ctecs2.CtecsDetailsKeypairV41Request{
 		RegionID:    plan.RegionId.ValueString(),
 		KeyPairName: plan.Name.ValueString(),
-		ProjectID:   plan.ProjectId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDetailsKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
 	if err != nil {
@@ -254,6 +265,7 @@ func (c *ctyunKeypair) getAndMergeKeypair(ctx context.Context, plan *CtyunKeypai
 	plan.Name = types.StringValue(keypairResponse.KeyPairName)
 	plan.FingerPrint = types.StringValue(keypairResponse.FingerPrint)
 	plan.Id = types.StringValue(keypairResponse.KeyPairID)
+	plan.ProjectId = types.StringValue(keypairResponse.ProjectID)
 	return
 }
 
@@ -308,4 +320,16 @@ func (c *ctyunKeypair) importKeyPair(ctx context.Context, plan CtyunKeypairConfi
 		return
 	}
 	return
+}
+
+// 创建前检查
+func (c *ctyunKeypair) checkBeforeCreate(ctx context.Context, plan CtyunKeypairConfig) (err error) {
+	_, err = c.service.GetKeyPairID(ctx, plan.Name.ValueString(), plan.RegionId.ValueString(), "")
+	if err != nil {
+		if strings.Contains(err.Error(), "不存在") {
+			return nil
+		}
+		return err
+	}
+	return fmt.Errorf("密钥对 %s 在资源池 %s 已经存在，请修改名称后重试", plan.Name.ValueString(), plan.RegionId.ValueString())
 }

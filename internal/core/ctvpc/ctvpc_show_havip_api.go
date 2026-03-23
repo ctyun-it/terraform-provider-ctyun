@@ -60,6 +60,7 @@ type CtvpcShowHavipResponse struct {
 type CtvpcShowHavipReturnObjResponse struct {
 	Id           *string                                        `json:"id,omitempty"`       /*  高可用虚 IP 的 ID  */
 	Ipv4         *string                                        `json:"ipv4,omitempty"`     /*  IPv4 地址  */
+	Ipv6         *string                                        `json:"ipv6,omitempty"`     /*  IPv6 地址  */
 	VpcID        *string                                        `json:"vpcID,omitempty"`    /*  虚拟私有云的的 id  */
 	SubnetID     *string                                        `json:"subnetID,omitempty"` /*  子网 id  */
 	InstanceInfo []*CtvpcShowHavipReturnObjInstanceInfoResponse `json:"instanceInfo"`       /*  绑定实例相关信息  */

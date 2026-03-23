@@ -47,8 +47,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test" {
@@ -100,4 +98,10 @@ resource "ctyun_dhcpoptionset" "test" {
   description  = "test"
   domain_name  = "www.ctyun.cn"
   dns_list     = ["114.114.114.114"]
+}
+
+
+resource "ctyun_vpc_route_table" "test" {
+  vpc_id =ctyun_vpc.vpc_test.id
+  name = "test_subnet"
 }

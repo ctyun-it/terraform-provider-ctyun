@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_acl_rule"
+---
+
 # ctyun_acl_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028588
+-> 管理访问控制规则
 
 
 
@@ -61,10 +66,22 @@ resource "ctyun_acl_rule" "example" {
 - `destination_port` (String) 目的地址端口范围，支持更新。示例 8080:8085
 - `enabled` (Boolean) acl 规则是否启用，支持更新。默认启用
 - `priority` (Number) 优先级，支持更新。取值范围： 1 - 32766，不填默认100
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `source_port` (String) 源地址端口范围，支持更新。示例： 8080:8085
 
 ### Read-Only
 
 - `id` (String) acl 规则id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ACL规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_acl_rule.[导入配置名称] [id],[acl_id],<region_id>
+# 示例
+terraform import ctyun_acl_rule.acl_rule_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,acl-123456,bb9fdb42056f11eda1610242ac110002
+```

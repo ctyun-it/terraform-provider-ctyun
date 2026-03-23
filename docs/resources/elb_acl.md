@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_acl"
+---
+
 # ctyun_elb_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032777
+-> 管理弹性负载均衡ACL
 
 
 
@@ -35,12 +40,23 @@ resource "ctyun_elb_acl" "test" {
 
 ### Optional
 
-- `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_+= <>?:,.,/;'[]·！@#￥%……&*（） ——+={}，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID
 
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 访问控制ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡ACL
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_acl.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_acl.elb_acl_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

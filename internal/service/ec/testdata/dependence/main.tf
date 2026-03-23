@@ -1,19 +1,11 @@
 
 resource "ctyun_express_connect" "express_connect_dependence" {
-  name        = "express_connect_dependence"
+  name        = "express_connect_dependence_${local.random_string}"
   description = "云间高速开发测试专用"
-
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
-resource "ctyun_ec_cloud_gateway" "cloud_gateway_dependence" {
-  ec_id       = ctyun_express_connect.express_connect_dependence.id
-  name        = "cloud_gateway_dependence"
-  description = "云间高速开发测试专用"
-}
-data "ctyun_vpcs" "vpc_test" {
-  page_size = 50
-}
-
-
 
 resource "ctyun_vpc" "vpc_test" {
   name        = "tf-vpc-for-ec"
@@ -21,8 +13,6 @@ resource "ctyun_vpc" "vpc_test" {
   description = "terraform-ec测试使用"
   enable_ipv6 = true
 }
-
-
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
@@ -67,8 +57,23 @@ resource "ctyun_subnet" "subnet_test_for_instance" {
   ]
 }
 
+data "ctyun_regions" "test" {
+
+}
+
+locals {
+  matched_regions = [for region in data.ctyun_regions.test.regions : region if region.id == ctyun_vpc.vpc_test.region_id]
+  region_name = one(local.matched_regions).name
+}
+
+resource "ctyun_ec_cloud_gateway" "cloud_gateway_dependence" {
+  ec_id       = ctyun_express_connect.express_connect_dependence.id
+  name        = "cloud_gateway_dependence"
+  description = "云间高速开发测试专用"
+  region_name = local.region_name
+}
+
 resource "ctyun_ec_vpc_instance" "instance_test" {
-  # region_id   = "200000002401"
   ec_id       = ctyun_express_connect.express_connect_dependence.id
   cgw_id      = ctyun_ec_cloud_gateway.cloud_gateway_dependence.id
   rtb_id      = ctyun_ec_cloud_gateway.cloud_gateway_dependence.rtb_id
@@ -83,32 +88,28 @@ resource "ctyun_ec_cloud_gateway" "cloud_gateway_xinan1" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
   name        = "cloud_gateway_xinan1"
   description = "云间高速开发测试专用"
-  region_id   = "200000002368"
-  region_name = "cn-xinan1-xn1A-public-ctcloud"
+  region_name = "西南2-贵州"
 }
 
 resource "ctyun_ec_cloud_gateway" "cloud_gateway_hgh7" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
   name        = "cloud_gateway_hgh7"
   description = "云间高速开发测试专用"
-  region_id   = "200000003329"
-  region_name = "cn-zj-hgh7-1a-public-ctcloud"
+  region_name = "南昌5"
 }
 
 resource "ctyun_ec_cloud_gateway" "cloud_gateway_huhehaote3" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
-  name        = "cloud_gateway_xinan1"
+  name        = "cloud_gateway_huhehaote3"
   description = "云间高速开发测试专用"
-  region_id   = "200000003573"
-  region_name = "cn-nm-het3-1a-public-ctcloud"
+  region_name = "呼和浩特3"
 }
 
 resource "ctyun_ec_cloud_gateway" "cloud_gateway_wulumuqi7" {
   ec_id       = ctyun_express_connect.express_connect_dependence.id
-  name        = "cloud_gateway_hgh7"
+  name        = "cloud_gateway_wulumuqi7"
   description = "云间高速开发测试专用"
-  region_id   = "200000004098"
-  region_name = "cn-xj-urc7-1a-public-ctcloud"
+  region_name = "乌鲁木齐7"
 }
 
 resource "ctyun_ec_packet" "packet_test" {
@@ -133,4 +134,8 @@ resource "ctyun_sdwan" "ctyun_sdwan_test" {
   name = "ctyun_sdwan_test"
   description = "terraform-ecsdwan测试使用"
   project_id = "0"
+}
+
+locals {
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }

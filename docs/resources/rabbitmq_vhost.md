@@ -1,5 +1,10 @@
+---
+subcategory: "分布式消息服务RabbitMQ"
+page_title: "CTYUN: ctyun_rabbitmq_vhost"
+---
+
 # ctyun_rabbitmq_vhost (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10220893
+-> 管理RabbitMQ实例的虚拟主机
 
 
 

@@ -22,7 +22,6 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 	datasourceName := "data.ctyun_mysql_param_templates." + dnd
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	engineVersion := "5.7"
 
 	// 测试数据
@@ -38,11 +37,10 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 			// 1. 创建参数模板测试
 			{
 				Config: utils.LoadTestCase(
-					createResourceFile, rnd, projectID,
+					createResourceFile, rnd,
 					templateName, engineVersion, initialDescription,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", templateName),
 					resource.TestCheckResourceAttr(resourceName, "engine", engineVersion),
 					resource.TestCheckResourceAttr(resourceName, "description", initialDescription),
@@ -53,7 +51,7 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 			// 2. 更新描述信息测试
 			{
 				Config: utils.LoadTestCase(
-					updateResourceFile, rnd, projectID,
+					updateResourceFile, rnd,
 					templateName, engineVersion, initialDescription, updatedTemplateParametersStr,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -63,7 +61,8 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 			},
 			// 4. 参数模板 datasource验证
 			{
-				Config: utils.LoadTestCase(datasourceFile, dnd, templateName, projectID),
+				Config: utils.LoadTestCase(updateResourceFile, rnd, templateName, engineVersion, initialDescription, updatedTemplateParametersStr) +
+					utils.LoadTestCase(datasourceFile, dnd, templateName),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "param_templates.#", "1"),
 					resource.TestCheckResourceAttr(datasourceName, "param_templates.0.name", templateName),
@@ -73,7 +72,7 @@ func TestAccCtyunMysqlParamTemplate(t *testing.T) {
 			// 5. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					updateResourceFile, rnd, projectID,
+					updateResourceFile, rnd,
 					templateName, engineVersion, initialDescription, updatedTemplateParametersStr,
 				),
 				Destroy: true,
@@ -89,7 +88,6 @@ func TestAccCtyunMysqlParamTemplateImportState(t *testing.T) {
 	createResourceFile := "resource_ctyun_mysql_param_template_create.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	engineVersion := "5.7"
 
 	// 测试数据
@@ -102,11 +100,10 @@ func TestAccCtyunMysqlParamTemplateImportState(t *testing.T) {
 			// 1. 创建参数模板测试
 			{
 				Config: utils.LoadTestCase(
-					createResourceFile, rnd, projectID,
+					createResourceFile, rnd,
 					templateName, engineVersion, initialDescription,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "name", templateName),
 					resource.TestCheckResourceAttr(resourceName, "engine", engineVersion),
 					resource.TestCheckResourceAttr(resourceName, "description", initialDescription),
@@ -123,14 +120,13 @@ func TestAccCtyunMysqlParamTemplateImportState(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.ID,
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"name", "engine", "description", "template_parameters", "project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"name", "engine", "description", "template_parameters"}, // 不需要忽略任何字段
 			},
 			// 3. 导入测试
 			{
@@ -146,12 +142,12 @@ func TestAccCtyunMysqlParamTemplateImportState(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"name", "engine", "description", "template_parameters", "project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"name", "engine", "description", "template_parameters"}, // 不需要忽略任何字段
 			},
 			// 4. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					createResourceFile, rnd, projectID,
+					createResourceFile, rnd,
 					templateName, engineVersion, initialDescription,
 				),
 				Destroy: true,
