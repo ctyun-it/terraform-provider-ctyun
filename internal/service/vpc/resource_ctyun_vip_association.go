@@ -47,7 +47,7 @@ func (c *ctyunVipAssociation) Metadata(_ context.Context, request resource.Metad
 
 func (c *ctyunVipAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理虚拟IP的绑定", "VIP", "https://www.ctyun.cn/document/10026730/10224288"),
+		MarkdownDescription: utils.FormatDesc("管理虚拟IP的绑定", "虚拟IP（Virtual IP，VIP）", "https://www.ctyun.cn/document/10026730/10224288"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
