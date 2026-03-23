@@ -289,6 +289,7 @@ func (c *CtyunMysqlWhiteList) Delete(ctx context.Context, request resource.Delet
 		return
 	} else if resp == nil {
 		err = errors.New("删除mysql白名单过程中，response返回为空, 请稍后再试！")
+		return
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
@@ -332,6 +333,7 @@ func (c *CtyunMysqlWhiteList) CreateMysqlAccessWhiteList(ctx context.Context, co
 		return
 	} else if resp == nil {
 		err = errors.New("创建mysql白名单过程中，response返回为空, 请稍后再试！")
+		return
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return

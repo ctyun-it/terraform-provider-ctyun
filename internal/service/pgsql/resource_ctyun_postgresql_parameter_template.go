@@ -399,6 +399,7 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameters(ctx context.Context, sta
 			return err2
 		} else if resp == nil {
 			err = fmt.Errorf("更新参数模板状态失败，模板id=%d", state.ID.ValueInt64())
+			return err
 		}
 		state.TemplateParameters = plan.TemplateParameters
 	}
