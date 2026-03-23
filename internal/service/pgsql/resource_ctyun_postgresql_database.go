@@ -398,12 +398,16 @@ func (c *CtyunPgsqlDatabase) getDatabaseDetail(ctx context.Context, config *Ctyu
 		return
 	} else if resp == nil {
 		err = fmt.Errorf("postgresql实例(id=%s)查询数据库详情，接口返回nil，请联系研发确认问题原因！", config.InstID.ValueString())
+		return
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
+		return
 	} else if len(resp.ReturnObj) == 0 {
 		err = common.ResourceNotExistError
+		return
 	} else if len(resp.ReturnObj) > 1 {
 		for _, v := range resp.ReturnObj {
 			if v.DBName == config.Name.ValueString() {
@@ -412,6 +416,7 @@ func (c *CtyunPgsqlDatabase) getDatabaseDetail(ctx context.Context, config *Ctyu
 			return
 		}
 		err = common.ResourceNotExistError
+		return
 	} else if len(resp.ReturnObj) == 1 {
 		detail = resp.ReturnObj[0]
 	}

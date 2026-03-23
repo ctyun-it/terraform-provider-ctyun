@@ -447,6 +447,9 @@ func (c *CtyunPostgresqlInstance) Create(ctx context.Context, request resource.C
 
 	// 继续处理多个安全组的情况
 	err = c.handleOtherMultipleSecurityGroups(ctx, &plan, &plan, "create")
+	if err != nil {
+		return
+	}
 	// 创建后，获取pgsql详情
 	err = c.getAndMergePgsqlInstance(ctx, &plan)
 	if err != nil {
@@ -768,6 +771,7 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 func (c *CtyunPostgresqlInstance) updatePgsqlInstance(ctx context.Context, state *CtyunPostgresqlInstanceConfig, plan *CtyunPostgresqlInstanceConfig) (err error) {
 	if state.ID.ValueString() == "" {
 		err = errors.New("在变配实例时，实例id为空")
+		return
 	}
 
 	// 修改RDS实例名称

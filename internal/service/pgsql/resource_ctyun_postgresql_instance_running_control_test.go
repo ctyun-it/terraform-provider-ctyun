@@ -33,10 +33,10 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	securityGroupID := dependence.securityGroupID
 	//azInfo := `availability_zone_info = [{"availability_zone_name":"cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count":1, "node_type":"master"}]`
 	rand.Seed(time.Now().UnixNano())
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
 	appointVip := fmt.Sprintf(`vip="%s"`, vip)
-	updatedFlavorName := "c7.xlarge.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
 

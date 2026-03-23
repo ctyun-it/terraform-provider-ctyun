@@ -581,11 +581,17 @@ func (c *CtyunMongodbInstance) Delete(ctx context.Context, request resource.Dele
 
 	masterOrderID := resp.ReturnObj.Data.NewOrderId
 	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	if err != nil {
+		return
+	}
 	err = c.destroy(ctx, state)
 	if err != nil {
 		return
 	}
 	err = c.destroyLoop(ctx, state)
+	if err != nil {
+		return
+	}
 	response.Diagnostics.AddWarning("删除MongoDB集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -689,9 +695,9 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 	// 确认实例id不为空后,查询实例详情
 	if config.ID.ValueString() == "" {
 		err = errors.New("查询实例详情时，实例id为空")
+		return
 	}
 	// 2）查询实例详情，获取allowBeMaster信息和eip id信息
-
 	detailReturnObj, err := c.getMongoDetailInfo(ctx, config)
 	if err != nil {
 		return
@@ -747,7 +753,6 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 		return
 	}
 	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.List[0].ExpireTime))
-	fmt.Println(1123, resp.ReturnObj.List[0].ExpireTime)
 	return
 }
 
@@ -2614,10 +2619,6 @@ func (c *CtyunMongodbInstance) updateMongodbReadOnly(ctx context.Context, plan *
 		return err
 	}
 	//err = c.afterUpdateSpecLoop(ctx, plan)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

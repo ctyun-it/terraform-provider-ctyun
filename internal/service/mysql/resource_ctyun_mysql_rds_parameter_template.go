@@ -209,6 +209,7 @@ func (c *CtyunMysqlRdsParameterTemplate) mysqlApplyTemplate(ctx context.Context,
 		return err
 	} else if resp == nil {
 		err = fmt.Errorf("mysql实例(id=%s)应用参数模板(id=%d)失败，接口返回nil，请联系研发确认问题原因！", config.InstID.ValueString(), config.TemplateID.ValueInt64())
+		return err
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
@@ -258,6 +259,7 @@ func (c *CtyunMysqlRdsParameterTemplate) mysqlUpdateParameters(ctx context.Conte
 		return err
 	} else if resp == nil {
 		err = fmt.Errorf("mysql实例(id=%s)应用参数模板(id=%d)失败，接口返回nil，请联系研发确认问题原因！", config.InstID.ValueString(), config.TemplateID.ValueInt64())
+		return err
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err

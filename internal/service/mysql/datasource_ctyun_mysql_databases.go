@@ -122,6 +122,9 @@ func (c *ctyunMysqlDatabases) Read(ctx context.Context, request datasource.ReadR
 	}
 	config.RegionID = types.StringValue(regionId)
 	resp, err := c.getMysqlDatabasesInfo(ctx, config)
+	if err != nil {
+		return
+	}
 	var databases []CtyunMysqlDatabaseModel
 	for _, schemaItem := range resp {
 		var database CtyunMysqlDatabaseModel

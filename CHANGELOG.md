@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.1.0 - March 17, 2026
+## v2.1.0 - March 23, 2026
 
 ### New Resources
 
@@ -22,6 +22,10 @@
 * resource\ctyun_ecs disk type support in uppercase
 * resource\ctyun_ebs disk type support in uppercase
 * datasource\ctyun_ebm_device_types add available field
+* resource\ctyun_ecs add master_port_id field
+* resource\ctyun_ecs support retry when openapi return order err
+* resource\ctyun_vpc support enable dns
+* resource\ctyun_mongodb_instance handle order timeout error when unsubscribing
 
 ### Bug Fixes
 

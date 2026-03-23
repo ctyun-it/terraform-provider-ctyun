@@ -84,6 +84,12 @@ func (c *ctyunVpc) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				Default: booldefault.StaticBool(false),
 			},
+			"enable_dns": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否开启dns。false：不开启，true: 开启，默认为不开启false",
+				Default:     booldefault.StaticBool(false),
+			},
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -133,13 +139,14 @@ func (c *ctyunVpc) Create(ctx context.Context, request resource.CreateRequest, r
 	regionId := plan.RegionId.ValueString()
 	projectId := plan.ProjectId.ValueString()
 	resp, err := c.meta.Apis.CtVpcApis.VpcCreateApi.Do(ctx, c.meta.Credential, &ctvpc.VpcCreateRequest{
-		RegionId:    regionId,
-		ProjectId:   projectId,
-		ClientToken: uuid.NewString(),
-		Name:        plan.Name.ValueString(),
-		Cidr:        plan.Cidr.ValueString(),
-		Description: plan.Description.ValueString(),
-		EnableIpv6:  plan.EnableIpv6.ValueBool(),
+		RegionId:            regionId,
+		ProjectId:           projectId,
+		ClientToken:         uuid.NewString(),
+		Name:                plan.Name.ValueString(),
+		Cidr:                plan.Cidr.ValueString(),
+		Description:         plan.Description.ValueString(),
+		EnableIpv6:          plan.EnableIpv6.ValueBool(),
+		DnsHostnamesEnabled: map[bool]int{true: 1, false: 0}[plan.EnableDns.ValueBool()],
 	})
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
@@ -201,11 +208,12 @@ func (c *ctyunVpc) Update(ctx context.Context, request resource.UpdateRequest, r
 	}
 
 	_, err := c.meta.Apis.CtVpcApis.VpcUpdateApi.Do(ctx, c.meta.Credential, &ctvpc.VpcUpdateRequest{
-		VpcId:       state.Id.ValueString(),
-		RegionId:    state.RegionId.ValueString(),
-		ClientToken: uuid.NewString(),
-		Name:        plan.Name.ValueString(),
-		Description: plan.Description.ValueString(),
+		VpcId:               state.Id.ValueString(),
+		RegionId:            state.RegionId.ValueString(),
+		ClientToken:         uuid.NewString(),
+		Name:                plan.Name.ValueString(),
+		Description:         plan.Description.ValueString(),
+		DnsHostnamesEnabled: map[bool]int{true: 1, false: 0}[plan.EnableDns.ValueBool()],
 	})
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
@@ -303,6 +311,7 @@ func (c *ctyunVpc) getAndMergeVpc(ctx context.Context, cfg CtyunVpcConfig) (*Cty
 	cfg.Cidr = types.StringValue(resp.Cidr)
 	cfg.EnableIpv6 = types.BoolValue(resp.Ipv6Enabled)
 	cfg.ProjectId = types.StringValue(resp.ProjectID)
+	cfg.EnableDns = types.BoolValue(resp.DnsHostnamesEnabled == 1)
 	return &cfg, nil
 }
 
@@ -314,4 +323,5 @@ type CtyunVpcConfig struct {
 	Description types.String `tfsdk:"description"`
 	ProjectId   types.String `tfsdk:"project_id"`
 	RegionId    types.String `tfsdk:"region_id"`
+	EnableDns   types.Bool   `tfsdk:"enable_dns"`
 }

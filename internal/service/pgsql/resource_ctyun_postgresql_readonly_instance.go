@@ -394,6 +394,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceDetail(ctx contex
 		config.prodVersion = parts[0] // 输出: 12.22
 	} else {
 		err = fmt.Errorf("实例版本有误，版本为：%s", engine)
+		return nil, err
 	}
 	config.prodVersion = parts[0]
 	config.vpcID = returnObj.VpcId
@@ -458,6 +459,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) CreatePostgresqlReadOnlyInstance(ctx c
 		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
+			return err
 		}
 		azInfo.AvailabilityZoneName = regionAzList[0].AvailabilityZoneId
 	}
