@@ -33,15 +33,17 @@ func NewCtyunIamUserAk() resource.Resource {
 type CtyunIamUserAk struct {
 	meta       *common.CtyunMetadata
 	iamService *business.IamService
+	name       string
 }
 
 func (c *CtyunIamUserAk) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_iam_user_ak"
+	c.name = response.TypeName
 }
 
 func (c *CtyunIamUserAk) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289`,
+		MarkdownDescription: utils.FormatDesc("用户AK/SK", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10355289"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -142,6 +144,10 @@ func (c *CtyunIamUserAk) Read(ctx context.Context, request resource.ReadRequest,
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -198,8 +204,8 @@ func (c *CtyunIamUserAk) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ak],[userID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [ak],[user_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

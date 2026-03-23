@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -29,12 +30,14 @@ import (
 
 type ctyunSfs struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	orderLooper   *business.OrderLooper
 }
 
 func (c *ctyunSfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfs) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -54,7 +57,7 @@ func NewCtyunSfs() resource.Resource {
 
 func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350`,
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -70,18 +73,22 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			},
 			"is_encrypt": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Description: "是否加密盘，默认false，支持更新。目前仅少量资源池支持加密。具体可查看产品能力地图：https://www.ctyun.cn/document/10027350/10693922",
-				Default:     booldefault.StaticBool(false),
+				Description: "是否加密盘，默认false。目前仅少量资源池支持加密。具体可查看产品能力地图：https://www.ctyun.cn/document/10027350/10693922",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 			"kms_uuid": schema.StringAttribute{
 				Optional:    true,
-				Description: "如果是加密盘，需要提供kms的uuid，支持更新",
+				Description: "如果是加密盘，需要提供kms的uuid",
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
 						path.MatchRoot("is_encrypt"),
 						types.BoolValue(true),
 					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -89,7 +96,7 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -172,20 +179,20 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
 			},
 			"vpc_id": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "虚拟私有云ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.VpcValidate(),
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Required:    true,
-				Description: "子网ID",
+				Optional:    true,
+				Description: "子网ID，当",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -201,6 +208,9 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "弹性文件系统状态",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"used_size": schema.Int32Attribute{
 				Computed:    true,
@@ -234,6 +244,9 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			"expire_time": schema.StringAttribute{
 				Description: "到期时间，为UTC格式，按需时为空",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -284,7 +297,7 @@ func (c *ctyunSfs) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMergeSfs(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -321,6 +334,15 @@ func (c *ctyunSfs) Update(ctx context.Context, request resource.UpdateRequest, r
 	err = c.getAndMergeSfs(ctx, &state)
 	if err != nil {
 		return
+	}
+
+	if !plan.VpcID.IsUnknown() && !plan.VpcID.IsNull() && state.VpcID.IsNull() {
+		state.VpcID = plan.VpcID
+		response.Diagnostics.AddWarning("vpc_id的更新仅写入状态文件", "在import时，状态文件中vpc_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
+		state.SubnetID = plan.SubnetID
+		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -374,9 +396,10 @@ func (c *ctyunSfs) createSfs(ctx context.Context, config *CtyunSfsConfig) error 
 		SfsName:     config.Name.ValueString(),
 		SfsSize:     config.SfsSize.ValueInt32(),
 		Vpc:         config.VpcID.ValueString(),
-		Subnet:      config.SubnetID.ValueString(),
 	}
-
+	if !config.SubnetID.IsNull() && !config.SubnetID.IsUnknown() {
+		params.Subnet = config.SubnetID.ValueString()
+	}
 	if config.CycleType.ValueString() == business.SfsOnDemandCycleType {
 		onDemand := true
 		params.OnDemand = &onDemand
@@ -403,6 +426,9 @@ func (c *ctyunSfs) createSfs(ctx context.Context, config *CtyunSfsConfig) error 
 		if config.IsEncrypt.ValueBool() {
 			params.KmsUUID = config.KmsUUID.ValueString()
 		}
+	} else {
+		isEncrypt := false
+		params.IsEncrypt = &isEncrypt
 	}
 	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
 		params.ProjectID = config.ProjectID.ValueString()
@@ -478,6 +504,7 @@ func (c *ctyunSfs) getAndMergeSfs(ctx context.Context, config *CtyunSfsConfig) e
 		return err
 	}
 	returnObj := resp.ReturnObj
+	config.ProjectID = types.StringValue(returnObj.ProjectID)
 	config.SharePath = types.StringValue(returnObj.SharePath)
 	config.SharePathWin = types.StringValue(returnObj.WindowsSharePath)
 	config.Name = types.StringValue(returnObj.SfsName)
@@ -489,8 +516,12 @@ func (c *ctyunSfs) getAndMergeSfs(ctx context.Context, config *CtyunSfsConfig) e
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(returnObj.CreateTime))
 	config.UpdateTime = types.StringValue(utils.FromUnixToUTC(returnObj.UpdateTime))
 	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnObj.ExpireTime))
-	//config.AzName = types.StringValue(returnObj.AzName)
-
+	config.AzName = types.StringValue(returnObj.AzName)
+	if config.IsEncrypt.ValueBool() {
+		config.KmsUUID = types.StringValue(returnObj.KmsUUID)
+	} else {
+		config.KmsUUID = types.StringNull()
+	}
 	return nil
 }
 
@@ -506,6 +537,10 @@ func (c *ctyunSfs) getSfsDetail(ctx context.Context, config *CtyunSfsConfig) (*s
 		err = fmt.Errorf("查询sfs失败，接口返回nil。sfs id 为：%s可联系研发确认原因", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExists") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -642,38 +677,80 @@ func (c *ctyunSfs) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[vpcID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunSfsConfig
-	var ID, regionID, projectID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeSfs(ctx, &config)
 	if err != nil {
 		return
 	}
+
+	// 获取vpc id
+	vpcList, err := c.getVpcListBySfsId(ctx, config)
+	if err != nil {
+		return
+	}
+	if len(vpcList) == 0 {
+		err = fmt.Errorf("查询文件系统（id=%s）下的vpc列表、vpc绑定的权限组列表表失败， 找不到对应的vpc信息。请与研发联系确认问题原因。 ", config.ID.ValueString())
+		return
+	}
+	config.VpcID = types.StringValue(vpcList[0].VpcID)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
+}
+
+func (c *ctyunSfs) getVpcListBySfsId(ctx context.Context, config CtyunSfsConfig) ([]*sfs.SfsSfsListVpcSfsReturnObjListResponse, error) {
+	params := &sfs.SfsSfsListVpcSfsRequest{
+		RegionID: config.RegionID.ValueString(),
+		SfsUID:   config.ID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkSfsApi.SfsSfsListVpcSfsApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return nil, err
+	} else if resp == nil {
+		err = fmt.Errorf("查询文件系统（id=%s）下的vpc列表、vpc绑定的权限组列表表失败， 接口返回nil。请与研发联系确认问题原因。 ", config.ID.ValueString())
+		return nil, err
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return nil, err
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.InvalidReturnObjError
+		return nil, err
+	}
+	return resp.ReturnObj.List, nil
 }
 
 type CtyunSfsConfig struct {

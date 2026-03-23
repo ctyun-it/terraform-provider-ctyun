@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -29,6 +30,7 @@ var (
 
 type CtyunMysqlAssociationEip struct {
 	meta       *common.CtyunMetadata
+	name       string
 	eipService *business.EipService
 }
 
@@ -36,51 +38,42 @@ func (c *CtyunMysqlAssociationEip) ImportState(ctx context.Context, request reso
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eipID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[eip_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAssociationEipConfig
-	var eipID, regionID, projectID, instanceID string
+	var eipID, regionID, instanceID string
 	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &instanceID, &eipID)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &eipID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eipID不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.InstID = types.StringValue(instanceID)
 	config.EipID = types.StringValue(eipID)
 	config.RegionID = types.StringValue(regionID)
-	if projectID != "" {
-		config.ProjectID = types.StringValue(projectID)
-	}
+
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
 	err = c.getAndMergeBindEip(ctx, &config)
 	if err != nil {
@@ -91,6 +84,7 @@ func (c *CtyunMysqlAssociationEip) ImportState(ctx context.Context, request reso
 
 func (c *CtyunMysqlAssociationEip) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_association_eip"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlAssociationEip() resource.Resource {
 	return &CtyunMysqlAssociationEip{}
@@ -98,7 +92,7 @@ func NewCtyunMysqlAssociationEip() resource.Resource {
 
 func (c *CtyunMysqlAssociationEip) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927`,
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例和弹性IP的绑定关系", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10033927"),
 		Attributes: map[string]schema.Attribute{
 			"eip_id": schema.StringAttribute{
 				Required:    true,
@@ -121,16 +115,9 @@ func (c *CtyunMysqlAssociationEip) Schema(ctx context.Context, request resource.
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目id",
-				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目id",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -222,17 +209,32 @@ func (c *CtyunMysqlAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "is not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
-func (c *CtyunMysqlAssociationEip) Update(ctx context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+func (c *CtyunMysqlAssociationEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
 	//暂无可更新内容
+	var plan CtyunAssociationEipConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunAssociationEipConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlAssociationEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -260,9 +262,7 @@ func (c *CtyunMysqlAssociationEip) Delete(ctx context.Context, request resource.
 		InstID: state.InstID.ValueString(),
 	}
 	unbindHeader := &mysql.TeledbUnbindEipRequestHeader{}
-	if state.ProjectID.ValueString() != "" {
-		unbindHeader.ProjectID = state.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUnbindEipApi.Do(ctx, c.meta.Credential, unbindParams, unbindHeader)
 	if err != nil {
 		return
@@ -300,9 +300,7 @@ func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *Cty
 		InstID: config.InstID.ValueString(),
 	}
 	header := &mysql.TeledbBindEipRequestHeader{}
-	if config.ProjectID.ValueString() != "" {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbBindEipApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -314,28 +312,6 @@ func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *Cty
 }
 
 func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, config *CtyunAssociationEipConfig) (err error) {
-	//detailParams := &mysql.TeledbQueryDetailRequest{
-	//	OuterProdInstId: config.InstID.ValueString(),
-	//}
-	//header := &mysql.TeledbQueryDetailRequestHeaders{
-	//	InstID:   config.InstID.ValueString(),
-	//	RegionID: config.RegionID.ValueString(),
-	//}
-	//if config.ProjectID.ValueString() != "" {
-	//	header.ProjectID = config.ProjectID.ValueStringPointer()
-	//}
-	//
-	//resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, header)
-	//if err != nil {
-	//	return err
-	//} else if resp.StatusCode != 0 {
-	//	err = fmt.Errorf("API return error. Message: %s", resp.Message)
-	//	return
-	//} else if resp.ReturnObj == nil {
-	//	err = common.InvalidReturnObjError
-	//	return
-	//}
-	//returnObj := resp.ReturnObj
 
 	params := &mysql.TeledbBoundEipListRequest{
 		RegionID: config.RegionID.ValueString(),
@@ -343,21 +319,33 @@ func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 	}
 
 	headers := &mysql.TeledbBoundEipListRequestHeader{}
-	if config.ProjectID.ValueString() != "" {
-		headers.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, headers)
 	if err2 != nil {
 		err = err2
 		return
 	} else if resp.StatusCode != 200 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s ", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
+	} else if resp.ReturnObj.Data == nil || len(resp.ReturnObj.Data) == 0 {
+		err = common.ResourceNotExistError
+		return
 	}
+
 	eipInfo := resp.ReturnObj.Data[0]
+	// eip未绑定
+	if eipInfo.Status == "DOWN" || eipInfo.BindStatus == 0 {
+		err = common.ResourceNotExistError
+		return
+	}
+
 	config.EipStatus = types.Int32Value(eipInfo.BindStatus)
 	config.Status = types.StringValue(eipInfo.Status)
 	return
@@ -380,9 +368,6 @@ func (c *CtyunMysqlAssociationEip) BindLoop(ctx context.Context, config *CtyunAs
 			}
 
 			headers := &mysql.TeledbBoundEipListRequestHeader{}
-			if config.ProjectID.ValueString() != "" {
-				headers.ProjectID = config.ProjectID.ValueStringPointer()
-			}
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, headers)
 			if err2 != nil {
 				err = err2
@@ -433,9 +418,6 @@ func (c *CtyunMysqlAssociationEip) StartedLoop(ctx context.Context, state *Ctyun
 			detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
 				InstID:   state.InstID.ValueString(),
 				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
 			}
 			resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 			if err2 != nil {

@@ -1,5 +1,10 @@
+---
+subcategory: "文档数据库服务（MongoDB）"
+page_title: "CTYUN: ctyun_mongodb_specs"
+---
+
 # ctyun_mongodb_specs (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10034488
+-> 查询MongoDB可用的规格
 
 
 

@@ -96,6 +96,7 @@ type CtvpcListSecurityGroupsReturnObjResponse struct {
 	CreationTime          *string                                                          `json:"creationTime,omitempty"`      /*  创建时间  */
 	Description           *string                                                          `json:"description,omitempty"`       /*  安全组描述信息。  */
 	SecurityGroupRuleList []*CtvpcListSecurityGroupsReturnObjSecurityGroupRuleListResponse `json:"securityGroupRuleList"`       /*  安全组规则信息  */
+	ProjectID             *string                                                          `json:"projectID,omitempty"`
 }
 
 type CtvpcListSecurityGroupsReturnObjSecurityGroupRuleListResponse struct {

@@ -64,7 +64,7 @@ func TestAccCtyunCcseNodeAssociationEcs(t *testing.T) {
 					name := ds.Attributes["name"]
 					cluster_id := ds.Attributes["cluster_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", name, cluster_id, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", cluster_id, name, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"password",
@@ -84,7 +84,7 @@ func TestAccCtyunCcseNodeAssociationEcs(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					name := ds.Attributes["name"]
 					cluster_id := ds.Attributes["cluster_id"]
-					return fmt.Sprintf("%s,%s", name, cluster_id), nil
+					return fmt.Sprintf("%s,%s", cluster_id, name), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"password",

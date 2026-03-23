@@ -8,6 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -33,6 +34,7 @@ func NewCtyunEcSdwanInstance() resource.Resource {
 
 type CtyunEcSdwanInstance struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEcSdwanInstanceConfig struct {
@@ -48,11 +50,12 @@ type CtyunEcSdwanInstanceConfig struct {
 
 func (c *CtyunEcSdwanInstance) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_ec_sdwan_instance"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunEcSdwanInstance) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220`,
+		MarkdownDescription: utils.FormatDesc("管理云间高速SDWAN网络实例", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -200,7 +203,7 @@ func (c *CtyunEcSdwanInstance) Read(ctx context.Context, req resource.ReadReques
 
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if err == common.ResourceNotExistError {
+		if errors.Is(err, common.ResourceNotExistError) {
 			resp.State.RemoveResource(ctx)
 			return
 		}
@@ -257,16 +260,19 @@ func (c *CtyunEcSdwanInstance) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [sdwan_id],[ec_id],[cgw_id]", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEcSdwanInstanceConfig
-	var ID, ecID string
-	err = terraform_extend.Split(request.ID, &ID, &ecID)
+	var sdwanId, ecID, cgwID string
+	err = terraform_extend.Split(request.ID, &sdwanId, &ecID, &cgwID)
 	if err != nil {
 		return
 	}
-	config.ID = types.StringValue(ID)
+	config.SdwanID = types.StringValue(sdwanId)
+	config.CgwID = types.StringValue(cgwID)
 	config.EcID = types.StringValue(ecID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -323,8 +329,6 @@ func (c *CtyunEcSdwanInstance) create(ctx context.Context, plan *CtyunEcSdwanIns
 }
 
 func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSdwanInstanceConfig) (err error) {
-	// 通过查询接口获取实例信息
-	instanceID := state.ID.ValueString()
 
 	// 根据InstanceID查询实例
 	listReq := &ec.EcEcListSDWANInstanceRequest{
@@ -345,27 +349,32 @@ func (c *CtyunEcSdwanInstance) getAndMerge(ctx context.Context, state *CtyunEcSd
 	} else if *listResp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s", *listResp.Message)
 		return
-	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) == 0 {
-		err = common.ResourceNotExistError
-		return
+	} else if listResp.ReturnObj == nil || listResp.ReturnObj.Results == nil || len(listResp.ReturnObj.Results) > 1 {
+		return common.InvalidReturnObjError
+	} else if len(listResp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
 	// 检查返回的实例是否匹配
 	found := false
 	for _, result := range listResp.ReturnObj.Results {
-		if result.InstanceID != nil && *result.InstanceID == instanceID {
-			found = true
-			// 更新状态值
-			if result.RouteLearn != nil {
-				state.RouteLearn = types.Int64Value(int64(*result.RouteLearn))
-			}
-			if result.RouteSync != nil {
-				state.RouteSync = types.Int64Value(int64(*result.RouteSync))
-			}
-			if result.Weights != nil {
-				state.Weights = types.Int64Value(int64(*result.Weights))
-			}
-			break
+		found = true
+		// 更新状态值
+		if result.RouteLearn != nil {
+			state.RouteLearn = types.Int64Value(int64(*result.RouteLearn))
 		}
+		if result.RouteSync != nil {
+			state.RouteSync = types.Int64Value(int64(*result.RouteSync))
+		}
+		if result.Weights != nil {
+			state.Weights = types.Int64Value(int64(*result.Weights))
+		}
+		if result.InstanceID != nil {
+			state.ID = types.StringValue(*result.InstanceID)
+		}
+		if result.DefaultRtbID != nil {
+			state.RtbID = types.StringValue(*result.DefaultRtbID)
+		}
+		break
 	}
 
 	if !found {

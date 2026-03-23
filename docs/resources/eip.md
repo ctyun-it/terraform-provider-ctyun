@@ -1,5 +1,10 @@
+---
+subcategory: "弹性IP（Elastic IP，EIP）"
+page_title: "CTYUN: ctyun_eip"
+---
+
 # ctyun_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975
+-> 管理弹性IP
 
 
 
@@ -73,3 +78,15 @@ resource "ctyun_eip" "eip_test1" {
 - `master_order_id` (String) 订购的受理单id
 - `status` (String) 弹性ip状态，取值范围：active：有效，down：未绑定，error：出错，updating：更新中，banding_or_unbangding：绑定解绑中，deleting：删除中，deleted：已删除，expired：已过期
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入弹性IP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_eip.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_eip.eip_example eip-12345,region-67890
+```

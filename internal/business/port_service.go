@@ -2,6 +2,7 @@ package business
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -17,6 +18,17 @@ func NewPortService(meta *common.CtyunMetadata) *PortService {
 }
 
 func (v PortService) Exist(ctx context.Context, portID, regionID string) (exist bool, err error) {
+	_, err = v.GetPortDetail(ctx, portID, regionID)
+	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			return false, nil
+		}
+		return
+	}
+	return true, nil
+}
+
+func (v PortService) GetPortDetail(ctx context.Context, portID, regionID string) (re *ctvpc.CtvpcShowPortReturnObjResponse, err error) {
 	params := &ctvpc.CtvpcShowPortRequest{
 		RegionID:           regionID,
 		NetworkInterfaceID: portID,
@@ -24,15 +36,16 @@ func (v PortService) Exist(ctx context.Context, portID, regionID string) (exist 
 	resp, err := v.meta.Apis.SdkCtVpcApis.CtvpcShowPortApi.Do(ctx, v.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp.StatusCode != common.NormalStatusCode {
 		if strings.Contains(*resp.Message, "is not exists") {
-			return false, nil
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		}
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
 	}
-	return true, nil
+	return resp.ReturnObj, nil
 }

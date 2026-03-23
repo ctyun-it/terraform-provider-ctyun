@@ -15,15 +15,14 @@ func TestAccCtyunMysqlReadOnlyInstance(t *testing.T) {
 	resourceFile := "resource_ctyun_mysql_read_node.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	instanceID := dependence.mysqlID
 	cycleType := "on_demand"
 	//cycleCount := 1
 	// 测试数据
 	instanceName := "test-ro-" + rnd
-	flavorName := "c7.large.2" // 示例规格，根据实际情况调整
-	storageType := "SATA"      // 存储类型
-	storageSpace := 100        // 存储空间(GB)
+	flavorName := dependence.flavorName // 示例规格，根据实际情况调整
+	storageType := "SATA"               // 存储类型
+	storageSpace := 100                 // 存储空间(GB)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
@@ -33,12 +32,11 @@ func TestAccCtyunMysqlReadOnlyInstance(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, storageType, storageSpace, instanceName,
+					storageType, storageSpace, instanceName,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", "on_demand"),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", storageSpace)),
 					resource.TestCheckResourceAttr(resourceName, "name", instanceName),
@@ -80,7 +78,7 @@ func TestAccCtyunMysqlReadOnlyInstance(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, storageType, storageSpace, instanceName,
+					storageType, storageSpace, instanceName,
 				),
 				Destroy: true,
 			},
@@ -94,15 +92,14 @@ func TestAccCtyunMysqlReadOnlyInstanceImportState(t *testing.T) {
 	resourceFile := "resource_ctyun_mysql_read_node.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	instanceID := dependence.mysqlID
 	cycleType := "on_demand"
 	//cycleCount := 1
 	// 测试数据
 	instanceName := "test-ros-" + rnd
-	flavorName := "c7.large.2" // 示例规格，根据实际情况调整
-	storageType := "SATA"      // 存储类型
-	storageSpace := 100        // 存储空间(GB)
+	flavorName := dependence.flavorName // 示例规格，根据实际情况调整
+	storageType := "SATA"               // 存储类型
+	storageSpace := 100                 // 存储空间(GB)
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
@@ -112,12 +109,11 @@ func TestAccCtyunMysqlReadOnlyInstanceImportState(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, storageType, storageSpace, instanceName,
+					storageType, storageSpace, instanceName,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", "on_demand"),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", storageSpace)),
 					resource.TestCheckResourceAttr(resourceName, "name", instanceName),
@@ -133,9 +129,8 @@ func TestAccCtyunMysqlReadOnlyInstanceImportState(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s",
+					return fmt.Sprintf("%s,%s",
 						rs.Primary.ID,
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -165,7 +160,7 @@ func TestAccCtyunMysqlReadOnlyInstanceImportState(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					instanceID, cycleType, flavorName,
-					projectID, storageType, storageSpace, instanceName,
+					storageType, storageSpace, instanceName,
 				),
 				Destroy: true,
 			},

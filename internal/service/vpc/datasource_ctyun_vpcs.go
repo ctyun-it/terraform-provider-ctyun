@@ -59,7 +59,7 @@ type CtyunVpcsConfig struct {
 
 func (c *ctyunVpcs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028487`,
+		MarkdownDescription: utils.FormatDesc("查询虚拟私有云列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028487"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -148,7 +148,7 @@ func (c *ctyunVpcs) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 						},
 						"project_id": schema.StringAttribute{
 							Computed:    true,
-							Description: "企业项目ID，默认为`0`",
+							Description: "企业项目ID",
 						},
 					},
 				},
@@ -170,7 +170,7 @@ func (c *ctyunVpcs) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
@@ -180,7 +180,7 @@ func (c *ctyunVpcs) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	pageNo := config.PageNo.ValueInt32()
 	pageSize := config.PageSize.ValueInt32()
-	projectId := c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId)
+	projectId := config.ProjectID.ValueString()
 	vpcId := config.VpcID.ValueString()
 	if pageNo > 0 {
 		params.PageNo = pageNo

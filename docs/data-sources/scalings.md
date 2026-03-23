@@ -1,5 +1,10 @@
+---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
+page_title: "CTYUN: ctyun_scalings"
+---
+
 # ctyun_scalings (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725
+-> 查询弹性伸缩组
 
 
 

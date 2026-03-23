@@ -23,7 +23,7 @@ func TestAccCtyunBackup(t *testing.T) {
 	initName := "init-backup"
 	updatedName := "updated-backup-" + rnd
 	instanceId := dependence.ecsID
-	repositoryID := "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
+	repositoryID := dependence.backupRepoId
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -41,6 +41,14 @@ func TestAccCtyunBackup(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新

@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -32,11 +34,13 @@ var (
 
 type CtyunPrivateZoneRecord struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunPrivateZoneRecord) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_private_zone_record"
+	c.name = response.TypeName
 }
 
 func (c *CtyunPrivateZoneRecord) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -57,8 +61,8 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -76,11 +80,11 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -94,7 +98,7 @@ func (c *CtyunPrivateZoneRecord) ImportState(ctx context.Context, request resour
 
 func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026757/10224466",
+		MarkdownDescription: utils.FormatDesc("管理内网DNS记录", "内网DNS（Intranet Domain Name Service，CT-IDNS）", "https://www.ctyun.cn/document/10026757/10224466"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -176,10 +180,16 @@ func (c *CtyunPrivateZoneRecord) Schema(ctx context.Context, request resource.Sc
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "内网DNS记录id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -238,9 +248,9 @@ func (c *CtyunPrivateZoneRecord) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -363,6 +373,9 @@ func (c *CtyunPrivateZoneRecord) getAndMerge(ctx context.Context, config *CtyunP
 		err = fmt.Errorf("获取内网DNS记录(id=%s)详情失败，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.ErrorCode == common.OpenapiPrivateZoneRecordNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return err
 	} else if resp.ReturnObj == nil {
@@ -376,6 +389,7 @@ func (c *CtyunPrivateZoneRecord) getAndMerge(ctx context.Context, config *CtyunP
 	config.TTL = types.Int32Value(resp.ReturnObj.TTL)
 	config.CreatedTime = types.StringValue(*resp.ReturnObj.CreatedAt)
 	config.UpdatedTime = types.StringValue(*resp.ReturnObj.UpdatedAt)
+	config.Enabled = types.BoolValue(resp.ReturnObj.Enabled == 1)
 	// 处理value
 	var values []string
 	for _, value := range resp.ReturnObj.Value {

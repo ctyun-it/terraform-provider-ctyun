@@ -2,12 +2,15 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -15,6 +18,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -39,10 +44,12 @@ func NewCtyunEcsBackupPolicy() resource.Resource {
 
 type ctyunEcsBackupPolicy struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEcsBackupPolicy) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_backup_policy"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupPolicyConfig struct {
@@ -74,12 +81,14 @@ type CtyunEcsBackupPolicyAdvRetention struct {
 
 func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033770`,
+		MarkdownDescription: utils.FormatDesc("管理云主机备份策略", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033770"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "云主机备份策略id",
+				Computed:    true,
+				Description: "云主机备份策略id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -98,7 +107,7 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Computed:    true,
 				Description: "企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为\"0\"",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -144,6 +153,9 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile(`^[0-9]|1[0-9]|2[0-3](,[0-9]|1[0-9]|2[0-3])*$`), "时间取值范围：0~23，多个时间点以逗号分隔"),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.Int64Attribute{
 				Optional:    true,
@@ -151,6 +163,9 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "备份策略状态，是否启用，取值范围：0（不启用），1（启用）。注：默认值0（不启用）。支持更新",
 				Validators: []validator.Int64{
 					int64validator.OneOf(0, 1),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"retention_type": schema.StringAttribute{
@@ -180,6 +195,9 @@ func (c *ctyunEcsBackupPolicy) Schema(_ context.Context, _ resource.SchemaReques
 				Description: "是否启用周期性全量备份。-1代表不开启，默认为-1；取值范围为[-1,100]，即每执行n次增量备份后，执行一次全量备份；若传入为0，代表每一次均为全量备份。支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(-1, 100),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"adv_retention_status": schema.BoolAttribute{
@@ -318,8 +336,11 @@ func (c *ctyunEcsBackupPolicy) getAndMerge(ctx context.Context, cfg *CtyunEcsBac
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	} else if resp.ReturnObj.CurrentCount != 1 {
+	} else if resp.ReturnObj.CurrentCount > 1 {
 		err = common.InvalidReturnObjResultsError
+		return
+	} else if len(resp.ReturnObj.PolicyList) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
 
@@ -425,6 +446,10 @@ func (c *ctyunEcsBackupPolicy) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -579,8 +604,8 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -597,11 +622,11 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -612,6 +637,8 @@ func (c *ctyunEcsBackupPolicy) ImportState(ctx context.Context, request resource
 	if err != nil {
 		return
 	}
+
+	cfg.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectID.ValueString(), common.ExtraProjectId))
 
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }

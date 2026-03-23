@@ -27,7 +27,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 
 	diskId := dependence.ebsID
 	//TODO 获取存储库ID替换
-	repositoryID := "671f67c4-6131-4154-8c1d-7c5b82edd1eb"
+	repositoryID := dependence.backupRepoId
 
 	bindDisksResourceName := "ctyun_ebs_backup_policy_bind_disks." + dnd
 	bindRepositoryResourceName := "ctyun_ebs_backup_policy_bind_repo." + dnd

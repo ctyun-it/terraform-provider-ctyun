@@ -1,5 +1,10 @@
+---
+subcategory: "对象存储（CT-ZOS，Zettabyte Object Storage）"
+page_title: "CTYUN: ctyun_zos_bucket"
+---
+
 # ctyun_zos_bucket (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237
+-> 管理对象存储桶
 
 
 
@@ -56,3 +61,15 @@ resource "ctyun_zos_bucket" "foo" {
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID
 - `name` (String) 名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ZOS Bucket
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_zos_bucket.[导入配置名称] [bucket],<region_id>
+# 示例
+terraform import ctyun_zos_bucket.example my-bucket-name,region-123
+```

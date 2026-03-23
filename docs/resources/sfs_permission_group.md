@@ -1,5 +1,10 @@
+---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
+page_title: "CTYUN: ctyun_sfs_permission_group"
+---
+
 # ctyun_sfs_permission_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
+-> 管理弹性文件服务权限组
 
 
 
@@ -44,3 +49,15 @@ resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
 - `is_default` (Boolean) 是否为默认权限组
 - `permission_rule_count` (Number) 权限组规则个数
 - `sfs_count` (Number) 绑定的文件系统个数
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS权限组
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs_permission_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_sfs_permission_group.permission_group_example pg-123456789,<region-123456>
+```

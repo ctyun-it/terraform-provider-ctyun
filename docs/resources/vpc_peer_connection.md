@@ -1,5 +1,10 @@
+---
+subcategory: "对等连接（VPC peering connection）"
+page_title: "CTYUN: ctyun_vpc_peer_connection"
+---
+
 # ctyun_vpc_peer_connection (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873
+-> 管理对等连接
 
 
 
@@ -75,12 +80,12 @@ resource "ctyun_vpc_peer_connection" "cross_example" {
 
 ### Read-Only
 
-- `accept_vpc_cidr` (String) 对端的vpc cidr
-- `accept_vpc_name` (String) 对端的vpc名称
+- `accept_vpc_cidr` (String, Deprecated) 废弃字段
+- `accept_vpc_name` (String, Deprecated) 废弃字段
 - `id` (String) 对等连接id
-- `instance_id` (String) 对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意
-- `request_vpc_cidr` (String) 本端的vpc cidr
-- `request_vpc_name` (String) 本端的vpc名称
+- `instance_id` (String) 对等连接实例id，跨账号情况下使用。如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意
+- `request_vpc_cidr` (String, Deprecated) 废弃字段
+- `request_vpc_name` (String, Deprecated) 废弃字段
 - `status` (String) 对等连接状态，agree(已连接)/pending(等待审核)
 - `user_type` (String) 对等连接类型：current(同一个租户) / other(不同租户)
 
@@ -95,3 +100,15 @@ Required:
 Read-Only:
 
 - `id` (String) 标签id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPC对等连接
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpc_peer_connection.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vpc_peer_connection.vpc_peer_connection_example vpr-12345678,200000001852
+```

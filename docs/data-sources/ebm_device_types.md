@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm_device_types"
+---
+
 # ctyun_ebm_device_types (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001
+-> 查询物理机可用的规格列表
 
 
 
@@ -44,6 +49,10 @@ output "ctyun_ebm_device_types_test" {
 
 <a id="nestedatt--device_types"></a>
 ### Nested Schema for `device_types`
+
+Optional:
+
+- `available` (Boolean) 是否可用（true：可用；false：不可用，已售罄）
 
 Read-Only:
 

@@ -57,10 +57,10 @@ func TestAccCtyunPrivateNatTransitIp(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					region_id := ds.Attributes["region_id"]
-					nat_gateway_id := ds.Attributes["nat_gateway_id"]
+					regionID := ds.Attributes["region_id"]
+					natGatewayID := ds.Attributes["nat_gateway_id"]
 					address1 := ds.Attributes["address"]
-					return fmt.Sprintf("%s,%s,%s", address1, nat_gateway_id, region_id), nil
+					return fmt.Sprintf("%s,%s,%s", natGatewayID, address1, regionID), nil
 				},
 				ImportStateVerifyIgnore: []string{},
 			},
@@ -70,9 +70,9 @@ func TestAccCtyunPrivateNatTransitIp(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					nat_gateway_id := ds.Attributes["nat_gateway_id"]
+					natGatewayID := ds.Attributes["nat_gateway_id"]
 					address1 := ds.Attributes["address"]
-					return fmt.Sprintf("%s,%s", address1, nat_gateway_id), nil
+					return fmt.Sprintf("%s,%s", natGatewayID, address1), nil
 				},
 				ImportStateVerifyIgnore: []string{},
 			},

@@ -11,6 +11,7 @@ import (
 )
 
 func TestAccCtyunEbm(t *testing.T) {
+	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	dnd := utils.GenerateRandomString()
 
@@ -53,7 +54,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.raidAz,
 					k, v,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -62,6 +63,14 @@ func TestAccCtyunEbm(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "status", initStatus),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新
@@ -76,7 +85,7 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.raidAz,
 					k, uv,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -98,9 +107,9 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.raidAz,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.raidAz),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
 					resource.TestCheckResourceAttr(datasourceName, "instances.0.instance_name", updatedName),
@@ -171,9 +180,9 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.raidAz,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.raidAz),
 			},
 			{
 				Config: utils.LoadTestCase(
@@ -186,9 +195,191 @@ func TestAccCtyunEbm(t *testing.T) {
 					dependence.systemRaid,
 					dependence.dataRaid,
 					dependence.subnetID,
-					dependence.az2,
+					dependence.raidAz,
 					k, uv,
-				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.az2),
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.raidAz),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+func TestAccCtyunEbmStandard(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	dnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_ebm." + rnd
+	datasourceName := "data.ctyun_ebms." + dnd
+	resourceFile := "resource_ctyun_ebm_standard.tf"
+	datasourceFile := "datasource_ctyun_ebms.tf"
+
+	initName := "init" + utils.GenerateRandomString()
+	initHostname := "init-hostname" + utils.GenerateRandomString()
+	initPassword := "P@ss-" + utils.GenerateRandomString()
+	initStatus := "running"
+
+	updatedName := "updated" + utils.GenerateRandomString()
+	updatedHostname := "updated-hostname" + utils.GenerateRandomString()
+	updatedPassword := "P@sstf-" + utils.GenerateRandomString()
+	updatedStatus := "stopped"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					initName, initHostname, initPassword, initStatus,
+					dependence.standardDeviceType,
+					dependence.standardImage,
+					dependence.vpcID,
+					dependence.standardSystemRaid,
+					dependence.standardDataRaid,
+					dependence.standardSubnetID,
+					dependence.standardAz,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", initName),
+					resource.TestCheckResourceAttr(resourceName, "hostname", initHostname),
+					resource.TestCheckResourceAttr(resourceName, "status", initStatus),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
+				),
+			},
+			// 更新
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					updatedName, updatedHostname, updatedPassword, updatedStatus,
+					dependence.standardDeviceType,
+					dependence.standardImage,
+					dependence.vpcID,
+					dependence.standardSystemRaid,
+					dependence.standardDataRaid,
+					dependence.standardSubnetID,
+					dependence.standardAz,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "hostname", updatedHostname),
+					resource.TestCheckResourceAttr(resourceName, "status", updatedStatus),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// 查询
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					updatedName, updatedHostname, updatedPassword, updatedStatus,
+					dependence.standardDeviceType,
+					dependence.standardImage,
+					dependence.vpcID,
+					dependence.standardSystemRaid,
+					dependence.standardDataRaid,
+					dependence.standardSubnetID,
+					dependence.standardAz,
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.standardAz),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "instances.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.instance_name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.hostname", updatedHostname),
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.status", updatedStatus),
+				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					azName := ds.Attributes["az_name"]
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s,%s", id, azName, regionID), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"auto_renew",
+					"subnet_id",
+					"data_volume_raid_uuid",
+					"system_volume_raid_uuid",
+					"master_order_id",
+					"password",
+					"project_id",
+					"user_data",
+					"cycle_type",
+					"image_uuid",
+					"cycle_count",
+					"bandwidth",
+				},
+			},
+			// 多种导入方式测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					azName := ds.Attributes["az_name"]
+					return fmt.Sprintf("%s,%s", id, azName), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"auto_renew",
+					"subnet_id",
+					"data_volume_raid_uuid",
+					"system_volume_raid_uuid",
+					"master_order_id",
+					"password",
+					"project_id",
+					"user_data",
+					"cycle_type",
+					"image_uuid",
+					"cycle_count",
+					"bandwidth",
+				},
+			},
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					updatedName, updatedHostname, updatedPassword, initStatus,
+					dependence.standardDeviceType,
+					dependence.standardImage,
+					dependence.vpcID,
+					dependence.standardSystemRaid,
+					dependence.standardDataRaid,
+					dependence.standardSubnetID,
+					dependence.standardAz,
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.standardAz),
+			},
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					updatedName, updatedHostname, updatedPassword, initStatus,
+					dependence.standardDeviceType,
+					dependence.standardImage,
+					dependence.vpcID,
+					dependence.standardSystemRaid,
+					dependence.standardDataRaid,
+					dependence.standardSubnetID,
+					dependence.standardAz,
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id", dependence.standardAz),
 				Destroy: true,
 			},
 		},

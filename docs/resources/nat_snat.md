@@ -1,5 +1,10 @@
+---
+subcategory: "NAT网关（CT-NAT Gateway）"
+page_title: "CTYUN: ctyun_nat_snat"
+---
+
 # ctyun_nat_snat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166496
+-> 管理公网NAT网关snat规则
 
 
 
@@ -59,7 +64,7 @@ resource "ctyun_nat_snat" "snat_test" {
 ### Optional
 
 - `description` (String) SNAT描述，支持更新
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `source_cidr` (String) 自定义网段，与source_subnet_id有且只能填写一个，支持更新
 - `source_subnet_id` (String) 子网ID，需要和NAT网关同属一个VPC，与source_cidr有且只能填写一个，支持更新
 
@@ -69,7 +74,7 @@ resource "ctyun_nat_snat" "snat_test" {
 - `eips` (Attributes List) 绑定的 eip 信息 (see [below for nested schema](#nestedatt--eips))
 - `id` (String) ID，同snat_id
 - `snat_id` (String) Snat规则的id
-- `subnet_type` (Number) 子网类型：1-使用子网ID，2-使用自定义网段
+- `subnet_type` (Number, Deprecated) 废弃字段
 
 <a id="nestedatt--eips"></a>
 ### Nested Schema for `eips`
@@ -78,3 +83,15 @@ Read-Only:
 
 - `eip_id` (String) 弹性 IP id
 - `ip_address` (String) 弹性 IP 地址
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入公网NAT SNAT规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_nat_snat.[导入配置名称] [id],[nat_gateway_id],<region_id>
+# 示例
+terraform import ctyun_nat_snat.snat_example snat-12345,nat-67890,region-bb9fdb42056f11eda1610242ac110002
+```

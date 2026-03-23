@@ -43,6 +43,18 @@ func TestAccCtyunSnapshot(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
 			// 更新
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, instanceId),
@@ -60,20 +72,7 @@ func TestAccCtyunSnapshot(t *testing.T) {
 					resource.TestCheckResourceAttr(datasourceName, "snapshots.0.name", updatedName),
 				),
 			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", id, regionId), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
-			},
+
 			{
 				ResourceName: resourceName,
 				ImportState:  true,

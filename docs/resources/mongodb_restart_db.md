@@ -1,5 +1,10 @@
+---
+subcategory: "文档数据库服务（MongoDB）"
+page_title: "CTYUN: ctyun_mongodb_restart_db"
+---
+
 # ctyun_mongodb_restart_db (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 重启MongoDB实例
 
 
 
@@ -76,7 +81,7 @@ resource "ctyun_mongodb_restart_db" "example" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

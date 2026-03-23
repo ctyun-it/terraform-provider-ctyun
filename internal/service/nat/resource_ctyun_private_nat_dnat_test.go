@@ -52,6 +52,14 @@ func TestAccCtyunPrivateDNat(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "external_ip", externalIp),
 					resource.TestCheckResourceAttr(resourceName, "protocol", protocol),
 					resource.TestCheckResourceAttrSet(resourceName, "dnat_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -97,10 +105,10 @@ func TestAccCtyunPrivateDNat2(t *testing.T) {
 	datasourceFile := "datasource_ctyun_private_nat_dnats.tf"
 	externalIp := dependence.privateNatIP1
 	natGatewayId := dependence.privateNatID
-	internalPort := utils.GenerateRandomPort(0, 65535)
-	updatedInternalPort := utils.GenerateRandomPort(0, 65535)
-	externalPort := utils.GenerateRandomPort(0, 1024)
-	updatedExternalPort := utils.GenerateRandomPort(0, 1024)
+	internalPort := utils.GenerateRandomPort(1, 65535)
+	updatedInternalPort := utils.GenerateRandomPort(1, 65535)
+	externalPort := utils.GenerateRandomPort(1, 1024)
+	updatedExternalPort := utils.GenerateRandomPort(1, 1024)
 
 	protocol := "tcp"
 	updatedProtocol := "udp"
@@ -149,8 +157,7 @@ func TestAccCtyunPrivateDNat2(t *testing.T) {
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
 					natGatewayID := ds.Attributes["nat_gateway_id"]
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, natGatewayID, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, natGatewayID, regionId), nil
 				},
 			},
 			{

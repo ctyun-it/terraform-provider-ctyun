@@ -8,7 +8,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -46,7 +46,7 @@ func (c *CtyunMongodbRestartDb) Metadata(ctx context.Context, req resource.Metad
 
 func (c *CtyunMongodbRestartDb) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535`,
+		MarkdownDescription: utils.FormatDesc("重启MongoDB实例", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -78,16 +78,9 @@ func (c *CtyunMongodbRestartDb) Schema(ctx context.Context, req resource.SchemaR
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -143,7 +136,21 @@ func (c *CtyunMongodbRestartDb) Read(ctx context.Context, req resource.ReadReque
 }
 
 func (c *CtyunMongodbRestartDb) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan CtyunMongodbRestartDbConfig
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
+	// 读取state中的配置
+	var state CtyunMongodbRestartDbConfig
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMongodbRestartDb) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -161,13 +168,6 @@ func (c *CtyunMongodbRestartDb) checkBeforeCreate(ctx context.Context, state *Ct
 		return
 	}
 
-	listHeader := &mongodb.MongodbGetListHeaders{
-		RegionID: state.RegionID.ValueString(),
-	}
-	if state.ProjectID.ValueString() != "" {
-		listHeader.ProjectID = state.ProjectID.ValueStringPointer()
-	}
-
 	result := retryer.Start(
 		func(currentTime int) bool {
 
@@ -176,9 +176,6 @@ func (c *CtyunMongodbRestartDb) checkBeforeCreate(ctx context.Context, state *Ct
 			}
 			detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 				RegionID: state.RegionID.ValueString(),
-			}
-			if state.ProjectID.ValueString() != "" {
-				detailHeader.ProjectID = state.ProjectID.ValueStringPointer()
 			}
 			detailResp, err3 := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 			if err3 != nil {
@@ -213,10 +210,6 @@ func (c *CtyunMongodbRestartDb) create(ctx context.Context, plan *CtyunMongodbRe
 	headers := &mongodb.MongodbRestartDbRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
-
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbRestartDbApi.Do(ctx, c.meta.Credential, request, headers)
 	if err != nil {
 		return

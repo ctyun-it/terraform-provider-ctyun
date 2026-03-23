@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -42,6 +43,7 @@ var (
 
 type CtyunMongodbInstance struct {
 	meta           *common.CtyunMetadata
+	name           string
 	ecsService     *business.EcsService
 	mongodbService *business.MongodbService
 	orderLooper    *business.OrderLooper
@@ -51,8 +53,8 @@ func (c *CtyunMongodbInstance) ImportState(ctx context.Context, request resource
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -69,11 +71,11 @@ func (c *CtyunMongodbInstance) ImportState(ctx context.Context, request resource
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -107,7 +109,7 @@ func (c *CtyunMongodbInstance) Metadata(ctx context.Context, request resource.Me
 
 func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535`,
+		MarkdownDescription: utils.FormatDesc("管理MongoDB实例", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -237,7 +239,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -285,7 +287,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Optional:    true,
 				Computed:    true,
 				Default:     stringdefault.StaticString("SSD"),
-				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD",
+				Description: "存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD，XSSD-0，XSSD-1，XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.MongodbStorageType...),
 				},
@@ -354,14 +356,13 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Description: "backup节点磁盘空间，当前不支持指定。默认与存储空间相同",
 			},
 			"backup_storage_type": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）。若不填写，默认为云硬盘（SSD）",
+				Required:    true,
+				Description: "backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSATA, business.StorageTypeSAS, business.StorageTypeSSD, business.BackupStorageTypeOS),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"upgrade_node_type": schema.StringAttribute{
@@ -381,6 +382,13 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -472,8 +480,10 @@ func (c *CtyunMongodbInstance) Read(ctx context.Context, request resource.ReadRe
 	// 查询远端
 	err = c.getAndMergeMongodbInstance(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -571,12 +581,17 @@ func (c *CtyunMongodbInstance) Delete(ctx context.Context, request resource.Dele
 
 	masterOrderID := resp.ReturnObj.Data.NewOrderId
 	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
-
+	if err != nil {
+		return
+	}
 	err = c.destroy(ctx, state)
 	if err != nil {
 		return
 	}
 	err = c.destroyLoop(ctx, state)
+	if err != nil {
+		return
+	}
 	response.Diagnostics.AddWarning("删除MongoDB集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 
@@ -594,6 +609,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 		Count:             1,
 		ProdId:            business.MongodbProdIDDict[config.ProdID.ValueString()],
 		MysqlNodeInfoList: nil,
+		CpuType:           business.MongodbCpuTypeDict[config.cpuType],
 	}
 	if config.BackupStorageType.ValueString() == business.BackupStorageTypeOS {
 		osStr := strings.ToLower(config.BackupStorageType.ValueString())
@@ -637,6 +653,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 	header := &mongodb.MongodbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbCreateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
@@ -678,9 +695,9 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 	// 确认实例id不为空后,查询实例详情
 	if config.ID.ValueString() == "" {
 		err = errors.New("查询实例详情时，实例id为空")
+		return
 	}
 	// 2）查询实例详情，获取allowBeMaster信息和eip id信息
-
 	detailReturnObj, err := c.getMongoDetailInfo(ctx, config)
 	if err != nil {
 		return
@@ -700,13 +717,12 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 	config.CreateTime = types.StringValue(utils.FromUnixToUTC(detailReturnObj.CreateTime))
 	if detailReturnObj.Backup != nil {
 		backupSize := strings.TrimSuffix(detailReturnObj.Backup.Size, "G")
+		// 暂时不处理，产线接口返回string，暂时无法处理
 		backupStorageSpace, err2 := strconv.ParseInt(backupSize, 10, 32)
 		if err2 != nil {
-			err = err2
-			return
+			backupStorageSpace = 0
 		}
 		config.BackupStorageSpace = types.Int32Value(int32(backupStorageSpace))
-
 	} else {
 		config.BackupStorageSpace = types.Int32Value(0)
 	}
@@ -720,7 +736,23 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 			},
 		})
 	}
-
+	listParams := &mongodb.MongodbGetListRequest{
+		ProdInstName: config.Name.ValueStringPointer(),
+	}
+	listHeader := &mongodb.MongodbGetListHeaders{
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkMongodbApis.MongodbGetListApi.Do(ctx, c.meta.Credential, listParams, listHeader)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		return
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.InvalidReturnObjError
+		return
+	}
+	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.List[0].ExpireTime))
 	return
 }
 
@@ -1177,7 +1209,7 @@ func (c *CtyunMongodbInstance) UpgradeLoop(ctx context.Context, state *CtyunMong
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，未更新成功！")
 	}
 	return
 
@@ -1288,7 +1320,7 @@ func (c *CtyunMongodbInstance) UpgradeStorageLoop(ctx context.Context, state *Ct
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，实例端口仍未更新成功！")
+		return errors.New("轮询已达最大次数，磁盘空间未更新成功！")
 	}
 	return
 }
@@ -1757,10 +1789,10 @@ func (c *CtyunMongodbInstance) upgradeStorage(ctx context.Context, state *CtyunM
 		}
 
 		// 轮询确认是否已扩容完成
-		err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
-		if err != nil {
-			return
-		}
+		//err = c.UpgradeStorageLoop(ctx, state, plan, planNodeInfo, 60)
+		//if err != nil {
+		//	return
+		//}
 	}
 	return
 }
@@ -1772,16 +1804,19 @@ func (c *CtyunMongodbInstance) getMongoDetailInfo(ctx context.Context, config *C
 	detailHeader := &mongodb.MongodbQueryDetailRequestHeaders{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if config.ProjectID.ValueString() != "" {
-		detailHeader.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeader)
 	if err != nil {
 		return
 	} else if resp == nil {
 		err = errors.New("获取mongodb实例为nil，请稍后再试！")
 		return
-	} else if resp.StatusCode != 800 {
+	} else if resp.StatusCode != common.NormalStatusCode {
+		// DDS_83000 =请确认用户下是否有实例, DDS_84000 =请确认prodInstId是否正确
+		if strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -1824,10 +1859,11 @@ func (c *CtyunMongodbInstance) checkSpec(ctx context.Context, plan *CtyunMongodb
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mongodbService.GetMongodbFlavorByProdIdAndFlavorName(
 		ctx,
@@ -2583,10 +2619,6 @@ func (c *CtyunMongodbInstance) updateMongodbReadOnly(ctx context.Context, plan *
 		return err
 	}
 	//err = c.afterUpdateSpecLoop(ctx, plan)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -2694,6 +2726,7 @@ func (c *CtyunMongodbInstance) acquireAndSetIdIfOrderNotFinished(ctx context.Con
 }
 
 type CtyunMongodbInstanceConfig struct {
+	ExpireTime           types.String `tfsdk:"expire_time"`
 	CycleType            types.String `tfsdk:"cycle_type"`             // 计费模式： 1是包周期，2是按需
 	RegionID             types.String `tfsdk:"region_id"`              // 资源池Id
 	VpcID                types.String `tfsdk:"vpc_id"`                 // 虚拟私有云Id

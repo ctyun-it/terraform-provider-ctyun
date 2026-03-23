@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库PostgreSQL版"
+page_title: "CTYUN: ctyun_postgresql_specs"
+---
+
 # ctyun_postgresql_specs (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10167295
+-> 查询PostgreSQL支持的规格
 
 
 

@@ -44,10 +44,10 @@ type TeledbGetAccessWhiteListResponseReturnObj struct {
 }
 
 type TeledbGetAccessWhiteListResponse struct {
-	StatusCode int32                                       `json:"statusCode"` // 接口状态码
-	Error      string                                      `json:"error"`      // 错误码，失败时返回，成功时为空
-	Message    string                                      `json:"message"`    // 描述信息
-	ReturnObj  []TeledbGetAccessWhiteListResponseReturnObj `json:"returnObj"`
+	StatusCode int32                                        `json:"statusCode"` // 接口状态码
+	Error      string                                       `json:"error"`      // 错误码，失败时返回，成功时为空
+	Message    string                                       `json:"message"`    // 描述信息
+	ReturnObj  []*TeledbGetAccessWhiteListResponseReturnObj `json:"returnObj"`
 }
 
 func (this *TeledbGetAccessWhiteList) Do(ctx context.Context, credential ctyunsdk.Credential, req *TeledbGetAccessWhiteListRequest, header *TeledbGetAccessWhiteListRequestHeader) (bindResponse *TeledbGetAccessWhiteListResponse, err error) {

@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_route"
+---
+
 # ctyun_ec_route (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10132372
+-> 管理云间高速路由
 
 
 
@@ -71,7 +76,7 @@ resource "ctyun_ec_route" "example" {
   description         = "examples"
   is_black_hole_route = false
   next_hop_type       = "vpc"
-  next_hop_id         = ctyun_ec_vpc_instance.instance_test.id
+  next_hop_id         = ctyun_ec_vpc_instance.instance_test.vpc_id
 }
 ```
 
@@ -97,3 +102,15 @@ resource "ctyun_ec_route" "example" {
 
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 路由规则id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云间高速路由
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_route.[导入配置名称] [id],[ec_id],[cgw_id],[rtb_id]
+# 示例
+terraform import ctyun_ec_route.ec_route_example route-12345678,ec-87654321,cgw-11111111,rtb-22222222
+```

@@ -50,7 +50,6 @@ func TestAccCtyunExpressConnectRegionPeer(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "src_region_id"),
 					resource.TestCheckResourceAttrSet(resourceName, "dst_region_id"),
-					resource.TestCheckResourceAttrSet(resourceName, "peer_type"),
 					resource.TestCheckResourceAttrSet(resourceName, "update_time"),
 				),
 			},

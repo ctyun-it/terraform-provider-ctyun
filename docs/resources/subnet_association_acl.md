@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_subnet_association_acl"
+---
+
 # ctyun_subnet_association_acl (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028591
+-> 管理访问控制和子网的绑定关系
 
 
 
@@ -47,14 +52,26 @@ resource "ctyun_subnet_association_acl" "example" {
 
 ### Required
 
-- `acl_id` (String) acl_id，支持更新。acl列表可以通过data.ctyun_acls查询
-- `subnet_id` (String) subnet_id，subnet列表可能通过data.ctyun_subnets查询，不支持更新
+- `acl_id` (String) acl_id。acl列表可以通过data.ctyun_acls查询
+- `subnet_id` (String) subnet_id，subnet列表可能通过data.ctyun_subnets查询
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入子网ACL关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_subnet_association_acl.[导入配置名称] [subnet_id],[acl_id],<region_id>
+# 示例
+terraform import ctyun_subnet_association_acl.example subnet-1234567890,acl-1234567890,bb9fdb42056f11eda1610242ac110002
+```

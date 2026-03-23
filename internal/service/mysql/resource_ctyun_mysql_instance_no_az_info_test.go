@@ -28,7 +28,7 @@ func TestAccCtyunMysqlNoAzInfoInstance(t *testing.T) {
 	storageSpace := 100
 	updatedStorageSpace := 120
 	backupStorageSpace := `backup_storage_space=120`
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -93,8 +93,8 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 
 	storageType := "SATA"
 	storageSpace := 100
-	flavorName := "c7.xlarge.2"
-	updatedFlavorName := "c7.xlarge.4"
+	flavorName := dependence.flavorName
+	updatedFlavorName := dependence.flavorName2
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -173,8 +173,8 @@ func TestAccCtyunMysqlNoAzInfoInstance2(t *testing.T) {
 
 	storageType := "SATA"
 	storageSpace := 100
-	flavorName := "c7.xlarge.2"
-	updatedFlavorName := "c7.xlarge.4"
+	flavorName := dependence.flavorName
+	updatedFlavorName := dependence.flavorName2
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {

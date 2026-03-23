@@ -28,8 +28,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test" {

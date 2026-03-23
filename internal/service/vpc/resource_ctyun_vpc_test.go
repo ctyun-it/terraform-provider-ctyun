@@ -21,9 +21,11 @@ func TestAccCtyunVpc(t *testing.T) {
 	initName := utils.GenerateRandomString()
 	initCidr := "192.168.0.0/16"
 	initDescription := utils.GenerateRandomString()
+	initEnableDNS := true
 
 	updatedName := utils.GenerateRandomString()
 	updatedDescription := utils.GenerateRandomString()
+	updateEnableDNS := false
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -36,31 +38,34 @@ func TestAccCtyunVpc(t *testing.T) {
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, initName, initDescription, initCidr),
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, initDescription, initCidr, initEnableDNS),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttr(resourceName, "cidr", initCidr),
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
+					resource.TestCheckResourceAttr(resourceName, "enable_dns", fmt.Sprint(initEnableDNS)),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr),
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr, initEnableDNS),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cidr", initCidr),
+					resource.TestCheckResourceAttr(resourceName, "enable_dns", fmt.Sprint(initEnableDNS)),
 					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr) +
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr, updateEnableDNS) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "vpcs.#", "1"),
 					resource.TestCheckResourceAttr(datasourceName, "vpcs.0.name", updatedName),
 					resource.TestCheckResourceAttr(datasourceName, "vpcs.0.cidr", initCidr),
 					resource.TestCheckResourceAttr(datasourceName, "vpcs.0.description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "enable_dns", fmt.Sprint(updateEnableDNS)),
 				),
 			},
 			{
@@ -70,41 +75,22 @@ func TestAccCtyunVpc(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
 			},
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s", id, projectId), nil
-				},
+				ResourceName:            resourceName,
+				ImportState:             true,
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
 			},
 			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
-			},
-			{
-				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr) +
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, initCidr, updateEnableDNS) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Destroy: true,
 			},

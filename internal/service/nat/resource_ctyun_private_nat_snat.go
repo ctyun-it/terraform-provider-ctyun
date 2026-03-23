@@ -10,11 +10,13 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -30,6 +32,7 @@ var (
 
 type ctyunPrivateSnatResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunPrivateSnatResource() resource.Resource {
@@ -40,36 +43,35 @@ func (c *ctyunPrivateSnatResource) ImportState(ctx context.Context, request reso
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[natGateWayID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[nat_gateway_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunPrivateSnatConfig
-	var ID, projectID, regionID, natGateWayID string
+	var ID, regionID, natGateWayID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &ID, &natGateWayID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &natGateWayID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if natGateWayID == "" {
-		err = fmt.Errorf("natGateWayID不能为空")
+		err = fmt.Errorf("nat_gateway_id不能为空")
 	}
 	config.ID = types.StringValue(ID)
 	config.SNatID = types.StringValue(ID)
@@ -79,6 +81,7 @@ func (c *ctyunPrivateSnatResource) ImportState(ctx context.Context, request reso
 	if err != nil {
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -88,22 +91,26 @@ func (c *ctyunPrivateSnatResource) Metadata(ctx context.Context, request resourc
 
 func (c *ctyunPrivateSnatResource) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378381`,
+		MarkdownDescription: utils.FormatDesc("管理私网NAT网关snat规则", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10378381"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，同snat_id",
+				Computed:    true,
+				Description: "ID，同snat_id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"snat_id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "Snat规则的id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "Snat规则的id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -145,22 +152,24 @@ func (c *ctyunPrivateSnatResource) Schema(_ context.Context, _ resource.SchemaRe
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
-					validator2.DescNotStartWithHttp()},
+					validator2.DescNotStartWithHttp(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_vpc_name": schema.StringAttribute{
-				Computed:      true,
-				Description:   "源vpc名称",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
-			//"source_subnet_name": schema.StringAttribute{
-			//	Computed:      true,
-			//	Description:   "源Subnet名称",
-			//	PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-			//},
 			"state": schema.StringAttribute{
-				Computed:      true,
-				Description:   "SNAT状态: running代表运行中, freeze代表已冻结, expired代表已到期",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "SNAT状态: running代表运行中, freeze代表已冻结, expired代表已到期",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -317,7 +326,7 @@ func (c *ctyunPrivateSnatResource) getAndMergeSnat(ctx context.Context, config *
 		NatGatewayID: config.NatGatewayID.ValueString(),
 		SnatID:       config.SNatID.ValueString(),
 		PageNo:       1,
-		PageSize:     10,
+		PageSize:     50,
 	})
 	if err != nil {
 		return
@@ -332,8 +341,7 @@ func (c *ctyunPrivateSnatResource) getAndMergeSnat(ctx context.Context, config *
 	snat := resp.ReturnObj[0]
 	config.SNatID = types.StringValue(snat.SnatID)
 	config.Description = types.StringValue(snat.Description)
-	config.SourceVpcName = types.StringValue(snat.SrcVpcName)
-	//config.SourceSubnetName = types.StringValue(snat.SrcSubnetName)
+	config.SourceVpcName = types.StringValue("")
 	config.State = types.StringValue(snat.State)
 
 	snatIps, diags := types.SetValueFrom(ctx, types.StringType, snat.Addresses)

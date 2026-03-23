@@ -66,11 +66,9 @@ func TestAccCtyunRedisInstanceWhitelists(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					instanceId := ds.Attributes["instance_id"]
-
 					name := ds.Attributes["name"]
 					regionId := ds.Attributes["region_id"]
-
-					return fmt.Sprintf("%s,%s,%s", name, instanceId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", instanceId, name, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{},
 			},
@@ -81,10 +79,8 @@ func TestAccCtyunRedisInstanceWhitelists(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					instanceId := ds.Attributes["instance_id"]
-
 					name := ds.Attributes["name"]
-
-					return fmt.Sprintf("%s,%s", name, instanceId), nil
+					return fmt.Sprintf("%s,%s", instanceId, name), nil
 				},
 				ImportStateVerifyIgnore: []string{},
 			},

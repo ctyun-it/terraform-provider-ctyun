@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -37,11 +38,13 @@ func NewCtyunEbsBackup() resource.Resource {
 
 type ctyunEbsBackup struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ebsService *business.EbsService
 }
 
 func (c *ctyunEbsBackup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup"
+	c.name = response.TypeName
 }
 
 type CtyunEbsBackupConfig struct {
@@ -74,7 +77,7 @@ type CtyunEbsBackupConfig struct {
 
 func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428`,
+		MarkdownDescription: utils.FormatDesc("管理云硬盘备份", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10037428"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -135,12 +138,13 @@ func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"full_backup": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。",
+				Computed:    true,
+				Description: "是否启用全量备份，如您是第一次备份，或者切换了存储库，则本次备份为全量备份，不受该参数影响。",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
-
 			// 返回参数
 			"backup_status": schema.StringAttribute{
 				Computed:    true,
@@ -173,26 +177,44 @@ func (c *ctyunEbsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			"freeze": schema.BoolAttribute{
 				Computed:    true,
 				Description: "备份是否冻结",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"encrypted": schema.BoolAttribute{
 				Computed:    true,
 				Description: "云硬盘是否加密",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"disk_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "云硬盘类型，取值范围为：SATA：普通IO。SAS：高IO。SSD：超高IO。FAST-SSD：极速型SSD。XSSD-0、XSSD-1、XSSD-2：X系列云硬盘",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"paas": schema.BoolAttribute{
 				Computed:    true,
 				Description: "是否支持PAAS",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "云硬盘挂载的云主机ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为\"0\"",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_name": schema.StringAttribute{
 				Computed:    true,
@@ -264,7 +286,10 @@ func (c *ctyunEbsBackup) getAndMerge(ctx context.Context, cfg *CtyunEbsBackupCon
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupShowBackupApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp.ErrorCode == common.OpenapiEbsBackupNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -283,6 +308,13 @@ func (c *ctyunEbsBackup) getAndMerge(ctx context.Context, cfg *CtyunEbsBackupCon
 		cfg.Description = types.StringValue(result.Description)
 	}
 
+	if cfg.FullBackup.IsUnknown() || cfg.FullBackup.IsNull() {
+		if result.BackupType == "full-backup" {
+			cfg.FullBackup = types.BoolValue(true)
+		} else {
+			cfg.FullBackup = types.BoolValue(false)
+		}
+	}
 	cfg.DiskID = types.StringValue(result.DiskID)
 	cfg.RepositoryID = types.StringValue(result.RepositoryID)
 	cfg.RepositoryName = types.StringValue(result.RepositoryName)
@@ -320,6 +352,10 @@ func (c *ctyunEbsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 
@@ -470,8 +506,8 @@ func (c *ctyunEbsBackup) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -491,11 +527,11 @@ func (c *ctyunEbsBackup) ImportState(ctx context.Context, request resource.Impor
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.Id = types.StringValue(ID)

@@ -2,12 +2,12 @@ package pgsql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -30,10 +30,12 @@ var (
 
 type CtyunPgsqlParamTemplate struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunPgsqlParamTemplate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_postgresql_param_template"
+	c.name = response.TypeName
 }
 func NewCtyunPgsqlParamTemplate() resource.Resource {
 	return &CtyunPgsqlParamTemplate{}
@@ -52,22 +54,21 @@ func (c *CtyunPgsqlParamTemplate) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunPgsqlParameterTemplateConfig
-	var id, regionID, projectID string
+	var id, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		id = request.ID
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &id, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &id, &regionID)
 		if err != nil {
 			return
 		}
@@ -77,7 +78,7 @@ func (c *CtyunPgsqlParamTemplate) ImportState(ctx context.Context, request resou
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -88,7 +89,6 @@ func (c *CtyunPgsqlParamTemplate) ImportState(ctx context.Context, request resou
 	}
 	config.ID = types.Int64Value(num)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergePostgresqlParameterTemplate(ctx, &config)
 	if err != nil {
 		return
@@ -98,7 +98,7 @@ func (c *CtyunPgsqlParamTemplate) ImportState(ctx context.Context, request resou
 
 func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10166169",
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL参数模板", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10166169"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -113,16 +113,9 @@ func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -188,6 +181,7 @@ func (c *CtyunPgsqlParamTemplate) Create(ctx context.Context, request resource.C
 	if err != nil {
 		return
 	}
+
 	//plan.ID = types.StringValue(plan.BackupName.ValueString())
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -211,8 +205,10 @@ func (c *CtyunPgsqlParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergePostgresqlParameterTemplate(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -253,6 +249,7 @@ func (c *CtyunPgsqlParamTemplate) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -279,10 +276,6 @@ func (c *CtyunPgsqlParamTemplate) Delete(ctx context.Context, request resource.D
 	header := &pgsql.PgsqlDeleteParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
-
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -307,9 +300,7 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 	header := &pgsql.PgsqlCreateParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -324,14 +315,12 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 }
 
 func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
-	// 若id为空，查询id
-	if config.ID.IsNull() || config.ID.IsUnknown() {
-		respList, err := c.getPgsqlParameterTemplateList(ctx, config)
-		if err != nil {
-			return err
-		}
-		config.ID = types.Int64Value(respList[0].PgTemplateId)
+	detail, err := c.getPgsqlParameterTemplateList(ctx, config)
+	if err != nil {
+		return err
 	}
+	config.ID = types.Int64Value(detail.PgTemplateId)
+	config.Description = types.StringValue(detail.Description)
 	if config.TemplateParameters.IsNull() {
 		config.TemplateParameters = types.MapNull(types.StringType)
 	}
@@ -346,9 +335,7 @@ func (c *CtyunPgsqlParamTemplate) getTemplateParametersValue(ctx context.Context
 	header := &pgsql.PgsqlGetParameterTemplateDetailRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetParameterTemplateDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -394,9 +381,7 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameters(ctx context.Context, sta
 		header := &pgsql.PgsqlUpdateParameterTemplateRequestHeader{
 			RegionID: state.RegionID.ValueString(),
 		}
-		if !state.ProjectID.IsNull() {
-			header.ProjectID = state.ProjectID.ValueStringPointer()
-		}
+
 		var updateParameterObjs []pgsql.ParameterObj
 		for parameterName, parameterValue := range updateParameters {
 			var parameterObj pgsql.ParameterObj
@@ -414,24 +399,25 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameters(ctx context.Context, sta
 			return err2
 		} else if resp == nil {
 			err = fmt.Errorf("更新参数模板状态失败，模板id=%d", state.ID.ValueInt64())
+			return err
 		}
 		state.TemplateParameters = plan.TemplateParameters
 	}
 	return nil
 }
 
-func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) ([]pgsql.ParameterTemplateInfo, error) {
+func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) (*pgsql.ParameterTemplateInfo, error) {
 	params := &pgsql.PgsqlGetParameterTemplateListRequest{
-		Name:     config.Name.ValueStringPointer(),
 		PageNow:  1,
-		PageSize: 10,
+		PageSize: 500,
 	}
 	header := &pgsql.PgsqlGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
+	if !config.Name.IsNull() && config.Name.IsUnknown() {
+		params.Name = config.Name.ValueStringPointer()
 	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetParameterTemplateListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -442,14 +428,21 @@ func (c *CtyunPgsqlParamTemplate) getPgsqlParameterTemplateList(ctx context.Cont
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return nil, err
 	}
-	if len(resp.ReturnObj.List) > 1 {
-		err = fmt.Errorf("有多个name=%s的参数模板！", config.Name.ValueString())
-		return nil, err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("未查询到name=%s的参数模板！", config.Name.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
 		return nil, err
 	}
-	return resp.ReturnObj.List, nil
+	if len(resp.ReturnObj.List) > 1 {
+		for _, item := range resp.ReturnObj.List {
+			if !config.ID.IsNull() && !config.ID.IsUnknown() && config.ID.ValueInt64() == item.PgTemplateId {
+				return &item, nil
+			}
+			if item.Name == config.Name.ValueString() && item.Description == config.Description.ValueString() {
+				return &item, nil
+			}
+		}
+	}
+	return &resp.ReturnObj.List[0], nil
 }
 
 func (c *CtyunPgsqlParamTemplate) updatePgsqlParameterTemplate(ctx context.Context, state *CtyunPgsqlParameterTemplateConfig, plan *CtyunPgsqlParameterTemplateConfig) error {
@@ -460,9 +453,7 @@ func (c *CtyunPgsqlParamTemplate) updatePgsqlParameterTemplate(ctx context.Conte
 	header := &pgsql.PgsqlUpdateParameterTemplateRemarkRequestHeader{
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() {
-		header.ProjectID = plan.ProjectID.ValueString()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlUpdateParameterTemplateRemarkApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package oceanfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,11 +23,13 @@ import (
 
 type CtyunOceanfsPermissionGroup struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunOceanfsPermissionGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_oceanfs_permission_group"
+	c.name = response.TypeName
 }
 
 func (c *CtyunOceanfsPermissionGroup) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -46,8 +50,8 @@ func (c *CtyunOceanfsPermissionGroup) ImportState(ctx context.Context, request r
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -63,11 +67,11 @@ func (c *CtyunOceanfsPermissionGroup) ImportState(ctx context.Context, request r
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -81,7 +85,7 @@ func (c *CtyunOceanfsPermissionGroup) ImportState(ctx context.Context, request r
 
 func (c *CtyunOceanfsPermissionGroup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853",
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务权限组", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10332853"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -97,7 +101,7 @@ func (c *CtyunOceanfsPermissionGroup) Schema(ctx context.Context, request resour
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成，不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。",
+				Description: "权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成（不支持下划线_），不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 255),
 				},
@@ -113,14 +117,23 @@ func (c *CtyunOceanfsPermissionGroup) Schema(ctx context.Context, request resour
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "权限组id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -174,7 +187,7 @@ func (c *CtyunOceanfsPermissionGroup) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -348,12 +361,12 @@ func (c *CtyunOceanfsPermissionGroup) getAndMerge(ctx context.Context, config *C
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	if len(resp.ReturnObj.List) > 1 {
-		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回多个结果！", config.ID.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
 		return err
 	}
-	if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回空结果！", config.ID.ValueString())
+	if len(resp.ReturnObj.List) > 1 {
+		err = fmt.Errorf("通过ID=%s查询海量文件服务的权限组列表，接口返回多个结果！", config.ID.ValueString())
 		return err
 	}
 	returnObj := resp.ReturnObj.List[0]

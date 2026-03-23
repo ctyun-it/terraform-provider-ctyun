@@ -1,5 +1,10 @@
+---
+subcategory: "并行文件服务HPFS（CT-HPFS，High Performance File Storage）"
+page_title: "CTYUN: ctyun_hpfs_instances"
+---
+
 # ctyun_hpfs_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
+-> 查询并行文件服务实例
 
 
 

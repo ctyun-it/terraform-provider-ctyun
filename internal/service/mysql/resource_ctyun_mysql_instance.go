@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -42,6 +43,7 @@ var (
 
 type CtyunMysqlInstance struct {
 	meta         *common.CtyunMetadata
+	name         string
 	ecsService   *business.EcsService
 	mysqlService *business.MysqlService
 	orderLooper  *business.OrderLooper
@@ -53,8 +55,8 @@ func (c *CtyunMysqlInstance) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -71,11 +73,11 @@ func (c *CtyunMysqlInstance) ImportState(ctx context.Context, request resource.I
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -106,11 +108,12 @@ func NewCtyunMysqlInstance() resource.Resource {
 
 func (c *CtyunMysqlInstance) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_instance"
+	c.name = response.TypeName
 }
 
 func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10134365`,
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10134365"),
 		Attributes: map[string]schema.Attribute{
 			"flavor_name": schema.StringAttribute{
 				Required:    true,
@@ -145,6 +148,20 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 				},
 				PlanModifiers: []planmodifier.Int32{
 					int32planmodifier.RequiresReplace(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"auto_renew": schema.BoolAttribute{
@@ -235,7 +252,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"storage_type": schema.StringAttribute{
 				Required:    true,
-				Description: "存储类型: SSD=超高IO、SATA=普通IO、SAS=高IO、SSD-genric=通用型SSD、FAST-SSD=极速型SSD",
+				Description: "存储类型: SSD=超高IO、SATA=普通IO，SAS=高IO，SSD-genric=通用型SSD，FAST-SSD=极速型SSD，XSSD-0，XSSD-1，XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageType...),
 				},
@@ -253,7 +270,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"backup_storage_type": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "备份空间磁盘存储类型：SSD=超高IO、SATA=普通IO、SAS=高IO",
+				Description: "备份空间磁盘存储类型：SSD=超高IO，SATA=普通IO，SAS=高IO",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSATA, business.StorageTypeSAS),
 				},
@@ -313,7 +330,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -462,7 +479,7 @@ func (c *CtyunMysqlInstance) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeMysqlInstance(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -558,10 +575,11 @@ func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInst
 
 	f := strings.Split(plan.FlavorName.ValueString(), ".")
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S、M 或 C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	// 再调用数据库规格接口
 	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
 		ctx,
@@ -623,6 +641,7 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 	header := &mysql.TeledbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
+		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
 
 	var MysqlNodeInfos []mysql.MysqlNodeInfoListRequest
@@ -706,13 +725,14 @@ func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, confi
 	returnOjb, err = c.mysqlService.GetDetailByID(
 		ctx,
 		config.InstID.ValueString(),
-		config.ProjectID.ValueString(),
 		config.RegionID.ValueString(),
 	)
 	if err != nil {
 		return
 	}
 	// 处理实例详情
+	config.CreateTime = types.StringValue(utils.FromUnixToUTC(returnOjb.CreateTime))
+	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnOjb.ExpireTime))
 	config.ProdRunningStatus = types.Int32Value(returnOjb.ProdRunningStatus)
 	config.ProdOrderStatus = types.Int32Value(returnOjb.ProdOrderStatus)
 	config.Vip = types.StringValue(returnOjb.Vip)
@@ -765,7 +785,6 @@ func (c *CtyunMysqlInstance) updateInfoLoop(ctx context.Context, state *CtyunMys
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {
@@ -796,7 +815,6 @@ func (c *CtyunMysqlInstance) startedLoop(ctx context.Context, state *CtyunMysqlI
 			instance, err = c.mysqlService.GetDetailByID(
 				ctx,
 				state.InstID.ValueString(),
-				state.ProjectID.ValueString(),
 				state.RegionID.ValueString(),
 			)
 			if err != nil {
@@ -1205,6 +1223,7 @@ func (c *CtyunMysqlInstance) generateAzInfos(ctx context.Context, config *CtyunM
 		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
+			return
 		}
 		// 定义一个az信息遍历下标
 		idx := 0
@@ -1309,6 +1328,9 @@ func (c *CtyunMysqlInstance) getUpgradeAzInfo(ctx context.Context, state *CtyunM
 			return
 		}
 		err = c.getAddNodeDist(ctx, azInfoList, nodeDist, state, int(addNodeNum))
+		if err != nil {
+			return
+		}
 	}
 	return
 }
@@ -1477,6 +1499,8 @@ func (c *CtyunMysqlInstance) encodeBase64(password string) string {
 }
 
 type CtyunMysqlInstanceConfig struct {
+	CreateTime                  types.String `tfsdk:"create_time"`
+	ExpireTime                  types.String `tfsdk:"expire_time"`
 	CycleType                   types.String `tfsdk:"cycle_type"`                     // 计费模式： 支持on_demand和month
 	RegionID                    types.String `tfsdk:"region_id"`                      // 资源池Id
 	VpcID                       types.String `tfsdk:"vpc_id"`                         // 虚拟私有云Id

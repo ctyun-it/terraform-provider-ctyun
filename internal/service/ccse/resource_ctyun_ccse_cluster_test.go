@@ -36,7 +36,7 @@ func TestAccCtyunClusterStandard(t *testing.T) {
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, initStartPort, initEndPort, ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, initStartPort, initEndPort, "", dependence.ecsAz, dependence.ecsMirrorID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "base_info.cluster_name", clusterName),
 					resource.TestCheckResourceAttr(resourceName, "base_info.cluster_series", clusterSeries),
@@ -47,7 +47,7 @@ func TestAccCtyunClusterStandard(t *testing.T) {
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, updateStartPort, updateEndPort, sg) +
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, updateStartPort, updateEndPort, sg, dependence.ecsAz, dependence.ecsMirrorID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".base_info.cluster_name"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "base_info.start_port", strconv.Itoa(updateStartPort)),
@@ -160,7 +160,7 @@ func TestAccCtyunClusterStandard(t *testing.T) {
 				},
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, updateStartPort, updateEndPort, sg) +
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.flavorName, updateStartPort, updateEndPort, sg, dependence.ecsAz, dependence.ecsMirrorID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".base_info.cluster_name"),
 				Destroy: true,
 			},
@@ -195,16 +195,24 @@ func TestAccCtyunClusterManaged(t *testing.T) {
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.subnetID, dependence.flavorName, seriesType, nodeScale),
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, dependence.subnetID, dependence.flavorName, seriesType, nodeScale, dependence.ecsAz, dependence.ecsMirrorID),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "base_info.cluster_name", clusterName),
 					resource.TestCheckResourceAttr(resourceName, "base_info.cluster_series", clusterSeries),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, fmt.Sprintf(dependence.subnetID+`","`+dependence.subnetID2), dependence.flavorName, updatedSeriesType, updatedNodeScale) +
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, fmt.Sprintf(dependence.subnetID+`","`+dependence.subnetID2), dependence.flavorName, updatedSeriesType, updatedNodeScale, dependence.ecsAz, dependence.ecsMirrorID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".base_info.cluster_name"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "records.#", "1"),
@@ -213,7 +221,7 @@ func TestAccCtyunClusterManaged(t *testing.T) {
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, fmt.Sprintf(dependence.subnetID+`","`+dependence.subnetID2), dependence.flavorName, updatedSeriesType, updatedNodeScale) +
+				Config: utils.LoadTestCase(resourceFile, rnd, clusterName, clusterSeries, dependence.vpcID, dependence.subnetID, fmt.Sprintf(dependence.subnetID+`","`+dependence.subnetID2), dependence.flavorName, updatedSeriesType, updatedNodeScale, dependence.ecsAz, dependence.ecsMirrorID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".base_info.cluster_name"),
 				Destroy: true,
 			},

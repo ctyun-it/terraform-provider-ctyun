@@ -1,5 +1,10 @@
+---
+subcategory: "VIP"
+page_title: "CTYUN: ctyun_vip"
+---
+
 # ctyun_vip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10224288
+-> 管理虚拟IP
 
 
 
@@ -48,7 +53,7 @@ resource "ctyun_vip" "example" {
 ### Optional
 
 - `ip_address` (String) ip地址
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `vip_type` (String) 虚拟IP的类型，v4-IPv4类型虚IP，v6-IPv6类型虚IP。默认为v4
 - `vpc_id` (String) VPC的ID
@@ -58,3 +63,15 @@ resource "ctyun_vip" "example" {
 - `id` (String) 高可用虚IP的ID
 - `ipv4_address` (String) 高可用虚IP的IPv4地址
 - `ipv6_address` (String) 高可用虚IP的IPv6地址
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入高可用虚IP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vip.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vip.vip_example vip-12345,region-67890
+```

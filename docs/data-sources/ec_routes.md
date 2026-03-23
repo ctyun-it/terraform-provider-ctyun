@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_routes"
+---
+
 # ctyun_ec_routes (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10132372
+-> 查询云间高速路由
 
 
 

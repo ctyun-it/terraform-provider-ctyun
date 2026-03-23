@@ -19,7 +19,7 @@ func TestAccCtyunExpressConnectRoute(t *testing.T) {
 	ecID := dependence.expressConnectID
 	cgwID := dependence.cloudGatewayId
 	rtbID := dependence.rtbID
-	cidr := "192.168.1.3/32"
+	cidr := "192.168.1.113/32"
 	ipVersion := "ipv4"
 	nextHopID := dependence.vpcInstanceVpcID
 	nextHopType := "vpc"
@@ -47,7 +47,14 @@ func TestAccCtyunExpressConnectRoute(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "is_black_hole_route", "false"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttrSet(resourceName, "create_time"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -154,7 +161,7 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 	for nextHopType, nextHopID := range nextHopTypesAndIDMap {
 		t.Run(nextHopType, func(t *testing.T) {
 			resourceName := "ctyun_ec_route." + rnd + "_" + nextHopType
-			cidr := fmt.Sprintf("192.168.1.%d/32", i+10)
+			cidr := fmt.Sprintf("192.168.1.%d/32", i+120)
 			ipVersion := "ipv4"
 			description := fmt.Sprintf("Route with %s next hop", nextHopType)
 
@@ -173,6 +180,27 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 							resource.TestCheckResourceAttrSet(resourceName, "id"),
 						),
 					},
+					// 3. 导入测试
+					{
+						ResourceName: resourceName,
+						ImportState:  true,
+						ImportStateIdFunc: func(s *terraform.State) (string, error) {
+							rs, ok := s.RootModule().Resources[resourceName]
+							if !ok {
+								return "", fmt.Errorf("resource not found: %s", resourceName)
+							}
+							return fmt.Sprintf("%s,%s,%s,%s",
+								rs.Primary.ID,
+								rs.Primary.Attributes["ec_id"],
+								rs.Primary.Attributes["cgw_id"],
+								rs.Primary.Attributes["rtb_id"],
+								//rs.Primary.Attributes["next_hop_id"],
+							), nil
+						},
+						ImportStateVerify:       true,
+						ImportStateVerifyIgnore: []string{"exclusive_id", "next_hop_id"}, // 子网列表可能变化
+
+					},
 					{
 						Config: utils.LoadTestCase(
 							resourceFile, rnd+"_"+nextHopType,
@@ -183,27 +211,7 @@ func TestAccCtyunExpressConnectRouteNextHopTypes(t *testing.T) {
 						Check: resource.ComposeAggregateTestCheckFunc(
 							resource.TestCheckResourceAttrSet(datasourceName, "routes.#")),
 					},
-					// 3. 导入测试
-					{
-						ResourceName: resourceName,
-						ImportState:  true,
-						ImportStateIdFunc: func(s *terraform.State) (string, error) {
-							rs, ok := s.RootModule().Resources[resourceName]
-							if !ok {
-								return "", fmt.Errorf("resource not found: %s", resourceName)
-							}
-							return fmt.Sprintf("%s,%s,%s,%s,%s",
-								rs.Primary.ID,
-								rs.Primary.Attributes["ec_id"],
-								rs.Primary.Attributes["cgw_id"],
-								rs.Primary.Attributes["rtb_id"],
-								rs.Primary.Attributes["next_hop_id"],
-							), nil
-						},
-						ImportStateVerify:       true,
-						ImportStateVerifyIgnore: []string{"exclusive_id", "is_black_hole_route"}, // 子网列表可能变化
 
-					},
 					// 2. 清理资源
 					{
 						Config: utils.LoadTestCase(

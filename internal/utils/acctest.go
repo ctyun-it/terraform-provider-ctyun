@@ -55,7 +55,7 @@ func GenerateRandomString() string {
 }
 
 func generateRandomStringWithRetry(retryCount int) string {
-	if retryCount > 1 { // 最多重试1次
+	if retryCount > 2 { // 最多重试1次
 		return ""
 	}
 

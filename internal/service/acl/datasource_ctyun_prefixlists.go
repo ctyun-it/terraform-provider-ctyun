@@ -42,7 +42,7 @@ func (c *CtyunPrefixLists) Metadata(ctx context.Context, request datasource.Meta
 
 func (c *CtyunPrefixLists) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10298321",
+		MarkdownDescription: utils.FormatDesc("查询前缀列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10298321"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -152,7 +152,7 @@ func (c *CtyunPrefixLists) Read(ctx context.Context, request datasource.ReadRequ
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

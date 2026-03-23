@@ -2,10 +2,13 @@ package ec
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -31,6 +34,7 @@ func NewCtyunExpressConnect() resource.Resource {
 
 type CtyunExpressConnect struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunExpressConnectConfig struct {
@@ -39,16 +43,17 @@ type CtyunExpressConnectConfig struct {
 	Description types.String `tfsdk:"description"`
 	Status      types.Int64  `tfsdk:"status"`
 	CreateTime  types.String `tfsdk:"create_time"`
-	RegionId    types.String `tfsdk:"region_id"`
+	ProjectID   types.String `tfsdk:"project_id"`
 }
 
 func (c *CtyunExpressConnect) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_express_connect"
+	c.name = resp.TypeName
 }
 
 func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220`,
+		MarkdownDescription: utils.FormatDesc("管理云间高速实例", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -85,17 +90,17 @@ func (c *CtyunExpressConnect) Schema(ctx context.Context, req resource.SchemaReq
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
-			"region_id": schema.StringAttribute{
+			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1),
+					validator2.Project(),
 				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 		},
 	}
@@ -153,6 +158,10 @@ func (c *CtyunExpressConnect) Read(ctx context.Context, req resource.ReadRequest
 	}
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			resp.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -204,8 +213,8 @@ func (c *CtyunExpressConnect) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -232,7 +241,9 @@ func (c *CtyunExpressConnect) create(ctx context.Context, plan *CtyunExpressConn
 	if !plan.Description.IsNull() {
 		createReq.EcDescription = plan.Description.ValueStringPointer()
 	}
-
+	if !plan.ProjectID.IsNull() {
+		createReq.ProjectID = plan.ProjectID.ValueStringPointer()
+	}
 	tflog.Info(ctx, "创建云间高速实例", map[string]interface{}{
 		"name": plan.Name.ValueString(),
 	})
@@ -261,17 +272,16 @@ func (c *CtyunExpressConnect) getAndMerge(ctx context.Context, plan *CtyunExpres
 	} else if *resp.StatusCode != common.NormalStatusCode {
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
+		return common.InvalidReturnObjError
 	} else if len(resp.ReturnObj.Results) == 0 {
-		return fmt.Errorf("no express connect instance found")
+		return common.ResourceNotExistError
 	}
 	result := resp.ReturnObj.Results[0]
 	plan.Name = types.StringValue(*result.EcName)
 	plan.Status = types.Int64Value(int64(*result.Status))
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(utils.SecString(result.CreateDate)))
-
-	if result.EcDescription != nil {
+	plan.ProjectID = types.StringValue(*result.Project)
+	if result.EcDescription != nil && *result.EcDescription != "" {
 		plan.Description = types.StringValue(*result.EcDescription)
 	}
 
@@ -343,11 +353,12 @@ func (c *CtyunExpressConnect) deleteCgwBill(ctx context.Context, state *CtyunExp
 
 	} else {
 		resourceID := queryResp.ReturnObj.Results[0].ResourceID
-		// 构造请求参数（这里需要根据实际业务需求进行调整）
+		regionID := "bb9fdb42056f11eda1610242ac110002"
+
 		req := &ec.EcEcCgwBillRefundRequest{
 			EcID:       state.ID.ValueString(),
-			RegionID:   state.RegionId.ValueString(), // 使用实际的RegionID
-			ResourceID: *resourceID,                  // 使用实际的ResourceID
+			ResourceID: *resourceID, // 使用实际的ResourceID
+			RegionID:   regionID,
 			// ClientToken 参数根据实际需求添加
 		}
 

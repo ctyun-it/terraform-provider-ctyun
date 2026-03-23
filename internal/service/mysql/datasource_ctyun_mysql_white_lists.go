@@ -23,7 +23,7 @@ type CtyunMysqlWhiteLists struct {
 
 func (c *CtyunMysqlWhiteLists) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794`,
+		MarkdownDescription: utils.FormatDesc("查询MySQL实例的白名单", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133794"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -95,7 +95,7 @@ func (c *CtyunMysqlWhiteLists) Read(ctx context.Context, request datasource.Read
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 

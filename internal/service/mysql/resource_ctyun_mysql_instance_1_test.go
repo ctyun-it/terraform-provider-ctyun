@@ -25,7 +25,7 @@ func TestAccCtyunMysqlInstance1(t *testing.T) {
 
 	storageType := "SATA"
 	storageSpace := 100
-	flavorName := "c7.xlarge.2"
+	flavorName := dependence.flavorName
 	updatedDiskAvailabilityZoneInfo := fmt.Sprintf(`availability_zone_info = [{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"slave"}]`, dependence.azName)
 	// 单节点
 	ProdId := "Single57"

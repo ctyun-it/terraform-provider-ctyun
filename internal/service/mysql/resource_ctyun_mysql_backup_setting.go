@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -32,11 +33,13 @@ var (
 
 type CtyunMysqlBackupSetting struct {
 	meta         *common.CtyunMetadata
+	name         string
 	mysqlService *business.MysqlService
 }
 
 func (c *CtyunMysqlBackupSetting) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_backup_setting"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlBackupSetting() resource.Resource {
 	return &CtyunMysqlBackupSetting{}
@@ -55,33 +58,33 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunMysqlBackupSettingConfig
-	var regionId, projectId, instId string
+	var regionId, instId string
 
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		instId = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &instId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &instId, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	if instId == "" {
-		err = fmt.Errorf("instanceID 不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID 不能为空")
+		err = fmt.Errorf("region_id不能为空")
+		return
 	}
 
 	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
 	cfg.InstID = types.StringValue(instId)
 	cfg.ID = types.StringValue(fmt.Sprintf("%s-setting", instId))
 	err = c.getAndMergeMysqlBackupSetting(ctx, &cfg)
@@ -93,7 +96,7 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 
 func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797",
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的备份配置", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098797"),
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -106,16 +109,9 @@ func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -231,8 +227,10 @@ func (c *CtyunMysqlBackupSetting) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeMysqlBackupSetting(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -273,6 +271,7 @@ func (c *CtyunMysqlBackupSetting) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -314,10 +313,6 @@ func (c *CtyunMysqlBackupSetting) updateMysqlBackupSettingConfig(ctx context.Con
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
-
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateBackupSettingApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -385,9 +380,6 @@ func (c *CtyunMysqlBackupSetting) getMysqlBackupSettingInfo(ctx context.Context,
 		InstID:   config.InstID.ValueString(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetBackupSettingDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -395,6 +387,10 @@ func (c *CtyunMysqlBackupSetting) getMysqlBackupSettingInfo(ctx context.Context,
 		err = fmt.Errorf("获取mysql(id=%s)备份设置信息失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "paasProduct find failed") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {

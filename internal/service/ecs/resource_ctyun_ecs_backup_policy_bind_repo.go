@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
 	"strings"
 	"time"
 )
@@ -37,10 +38,12 @@ func NewCtyunEcsBackupPolicyBindRepo() resource.Resource {
 
 type ctyunEcsBackupPolicyBindRepo struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEcsBackupPolicyBindRepo) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_backup_policy_bind_repo"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupPolicyBindRepoConfig struct {
@@ -52,12 +55,14 @@ type CtyunEcsBackupPolicyBindRepoConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindRepo) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10235038`,
+		MarkdownDescription: utils.FormatDesc("管理云主机备份存储库和备份策略的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10235038"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"policy_id": schema.StringAttribute{
 				Required:    true,
@@ -149,9 +154,9 @@ func (c *ctyunEcsBackupPolicyBindRepo) Read(ctx context.Context, request resourc
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -404,17 +409,17 @@ func (c *ctyunEcsBackupPolicyBindRepo) getBindingRepos(ctx context.Context, plan
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEcsBackupPolicyBindRepo) getAndMerge(ctx context.Context, plan *CtyunEcsBackupPolicyBindRepoConfig) (err error) {
-	policyId, repositoryID, regionID := plan.PolicyID.ValueString(), plan.RepositoryID.ValueString(), plan.RegionID.ValueString()
+	policyId, repositoryID := plan.PolicyID.ValueString(), plan.RepositoryID.ValueString()
 	hasBind, err := c.getBindingRepos(ctx, *plan)
 
 	if err != nil {
 		return
 	}
 	if !hasBind {
-		err = fmt.Errorf("云主机备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
-		return
+		//err = fmt.Errorf("云主机备份策略 %s 和存储库 %s 未关联  regionID： %s", policyId, repositoryID, regionID)
+		return common.ResourceNotExistError
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, repositoryID, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", policyId, repositoryID))
 	return
 }
 
@@ -422,8 +427,8 @@ func (c *ctyunEcsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [policyID],[repositoryID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [policy_id],[repository_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -445,15 +450,15 @@ func (c *ctyunEcsBackupPolicyBindRepo) ImportState(ctx context.Context, request 
 	}
 
 	if policyID == "" {
-		err = fmt.Errorf("policyID不能为空")
+		err = fmt.Errorf("policy_id不能为空")
 		return
 	}
 	if repositoryID == "" {
-		err = fmt.Errorf("repositoryID不能为空")
+		err = fmt.Errorf("repository_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

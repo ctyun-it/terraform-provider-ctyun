@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -10,6 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -40,6 +42,7 @@ func NewCtyunEip() resource.Resource {
 
 type ctyunEip struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 type CtyunEipConfig struct {
@@ -63,16 +66,19 @@ type CtyunEipConfig struct {
 
 func (c *ctyunEip) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_eip"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026753/10219975`,
+		MarkdownDescription: utils.FormatDesc("管理弹性IP", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10219975"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -130,12 +136,17 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "按需计费类型，当cycle_type为on_demand时生效，bandwidth：按带宽，upflowc：按流量",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
 					),
 					stringvalidator.OneOf(business.EipDemandBillingTypes...),
 				},
@@ -143,6 +154,9 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"address": schema.StringAttribute{
 				Computed:    true,
 				Description: "ip地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -151,6 +165,9 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -166,13 +183,16 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -224,15 +244,15 @@ func (c *ctyunEip) Create(ctx context.Context, request resource.CreateRequest, r
 	plan.Id = types.StringValue(id)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 
-	instance, ctyunRequestError := c.getAndMergeEip(ctx, plan)
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	err = c.getAndMergeEip(ctx, &plan)
+	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
 func (c *ctyunEip) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -245,16 +265,15 @@ func (c *ctyunEip) Read(ctx context.Context, request resource.ReadRequest, respo
 	if !c.acquireAndSetIdIfOrderNotFinished(ctx, &state, response) {
 		return
 	}
-	instance, err := c.getAndMergeEip(ctx, state)
+	err := c.getAndMergeEip(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -316,12 +335,12 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		}
 	}
 
-	instance, ctyunRequestError := c.getAndMergeEip(ctx, state)
+	ctyunRequestError := c.getAndMergeEip(ctx, &state)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEip) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -356,8 +375,8 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [eipId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -376,13 +395,24 @@ func (c *ctyunEip) ImportState(ctx context.Context, request resource.ImportState
 
 	cfg.Id = types.StringValue(eipId)
 	cfg.RegionId = types.StringValue(regionId)
-
-	instance, err := c.getAndMergeEip(ctx, cfg)
+	err = c.getAndMergeEip(ctx, &cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	cfg.ProjectId = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectId.ValueString(), common.ExtraProjectId))
+	var cycleType string
+	var cycleCount int32
+	cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	cfg.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		cfg.CycleCount = types.Int64Null()
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 func (c *ctyunEip) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -399,18 +429,17 @@ func (c *ctyunEip) isBindWithShareBandwidth(bandwidthId string) bool {
 }
 
 // getAndMergeEip 查询eip
-func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*CtyunEipConfig, error) {
+func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) error {
 	resp, err := c.meta.Apis.CtVpcApis.EipShowApi.Do(ctx, c.meta.Credential, &ctvpc.EipShowRequest{
 		RegionId: cfg.RegionId.ValueString(),
 		EipId:    cfg.Id.ValueString(),
 	})
 	if err != nil {
-		if err.ErrorCode() == common.OpenapiEipNotFound {
-			return nil, nil
+		if err.ErrorCode() == common.OpenapiSubnetNotFound {
+			return common.ResourceNotExistError
 		}
-		return nil, err
+		return err
 	}
-
 	// 带宽类型
 	bandwidthType := business.EipBandwidthTypeStandalone
 	if c.isBindWithShareBandwidth(resp.BandwidthId) {
@@ -427,7 +456,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*Cty
 
 	statusResp, err2 := business.EipStatusMap.ToOriginalScene(resp.Status, business.EipStatusMapScene1)
 	if err2 != nil {
-		return nil, err2
+		return err2
 	}
 
 	cfg.Id = types.StringValue(resp.Id)
@@ -439,7 +468,17 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg CtyunEipConfig) (*Cty
 	cfg.ExpireTime = types.StringValue(resp.ExpiredAt)
 	cfg.CreateTime = types.StringValue(resp.CreatedAt)
 	cfg.UpdateTime = types.StringValue(resp.UpdatedAt)
-	return &cfg, nil
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
+	if resp.BillingMethod == business.OnDemandCycleType {
+		cfg.CycleType = types.StringValue(business.OnDemandCycleType)
+		if resp.BandwidthType == "standalone" {
+			cfg.DemandBillingType = types.StringValue("bandwidth")
+		} else {
+			cfg.DemandBillingType = types.StringValue(resp.BandwidthType)
+		}
+	}
+
+	return nil
 }
 
 // getMasterOrderIdIfOrderInProgress 获取masterOrderId

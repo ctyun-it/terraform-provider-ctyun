@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/oceanfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -21,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,11 +31,14 @@ import (
 
 type CtyunOceanfs struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
+	orderLooper   *business.OrderLooper
 }
 
 func (c *CtyunOceanfs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_oceanfs"
+	c.name = response.TypeName
 }
 
 func (c *CtyunOceanfs) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -45,7 +48,7 @@ func (c *CtyunOceanfs) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func NewCtyunOceanfs() resource.Resource {
@@ -56,43 +59,73 @@ func (c *CtyunOceanfs) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunOceanfsConfig
-	var ID, regionID, projectID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
+	}
+
+	// 获取vpc和subnet信息
+	var vpcs []string
+	vpcList, err := c.getVpcBySfsID(ctx, &config)
+	if err != nil {
+		return
+	}
+	for _, vpc := range vpcList {
+		if vpc.VpcID == nil {
+			continue
+		}
+		vpcs = append(vpcs, *vpc.VpcID)
+	}
+	if len(vpcs) == 0 {
+		err = fmt.Errorf("未获取到vpc信息")
+		return
+	}
+	config.VpcID = types.StringValue(vpcs[0])
+	// 确保创建时间和到期时间是RFC3339的
+	var cycleType string
+	var cycleCount int32
+	cycleType, cycleCount, err = utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10115906",
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10115906"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -107,13 +140,11 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Optional:      true,
+				Computed:      true,
+				Description:   "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{explanmodifier.Project()},
+				Default:       defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
 					validator2.Project(),
 				},
@@ -188,20 +219,20 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 				},
 			},
 			"vpc_id": schema.StringAttribute{
-				Description: "VPC ID",
+				Description: "VPC ID，创建时仅支持一个vpc，若需要更新依赖ctyun_oceanfs_permission_group_association能力",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					validator2.VpcValidate(),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"subnet_id": schema.StringAttribute{
 				Description: "子网ID，当isVpce为true时必填",
-				Required:    true,
+				Optional:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -223,7 +254,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签键",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
@@ -233,7 +264,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 							Description: "标签值",
 							Required:    true,
 							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
+								explanmodifier.NullIgnoreString(),
 							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
@@ -242,7 +273,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 					},
 				},
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreSet(),
 				},
 			},
 			"id": schema.StringAttribute{
@@ -255,6 +286,9 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 			"status": schema.StringAttribute{
 				Description: "文件系统状态",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"used_size": schema.Int32Attribute{
 				Description: "已使用大小（GB）",
@@ -274,6 +308,9 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 			"expire_time": schema.StringAttribute{
 				Description: "到期时间，为UTC格式，按需时为空",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"share_path": schema.StringAttribute{
 				Computed:    true,
@@ -337,10 +374,11 @@ func (c *CtyunOceanfs) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
+
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -377,6 +415,14 @@ func (c *CtyunOceanfs) Update(ctx context.Context, request resource.UpdateReques
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
+	}
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
+		state.SubnetID = plan.SubnetID
+		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Tags.IsUnknown() && !plan.Tags.IsNull() && state.Tags.IsNull() {
+		state.Tags = plan.Tags
+		response.Diagnostics.AddWarning("tags的更新仅写入状态文件", "在import时，状态文件中tags为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -533,6 +579,7 @@ func (c *CtyunOceanfs) getAndMerge(ctx context.Context, config *CtyunOceanfsConf
 	}
 	returnObj := resp.ReturnObj
 	config.Name = types.StringValue(returnObj.SfsName)
+	config.ProjectID = types.StringValue(returnObj.ProjectID)
 	//config.SfsType = types.StringValue(returnObj.SfsType)
 	config.SfsProtocol = types.StringValue(returnObj.SfsProtocol)
 	config.SfsSize = types.Int32Value(returnObj.SfsSize)
@@ -544,6 +591,7 @@ func (c *CtyunOceanfs) getAndMerge(ctx context.Context, config *CtyunOceanfsConf
 	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(returnObj.ExpireTime))
 	config.SharePath = types.StringValue(returnObj.SharePath)
 	config.SharePathWin = types.StringValue(returnObj.WindowsSharePath)
+
 	if config.Tags.IsNull() || config.Tags.IsUnknown() {
 		config.Tags = types.SetNull(types.ObjectType{
 			AttrTypes: map[string]attr.Type{
@@ -552,6 +600,7 @@ func (c *CtyunOceanfs) getAndMerge(ctx context.Context, config *CtyunOceanfsConf
 			},
 		})
 	}
+
 	return nil
 }
 
@@ -600,7 +649,8 @@ func (c *CtyunOceanfs) delete(ctx context.Context, config CtyunOceanfsConfig) er
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return err
 	}
-	return nil
+	masterOrderID := resp.ReturnObj.MasterOrderID
+	return c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 }
 
 func (c *CtyunOceanfs) resizeLoop(ctx context.Context, state *CtyunOceanfsConfig, plan *CtyunOceanfsConfig, loopCount ...int) error {
@@ -648,6 +698,10 @@ func (c *CtyunOceanfs) getOceanfsDetail(ctx context.Context, config *CtyunOceanf
 		err = fmt.Errorf("获取海量文件服务Oceanfs详情失败(id=%s)，返回结果为空，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExists") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -655,6 +709,28 @@ func (c *CtyunOceanfs) getOceanfsDetail(ctx context.Context, config *CtyunOceanf
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *CtyunOceanfs) getVpcBySfsID(ctx context.Context, config *CtyunOceanfsConfig) ([]*oceanfs.OceanfsListVpcPermissionReturnObjListItemResponse, error) {
+	params := &oceanfs.OceanfsListVpcPermissionRequest{
+		SfsUID:   config.ID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkOceanfsApis.OceanfsListVpcPermissionApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return nil, err
+	} else if resp == nil {
+		err = fmt.Errorf("获取海量文件服务Oceanfs vpc列表失败(id=%s)，返回结果为空，请联系研发确认问题原因！", config.ID.ValueString())
+		return nil, err
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return nil, err
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.InvalidReturnObjError
+		return nil, err
+	}
+
+	return resp.ReturnObj.List, nil
 }
 
 type CtyunOceanfsConfig struct {

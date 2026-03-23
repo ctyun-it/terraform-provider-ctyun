@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_backup_policies"
+---
+
 # ctyun_ecs_backup_policies (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033770
+-> 查询云主机备份策略
 
 
 

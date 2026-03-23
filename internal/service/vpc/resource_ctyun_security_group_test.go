@@ -40,6 +40,14 @@ func TestAccCtyunSecurityGroup(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -68,14 +76,12 @@ func TestAccCtyunSecurityGroup(t *testing.T) {
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
 					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id is required")
+						return "", fmt.Errorf("id, region_id is required")
 					}
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 
@@ -84,13 +90,10 @@ func TestAccCtyunSecurityGroup(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-
 					return fmt.Sprintf("%s", id), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
-				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, updatedDescription, dependence.vpcID) +

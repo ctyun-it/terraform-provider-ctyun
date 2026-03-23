@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_region_peers"
+---
+
 # ctyun_ec_region_peers (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038250
+-> 查询云间高速跨域连接
 
 
 
@@ -54,7 +59,6 @@ Read-Only:
 - `packet_id` (String) 带宽包ID
 - `packet_name` (String) 带宽包名称
 - `peer_name` (String) 跨域连接名称
-- `peer_type` (Number) 互通类型（1：境内，2：跨境（中国大陆-亚太），3：境外（亚太），4：定制）
 - `rate` (Number) 带宽值（MB）
 - `src_cgw_id` (String) 本端网关ID
 - `src_cgw_name` (String) 本端网关名称

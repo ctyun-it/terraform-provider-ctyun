@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -30,10 +31,12 @@ var (
 
 type CtyunMysqlParamTemplate struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlParamTemplate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_param_template"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlParamTemplate() resource.Resource {
 	return &CtyunMysqlParamTemplate{}
@@ -51,22 +54,21 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunMysqlParamTemplateConfig
-	var id, regionID, projectID string
+	var id, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		id = request.ID
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &id, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &id, &regionID)
 		if err != nil {
 			return
 		}
@@ -76,7 +78,7 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -87,7 +89,6 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 	}
 	config.ID = types.Int64Value(num)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeMysqlParameterTemplate(ctx, &config)
 	if err != nil {
 		return
@@ -97,7 +98,7 @@ func (c *CtyunMysqlParamTemplate) ImportState(ctx context.Context, request resou
 
 func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098794",
+		MarkdownDescription: utils.FormatDesc("管理MySQL参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10098794"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -112,16 +113,9 @@ func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -218,8 +212,10 @@ func (c *CtyunMysqlParamTemplate) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergeMysqlParameterTemplate(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -260,6 +256,7 @@ func (c *CtyunMysqlParamTemplate) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -303,9 +300,7 @@ func (c *CtyunMysqlParamTemplate) CreateMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbCreateParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -329,6 +324,15 @@ func (c *CtyunMysqlParamTemplate) getAndMergeMysqlParameterTemplate(ctx context.
 		}
 		config.ID = types.Int64Value(templateList[0].ID)
 	}
+	// 根据id获取template信息
+	templateDetail, err := c.getParameterTemplateGroupDetail(ctx, config)
+	if err != nil {
+		return err
+	}
+	config.Description = types.StringValue(templateDetail.Description)
+	config.Engine = types.StringValue(templateDetail.MysqlEngine)
+	config.Name = types.StringValue(templateDetail.ParameterGroupName)
+
 	if config.TemplateParameters.IsNull() {
 		config.TemplateParameters = types.MapNull(types.StringType)
 	}
@@ -368,9 +372,6 @@ func (c *CtyunMysqlParamTemplate) getParameterListByPage(ctx context.Context, co
 	header := &mysql.TeledbGetParameterTemplateDetailRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateDetailApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -383,6 +384,9 @@ func (c *CtyunMysqlParamTemplate) getParameterListByPage(ctx context.Context, co
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
+	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) < 1 {
+		return nil, common.ResourceNotExistError
 	}
 	return resp, nil
 }
@@ -397,9 +401,6 @@ func (c *CtyunMysqlParamTemplate) getIDByParameterTemplateName(ctx context.Conte
 	header := mysql.TeledbGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateListApi.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return nil, err
@@ -413,8 +414,8 @@ func (c *CtyunMysqlParamTemplate) getIDByParameterTemplateName(ctx context.Conte
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
-	if len(resp.ReturnObj.List) < 1 {
-		err = fmt.Errorf("未查询到参数模板(name=%s)列表", config.Name.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) < 1 {
+		err = common.ResourceNotExistError
 		return nil, err
 	}
 	if len(resp.ReturnObj.List) > 1 {
@@ -467,9 +468,6 @@ func (c *CtyunMysqlParamTemplate) updateMysqlParameterTemplate(ctx context.Conte
 		header := &mysql.TeledbUpdateParameterTemplateRequestHeader{
 			RegionID: state.RegionID.ValueString(),
 		}
-		if !state.ProjectID.IsNull() {
-			header.ProjectID = state.ProjectID.ValueStringPointer()
-		}
 		resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 		if err2 != nil {
 			return err2
@@ -492,9 +490,6 @@ func (c *CtyunMysqlParamTemplate) deleteMysqlParameterTemplate(ctx context.Conte
 	header := &mysql.TeledbDeleteParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueString()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -508,7 +503,7 @@ func (c *CtyunMysqlParamTemplate) deleteMysqlParameterTemplate(ctx context.Conte
 	// 调用列表接口，确认是否已经删除
 	_, err = c.getIDByParameterTemplateName(ctx, &config)
 	if err != nil {
-		if strings.Contains(err.Error(), "未查询到参数模板") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			return nil
 		}
 		return err
@@ -538,6 +533,7 @@ func (c *CtyunMysqlParamTemplate) compareParameters(ctx context.Context, state *
 		stateParameter, ok := stateParameterMap[parameterID]
 		if !ok {
 			err = fmt.Errorf("参数不支持增加，parameter_name=%s为新增参数，state阶段不存在。", planParameterItem.ParameterName)
+			return nil, nil, err
 		}
 		flag, err2 := c.compareDetail(stateParameter, planParameterItem)
 		if err2 != nil {
@@ -556,7 +552,7 @@ func (c *CtyunMysqlParamTemplate) initParameterMap(ctx context.Context, state *C
 	var parameters []CtyunMysqlParameterModel
 	diags := state.TemplateParameters.ElementsAs(ctx, &parameters, false)
 	if diags.HasError() {
-		err := fmt.Errorf(diags[0].Detail())
+		err := errors.New(diags[0].Detail())
 		return nil, err
 	}
 	for _, parameter := range parameters {
@@ -606,6 +602,37 @@ func (c *CtyunMysqlParamTemplate) getOldParameterValue(ctx context.Context, stat
 		}
 	}
 	return oldParameters, nil
+}
+
+func (c *CtyunMysqlParamTemplate) getParameterTemplateGroupDetail(ctx context.Context, config *CtyunMysqlParamTemplateConfig) (*mysql.TeledbGetParameterTemplateGroupDetailResponseReturnObj, error) {
+	if config.ID.IsNull() || config.ID.IsUnknown() {
+		err := fmt.Errorf("name = %s的参数模板未获取到id， 导致参数模板详情接口访问失败！", config.Name.ValueString())
+		return nil, err
+	}
+	params := &mysql.TeledbGetParameterTemplateGroupDetailRequest{
+		ID: config.ID.ValueInt64(),
+	}
+	header := &mysql.TeledbGetParameterTemplateGroupDetailRequestHeader{
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateGroupDetailApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return nil, err
+	} else if resp == nil {
+		err = fmt.Errorf("查询id=%d mysql参数模板失败，接口返回nil，请联系研发确认问题原因！", config.ID.ValueInt64())
+		return nil, err
+	} else if resp.StatusCode != 0 {
+		if strings.Contains(*resp.Error, "MYSQL_10005") || strings.Contains(resp.Message, "id not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return nil, err
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return nil, err
+	}
+	return resp.ReturnObj, nil
 }
 
 type CtyunMysqlParamTemplateConfig struct {

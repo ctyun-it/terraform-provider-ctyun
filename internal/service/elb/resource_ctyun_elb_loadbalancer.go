@@ -9,6 +9,7 @@ import (
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -33,6 +34,7 @@ var (
 
 type CtyunElbLoadBalancerResource struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbLoadBalancer() resource.Resource {
@@ -40,11 +42,12 @@ func NewCtyunElbLoadBalancer() resource.Resource {
 }
 func (c *CtyunElbLoadBalancerResource) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_loadbalancer"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10138703"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -63,7 +66,7 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -105,6 +108,9 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				Validators: []validator.String{
 					validator2.Desc(),
 					stringvalidator.LengthBetween(0, 128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"eip_id": schema.StringAttribute{
@@ -151,26 +157,18 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "负载均衡Id",
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
 				Computed:    true,
-				Description: "可用区名称",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
+				Description: "负载均衡Id",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"port_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡实例默认创建port ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_address": schema.StringAttribute{
 				Computed:    true,
@@ -187,10 +185,20 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
+			},
+			"expired_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -231,25 +239,10 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
-			"eip_info": schema.ListNestedAttribute{
-				Computed:    true,
-				Description: "弹性公网IP信息",
-				NestedObject: schema.NestedAttributeObject{
-					Attributes: map[string]schema.Attribute{
-						"eip_id": schema.StringAttribute{
-							Computed:    true,
-							Description: "弹性公网IP的Id",
-						},
-						"bandwidth": schema.Float32Attribute{
-							Computed:    true,
-							Description: "弹性公网IP的带宽",
-						},
-						"is_talk_order": schema.BoolAttribute{
-							Computed:    true,
-							Description: "是否按需资源",
-						},
-					},
-				},
+			"az_name": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "可用区",
 			},
 		},
 	}
@@ -323,7 +316,7 @@ func (c *CtyunElbLoadBalancerResource) Read(ctx context.Context, request resourc
 	// 查询远端
 	err = c.getAndMergeElb(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -375,6 +368,7 @@ func (c *CtyunElbLoadBalancerResource) Update(ctx context.Context, request resou
 	if err != nil {
 		return
 	}
+	state.AzName = plan.AzName
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -421,37 +415,51 @@ func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request 
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbLoadBalancerConfig
-	var ID, projectID, regionID string
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeElb(ctx, &config)
 	if err != nil {
 		return
+	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreatedTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleType == business.YearCycleType || cycleCount == 100 {
+		config.CycleType = types.StringValue(business.OnDemandCycleType)
+		config.CycleCount = types.Int64Null()
+	} else {
+		config.CycleType = types.StringValue(cycleType)
+		if cycleCount > 0 {
+			config.CycleCount = types.Int64Value(int64(cycleCount))
+		} else {
+			config.CycleCount = types.Int64Null()
+		}
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -509,7 +517,7 @@ func (c *CtyunElbLoadBalancerResource) createPgElb(ctx context.Context, plan *Ct
 }
 
 func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, plan CtyunElbLoadBalancerConfig) error {
-	// regionid不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
+	// region_id不能为空，subnetID	(子网id)不能为空,name不能为空，slaName不能为空，resourceType不能为空
 	regionId := plan.RegionID
 	subnetId := plan.SubnetID
 	slaName := plan.SlaName
@@ -517,23 +525,23 @@ func (c *CtyunElbLoadBalancerResource) checkBeforeCreateElb(_ context.Context, p
 	name := plan.Name
 	eipId := plan.EipID
 	if regionId.IsNull() {
-		return fmt.Errorf("regionID不能为空!")
+		return fmt.Errorf("region_id不能为空!")
 	}
 	if subnetId.IsNull() {
-		return fmt.Errorf("subnetId-子网的ID不能为空!")
+		return fmt.Errorf("subnet_id不能为空!")
 	}
 	if slaName.IsNull() {
-		return fmt.Errorf("slaName-lb的规格名称不能为空！")
+		return fmt.Errorf("sla_name-lb的规格名称不能为空！")
 	}
 	if resourceType.IsNull() {
-		return fmt.Errorf("resourceType-资源类型不能为空！")
+		return fmt.Errorf("resource_type-资源类型不能为空！")
 	}
 	if !c.isContains(resourceType.ValueString(), business.LbResourceType) {
-		return fmt.Errorf("resourceType资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
+		return fmt.Errorf("resource_type资源类型取值存在问题，resourceType取值范围为{internal：内网负载均衡，external：公网负载均衡}")
 	}
-	//当resourceType=external为必填, eipID不能为空
+	//当resourceType=external为必填, eip_id不能为空
 	if resourceType.ValueString() == business.LbResourceTypeExternal && eipId.IsNull() {
-		return fmt.Errorf("当resourceType=external为必填, eipID不能为空")
+		return fmt.Errorf("当resourceType=external为必填, eip_id不能为空")
 	}
 
 	if name.IsNull() {
@@ -549,6 +557,9 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	}
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbShowLoadBalancerApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if resp.ErrorCode == common.OpenapiLoadBalancerNotFound {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
@@ -584,18 +595,12 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	config.ResourceType = types.StringValue(elbObj.ResourceType)
 	config.CreatedTime = types.StringValue(elbObj.CreatedTime)
 	config.UpdatedTime = types.StringValue(elbObj.UpdatedTime)
+	config.ExpiredTime = types.StringValue(elbObj.ExpiredTime)
+	config.ProjectID = types.StringValue(elbObj.ProjectID)
 	EipInfoList := elbObj.EipInfo
-	var eipInfos []EipInfoModel
 	for _, eipItem := range EipInfoList {
-		var eipInfo EipInfoModel
-		eipInfo.EipID = types.StringValue(eipItem.EipID)
-		eipInfo.Bandwidth = types.Float32Value(eipItem.Bandwidth)
-		eipInfo.IsTalkOrder = utils.SecBoolValue(eipItem.IsTalkOrder)
-		eipInfos = append(eipInfos, eipInfo)
+		config.EipID = types.StringValue(eipItem.EipID)
 	}
-
-	eipInfoType := utils.StructToTFObjectTypes(EipInfoModel{})
-	config.EipInfo, _ = types.ListValueFrom(ctx, eipInfoType, eipInfos)
 	return
 }
 
@@ -819,18 +824,18 @@ type CtyunElbLoadBalancerConfig struct {
 	ResourceType     types.String `tfsdk:"resource_type"`      //资源类型。internal：内网负载均衡，external：公网负载均衡
 	PrivateIpAddress types.String `tfsdk:"private_ip_address"` //负载均衡的私有IP地址，不指定则自动分配
 	ID               types.String `tfsdk:"id"`                 //负载均衡ID
-	AzName           types.String `tfsdk:"az_name"`            //可用区名称
 	PortID           types.String `tfsdk:"port_id"`            //负载均衡实例默认创建port ID
 	Ipv6Address      types.String `tfsdk:"ipv6_address"`       //负载均衡实例的IPv6地址
-	EipInfo          types.List   `tfsdk:"eip_info"`           //弹性公网IP信息
 	AdminStatus      types.String `tfsdk:"admin_status"`       //管理状态: DOWN / ACTIVE
 	Status           types.String `tfsdk:"status"`             //负载均衡状态: DOWN / ACTIVE
 	CreatedTime      types.String `tfsdk:"create_time"`        //创建时间，为UTC格式
 	UpdatedTime      types.String `tfsdk:"update_time"`        //更新时间，为UTC格式
+	ExpiredTime      types.String `tfsdk:"expired_time"`       //到期时间，为UTC格式
 	// 升级保障型负载均衡字段
 	CycleType       types.String `tfsdk:"cycle_type"`        //订购类型：month（包月） / year（包年）
 	CycleCount      types.Int64  `tfsdk:"cycle_count"`       //订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 	PayVoucherPrice types.String `tfsdk:"pay_voucher_price"` //代金券金额，支持到小数点后两位
+	AzName          types.String `tfsdk:"az_name"`
 }
 
 type EipInfoModel struct {

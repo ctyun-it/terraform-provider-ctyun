@@ -73,10 +73,10 @@ func TestAccCtyunCcsePlugin(t *testing.T) {
 				ImportStateVerify: true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					chartName := ds.Attributes["chart_name"]
 					clusterId := ds.Attributes["cluster_id"]
+					chartName := ds.Attributes["chart_name"]
 					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", chartName, clusterId, regionID), nil
+					return fmt.Sprintf("%s,%s,%s", clusterId, chartName, regionID), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"values_json",
@@ -92,7 +92,7 @@ func TestAccCtyunCcsePlugin(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					chartName := ds.Attributes["chart_name"]
 					clusterId := ds.Attributes["cluster_id"]
-					return fmt.Sprintf("%s,%s", chartName, clusterId), nil
+					return fmt.Sprintf("%s,%s", clusterId, chartName), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"values_json",

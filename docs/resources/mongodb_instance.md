@@ -1,5 +1,10 @@
+---
+subcategory: "文档数据库服务（MongoDB）"
+page_title: "CTYUN: ctyun_mongodb_instance"
+---
+
 # ctyun_mongodb_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535
+-> 管理MongoDB实例
 
 
 
@@ -20,7 +25,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_vpc" "vpc_test" {
-  name        = "tf-vpc-for-mon"
+  name        = "tf-vpc-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
@@ -28,7 +33,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-subnet-for-mon"
+  name        = "tf-subnet-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -71,6 +76,7 @@ variable "password" {
 
 ### Required
 
+- `backup_storage_type` (String) backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
 - `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_mongodb_specs查询支持的规格。支持更新
 - `name` (String) 实例名称（长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符），支持更新。
@@ -84,7 +90,6 @@ variable "password" {
 
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
 - `availability_zone_info` (Attributes List) mongodb实例节点指定可用区字段，选填。若不填写，将按节点个数均匀分布到各个可用区上。若需要填写可参考提供的examples 支持更新 (see [below for nested schema](#nestedatt--availability_zone_info))
-- `backup_storage_type` (String) backup节点存储类型，取值范围：SATA, SAS, SSD, OS（对象存储）。若不填写，默认为云硬盘（SSD）
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
 - `is_upgrade_back_up` (Boolean) 磁盘扩容时候会使用,是否主磁盘与备磁盘一起扩容，支持更新。该参数仅在升配主存储空间时生效，且需要注意is_upgrade_back_up=ture时，待升配的磁盘空间必须大于现磁盘空间（包括备份空间）。取值范围：true-主备同时扩容； false-主备不同时扩容。默认为false
 - `mongos_num` (Number) mongos节点数量，mongodb为集群版需填写，支持更新。默认为2，取值范围：2~32
@@ -94,7 +99,7 @@ variable "password" {
 - `region_id` (String) 区域id,如果不填这默认使用provider ctyun总region_id 或者环境变量
 - `shard_num` (Number) shard节点数量，mongodb为集群版需填写，支持更新。默认为2，取值范围：2~32
 - `storage_space` (Number) 存储空间(单位:G)，默认为100GB，支持更新。取值范围：10-6144，backup节点为单个shard的容量乘以shard的个数
-- `storage_type` (String) 存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD
+- `storage_type` (String) 存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD，XSSD-0，XSSD-1，XSSD-2
 - `upgrade_node_type` (String) 当实例为集群版，若升配mongos、shard节点个数时可填写，支持更新。取值范围：shard, mongos
 
 ### Read-Only
@@ -102,6 +107,7 @@ variable "password" {
 - `backup_storage_space` (Number) backup节点磁盘空间，当前不支持指定。默认与存储空间相同
 - `create_time` (String) 创建时间，为UTC格式
 - `eip_id` (String) eip Id
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `host_ip` (String) 主机ip
 - `id` (String) mongodb实例id
 - `master_order_id` (String) 订单id

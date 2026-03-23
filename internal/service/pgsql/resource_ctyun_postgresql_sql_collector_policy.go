@@ -51,7 +51,7 @@ package pgsql
 //
 //func (c *CtyunPostgresqlCollectorPolicy) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 //	resp.Schema = schema.Schema{
-//		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10161917`,
+//		MarkdownDescription: utils.FormatDesc("POSTGRESQL", "https://www.ctyun.cn/document/10034019/10161917`,
 //		Attributes: map[string]schema.Attribute{
 //			"id": schema.StringAttribute{
 //				Computed:    true,
@@ -226,11 +226,11 @@ package pgsql
 //		}
 //	}
 //	if instanceId == "" {
-//		err = fmt.Errorf("ID不能为空")
+//		err = fmt.Errorf(id不能为空")
 //		return
 //	}
 //	if regionId == "" {
-//		err = fmt.Errorf("regionID不能为空")
+//		err = fmt.Errorf("region_id不能为空")
 //		return
 //	}
 //	config.InstanceID = types.StringValue(instanceId)

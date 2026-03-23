@@ -18,5 +18,10 @@ func AcquireEnvKey(name string) string {
 // AcquireEnvParam 从环境变量中获取参数
 // 例如：入参为ak，返回CTYUN_AK环境变量中的值
 func AcquireEnvParam(name string) string {
-	return os.Getenv(AcquireEnvKey(name))
+	key := AcquireEnvKey(name)
+	value := os.Getenv(key)
+	if key == "CTYUN_PROJECT_ID" && strings.TrimSpace(value) == "" {
+		return "0"
+	}
+	return value
 }

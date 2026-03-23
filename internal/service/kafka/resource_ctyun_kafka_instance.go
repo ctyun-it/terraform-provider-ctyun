@@ -8,6 +8,7 @@ import (
 	ctgkafka "github.com/ctyun-it/terraform-provider-ctyun/internal/core/kafka"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -39,6 +40,7 @@ var (
 
 type ctyunKafkaInstance struct {
 	meta        *common.CtyunMetadata
+	name        string
 	vpcService  *business.VpcService
 	sgService   *business.SecurityGroupService
 	orderLooper *business.OrderLooper
@@ -50,6 +52,7 @@ func NewCtyunKafkaInstance() resource.Resource {
 
 func (c *ctyunKafkaInstance) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_kafka_instance"
+	c.name = response.TypeName
 }
 
 type CtyunKafkaInstanceConfig struct {
@@ -87,7 +90,7 @@ type CtyunKafkaInstanceConfig struct {
 
 func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029624/10030700`,
+		MarkdownDescription: utils.FormatDesc("管理KAFKA实例", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10030700"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -123,8 +126,7 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -428,7 +430,7 @@ func (c *ctyunKafkaInstance) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "已经销毁") {
+		if strings.Contains(err.Error(), "已经销毁") || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -532,8 +534,8 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -552,11 +554,11 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 	}
 
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -572,9 +574,9 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunKafkaInstance) checkBeforeCreate(ctx context.Context, plan CtyunKafkaInstanceConfig) (err error) {
-	regionID, projectID := plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}
@@ -793,7 +795,7 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 	plan.DiskSize = types.Int32Value(utils.StringToInt32Must(instance.Space))
 	plan.VpcID = types.StringValue(instance.VpcId)
 	plan.SubnetID = types.StringValue(instance.SubnetId)
-	cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, instance.CreateTime), utils.ConvertToUTCZ(time.RFC3339, instance.ExpireTime)
+	cTime, eTime := utils.FromBJTimeToUTCZ(instance.CreateTime), utils.FromBJTimeToUTCZ(instance.ExpireTime)
 	plan.CreateTime = types.StringValue(cTime)
 	plan.ExpireTime = types.StringValue(eTime)
 	plan.ActualCycleType = types.StringValue(map[string]string{"1": business.OrderCycleTypeMonth, "2": business.OrderCycleTypeOnDemand}[instance.BillMode])

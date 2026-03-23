@@ -50,8 +50,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu     = 2
   ram     = 4
   arch    = "x86"
-  series  = "C"
-  type    = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test" {
@@ -82,8 +80,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test2" {
   cpu     = 2
   ram     = 4
   arch    = "x86"
-  series  = "C"
-  type    = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test2" {
@@ -101,7 +97,6 @@ resource "ctyun_ecs" "ecs_test2" {
 }
 
 resource "ctyun_elb_loadbalancer" "test" {
-  az_name       = local.az1
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-ha"
   sla_name      = "elb.s2.small"
@@ -124,6 +119,8 @@ resource "ctyun_elb_target_group" "target_group_test" {
   name      = "tf-target-ha"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 1
 }
 
 resource "ctyun_elb_target" "target" {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -35,7 +36,7 @@ func (c *CtyunVpcPeerConnections) Metadata(ctx context.Context, request datasour
 
 func (c *CtyunVpcPeerConnections) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873",
+		MarkdownDescription: utils.FormatDesc("查询对等连接", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037873"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Description: "资源池id",
@@ -132,12 +133,18 @@ func (c *CtyunVpcPeerConnections) Read(ctx context.Context, request datasource.R
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
+	if config.PageSize.IsNull() {
+		config.PageSize = types.Int32Value(10)
+	}
+	if config.PageNo.IsNull() {
+		config.PageNo = types.Int32Value(1)
+	}
 	params := &ctvpc.CtvpcListVpcPeerConnectionRequest{
 		RegionID:   regionId,
 		PageSize:   config.PageSize.ValueInt32(),
+		PageNo:     config.PageNo.ValueInt32(),
 		PageNumber: config.PageNo.ValueInt32(),
 	}
-
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListVpcPeerConnectionApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return

@@ -42,7 +42,7 @@ func (c *CtyunScalingActivities) Configure(ctx context.Context, request datasour
 
 func (c *CtyunScalingActivities) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10216432`,
+		MarkdownDescription: utils.FormatDesc("查询弹性伸缩组的活动", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10216432"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

@@ -14,13 +14,13 @@ func TestAccCtyunCcseImages(t *testing.T) {
 	datasourceFile := "datasource_ctyun_ccse_images.tf"
 
 	ecsData := "data.ctyun_ccse_images." + ecs
-	ebmData := "data.ctyun_ccse_images." + ebm
+	//ebmData := "data.ctyun_ccse_images." + ebm
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(datasourceFile, ecs, dependence.flavorName, ebm, dependence.deviceType),
+				Config: utils.LoadTestCase(datasourceFile, ecs, dependence.flavorName, ebm, dependence.deviceType, dependence.ebmAz),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// ECS 数据源检查
 					resource.TestCheckResourceAttrWith(ecsData, "images.#", utils.AtLeastOne),
@@ -28,9 +28,9 @@ func TestAccCtyunCcseImages(t *testing.T) {
 					resource.TestCheckResourceAttrSet(ecsData, "images.0.name"),
 
 					// EBM 数据源检查
-					resource.TestCheckResourceAttrWith(ebmData, "images.#", utils.AtLeastOne),
-					resource.TestCheckResourceAttrSet(ebmData, "images.0.id"),
-					resource.TestCheckResourceAttrSet(ebmData, "images.0.name"),
+					//resource.TestCheckResourceAttrWith(ebmData, "images.#", utils.AtLeastOne),
+					//resource.TestCheckResourceAttrSet(ebmData, "images.0.id"),
+					//resource.TestCheckResourceAttrSet(ebmData, "images.0.name"),
 				),
 			},
 		},

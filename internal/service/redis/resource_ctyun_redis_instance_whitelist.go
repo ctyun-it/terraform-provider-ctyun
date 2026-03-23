@@ -2,12 +2,14 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -47,7 +49,7 @@ type CtyunRedisInstanceWhitelistConfig struct {
 
 func (c *ctyunRedisInstanceWhitelist) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10398174`,
+		MarkdownDescription: utils.FormatDesc("管理Redis实例白名单", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10398174"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -139,6 +141,10 @@ func (c *ctyunRedisInstanceWhitelist) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -216,7 +222,7 @@ func (c *ctyunRedisInstanceWhitelist) ImportState(ctx context.Context, request r
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [分组名称],[实例ID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [分组名称],[instance_id],[name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -227,27 +233,27 @@ func (c *ctyunRedisInstanceWhitelist) ImportState(ctx context.Context, request r
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instanceId)
+		err = terraform_extend.Split(request.ID, &instanceId, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instanceId, &regionId)
+		err = terraform_extend.Split(request.ID, &instanceId, &name, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if name == "" {
-		err = fmt.Errorf("分组名称不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("实例ID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.InstanceId = types.StringValue(instanceId)
@@ -356,7 +362,12 @@ func (c *ctyunRedisInstanceWhitelist) getAndMerge(ctx context.Context, state *Ct
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -385,7 +396,7 @@ func (c *ctyunRedisInstanceWhitelist) getAndMerge(ctx context.Context, state *Ct
 	state.Name = types.StringValue(whitelistData.Group)
 
 	// 设置ID
-	state.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", state.Name.ValueString(), state.InstanceId.ValueString(), state.RegionId.ValueString()))
+	state.ID = types.StringValue(fmt.Sprintf("%s,%s", state.InstanceId.ValueString(), state.Name.ValueString()))
 
 	return
 }

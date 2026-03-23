@@ -54,6 +54,7 @@ func (this *SubnetQueryApi) Do(ctx context.Context, credential ctyunsdk.Credenti
 		Cidr:              realResponse.CIDR,
 		Gateway:           realResponse.Gateway,
 		Start:             realResponse.Start,
+		ProjectID:         realResponse.ProjectID,
 		End:               realResponse.End,
 		Ipv6Enabled:       realResponse.Ipv6Enabled,
 		EnableIpv6:        realResponse.EnableIpv6,
@@ -79,8 +80,9 @@ type subnetQueryRealResponse struct {
 	RouteTableID      string    `json:"routeTableID"`
 	NetworkAclID      string    `json:"networkAclID"`
 	CIDR              string    `json:"CIDR"`
-	Gateway           string    `json:"gateway"`
+	Gateway           string    `json:"gatewayIP"`
 	Start             string    `json:"start"`
+	ProjectID         string    `json:"projectID"`
 	End               string    `json:"end"`
 	AvailableIpCount  int       `json:"availableIpCount"`
 	Ipv6Enabled       int       `json:"ipv6Enabled"`
@@ -117,6 +119,7 @@ type SubnetQueryResponse struct {
 	End               string
 	Ipv6Enabled       int
 	EnableIpv6        bool
+	ProjectID         string
 	AvailableIpCount  int
 	Ipv6Cidr          string
 	Ipv6Start         string

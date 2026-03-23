@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -18,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -36,6 +38,7 @@ var (
 
 type ctyunEbs struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ebsService *business.EbsService
 }
 
@@ -45,11 +48,12 @@ func NewCtyunEbs() resource.Resource {
 
 func (c *ctyunEbs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696`,
+		MarkdownDescription: utils.FormatDesc("管理云硬盘", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -71,17 +75,20 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"type": schema.StringAttribute{
 				Required:    true,
-				Description: "磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；XSSD-0、XSSD-1、XSSD-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式",
+				Description: "磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；xssd-0、xssd-1、xssd-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbsDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbsDiskTypes...),
+						stringvalidator.OneOf(business.EbsDiskTypesUpper...),
+					),
 				},
 			},
 			"size": schema.Int64Attribute{
 				Required:    true,
-				Description: "磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；XSSD-0：10GB-65536GB；XSSD-1：20GB-65536GB；XSSD-2：512GB-65536GB 支持更新（不支持缩容）",
+				Description: "磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；xssd-0：10GB-65536GB；xssd-1：20GB-65536GB；xssd-2：512GB-65536GB 支持更新（不支持缩容）",
 				Validators: []validator.Int64{
 					int64validator.Between(10, 65536),
 				},
@@ -118,6 +125,9 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -138,26 +148,40 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"multi_attach": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "是否共享云硬盘",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"encrypted": schema.BoolAttribute{
+				Optional:    true,
 				Computed:    true,
 				Description: "是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+					boolplanmodifier.RequiresReplace(),
+				},
 			},
 			"kms_uuid": schema.StringAttribute{
 				Computed:    true,
 				Description: "加密盘密钥UUID，是加密盘时才返回",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -196,11 +220,17 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"delete_snap_with_ebs": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "设置快照是否随云硬盘删除，true表示随盘删除，false表示不随盘删除",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"image_id": schema.StringAttribute{
 				Optional:    true,
@@ -276,14 +306,13 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 	}
 	diskType, err := business.EbsDiskTypeMap.FromOriginalScene(plan.Type.ValueString(), business.EbsDiskTypeMapScene1)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+		// 尝试小写转大写，失败则表示本来就是大写
+		diskType = plan.Type.ValueString()
 	}
 
 	// 构建标签请求
 	var labels []*ctebs2.EbsNewEbsLabelsRequest
 	if plan.Labels != nil {
-		var labels []*ctebs2.EbsNewEbsLabelsRequest
 		for _, label := range plan.Labels {
 			labels = append(labels, &ctebs2.EbsNewEbsLabelsRequest{
 				Key:   label.Key.ValueString(),
@@ -292,31 +321,32 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		}
 	}
 
-	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, &ctebs2.EbsNewEbsRequest{
-		ClientToken:       uuid.NewString(),
-		RegionID:          regionId,
-		MultiAttach:       plan.MultiAttach.ValueBoolPointer(),
-		IsEncrypt:         plan.Encrypted.ValueBoolPointer(),
-		KmsUUID:           plan.KmsUuid.ValueString(),
-		ProjectID:         projectId,
-		DiskMode:          diskMode.(string),
-		DiskType:          diskType.(string),
-		DiskName:          plan.Name.ValueString(),
-		DiskSize:          plan.Size.ValueInt64(),
-		OnDemand:          &onDemand,
-		CycleType:         plan.CycleType.ValueString(),
-		CycleCount:        int32(plan.CycleCount.ValueInt64()),
-		ImageID:           plan.ImageId.ValueString(),
-		AzName:            azName,
-		ProvisionedIops:   plan.ProvisionedIops.ValueInt64(),
-		DeleteSnapWithEbs: plan.DeleteSnapWithEbs.ValueBoolPointer(),
-		Labels:            labels,
-		BackupID:          plan.BackupId.ValueString(),
-	})
-
+	params := &ctebs2.EbsNewEbsRequest{
+		ClientToken:     uuid.NewString(),
+		RegionID:        regionId,
+		MultiAttach:     plan.MultiAttach.ValueBoolPointer(),
+		IsEncrypt:       plan.Encrypted.ValueBoolPointer(),
+		KmsUUID:         plan.KmsUuid.ValueString(),
+		ProjectID:       projectId,
+		DiskMode:        diskMode.(string),
+		DiskType:        diskType.(string),
+		DiskName:        plan.Name.ValueString(),
+		DiskSize:        plan.Size.ValueInt64(),
+		OnDemand:        &onDemand,
+		CycleType:       plan.CycleType.ValueString(),
+		CycleCount:      int32(plan.CycleCount.ValueInt64()),
+		ImageID:         plan.ImageId.ValueString(),
+		AzName:          azName,
+		ProvisionedIops: plan.ProvisionedIops.ValueInt64(),
+		Labels:          labels,
+		BackupID:        plan.BackupId.ValueString(),
+	}
+	if !plan.DeleteSnapWithEbs.IsUnknown() && !plan.DeleteSnapWithEbs.IsNull() {
+		params.DeleteSnapWithEbs = plan.DeleteSnapWithEbs.ValueBoolPointer()
+	}
+	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, params)
 	var id, masterOrderId string
 	if err2 == nil {
-
 		if resp.StatusCode == common.ErrorStatusCode && resp.ErrorCode != common.EbsOrderInProgress {
 			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 			response.Diagnostics.AddError(err.Error(), err.Error())
@@ -524,59 +554,41 @@ func (c *ctyunEbs) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[project_id],[az_name],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunEbsConfig
 
-	var ID, projectId, azName, regionId string
-	// 根据分隔符数量判断是否输入了regionId,projectId,azName
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionId
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &azName)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &azName, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-	config.ProjectId = types.StringValue(projectId)
-	config.AzName = types.StringValue(azName)
-
 	instance, err := c.getAndMergeEbs(ctx, config)
 	if err != nil {
 		return
 	}
 	if instance == nil {
-		response.State.RemoveResource(ctx)
+		err = common.ResourceNotExistError
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -601,22 +613,29 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 		return nil, fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 	}
 	obj := resp.ReturnObj
+	if utils.SecBool(obj.IsSystemVolume) {
+		return nil, fmt.Errorf("不支持系统盘")
+	}
 	diskMode, err2 := business.EbsDiskModeMap.ToOriginalScene(obj.DiskMode, business.EbsDiskModeMapScene1)
 	if err2 != nil {
 		return nil, err2
 	}
-	diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(obj.DiskType, business.EbsDiskTypeMapScene1)
-	if err2 != nil {
-		return nil, err2
+	if cfg.Type.ValueString() != obj.DiskType {
+		diskType, e := business.EbsDiskTypeMap.ToOriginalScene(obj.DiskType, business.EbsDiskTypeMapScene1)
+		if e != nil {
+			return nil, e
+		}
+		cfg.Type = types.StringValue(diskType.(string))
 	}
 	cfg.Name = types.StringValue(obj.DiskName)
 	cfg.Id = types.StringValue(obj.DiskID)
 	cfg.Size = types.Int64Value(obj.DiskSize)
-	cfg.Type = types.StringValue(diskType.(string))
 	cfg.Mode = types.StringValue(diskMode.(string))
 	cfg.Status = types.StringValue(obj.DiskStatus)
 	cfg.ExpireTime = types.StringValue(utils.FromUnixToUTC(obj.ExpireTime))
 	cfg.CreateTime = types.StringValue(utils.FromUnixToUTC(obj.CreateTime))
+	cfg.AzName = types.StringValue(obj.AzName)
+	cfg.ProjectId = types.StringValue(obj.ProjectID)
 
 	// 处理可选的布尔字段
 	if obj.MultiAttach != nil {
@@ -648,7 +667,12 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	}
 
 	// 处理IOPS字段
-	cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	//如果ProvisionedIops为0，那么就不设置ProvisionedIops
+	if obj.ProvisionedIops > 0 {
+		cfg.ProvisionedIops = types.Int64Value(obj.ProvisionedIops)
+	} else {
+		cfg.ProvisionedIops = types.Int64Null()
+	}
 
 	// 处理删除快照策略字段
 	if obj.DeleteSnapWithEbs == "true" {

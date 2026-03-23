@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -51,7 +52,7 @@ type CtyunRedisAssociationEipConfig struct {
 
 func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173`,
+		MarkdownDescription: utils.FormatDesc("管理Redis实例和弹性IP的绑定关系", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10132173"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -148,7 +149,7 @@ func (c *ctyunRedisAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "can't find") || strings.Contains(err.Error(), "已退订") {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "未绑定") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -221,15 +222,15 @@ func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request reso
 	}
 
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if eipID == "" {
-		err = fmt.Errorf("eipID不能为空")
+		err = fmt.Errorf("eip_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 

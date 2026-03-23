@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_user_ak"
+---
+
 # ctyun_iam_user_ak (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289
+-> 用户AK/SK
 
 
 

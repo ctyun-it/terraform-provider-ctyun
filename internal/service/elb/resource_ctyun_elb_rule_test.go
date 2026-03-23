@@ -27,7 +27,7 @@ func TestAccCtyunElbRule(t *testing.T) {
 	conditions := fmt.Sprintf(`{"condition_type": "%s", "condition_server_name": "%s"}`, "server_name", "terraform-test.com")
 	//updatedConditions := fmt.Sprintf(`{"type": "%s", "condition_server_name": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "server_name", "terraform-test-new.com", "test_new", "PREFIX")
 	updatedConditions := fmt.Sprintf(`{"condition_type": "%s", "condition_server_name": "%s"}`, "server_name", "terraform-test-new.com")
-	pathConditions := fmt.Sprintf(`{"condition_type": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "url_path", "test", "PREFIX")
+	pathConditions := fmt.Sprintf(`{"condition_type": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "url_path", "/test", "PREFIX")
 	//updatedPathConditions := fmt.Sprintf(`{"type": "%s","condition_url_paths":"%s","condition_match_type":"%s"}`, "url_path", "test-new", "PREFIX")
 	actionTargetGroups := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID4)
 	//updatedActionTargetGroups := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID)
@@ -54,7 +54,40 @@ func TestAccCtyunElbRule(t *testing.T) {
 					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "test"),
 					//resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_match_type", "PREFIX"),
 					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			// 1.2 update
 			{
@@ -111,7 +144,7 @@ func TestAccCtyunElbRule(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "listener_id", listenerId),
 					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_type", "url_path"),
 					resource.TestCheckResourceAttr(resourceName, "action_type", actionType),
-					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "test"),
+					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_url_paths", "/test"),
 					resource.TestCheckResourceAttr(resourceName, "conditions.0.condition_match_type", "PREFIX"),
 					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
 				),
@@ -165,31 +198,7 @@ func TestAccCtyunElbRuleImportState(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "action_target_groups.0.target_group_id", dependence.targetGroupID4),
 				),
 			},
-			// importState 1
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s", id), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
-			// importState 2
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionID := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,,%s", id, regionID), nil
-				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"az_name", "project_id"},
-			},
+
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, listenerId, conditions, actionType, actionTargetGroups),
 				Destroy: true,

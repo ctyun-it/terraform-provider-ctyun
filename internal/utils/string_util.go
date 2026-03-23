@@ -142,6 +142,12 @@ func StringToInt32Must(s string) int32 {
 	return int32(num)
 }
 
+// StringToInt64Must 字符串转int64
+func StringToInt64Must(s string) int64 {
+	num, _ := strconv.ParseInt(s, 10, 64)
+	return num
+}
+
 func JsonString(obj interface{}) string {
 	b, _ := json.Marshal(obj)
 	return string(b)

@@ -2,12 +2,14 @@ package oceanfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/oceanfs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,15 +20,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
+	"time"
 )
 
 type CtyunOceanfsPermissionRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunOceanfsPermissionRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_oceanfs_permission_rule"
+	c.name = response.TypeName
 }
 
 func (c *CtyunOceanfsPermissionRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,8 +52,8 @@ func (c *CtyunOceanfsPermissionRule) ImportState(ctx context.Context, request re
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permissionGroupID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],[permission_group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -67,15 +72,15 @@ func (c *CtyunOceanfsPermissionRule) ImportState(ctx context.Context, request re
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -90,7 +95,7 @@ func (c *CtyunOceanfsPermissionRule) ImportState(ctx context.Context, request re
 
 func (c *CtyunOceanfsPermissionRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853",
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务权限组规则", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10332853"),
 		Attributes: map[string]schema.Attribute{
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,
@@ -143,6 +148,9 @@ func (c *CtyunOceanfsPermissionRule) Schema(ctx context.Context, request resourc
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "权限组规则id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -192,7 +200,7 @@ func (c *CtyunOceanfsPermissionRule) Read(ctx context.Context, request resource.
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -279,7 +287,7 @@ func (c *CtyunOceanfsPermissionRule) create(ctx context.Context, config *CtyunOc
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return err
 	}
-
+	time.Sleep(1 * time.Second)
 	// 通过查询权限组列表，获取权限组规则id
 	ruleList, err := c.getRuleList(ctx, config)
 	if err != nil {
@@ -336,7 +344,7 @@ func (c *CtyunOceanfsPermissionRule) getRuleDetail(ctx context.Context, config *
 		PageNo:              pageNo,
 	}
 	if ruleType == "detail" {
-		params.PermissionGroupFuid = config.PermissionGroupFuid.ValueString()
+		params.PermissionRuleFuid = config.ID.ValueString()
 	}
 	resp, err := c.meta.Apis.SdkOceanfsApis.OceanfsListPermissionRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -363,8 +371,8 @@ func (c *CtyunOceanfsPermissionRule) getAndMerge(ctx context.Context, config *Ct
 		err = fmt.Errorf("查询权限组id=%s，权限组规则id=%s详情，返回信息条数>1。", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
 		return err
 	}
-	if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("未查询到权限组id=%s，权限组规则id=%s详情", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
 		return err
 	}
 	returnObj := resp.ReturnObj.List[0]

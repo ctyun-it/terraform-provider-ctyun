@@ -36,3 +36,7 @@ output "vpc_id2" {
 output "dhcp_id" {
   value = ctyun_dhcpoptionset.test.id
 }
+
+output "route_table_id" {
+  value = ctyun_vpc_route_table.test.id
+}

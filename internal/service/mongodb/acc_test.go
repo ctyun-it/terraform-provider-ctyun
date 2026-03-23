@@ -5,6 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+	"time"
 )
 
 const dependenceDir = "testdata/dependence"
@@ -17,6 +18,8 @@ type Dependence struct {
 	eipID           string
 	hostIP          string
 	azName          string
+	flavorName      string
+	flavorName2     string
 }
 
 var dependence Dependence
@@ -40,6 +43,8 @@ func TestMain(m *testing.M) {
 		eipID:           outputs["eip_id"].Value,
 		hostIP:          outputs["mongodb_host_ip"].Value,
 		azName:          outputs["az_name"].Value,
+		flavorName:      outputs["flavor_name"].Value,
+		flavorName2:     outputs["flavor_name2"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")
@@ -47,6 +52,8 @@ func TestMain(m *testing.M) {
 	// 执行测试用例
 	code := m.Run()
 	fmt.Println("开始清理依赖资源")
+	terraform.DestroyResource(dependenceDir)
+	time.Sleep(3 * time.Minute)
 	// 清理依赖资源
 	err = terraform.DestroyResource(dependenceDir)
 	if err != nil {

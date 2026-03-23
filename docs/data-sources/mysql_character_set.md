@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_character_set"
+---
+
 # ctyun_mysql_character_set (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10140487
+-> 查询MySQL实例的字符集
 
 
 

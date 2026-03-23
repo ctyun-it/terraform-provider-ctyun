@@ -187,12 +187,17 @@ func (v TagsService) QueryAll(ctx context.Context, regionId string, resourceType
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		// 考虑资源是否存在
+		if strings.Contains(*resp.ErrorCode, "Openapi.Nat.NotFound") || strings.Contains(*resp.ErrorCode, "resource not found") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	}
+	} // tags不用判断是否长度为空，列表返回为空是可以的
 	var resultTags []Tag
 	for _, apiTag := range resp.ReturnObj.Results {
 		tag := Tag{

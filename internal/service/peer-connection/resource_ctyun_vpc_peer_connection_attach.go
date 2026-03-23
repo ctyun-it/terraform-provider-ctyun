@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,11 +25,13 @@ var (
 
 type CtyunVpcPeerConnectionAttach struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunVpcPeerConnectionAttach) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_peer_connection_attach"
+	c.name = response.TypeName
 }
 
 func (c *CtyunVpcPeerConnectionAttach) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,7 +50,7 @@ func NewCtyunVpcPeerConnectionAttach() resource.Resource {
 
 func (c *CtyunVpcPeerConnectionAttach) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037761",
+		MarkdownDescription: utils.FormatDesc("接受或拒绝对等连接申请", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037761"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -84,6 +87,9 @@ func (c *CtyunVpcPeerConnectionAttach) Schema(ctx context.Context, request resou
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}

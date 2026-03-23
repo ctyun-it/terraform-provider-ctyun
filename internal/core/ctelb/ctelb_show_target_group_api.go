@@ -72,6 +72,7 @@ type CtelbShowTargetGroupReturnObjResponse struct {
 	Algorithm     string                                              `json:"algorithm,omitempty"`     /*  调度算法  */
 	SessionSticky *CtelbShowTargetGroupReturnObjSessionStickyResponse `json:"sessionSticky"`           /*  会话保持配置  */
 	Status        string                                              `json:"status,omitempty"`        /*  状态: DOWN / ACTIVE  */
+	Protocol      string                                              `json:"protocol,omitempty"`      /*  状态: DOWN / ACTIVE  */
 	CreatedTime   string                                              `json:"createdTime,omitempty"`   /*  创建时间，为UTC格式  */
 	UpdatedTime   string                                              `json:"updatedTime,omitempty"`   /*  更新时间，为UTC格式  */
 	ProxyProtocol int32                                               `json:"proxyProtocol,omitempty"`

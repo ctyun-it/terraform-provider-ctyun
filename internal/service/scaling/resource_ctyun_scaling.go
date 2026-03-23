@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -37,11 +37,13 @@ var (
 
 type ctyunScaling struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *ctyunScaling) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_scaling_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunScaling) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -51,7 +53,6 @@ func (c *ctyunScaling) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
 }
 
 func NewCtyunScaling() resource.Resource {
@@ -62,29 +63,22 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[vpcId],[projectId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunScalingConfig
-	var ID, vpcId, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &vpcId)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId)
+		err = terraform_extend.Split(request.ID, &ID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &vpcId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
@@ -92,32 +86,23 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
-		return
-	}
-	if vpcId == "" {
-		err = fmt.Errorf("vpcId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
 	config.ID = types.Int64Value(id)
 	config.RegionID = types.StringValue(regionId)
-	config.VpcID = types.StringValue(vpcId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
-
 	config.AddInstanceUUIDList = types.SetNull(types.StringType)
 	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
-
+	config.ExpectedCount = config.ActualCount
 	err = c.getAndMergeScaling(ctx, &config)
 	if err != nil {
 		return
@@ -127,7 +112,7 @@ func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportS
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725`,
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -146,7 +131,7 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -242,6 +227,10 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 					validator2.ScalingCountValidate(),
 				},
 			},
+			"actual_count": schema.Int32Attribute{
+				Computed:    true,
+				Description: "当前弹性伸缩组内云主机数量",
+			},
 			"health_period": schema.Int32Attribute{
 				Required:    true,
 				Description: "健康检查时间间隔（周期），单位：秒，取值范围：[300,10080]。支持更新",
@@ -322,6 +311,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlStatus...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"delete_protection": schema.StringAttribute{
 				Optional:    true,
@@ -329,6 +321,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Description: "控制伸缩组保护，开启伸缩组保护，不可删除该伸缩组。取值范围：enable 或 disable，支持更新。可以用于控制伸缩组保护的开启/关闭",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlProtectionStatus...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"add_instance_uuid_list": schema.SetAttribute{
@@ -357,9 +352,8 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 			//	},
 			//},
 			"is_destroy": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				Optional: true,
+				//Default:     booldefault.StaticBool(false),
 				Description: "移除时是否销毁，仅当移除云主机时生效（对手动添加的机器做处理），true-ecs移出伸缩组时销毁， false-ecs移出伸缩组时不销毁，支持更新",
 			},
 			"real_count": schema.Int32Attribute{
@@ -441,7 +435,7 @@ func (c *ctyunScaling) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMergeScaling(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotExists") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -660,12 +654,14 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 	config.MinCount = types.Int32Value(scalingDetail.MinCount)
 	config.MaxCount = types.Int32Value(scalingDetail.MaxCount)
 	//  todo 考虑是否需要同步
-	//config.ExpectedCount = types.Int32Value(scalingDetail.ExpectedCount)
+	config.ActualCount = types.Int32Value(scalingDetail.ExpectedCount)
 	config.RealCount = types.Int32Value(scalingDetail.InstanceCount)
 	config.UseLb = types.Int32Value(scalingDetail.UseLb)
 	config.HealthPeriod = types.Int32Value(scalingDetail.HealthPeriod)
+	config.VpcID = types.StringValue(scalingDetail.VpcID)
 	var diags diag.Diagnostics
 	config.SecurityGroupIDList, diags = types.SetValueFrom(ctx, types.StringType, scalingDetail.SecurityGroupIDList)
+	config.ProjectID = types.StringValue(scalingDetail.ProjectIDEcs)
 	if diags.HasError() {
 		return errors.New(diags[0].Detail())
 	}
@@ -691,6 +687,8 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 		if diags.HasError() {
 			return errors.New(diags[0].Detail())
 		}
+	} else {
+		config.LbList = types.ListNull(utils.StructToTFObjectTypes(CtyunLbInfoModel{}))
 	}
 
 	// 处理subnetIDList
@@ -724,16 +722,24 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 		err = errors.New("获取弹性伸缩列表信息返回nil，请稍后重试或联系研发人员！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Scaling.Group.NotFound") || strings.Contains(resp.Message, "未找到弹性伸缩组信息") {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
+	if resp.ReturnObj.ScalingGroups == nil || len(resp.ReturnObj.ScalingGroups) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.ScalingGroups) > 1 {
 		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回多个实例。具体如下:%#v\n", config.ID.ValueInt64(), resp.ReturnObj.ScalingGroups)
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -1604,6 +1610,7 @@ type CtyunScalingConfig struct {
 	MinCount            types.Int32  `tfsdk:"min_count"`              // 最小云主机数
 	MaxCount            types.Int32  `tfsdk:"max_count"`              // 最大云主机数
 	ExpectedCount       types.Int32  `tfsdk:"expected_count"`         // 期望云主机数
+	ActualCount         types.Int32  `tfsdk:"actual_count"`           // 当前实例数量
 	RealCount           types.Int32  `tfsdk:"real_count"`             // 当前云主机数
 	HealthPeriod        types.Int32  `tfsdk:"health_period"`          // 健康检查时间间隔
 	LbList              types.List   `tfsdk:"lb_list"`                // 负载均衡列表

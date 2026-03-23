@@ -2,6 +2,7 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,15 +10,19 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -32,6 +37,7 @@ var (
 
 type CtyunElbHealthCheck struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbHealthCheck() resource.Resource {
@@ -48,11 +54,12 @@ func (c *CtyunElbHealthCheck) Configure(ctx context.Context, request resource.Co
 
 func (c *CtyunElbHealthCheck) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_health_check"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡健康检查", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032101"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -81,6 +88,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"protocol": schema.StringAttribute{
@@ -136,6 +146,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						types.StringValue(business.HealthCheckProtocolTCP),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"http_url_path": schema.StringAttribute{
 				Optional:    true,
@@ -153,6 +166,9 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						types.StringValue(business.HealthCheckProtocolTCP),
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"http_expected_codes": schema.SetAttribute{
 				Optional:    true,
@@ -169,6 +185,12 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 						types.StringValue(business.HealthCheckProtocolUDP),
 						types.StringValue(business.HealthCheckProtocolTCP),
 					),
+					setvalidator.ValueStringsAre(
+						stringvalidator.OneOf("http_2xx", "http_3xx", "http_4xx", "http_5xx"),
+					),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"protocol_port": schema.Int32Attribute{
@@ -178,22 +200,15 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 				Validators: []validator.Int32{
 					int32validator.Between(1, 65535),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "健康检查ID",
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
 				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				Description: "健康检查ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"status": schema.Int32Attribute{
@@ -203,6 +218,14 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -255,7 +278,7 @@ func (c *CtyunElbHealthCheck) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeHealthCheck(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -294,7 +317,7 @@ func (c *CtyunElbHealthCheck) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -332,38 +355,37 @@ func (c *CtyunElbHealthCheck) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunElbHealthCheckConfig
-	var ID, projectID, regionID string
+	var ID, regionID string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		ID = request.ID
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMergeHealthCheck(ctx, &config)
 	if err != nil {
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -488,6 +510,9 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbShowHealthCheckApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
+	} else if resp.ErrorCode == common.OpenapiHealthCheckNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
@@ -502,7 +527,11 @@ func (c *CtyunElbHealthCheck) getAndMergeHealthCheck(ctx context.Context, plan *
 	plan.Description = types.StringValue(resp.ReturnObj.Description)
 	plan.Name = types.StringValue(resp.ReturnObj.Name)
 	plan.Protocol = types.StringValue(resp.ReturnObj.Protocol)
-	plan.ProtocolPort = types.Int32Value(resp.ReturnObj.ProtocolPort)
+	if resp.ReturnObj.ProtocolPort > 0 {
+		plan.ProtocolPort = types.Int32Value(resp.ReturnObj.ProtocolPort)
+	} else {
+		plan.ProtocolPort = types.Int32Null()
+	}
 	plan.Timeout = types.Int32Value(resp.ReturnObj.Timeout)
 	plan.Interval = types.Int32Value(resp.ReturnObj.Interval)
 	plan.MaxRetry = types.Int32Value(resp.ReturnObj.MaxRetry)
@@ -537,7 +566,7 @@ type CtyunElbHealthCheckConfig struct {
 	HttpExpectedCodes types.Set    `tfsdk:"http_expected_codes"` //仅当protocol为HTTP时必填且生效,支持http_2xx/http_3xx/http_4xx/http_5xx，一个或者多个的列表, 当 protocol 为 HTTP 时, 不填默认为 http_2xx
 	ProtocolPort      types.Int32  `tfsdk:"protocol_port"`       //健康检查端口 1 - 65535
 	ID                types.String `tfsdk:"id"`                  //健康检查ID
-	ProjectID         types.String `tfsdk:"project_id"`          //	项目ID
 	Status            types.Int32  `tfsdk:"status"`              //状态 1 表示 UP, 0 表示 DOWN
 	CreateTime        types.String `tfsdk:"create_time"`         //	创建时间，为UTC格式
+	ProjectId         types.String `tfsdk:"project_id"`          //企业项目ID
 }

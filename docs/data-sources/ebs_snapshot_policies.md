@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_snapshot_policies"
+---
+
 # ctyun_ebs_snapshot_policies (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118840
+-> 查询云硬盘快照策略
 
 
 
