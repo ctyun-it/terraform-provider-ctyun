@@ -1,5 +1,9 @@
 ---
+<<<<<<< HEAD
 subcategory: "虚拟IP（Virtual IP，VIP）"
+=======
+subcategory: "VIP"
+>>>>>>> a527f4c5a75df1829a2bf97af49cf86513680061
 page_title: "CTYUN: ctyun_vip_association"
 ---
 

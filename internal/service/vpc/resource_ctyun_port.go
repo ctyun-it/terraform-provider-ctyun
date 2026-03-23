@@ -70,7 +70,11 @@ type CtyunNetworkInterfaceConfig struct {
 
 func (c *ctyunNetworkInterface) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
+<<<<<<< HEAD
 		MarkdownDescription: utils.FormatDesc("管理弹性网卡", "弹性网卡（Elastic Network Interface）", "https://www.ctyun.cn/document/10026730/10225195"),
+=======
+		MarkdownDescription: utils.FormatDesc("管理弹性网卡", "PORT", "https://www.ctyun.cn/document/10026730/10225195"),
+>>>>>>> a527f4c5a75df1829a2bf97af49cf86513680061
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
