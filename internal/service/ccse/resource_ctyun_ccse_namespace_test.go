@@ -101,7 +101,7 @@ status:
 					namespace := ds.Attributes["namespace"]
 					cluster_id := ds.Attributes["cluster_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s", namespace, cluster_id, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", cluster_id, namespace, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"values_yaml",
@@ -115,7 +115,7 @@ status:
 					ds := s.RootModule().Resources[resourceName].Primary
 					namespace := ds.Attributes["namespace"]
 					cluster_id := ds.Attributes["cluster_id"]
-					return fmt.Sprintf("%s,%s", namespace, cluster_id), nil
+					return fmt.Sprintf("%s,%s", cluster_id, namespace), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"values_yaml",

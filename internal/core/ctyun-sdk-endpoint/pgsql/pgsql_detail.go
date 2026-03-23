@@ -88,7 +88,7 @@ type PgsqlDetailResponseReturnObj struct {
 	ProdInstName        string `json:"prodInstName"`        // 实例名称
 	ProdInstSetName     string `json:"prodInstSetName"`     // 实例集群名称
 	ProdOrderStatus     int32  `json:"prodOrderStatus"`     // 订单状态，0：正常，1：冻结，2：删除，3：操作中，4：失败,2005:扩容中
-	ProdRunningStatus   int32  `json:"prodRunninStatus"`    // 实例状态,0:运行中 1:重启中 2:备份中 3:恢复中 1001:已停止 1006:恢复失败 1007:VIP不可用 1008:GATEWAY不可用 1009:主库不可用 1010:备库不可用 1021:实例维护中 2000:开通中 2002:已退订 2005:扩容中 2011:冻结
+	ProdRunningStatus   int32  `json:"prodRunningStatus"`   // 实例状态,0:运行中 1:重启中 2:备份中 3:恢复中 1001:已停止 1006:恢复失败 1007:VIP不可用 1008:GATEWAY不可用 1009:主库不可用 1010:备库不可用 1021:实例维护中 2000:开通中 2002:已退订 2005:扩容中 2011:冻结
 	ProdType            int32  `json:"prodType"`            // 实例部署方式 0：单机部署,1：主备部署
 	ReadPort            int32  `json:"readPort"`            // 读端口
 	SecurityGroup       string `json:"securityGroup"`       // 安全组名称
@@ -109,4 +109,5 @@ type PgsqlDetailResponseReturnObj struct {
 	BackupUsageDiskSize string `json:"backupUsageDiskSize"` // 备份已使用空间
 	BackupFreeSpace     string `json:"backupFreeSpace"`     // 备份免费空间
 	BillMode            int32  `json:"billMode"`            // 计费模式,1包周期,2按需
+	ProjectId           string `json:"projectId"`
 }

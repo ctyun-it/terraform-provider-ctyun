@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctebsbackup "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebsbackup"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -66,7 +67,7 @@ type ctyunEbsBackupsConfig struct {
 
 func (c *ctyunEbsBackups) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428`,
+		MarkdownDescription: utils.FormatDesc("查询云硬盘备份列表", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10037428"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -212,10 +213,10 @@ func (c *ctyunEbsBackups) Read(ctx context.Context, request datasource.ReadReque
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
+	projectID := c.meta.GetExtraIfEmpty(config.ProjectID.ValueString(), common.ExtraProjectId)
 	config.RegionID = types.StringValue(regionId)
 	// 组装请求体
 	params := &ctebsbackup.EbsbackupListBackupRequest{
@@ -228,7 +229,7 @@ func (c *ctyunEbsBackups) Read(ctx context.Context, request datasource.ReadReque
 		BackupName:   config.Name.ValueString(),
 		QueryContent: config.QueryContent.ValueString(),
 		BackupStatus: config.BackupStatus.ValueString(),
-		ProjectID:    config.ProjectID.ValueString(),
+		ProjectID:    projectID,
 	}
 
 	// 调用API

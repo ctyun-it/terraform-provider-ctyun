@@ -1,7 +1,6 @@
 
 # 从云主机数据盘创建私有镜像
 resource "ctyun_image_from_ecs" "%[1]s" {
-
   image_type="data_disk"
   # 必选参数：镜像名称（2~32字符，仅数字、字母、-组成，不以数字或-开头/结尾）
   image_name = "%[2]s"
@@ -12,9 +11,6 @@ resource "ctyun_image_from_ecs" "%[1]s" {
 
   # 必选参数：数据盘ID（需挂载于指定云主机）
   data_disk_id = "%[5]s"
-
-  # 可选参数：企业项目ID（默认0，即default项目）
-  project_id = "0"
 
   # 可选参数：标签列表（最多10个，键值不可重复）
   labels = [

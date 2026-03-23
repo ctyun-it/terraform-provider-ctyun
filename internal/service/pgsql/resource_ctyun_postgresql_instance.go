@@ -10,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -39,6 +40,7 @@ var (
 
 type CtyunPostgresqlInstance struct {
 	meta         *common.CtyunMetadata
+	name         string
 	ecsService   *business.EcsService
 	pgsqlService *business.PgsqlService
 	orderLooper  *business.OrderLooper
@@ -48,8 +50,8 @@ func (c *CtyunPostgresqlInstance) ImportState(ctx context.Context, request resou
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -66,11 +68,11 @@ func (c *CtyunPostgresqlInstance) ImportState(ctx context.Context, request resou
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -100,11 +102,12 @@ func NewCtyunPostgresqlInstance() resource.Resource {
 
 func (c *CtyunPostgresqlInstance) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_postgresql_instance"
+	c.name = response.TypeName
 }
 
 func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165`,
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10153165"),
 		Attributes: map[string]schema.Attribute{
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -137,7 +140,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"prod_id": schema.StringAttribute{
 				Required:    true,
-				Description: "产品ID，支持更新。取值范围包括：Single1222-（单实例12.22版本）, MasterSlave1222（一主一备12.22版本）, Single1417（单实例14.17版本）, MasterSlave1417（一主一备14.17版本）, Single1320（单实例13.20版本）, MasterSlave1320（一主一备13.20版本）, ReadOnly1222（只读实例12.22版本）, ReadOnly1320（只读实例13.20版本）, ReadOnly1417（只读实例14.17版本）, Single1512（单实例15.12版本）, MasterSlave1512（一主一备15.12版本）, ReadOnly1512（只读实例15.12版本）, Master2Slave1222（一主两备12.22版本）, Master2Slave1417（一主两备14.17版本）, Master2Slave1320（一主两备13.20版本）, Master2Slave1512（一主两备15.12版本）, Single168（单实例16.8版本）, MasterSlave168（一主一备16.8版本）, Master2Slave168（一主两备16.8版本）, ReadOnly168（只读实例16.8版本）。注：扩容过程中，不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(prod_id)扩容同时进行",
+				Description: "产品ID，支持更新。取值范围包括：Single1222-（单实例12.22版本）, MasterSlave1222（一主一备12.22版本）, Single1419（单实例14.19版本）, MasterSlave1419（一主一备14.19版本）, Single1322（单实例13.22版本）, MasterSlave1322（一主一备13.22版本）, ReadOnly1222（只读实例12.22版本）, ReadOnly1322（只读实例13.22版本）, ReadOnly1419（只读实例14.19版本）, Single1514（单实例15.14版本）, MasterSlave1514（一主一备15.14版本）, ReadOnly1514（只读实例15.14版本）, Master2Slave1222（一主两备12.22版本）, Master2Slave1419（一主两备14.19版本）, Master2Slave1322（一主两备13.22版本）, Master2Slave1514（一主两备15.14版本）, Single1610（单实例16.10版本）, MasterSlave1610（一主一备16.10版本）, Master2Slave1610（一主两备16.10版本）, ReadOnly1610（只读实例16.10版本）。注：扩容过程中，不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(prod_id)扩容同时进行",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.PgsqlProdIds...),
 				},
@@ -155,9 +158,9 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"storage_type": schema.StringAttribute{
 				Required:    true,
-				Description: "主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）",
+				Description: "主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSSDGenric, business.StorageTypeFASTSSD),
+					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSSDGenric, business.StorageTypeFASTSSD, business.StorageTypeXSSD0, business.StorageTypeXSSD1, business.StorageTypeXSSD2),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -293,7 +296,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID。若环境变量为空，则默认为0",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -444,6 +447,9 @@ func (c *CtyunPostgresqlInstance) Create(ctx context.Context, request resource.C
 
 	// 继续处理多个安全组的情况
 	err = c.handleOtherMultipleSecurityGroups(ctx, &plan, &plan, "create")
+	if err != nil {
+		return
+	}
 	// 创建后，获取pgsql详情
 	err = c.getAndMergePgsqlInstance(ctx, &plan)
 	if err != nil {
@@ -471,7 +477,8 @@ func (c *CtyunPostgresqlInstance) Read(ctx context.Context, request resource.Rea
 	// 查询远端
 	err = c.getAndMergePgsqlInstance(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到实例") {
+		if errors.Is(err, common.ResourceNotExistError) {
+			// 删除state
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -644,7 +651,7 @@ func (c *CtyunPostgresqlInstance) CreatePgsqlInstance(ctx context.Context, confi
 	// 处理MysqlNodeInfoList
 	var pgsqlNodeInfoList []pgsql.PgsqlCreateRequestNodeInfoList
 	pgsqlNodeInfo := pgsql.PgsqlCreateRequestNodeInfoList{}
-	pgsqlNodeInfo.InstSpec = business.PgsqlInstanceSeriesDict[config.instanceSeries]
+	pgsqlNodeInfo.InstSpec = business.MysqlInstanceSeriesDict[config.instanceSeries]
 	pgsqlNodeInfo.StorageType = config.StorageType.ValueString()
 	pgsqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
 	pgsqlNodeInfo.ProdPerformanceSpec = config.prodPerformanceSpec
@@ -708,7 +715,6 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 			return
 		}
 		config.ID = types.StringValue(id)
-
 	}
 	if config.ID.ValueString() == "" {
 		err = errors.New("实例id为空")
@@ -765,6 +771,7 @@ func (c *CtyunPostgresqlInstance) getAndMergePgsqlInstance(ctx context.Context, 
 func (c *CtyunPostgresqlInstance) updatePgsqlInstance(ctx context.Context, state *CtyunPostgresqlInstanceConfig, plan *CtyunPostgresqlInstanceConfig) (err error) {
 	if state.ID.ValueString() == "" {
 		err = errors.New("在变配实例时，实例id为空")
+		return
 	}
 
 	// 修改RDS实例名称
@@ -950,7 +957,8 @@ func (c *CtyunPostgresqlInstance) ListLoop(ctx context.Context, config *CtyunPos
 }
 
 func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *CtyunPostgresqlInstanceConfig, runningStatus int32, orderStatus int32, loopCount ...int) (err error) {
-
+	currentRunningStatus := int32(-1)
+	currentOrderStatus := int32(-1)
 	count := 60
 	if len(loopCount) > 0 {
 		count = loopCount[0]
@@ -961,7 +969,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 	if err != nil {
 		return
 	}
-	// 因为pgsql console和openapi有一个同步误差时间，需要多轮询几轮，目前暂定4轮
+	// 因为pgsql console和openapi有一个同步误差时间，需要多轮询几轮，目前暂定2轮
 	syncCount := 2
 	result := retryer.Start(
 		func(currentTime int) bool {
@@ -997,17 +1005,17 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 				}
 				return true
 			}
-			detailRunningStatus := resp.ReturnObj.ProdRunningStatus
-			detailOrderStatus := resp.ReturnObj.ProdOrderStatus
+			currentRunningStatus = resp.ReturnObj.ProdRunningStatus
+			currentOrderStatus = resp.ReturnObj.ProdOrderStatus
 			// 判断是否被停用，如果被停用需要恢复使用
-			if detailRunningStatus == business.PgsqlProdRunningStatusStopped && runningStatus != business.PgsqlProdRunningStatusStopped {
+			if currentRunningStatus == business.PgsqlProdRunningStatusStopped && runningStatus != business.PgsqlProdRunningStatusStopped {
 				err = c.startInstance(ctx, state, nil)
 				if err != nil {
 					return false
 				}
 				return true
 			}
-			if detailRunningStatus == runningStatus && detailOrderStatus == orderStatus {
+			if currentRunningStatus == runningStatus && currentOrderStatus == orderStatus {
 				if syncCount <= 0 {
 					return false
 				} else {
@@ -1017,7 +1025,7 @@ func (c *CtyunPostgresqlInstance) RunningStatusLoop(ctx context.Context, state *
 			return true
 		})
 	if result.ReturnReason == business.ReachMaxLoopTime {
-		return errors.New("轮询已达最大次数，资源仍未启动成功！")
+		return fmt.Errorf("轮询已达最大次数，资源仍状态仍不符合预期，预期运行状态为：%d，预期订单状态为：%d，当前运行状态为：%d，当前订单状态为：%d！", runningStatus, orderStatus, currentRunningStatus, currentOrderStatus)
 	}
 	return
 }
@@ -1307,11 +1315,11 @@ func (c *CtyunPostgresqlInstance) checkSpec(ctx context.Context, plan *CtyunPost
 		return errors.New("flavor_name 输入规格有误")
 	}
 	hostType := strings.ToUpper(f[0])
-	plan.instanceSeries = string(hostType[0]) // S, M , C
-	if len(hostType) > 2 {
-		plan.instanceSeries = hostType
+	instanceSeries := c.ecsService.GetInstanceSeries(ctx, hostType)
+	if instanceSeries == "" {
+		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
-
+	plan.instanceSeries = instanceSeries // S、M 或 C
 	//  获取 flavor
 	flavor, err := c.pgsqlService.GetPgsqlFlavorByProdIdAndFlavorName(ctx, plan.ProdID.ValueString(), plan.FlavorName.ValueString(), plan.RegionID.ValueString(), plan.instanceSeries)
 	if err != nil {
@@ -1963,6 +1971,8 @@ func (c *CtyunPostgresqlInstance) handleOtherMultipleSecurityGroups(ctx context.
 			}
 		}
 	}
+	// 暂停等待几秒，防止更新完安全组之前就查询详情
+	time.Sleep(time.Second * 5)
 	return nil
 }
 

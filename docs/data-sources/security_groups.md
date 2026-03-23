@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_security_groups"
+---
+
 # ctyun_security_groups (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询安全组
 
 
 

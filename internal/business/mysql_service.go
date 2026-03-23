@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	"strings"
 	"time"
 )
 
@@ -73,7 +74,7 @@ func (u MysqlService) GetIDByOrder(ctx context.Context, orderID, projectID strin
 	return
 }
 
-func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
+func (u MysqlService) GetDetailByID(ctx context.Context, instID, regionID string) (instance *mysql.DetailRespReturnObj, err error) {
 	detailParams := &mysql.TeledbQueryDetailRequest{
 		OuterProdInstId: instID,
 	}
@@ -81,13 +82,15 @@ func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID, regi
 		InstID:   instID,
 		RegionID: regionID,
 	}
-	if projectID != "" {
-		detailHeaders.ProjectID = &projectID
-	}
+
 	resp, err := u.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, u.meta.Credential, detailParams, detailHeaders)
 	if err != nil {
 		return
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Message, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
@@ -98,7 +101,7 @@ func (u MysqlService) GetDetailByID(ctx context.Context, instID, projectID, regi
 	return
 }
 
-func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectID, regionID string, runningStatus, orderStatus int32) (err error) {
+func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectId string, regionID string, runningStatus, orderStatus int32) (err error) {
 	retryer, err := NewRetryer(time.Second*20, 180)
 	if err != nil {
 		return
@@ -106,11 +109,12 @@ func (u MysqlService) WaitInstanceStatus(ctx context.Context, instID, projectID,
 	result := retryer.Start(
 		func(currentTime int) bool {
 			var instance *mysql.DetailRespReturnObj
-			instance, err = u.GetDetailByID(ctx, instID, projectID, regionID)
+			instance, err = u.GetDetailByID(ctx, instID, regionID)
 			if err != nil {
 				return false
 			}
-			if instance.ProdRunningStatus == runningStatus && instance.ProdOrderStatus == orderStatus {
+			//
+			if instance.ProdRunningStatus == runningStatus && instance.ProdOrderStatus == orderStatus && instance.Alive == 0 {
 				return false
 			}
 			return true

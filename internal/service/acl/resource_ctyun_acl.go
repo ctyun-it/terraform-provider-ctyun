@@ -2,12 +2,14 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -31,11 +33,13 @@ var (
 
 type CtyunAcl struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunAcl) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_acl"
+	c.name = response.TypeName
 }
 
 func (c *CtyunAcl) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -45,7 +49,6 @@ func (c *CtyunAcl) Configure(_ context.Context, request resource.ConfigureReques
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
 }
 
 func NewCtyunAcl() resource.Resource {
@@ -56,43 +59,37 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAclConfig
 
-	var ID, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
+	var ID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		ID = request.ID
-	} else if strings.Count(request.ID, common.ImportSeparator) == 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &projectId)
-		if err != nil {
-			return
-		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	config.ProjectID = types.StringValue(projectId)
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	config.ProjectID = types.StringValue(projectID)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -102,7 +99,7 @@ func (c *CtyunAcl) ImportState(ctx context.Context, request resource.ImportState
 
 func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028583",
+		MarkdownDescription: utils.FormatDesc("管理访问控制", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028583"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -131,7 +128,7 @@ func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -148,10 +145,14 @@ func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, r
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "acl备注，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·！@#￥%……&*（） —— -+={},《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"apply_to_public_lb": schema.BoolAttribute{
@@ -161,6 +162,7 @@ func (c *CtyunAcl) Schema(ctx context.Context, request resource.SchemaRequest, r
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"enabled": schema.BoolAttribute{
@@ -234,14 +236,13 @@ func (c *CtyunAcl) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (c *CtyunAcl) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -360,17 +361,19 @@ func (c *CtyunAcl) getAclDetail(ctx context.Context, config *CtyunAclConfig) (*c
 		RegionID: config.RegionID.ValueString(),
 		AclID:    config.ID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowAclApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return nil, err
 	} else if resp == nil {
-		err = fmt.Errorf("获取acl详情失败，接口f返回nil，请联系研发确认问题原因！")
+		err = fmt.Errorf("获取acl详情失败，接口返回nil，请联系研发确认问题原因！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -391,9 +394,6 @@ func (c *CtyunAcl) update(ctx context.Context, state *CtyunAclConfig, plan *Ctyu
 		AclID:    state.ID.ValueString(),
 		Name:     plan.Name.ValueString(),
 		Enabled:  &paramEnabled,
-	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		params.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 	if !plan.Description.IsNull() {
 		params.Description = plan.Description.ValueStringPointer()

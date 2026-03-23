@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs"
+---
+
 # ctyun_ebs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027696
+-> 管理云硬盘
 
 
 
@@ -36,8 +41,8 @@ resource "ctyun_ebs" "ebs_test" {
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，year：按年、on_demand：按需。当此值为month或者year时，cycle_count为必填
 - `mode` (String) 磁盘模式，vbd，iscsi，fcsan
 - `name` (String) 磁盘命名，单账户单资源池下，命名需唯一，长度为2-64个字符，仅允许英文字母、数字及特殊字符._-，不能以特殊字符开头，支持更新
-- `size` (Number) 磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；XSSD-0：10GB-65536GB；XSSD-1：20GB-65536GB；XSSD-2：512GB-65536GB 支持更新（不支持缩容）
-- `type` (String) 磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；XSSD-0、XSSD-1、XSSD-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式
+- `size` (Number) 磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；xssd-0：10GB-65536GB；xssd-1：20GB-65536GB；xssd-2：512GB-65536GB 支持更新（不支持缩容）
+- `type` (String) 磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；xssd-0、xssd-1、xssd-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式
 
 ### Optional
 
@@ -45,6 +50,7 @@ resource "ctyun_ebs" "ebs_test" {
 - `backup_id` (String) 云硬盘备份ID参数，有以下限制：从备份创建盘仅支持VBD模式；新盘容量不能小于备份源盘容量；不支持配置加密属性（自动与备份源盘保持一致）；备份状态必须是可用。
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年
 - `delete_snap_with_ebs` (Boolean) 设置快照是否随云硬盘删除，true表示随盘删除，false表示不随盘删除
+- `encrypted` (Boolean) 是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密
 - `image_id` (String) 镜像ID，如果用镜像创建，只支持数据盘的私有镜像和共享镜像，所创建的数据盘的所在地域要与镜像源一致，容量不可小于镜像对应的磁盘容量。从镜像创建的数据盘不支持加密、ISCSI和FCSAN高级配置。
 - `labels` (Attributes List) 设置云硬盘标签，实际绑定标签的结果请查询云硬盘详情的labels返回值是否如预期。 (see [below for nested schema](#nestedatt--labels))
 - `multi_attach` (Boolean) 是否共享云硬盘
@@ -58,7 +64,6 @@ resource "ctyun_ebs" "ebs_test" {
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
-- `encrypted` (Boolean) 是否加密盘； 共享盘、ISCSI模式磁盘、极速型SSD类型盘、XSSD系列盘不支持加密
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 磁盘id
 - `kms_uuid` (String) 加密盘密钥UUID，是加密盘时才返回
@@ -72,3 +77,15 @@ Required:
 
 - `key` (String) 标签的key值，长度不能超过32个字符。
 - `value` (String) 标签的value值，长度不能超过32个字符。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘(ebs)
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ebs.example d-ebs1234567890,bb9fdb42056f11eda1610242ac110002
+```

@@ -30,10 +30,12 @@ var (
 
 type CtyunPostgresqlBackup struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunPostgresqlBackup) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_postgresql_backup"
+	c.name = response.TypeName
 }
 func NewCtyunPostgresqlBackup() resource.Resource {
 	return &CtyunPostgresqlBackup{}
@@ -51,41 +53,39 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[instanceID],[projectID],[regionID]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunPostgresqlBackupConfig
-	var name, regionId, projectId, instId string
+	var name, regionId, instId string
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
 		if err != nil {
 			return
 		}
 	}
 	if name == "" {
-		err = fmt.Errorf("name 不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 	if instId == "" {
-		err = fmt.Errorf("instID 不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID 不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
 	cfg.Name = types.StringValue(name)
 	cfg.InstID = types.StringValue(instId)
 	err = c.getAndMergePostgresqlBackup(ctx, &cfg)
@@ -98,7 +98,7 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 
 func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10160072",
+		MarkdownDescription: utils.FormatDesc("管理PostgreSQL实例的备份", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10160072"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -123,16 +123,9 @@ func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.Sch
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:            true,
+				MarkdownDescription: "废弃字段，请不要指定",
+				Description:         "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -226,8 +219,10 @@ func (c *CtyunPostgresqlBackup) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMergePostgresqlBackup(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -237,7 +232,21 @@ func (c *CtyunPostgresqlBackup) Read(ctx context.Context, request resource.ReadR
 }
 
 func (c *CtyunPostgresqlBackup) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunPostgresqlBackupConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunPostgresqlBackupConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunPostgresqlBackup) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -266,9 +275,7 @@ func (c *CtyunPostgresqlBackup) Delete(ctx context.Context, request resource.Del
 	header := &pgsql.PgsqlDeleteBackupRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlDeleteBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
@@ -292,9 +299,7 @@ func (c *CtyunPostgresqlBackup) CreatePostgresqlBackup(ctx context.Context, conf
 	header := &pgsql.PgsqlCreateBackupRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlCreateBackupApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -327,9 +332,7 @@ func (c *CtyunPostgresqlBackup) getBackupDetail(ctx context.Context, config *Cty
 	header := &pgsql.PgsqlGetBackupListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtPgsqlApis.PgsqlGetBackupListApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return nil, err
@@ -337,19 +340,25 @@ func (c *CtyunPostgresqlBackup) getBackupDetail(ctx context.Context, config *Cty
 		err = fmt.Errorf("查询postgresql实例(id=%s)的备份集(name=%s)失败，接口返回nil，请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(*resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("postgresql实例(id=%s)中存在重名备份集(name=%s)", config.InstID.ValueString(), config.Name.ValueString())
 		return nil, err
-	} else if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("postgresql实例(id=%s)中不存在名为%s的备份集", config.InstID.ValueString(), config.Name.ValueString())
-		return nil, err
 	}
+
 	return resp, nil
 }
 

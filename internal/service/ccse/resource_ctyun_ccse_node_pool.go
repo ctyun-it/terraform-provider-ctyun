@@ -2,6 +2,7 @@ package ccse
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -37,6 +39,7 @@ var (
 
 type ctyunCcseNodePool struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunCcseNodePool() resource.Resource {
@@ -45,6 +48,7 @@ func NewCtyunCcseNodePool() resource.Resource {
 
 func (c *ctyunCcseNodePool) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ccse_node_pool"
+	c.name = response.TypeName
 }
 
 type CtyunCcseNodePoolConfig struct {
@@ -84,7 +88,7 @@ type CtyunCcseNodePoolDisk struct {
 
 func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452`,
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎节点池", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10318452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -303,7 +307,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true,
 				Description: "最大pod数, 默认110",
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Int32{
 					int32validator.AtLeast(1),
@@ -315,9 +319,9 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Attributes: map[string]schema.Attribute{
 					"type": schema.StringAttribute{
 						Required:    true,
-						Description: "系统盘类型，支持SATA、SAS、SSD，支持更新",
+						Description: "系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新",
 						Validators: []validator.String{
-							stringvalidator.OneOf(business.CcseDiskTypes...),
+							stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 						},
 					},
 					"size": schema.Int32Attribute{
@@ -369,9 +373,9 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 					Attributes: map[string]schema.Attribute{
 						"type": schema.StringAttribute{
 							Required:    true,
-							Description: "数据盘类型，支持SATA、SAS、SSD，支持更新",
+							Description: "数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新",
 							Validators: []validator.String{
-								stringvalidator.OneOf(business.CcseDiskTypes...),
+								stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 							},
 						},
 						"size": schema.Int32Attribute{
@@ -445,7 +449,7 @@ func (c *ctyunCcseNodePool) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -525,8 +529,8 @@ func (c *ctyunCcseNodePool) ImportState(ctx context.Context, request resource.Im
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[clusterID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[cluster_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -551,11 +555,11 @@ func (c *ctyunCcseNodePool) ImportState(ctx context.Context, request resource.Im
 		return
 	}
 	if clusterID == "" {
-		err = fmt.Errorf("clusterID不能为空")
+		err = fmt.Errorf("cluster_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -828,7 +832,11 @@ func (c *ctyunCcseNodePool) getNodePoolByID(ctx context.Context, plan CtyunCcseN
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		if resp.Error == common.OpenapiCCSENotExist || strings.Contains(resp.Message, "不存在") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

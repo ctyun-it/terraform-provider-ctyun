@@ -82,6 +82,7 @@ type SdwanGetSdwanAclRuleReturnObjResponseResult struct {
 	Protocol         *string `json:"protocol"`         /*  本参数表示协议类型<br/><br/>取值范围:<br/>udp:UDP<br/>icmp:ICMP</br>all:ALL</br>tcp:TCP  */
 	FuserLastUpdated *string `json:"fuserLastUpdated"` /*  用户最近更新时间  */
 	SrcCidr          *string `json:"srcCidr"`          /*  源网段  */
+	IpVersion        *string `json:"ipVersion"`        /*  源网段  */
 	DstCidr          *string `json:"dstCidr"`          /*  目的网段  */
 	SrcPortRange     *string `json:"srcPortRange"`     /*  源端口范围  */
 	DstPortRange     *string `json:"dstPortRange"`     /*  目的端口范围  */

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -24,7 +25,7 @@ func (c *ctyunNetworkInterfaces) Metadata(_ context.Context, req datasource.Meta
 
 func (c *ctyunNetworkInterfaces) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225195`,
+		MarkdownDescription: utils.FormatDesc("查询弹性网卡", "PORT", "https://www.ctyun.cn/document/10026730/10225195"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -130,7 +131,7 @@ func (c *ctyunNetworkInterfaces) Read(ctx context.Context, req datasource.ReadRe
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		resp.Diagnostics.AddError(msg, msg)
 		return
 	}

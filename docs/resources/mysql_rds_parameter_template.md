@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_rds_parameter_template"
+---
+
 # ctyun_mysql_rds_parameter_template (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10035295
+-> 配置MySQL实例的参数，同时支持应用参数模板
 
 
 
@@ -85,7 +90,7 @@ resource "ctyun_mysql_rds_parameter_template" "examples" {
 ### Optional
 
 - `parameters` (Map of String) 要修改的参数对。传入该参数，则无需传入template_id，当前mysql实例的参数可根据data.ctyun_mysql_parameters获取。
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `template_id` (Number) 参数模板id，当mysql实例应用参数模板时必填。参数模板id可以根据data.ctyun_mysql_param_templates获取
 

@@ -30,6 +30,8 @@ type Dependence struct {
 	scalingConfigID  string
 	scalingConfigID1 string
 	azName           string
+	flavorName       string
+	flavorName2      string
 }
 
 var dependence Dependence
@@ -76,6 +78,8 @@ func TestMain(m *testing.M) {
 		scalingConfigID:  outputs["scaling_config_id"].Value,
 		scalingConfigID1: outputs["scaling_config_id1"].Value,
 		azName:           outputs["az_name"].Value,
+		flavorName:       outputs["flavor_name"].Value,
+		flavorName2:      outputs["flavor_name2"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

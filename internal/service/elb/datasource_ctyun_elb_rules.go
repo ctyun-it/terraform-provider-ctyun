@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -40,7 +41,7 @@ func (c *ctyunElbRules) Metadata(ctx context.Context, request datasource.Metadat
 
 func (c *ctyunElbRules) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡转发规则", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032110"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -182,7 +183,7 @@ func (c *ctyunElbRules) Read(ctx context.Context, request datasource.ReadRequest
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}

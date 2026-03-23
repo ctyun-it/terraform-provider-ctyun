@@ -70,8 +70,12 @@ type CtvpcShowRouteTableReturnObjResponse struct {
 	SubnetDetail    []*CtvpcShowRouteTableReturnObjSubnetDetailResponse `json:"subnetDetail"`          /*  子网配置详情  */
 	RawType         int32                                               `json:"type"`                  /*  路由表类型:0-子网路由表，2-网关路由表  */
 	Origin          *string                                             `json:"origin,omitempty"`      /*  路由表来源：default-系统默认; user-用户创建  */
+	Ipv4Gw          *CtvpcShowRouteTableReturnObjIpv4GwResponse         `json:"ipv4Gw,omitempty"`      /*  路由表来源：default-系统默认; user-用户创建  */
 }
-
+type CtvpcShowRouteTableReturnObjIpv4GwResponse struct {
+	Id   *string `json:"id,omitempty"`   /*  路由下子网 id  */
+	Name *string `json:"name,omitempty"` /*  路由下子网名字  */
+}
 type CtvpcShowRouteTableReturnObjSubnetDetailResponse struct {
 	Id       *string `json:"id,omitempty"`       /*  路由下子网 id  */
 	Name     *string `json:"name,omitempty"`     /*  路由下子网名字  */

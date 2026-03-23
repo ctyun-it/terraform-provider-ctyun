@@ -11,7 +11,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -25,11 +25,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/float64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -53,6 +53,7 @@ func NewCtyunEcs() resource.Resource {
 
 type ctyunEcs struct {
 	meta                 *common.CtyunMetadata
+	name                 string
 	ecsService           *business.EcsService
 	ebsService           *business.EbsService
 	securityGroupService *business.SecurityGroupService
@@ -69,20 +70,26 @@ var (
 
 func (c *ctyunEcs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730`,
+		MarkdownDescription: utils.FormatDesc("管理云主机", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("display_name")),
+				},
 			},
 			"instance_name": schema.StringAttribute{
 				Required:    true,
@@ -106,17 +113,27 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"flavor_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新",
+				Computed:    true,
+				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					validator2.UUID(),
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_name")),
 				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("flavor_name")),
+				},
 			},
 			"flavor_name": schema.StringAttribute{
 				Optional:    true,
-				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，支持更新",
+				Computed:    true,
+				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.MatchRoot("flavor_id")),
+				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("flavor_id")),
 				},
 			},
 			"image_id": schema.StringAttribute{
@@ -140,7 +157,10 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbsDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbsDiskTypes...),
+						stringvalidator.OneOf(business.EbsDiskTypesUpper...),
+					),
 				},
 			},
 			"system_disk_size": schema.Int64Attribute{
@@ -148,6 +168,9 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "系统盘大小，单位为G，取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(40, 32768),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.CheckValueWhenChangeInt64(path.Root("status"), business.EcsStatusStopped),
 				},
 			},
 			"vpc_id": schema.StringAttribute{
@@ -171,10 +194,15 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"fixed_ip": schema.StringAttribute{
+				Optional:    true,
 				Computed:    true,
 				Description: "加入子网后的ip地址",
 				Validators: []validator.String{
 					validator2.Ip(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"security_group_ids": schema.SetAttribute{
@@ -185,12 +213,15 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					setvalidator.SizeAtLeast(1),
 					setvalidator.ValueStringsAre(validator2.SecurityGroupValidate()),
 				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.UseStateForUnknown(),
+				},
 				Description: "安全组id列表，在多可用区类型资源池下，安全组ID通常以“sg-”开头，非多可用区类型资源池安全组ID为uuid格式；默认使用默认安全组，无默认安全组情况下请填写该参数 支持更新",
 			},
 			"key_pair_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "密钥对名称，支持更新",
+				Description: "密钥对名称，与password字段互斥，支持更新",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
 						path.MatchRoot("password"),
@@ -202,7 +233,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"password": schema.StringAttribute{
 				Optional:    true,
-				Description: "用户密码，满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头 支持更新",
+				Description: "用户密码，与key_pair_name字段互斥，满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头 支持更新",
 				Validators: []validator.String{
 					stringvalidator.ConflictsWith(path.Expressions{
 						path.MatchRoot("key_pair_name"),
@@ -237,21 +268,14 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true",
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
-				Default: booldefault.StaticBool(true),
+				Default:     booldefault.StaticBool(true),
+				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true，支持更新",
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 				},
-			},
-			"default_security_group_id": schema.StringAttribute{
-				Computed:    true,
-				Description: "默认加入安全组id",
 			},
 			"status": schema.StringAttribute{
 				Optional:    true,
@@ -270,16 +294,22 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 			"system_disk_id": schema.StringAttribute{
 				Computed:    true,
-				Description: "系统盘的id",
+				Description: "系统盘ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"user_data": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符",
 				Default:     stringdefault.StaticString(""),
+				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 16384),
 				},
@@ -290,13 +320,16 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订购的受理单ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -339,7 +372,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, false),
+				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 			"is_destroy_instance": schema.BoolAttribute{
 				Optional:    true,
@@ -372,6 +405,24 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "是否开启实例删除保护，默认为false，按需实例支持更新",
 				Default:     booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					validator2.ConflictsWithEqualBool(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
+				},
+			},
+			"security_product": schema.StringAttribute{
+				Optional:    true,
+				Description: "安全防护类型，取值范围：EnterpriseEdition：企业版，UltimateEdition：旗舰版，BasicEdition：基础版。不填写表示不开启。",
+				Validators: []validator.String{
+					stringvalidator.OneOf(
+						"EnterpriseEdition", "UltimateEdition", "BasicEdition"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"labels": schema.ListNestedAttribute{
 				Optional:    true,
@@ -400,6 +451,13 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "云主机组ID，支持更新",
 				Validators: []validator.String{
 					validator2.UUID(),
+				},
+			},
+			"master_port_id": schema.StringAttribute{
+				Computed:    true,
+				Description: "主网卡id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"create_time": schema.StringAttribute{
@@ -441,7 +499,26 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 	if err != nil {
 		return
 	}
+	// 先保存好state状态，以防后续接口失败，导致资源游离
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
+
+	// 等待云主机状态为运行中的状态
+	err = c.waitInstanceStatusFor(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), business.EcsStatusRunning)
+	if err != nil {
+		return
+	}
+
+	// 设置删除保护设置
+	err = c.setDeletionProtection(ctx, &plan)
+	if err != nil {
+		return
+	}
+
+	err = c.createMetadata(ctx, plan.Id.ValueString(), plan.RegionId.ValueString(), plan.Metadata)
+	if err != nil {
+		return
+	}
+
 	// 创建机器后状态默认为启动状态，可根据用户要求的状态，去执行对应的操作，比如关机、节省关机
 	status := plan.Status.ValueString()
 	if status != "" && status != business.EcsStatusRunning {
@@ -452,18 +529,12 @@ func (c *ctyunEcs) Create(ctx context.Context, request resource.CreateRequest, r
 	}
 
 	// 查询信息
-	instance, err := c.getAndMergeEcs(ctx, plan)
+	err = c.getAndMergeEcs(ctx, &plan)
 	if err != nil {
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-	}
 
-	// 修复bug，因为创建的时候，后端会将实例自动加入到到某个特定的安全组中，如果直接返回会导致terraform报错，因此要把多余的安全组给过滤掉
-	instance.DefaultSecurityGroupId = c.getAndRemoveSecurityGroups(ctx, plan, instance)
-
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
 func (c *ctyunEcs) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -476,16 +547,17 @@ func (c *ctyunEcs) Read(ctx context.Context, request resource.ReadRequest, respo
 	if !c.acquireAndSetIdIfOrderNotFinished(ctx, &state, response) {
 		return
 	}
-	instance, err := c.getAndMergeEcs(ctx, state)
+	err := c.getAndMergeEcs(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+			return
+		}
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -535,6 +607,12 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
+	//更新续订开关
+	err = c.updateAutoRenew(ctx, state, plan)
+	if err != nil {
+		return
+	}
+	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	// 更新安全组
 	err = c.updateSecurityGroup(ctx, state, plan)
 	if err != nil {
@@ -565,16 +643,19 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
+	state.AffinityGroupId = plan.AffinityGroupId
 	// 反查信息
-	instance, err := c.getAndMergeEcs(ctx, state)
+	err = c.getAndMergeEcs(ctx, &state)
 	if err != nil {
 		return
 	}
-	instance.IsDestroyInstance = plan.IsDestroyInstance
-	instance.Password = plan.Password
-	instance.CycleType = plan.CycleType
-	instance.CycleCount = plan.CycleCount
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	state.IsDestroyInstance = plan.IsDestroyInstance
+	state.Password = plan.Password
+	if !plan.PayVoucherPrice.IsUnknown() && !plan.PayVoucherPrice.IsNull() && state.PayVoucherPrice.IsNull() {
+		state.PayVoucherPrice = plan.PayVoucherPrice
+		response.Diagnostics.AddWarning("pay_voucher_price的更新仅写入状态文件", "在import时，状态文件中pay_voucher_price为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunEcs) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -663,9 +744,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	if err != nil {
 		return err
 	}
-	imageVisibility, err2 := business.ImageVisibilityMap.FromOriginalScene(imageResponse.Images[0].Visibility, business.ImageVisibilityMapScene1)
-	if err2 != nil {
-		return err2
+	imageVisibility, exist := business.ImageVisibilityMap[imageResponse.Images[0].Visibility]
+	if !exist {
+		return fmt.Errorf("不支持的镜像种类：%s", imageResponse.Images[0].Visibility)
 	}
 
 	// 是否按需参数
@@ -686,7 +767,8 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	// 系统盘类型参数
 	diskType, err2 := business.EbsDiskTypeMap.FromOriginalScene(plan.SystemDiskType.ValueString(), business.EbsDiskTypeMapScene1)
 	if err2 != nil {
-		return err2
+		// 尝试小写转大写，失败则表示本来就是大写
+		diskType = plan.SystemDiskType.ValueString()
 	}
 
 	var securityGroupIds []types.String
@@ -701,7 +783,6 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	azName := plan.AzName.ValueString()
 	projectId := plan.ProjectId.ValueString()
 
-	image_type := imageVisibility.(int)
 	boot_disk_size := int32(plan.SystemDiskSize.ValueInt64())
 	cycle_count := int32(plan.CycleCount.ValueInt64())
 	nic_is_master := true
@@ -734,7 +815,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		DisplayName:     plan.DisplayName.ValueString(),
 		FlavorName:      plan.FlavorName.ValueStringPointer(),
 		FlavorID:        plan.FlavorId.ValueStringPointer(),
-		ImageType:       int32(image_type),
+		ImageType:       int32(imageVisibility),
 		ImageID:         plan.ImageId.ValueString(),
 		BootDiskType:    diskType.(string),
 		BootDiskSize:    boot_disk_size,
@@ -770,14 +851,30 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		params.UserPassword = plan.Password.ValueStringPointer()
 	}
 
+	if !plan.SecurityProduct.IsNull() && !plan.SecurityProduct.IsUnknown() {
+		params.SecurityProduct = plan.SecurityProduct.ValueStringPointer()
+	}
+
 	// 创建ecs实例
 	resp, err2 := c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err2 != nil {
 		return err2
-	}
-	if resp.StatusCode == common.ErrorStatusCode {
-		err := fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return err
+	} else if resp == nil {
+		return common.InvalidReturnObjError
+	} else if resp.StatusCode != common.NormalStatusCode {
+		// 若接口返回：订单处理失败: 远程调用失败报错的话，等待5s，重试一次
+		if strings.Contains(utils.SecString(resp.Error), "Ecs.Order.ProcFailed") || strings.Contains(utils.SecString(resp.Message), "order proc failed") {
+			time.Sleep(5 * time.Second)
+			resp, err2 = c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
+			if err2 != nil {
+				return err2
+			} else if resp == nil {
+				return common.InvalidReturnObjError
+			} else if resp.StatusCode != common.NormalStatusCode {
+				err2 = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
+				return err2
+			}
+		}
 	}
 
 	// 先设置重要的属性
@@ -797,19 +894,6 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	id := loop.Uuid[0]
 	plan.Id = types.StringValue(id)
 
-	// 等待云主机状态为运行中的状态
-	_ = c.waitInstanceStatusFor(ctx, id, regionId, business.EcsStatusRunning)
-
-	// 设置删除保护设置
-	err2 = c.setDeletionProtection(ctx, plan)
-	if err2 != nil {
-		return err2
-	}
-
-	err2 = c.createMetadata(ctx, id, regionId, plan.Metadata)
-	if err2 != nil {
-		return err2
-	}
 	return nil
 }
 
@@ -1146,32 +1230,6 @@ func (c *ctyunEcs) getInstanceStatus(ctx context.Context, id, regionId string) (
 	return resp.InstanceStatus, err
 }
 
-// getAndRemoveSecurityGroups 获取并删除对应安全组
-func (c *ctyunEcs) getAndRemoveSecurityGroups(ctx context.Context, plan CtyunEcsConfig, target *CtyunEcsConfig) types.String {
-	var securityGroupIds []types.String
-	plan.SecurityGroupIds.ElementsAs(ctx, &securityGroupIds, true)
-	mapping := make(map[string]struct{})
-	for _, id := range securityGroupIds {
-		mapping[id.ValueString()] = struct{}{}
-	}
-
-	newSecurityGroupIds := []types.String{}
-	var targetSecurityGroupIds []types.String
-	target.SecurityGroupIds.ElementsAs(ctx, &targetSecurityGroupIds, true)
-	var defaultSecurityGroupId types.String
-	for _, id := range targetSecurityGroupIds {
-		_, ok := mapping[id.ValueString()]
-		if ok {
-			newSecurityGroupIds = append(newSecurityGroupIds, id)
-		} else {
-			defaultSecurityGroupId = id
-		}
-	}
-	sgs, _ := types.SetValueFrom(ctx, types.StringType, newSecurityGroupIds)
-	target.SecurityGroupIds = sgs
-	return defaultSecurityGroupId
-}
-
 // leaveSecurityGroups 离开安全组
 func (c *ctyunEcs) leaveSecurityGroups(ctx context.Context, state CtyunEcsConfig) error {
 	var securityGroupIds []types.String
@@ -1205,8 +1263,13 @@ func (c *ctyunEcs) waitInstanceStatusFor(ctx context.Context, id, regionId, stat
 }
 
 // updateFlavor 更新云主机实例规格
+// 支持flavor id 和flavor name 交叉更新的情况：创建时使用flavor id， 更新的时候使用flavor name
 func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan CtyunEcsConfig) error {
-	if state.FlavorId.Equal(plan.FlavorId) && state.FlavorName.Equal(plan.FlavorName) {
+	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
+	if flavorID != "" && state.FlavorId.Equal(plan.FlavorId) {
+		return nil
+	}
+	if flavorName != "" && state.FlavorName.Equal(plan.FlavorName) {
 		return nil
 	}
 
@@ -1214,21 +1277,19 @@ func (c *ctyunEcs) updateFlavor(ctx context.Context, state CtyunEcsConfig, plan 
 	if !c.checkInstanceStatus(ctx, state.Id.ValueString(), state.RegionId.ValueString(), business.EcsStatusStopped) {
 		return errors.New("变更云主机配置规格，请先将云主机关机")
 	}
-	flavorID, flavorName := plan.FlavorId.ValueString(), plan.FlavorName.ValueString()
-	if flavorName != "" {
+	if flavorID != "" && !plan.FlavorId.Equal(state.FlavorId) {
+		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
+		if err != nil {
+			return err
+		}
+	}
+	if flavorName != "" && !plan.FlavorName.Equal(state.FlavorName) {
 		fid, err := c.ecsService.GetFlavorIDByName(ctx, flavorName, plan.RegionId.ValueString(), plan.AzName.ValueString())
 		if err != nil {
 			return err
 		}
 		flavorID = fid
 	}
-	if flavorID != "" {
-		err := c.ecsService.FlavorMustExist(ctx, flavorID, state.RegionId.ValueString(), state.AzName.ValueString())
-		if err != nil {
-			return err
-		}
-	}
-
 	// 更新云主机规格
 	resp, err := c.meta.Apis.CtEcsApis.EcsUpdateFlavorSpecApi.Do(ctx, c.meta.Credential, &ctecs.EcsUpdateFlavorSpecRequest{
 		RegionId:    state.RegionId.ValueString(),
@@ -1381,7 +1442,7 @@ func (c *ctyunEcs) destroyInstance(ctx context.Context, state CtyunEcsConfig) er
 }
 
 // getAndMergeEcs 查询ecs
-func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*CtyunEcsConfig, error) {
+func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err error) {
 	regionId := cfg.RegionId.ValueString()
 
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDetailsInstanceV41Api.Do(ctx, c.meta.SdkCredential, &ctecs2.CtecsDetailsInstanceV41Request{
@@ -1389,15 +1450,16 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		InstanceID: cfg.Id.ValueString(),
 	})
 	if err != nil {
-		return nil, err
+		return
 	} else if utils.SecString(resp.ErrorCode) == common.EcsInstanceNotFound {
-		return nil, nil
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return nil, err
+		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
-		return nil, err
+		return
 	}
 	instance_details_resp := resp.ReturnObj
 	// 基础信息
@@ -1408,28 +1470,23 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 	cfg.UpdateTime = types.StringValue(*instance_details_resp.UpdatedTime)
 	cfg.Name = cfg.DisplayName
 	cfg.EipAddress = utils.SecStringValue(instance_details_resp.FloatingIP)
-	if cfg.FlavorId != types.StringNull() {
-		cfg.FlavorId = types.StringValue(*instance_details_resp.Flavor.FlavorID)
-	}
+	cfg.FlavorId = types.StringValue(*instance_details_resp.Flavor.FlavorID)
+	cfg.FlavorName = types.StringValue(*instance_details_resp.Flavor.FlavorName)
 	cfg.ActualImageID = types.StringValue(*instance_details_resp.Image.ImageID)
 	cfg.VpcId = types.StringValue(*instance_details_resp.VpcID)
 	cfg.Status = types.StringValue(*instance_details_resp.InstanceStatus)
+	cfg.ProjectId = types.StringValue(*instance_details_resp.ProjectID)
+
 	if instance_details_resp.ExpiredTime != nil {
-		cfg.ExpireTime = types.StringValue(utils.FromRFC3339ToLocal(*instance_details_resp.ExpiredTime))
+		cfg.ExpireTime = types.StringValue(*instance_details_resp.ExpiredTime)
 	} else {
 		// 当ExpiredTime为nil时，设置为空字符串
 		cfg.ExpireTime = types.StringValue("")
 	}
 
-	// 填充安全组信息
-	sgs := []types.String{}
+	// 将SecGroupList转换成Set并赋值到cfg.SecurityGroupIds
+	sgs := make([]types.String, 0, len(instance_details_resp.SecGroupList))
 	for _, sg := range instance_details_resp.SecGroupList {
-		// 如果存在默认的安全组，要判断一下返回的是否为默认的安全组，如果是默认的就把它排除掉
-		if !cfg.DefaultSecurityGroupId.IsNull() && !cfg.DefaultSecurityGroupId.IsUnknown() {
-			if *sg.SecurityGroupID == cfg.DefaultSecurityGroupId.ValueString() {
-				continue
-			}
-		}
 		sgs = append(sgs, types.StringValue(*sg.SecurityGroupID))
 	}
 	securityGroupIds, _ := types.SetValueFrom(ctx, types.StringType, sgs)
@@ -1440,6 +1497,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		if *nc.IsMaster {
 			cfg.SubnetId = types.StringValue(*nc.SubnetID)
 			cfg.FixedIp = types.StringValue(*nc.IPv4Address)
+			cfg.MasterPortID = types.StringValue(*nc.NetworkCardID)
 		}
 	}
 
@@ -1456,7 +1514,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		PageSize:   50,
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	var vs []ctecs.EcsVolumeListResultsResponse
 	for _, v := range ecsVolumeResponse.Results {
@@ -1465,14 +1523,18 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		}
 	}
 	if len(vs) != 1 {
-		return nil, errors.New("查询系统盘信息发生错误，查询到系统盘数量" + strconv.Itoa(len(vs)))
+		return errors.New("查询系统盘信息发生错误，查询到系统盘数量" + strconv.Itoa(len(vs)))
 	}
 	result := vs[0]
-	diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
-	if err2 != nil {
-		return nil, err2
+	// 大小写不同，说明plan用的是小写。
+	// 这里有个隐含case，import时必须要填写小写
+	if cfg.SystemDiskType.ValueString() != result.DiskDataType {
+		diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
+		if err2 != nil {
+			return err2
+		}
+		cfg.SystemDiskType = types.StringValue(diskType.(string))
 	}
-	cfg.SystemDiskType = types.StringValue(diskType.(string))
 	cfg.SystemDiskSize = types.Int64Value(int64(result.DiskSize))
 	cfg.SystemDiskId = types.StringValue(result.DiskId)
 
@@ -1526,15 +1588,61 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg CtyunEcsConfig) (*Cty
 		cfg.Labels = []Label{}
 	}
 
-	// 设置云主机组信息
-	if cfg.AffinityGroupId != types.StringNull() && instance_details_resp.AffinityGroup != nil && instance_details_resp.AffinityGroup.AffinityGroupID != nil {
-		cfg.AffinityGroupId = types.StringValue(*instance_details_resp.AffinityGroup.AffinityGroupID)
-	} else {
-		cfg.AffinityGroupId = types.StringNull()
-
+	cfg.AzName = types.StringValue(*instance_details_resp.AzName)
+	cfg.KeyPairName = types.StringValue(*instance_details_resp.KeypairName)
+	err = c.getAutoRenew(ctx, cfg)
+	if err != nil {
+		return err
 	}
+	err = c.getUserData(ctx, cfg)
+	if err != nil {
+		return err
+	}
+	return
+}
 
-	return &cfg, nil
+func (c *ctyunEcs) getUserData(ctx context.Context, plan *CtyunEcsConfig) (err error) {
+	params := &ctecs2.CtecsQueryUserdataDetailsV41Request{
+		RegionID:   plan.RegionId.ValueString(),
+		InstanceID: plan.Id.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsQueryUserdataDetailsV41Api.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
+	}
+	var userData string
+	if resp.ReturnObj != nil {
+		userData = resp.ReturnObj.Userdata
+	}
+	plan.UserData = types.StringValue(userData)
+	return
+}
+
+func (c *ctyunEcs) getAutoRenew(ctx context.Context, plan *CtyunEcsConfig) (err error) {
+	if plan.ExpireTime.ValueString() == "" {
+		plan.AutoRenew = types.BoolValue(true)
+		return
+	}
+	params := &ctecs2.CtecsEcsGetAutoRenewConfigRequest{
+		RegionID:   plan.RegionId.ValueString(),
+		InstanceID: plan.Id.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsEcsGetAutoRenewConfigApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return
+	}
+	var autoRenew bool
+	if resp.ReturnObj.AutoRenewStatus == 1 {
+		autoRenew = true
+	}
+	plan.AutoRenew = types.BoolValue(autoRenew)
+	return
 }
 
 // getEcsAffinityGroup 查询云主机绑定的云主机组
@@ -1570,7 +1678,7 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	}
 
 	// vpc必须存在
-	err = c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	err = c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
 	if err != nil {
 		return err
 	}
@@ -1579,7 +1687,7 @@ func (c *ctyunEcs) checkCreate(ctx context.Context, plan CtyunEcsConfig) error {
 	var securityGroupIds []types.String
 	plan.SecurityGroupIds.ElementsAs(ctx, &securityGroupIds, true)
 	for _, id := range securityGroupIds {
-		err := c.securityGroupService.MustExist(ctx, id.ValueString(), plan.RegionId.ValueString())
+		err = c.securityGroupService.MustExist(ctx, id.ValueString(), plan.RegionId.ValueString())
 		if err != nil {
 			return err
 		}
@@ -1777,8 +1885,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 	if plan.AffinityGroupId == state.AffinityGroupId {
 		return nil
 	}
-	//state有plan有 先解绑再绑定; state无plan有 只绑定；state有plan无 只解绑
-	if !state.AffinityGroupId.IsNull() && state.AffinityGroupId.String() != "" {
+	if state.AffinityGroupId.ValueString() != "" {
 		err := c.dissociate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1789,7 +1896,7 @@ func (c *ctyunEcs) updateAffinityGroup(ctx context.Context, state CtyunEcsConfig
 		}
 	}
 
-	if !plan.AffinityGroupId.IsNull() && plan.AffinityGroupId.String() != "" {
+	if plan.AffinityGroupId.ValueString() != "" {
 		err := c.associate(ctx, plan, state)
 		if err != nil {
 			return err
@@ -1807,7 +1914,7 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 	params := &ctecs2.CtecsAffinityGroupbindInstanceV41Request{
 		RegionID:        plan.RegionId.ValueString(),
 		InstanceID:      plan.Id.ValueString(),
-		AffinityGroupID: state.AffinityGroupId.ValueString(),
+		AffinityGroupID: plan.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -1816,7 +1923,6 @@ func (c *ctyunEcs) associate(ctx context.Context, plan, state CtyunEcsConfig) (e
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	}
-
 	return
 }
 
@@ -1849,8 +1955,8 @@ func (c *ctyunEcs) checkAfterAssociation(ctx context.Context, plan CtyunEcsConfi
 // dissociate 解绑云主机组
 func (c *ctyunEcs) dissociate(ctx context.Context, plan, state CtyunEcsConfig) (err error) {
 	params := &ctecs2.CtecsAffinityGroupUnbindInstanceV41Request{
-		RegionID:        plan.RegionId.ValueString(),
-		InstanceID:      plan.Id.ValueString(),
+		RegionID:        state.RegionId.ValueString(),
+		InstanceID:      state.Id.ValueString(),
 		AffinityGroupID: state.AffinityGroupId.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsAffinityGroupUnbindInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
@@ -1947,45 +2053,65 @@ func (c *ctyunEcs) updateLabels(ctx context.Context, state CtyunEcsConfig, plan 
 	return nil
 }
 
+func (c *ctyunEcs) updateAutoRenew(ctx context.Context, state, plan CtyunEcsConfig) (err error) {
+	if plan.AutoRenew.Equal(state.AutoRenew) && plan.CycleType.Equal(state.CycleType) {
+		return
+	}
+	params := &ctecs2.CtecsEcsUpdateAutoRenewConfigRequest{
+		RegionID:        state.RegionId.ValueString(),
+		InstanceIDList:  state.Id.ValueString(),
+		AutoRenewStatus: map[bool]int32{true: 1, false: 0}[plan.AutoRenew.ValueBool()],
+	}
+	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsEcsUpdateAutoRenewConfigApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		return
+	}
+	return
+}
+
 type CtyunEcsConfig struct {
-	Id                     types.String  `tfsdk:"id"`
-	Name                   types.String  `tfsdk:"name"`
-	InstanceName           types.String  `tfsdk:"instance_name"`
-	DisplayName            types.String  `tfsdk:"display_name"`
-	FlavorId               types.String  `tfsdk:"flavor_id"`
-	ImageId                types.String  `tfsdk:"image_id"`
-	ActualImageID          types.String  `tfsdk:"actual_image_id"`
-	SystemDiskType         types.String  `tfsdk:"system_disk_type"`
-	SystemDiskSize         types.Int64   `tfsdk:"system_disk_size"`
-	VpcId                  types.String  `tfsdk:"vpc_id"`
-	SecurityGroupIds       types.Set     `tfsdk:"security_group_ids"`
-	KeyPairName            types.String  `tfsdk:"key_pair_name"`
-	Password               types.String  `tfsdk:"password"`
-	CycleCount             types.Int64   `tfsdk:"cycle_count"`
-	CycleType              types.String  `tfsdk:"cycle_type"`
-	AutoRenew              types.Bool    `tfsdk:"auto_renew"`
-	SubnetId               types.String  `tfsdk:"subnet_id"`
-	FixedIp                types.String  `tfsdk:"fixed_ip"`
-	DefaultSecurityGroupId types.String  `tfsdk:"default_security_group_id"`
-	Status                 types.String  `tfsdk:"status"`
-	ExpireTime             types.String  `tfsdk:"expire_time"`
-	SystemDiskId           types.String  `tfsdk:"system_disk_id"`
-	UserData               types.String  `tfsdk:"user_data"`
-	MasterOrderId          types.String  `tfsdk:"master_order_id"`
-	ProjectId              types.String  `tfsdk:"project_id"`
-	Bandwidth              types.Int32   `tfsdk:"bandwidth"`
-	RegionId               types.String  `tfsdk:"region_id"`
-	AzName                 types.String  `tfsdk:"az_name"`
-	IsDestroyInstance      types.Bool    `tfsdk:"is_destroy_instance"`
-	PayVoucherPrice        types.Float64 `tfsdk:"pay_voucher_price"`
-	Metadata               types.Map     `tfsdk:"metadata"`
-	DeletionProtection     types.Bool    `tfsdk:"deletion_protection"`
-	Labels                 []Label       `tfsdk:"labels"`
-	AffinityGroupId        types.String  `tfsdk:"affinity_group_id"`
-	FlavorName             types.String  `tfsdk:"flavor_name"`
-	EipAddress             types.String  `tfsdk:"eip_address"`
-	CreateTime             types.String  `tfsdk:"create_time"`
-	UpdateTime             types.String  `tfsdk:"update_time"`
+	Id                 types.String  `tfsdk:"id"`
+	Name               types.String  `tfsdk:"name"`
+	InstanceName       types.String  `tfsdk:"instance_name"`
+	DisplayName        types.String  `tfsdk:"display_name"`
+	FlavorId           types.String  `tfsdk:"flavor_id"`
+	ImageId            types.String  `tfsdk:"image_id"`
+	ActualImageID      types.String  `tfsdk:"actual_image_id"`
+	SystemDiskType     types.String  `tfsdk:"system_disk_type"`
+	SystemDiskSize     types.Int64   `tfsdk:"system_disk_size"`
+	VpcId              types.String  `tfsdk:"vpc_id"`
+	SecurityGroupIds   types.Set     `tfsdk:"security_group_ids"`
+	KeyPairName        types.String  `tfsdk:"key_pair_name"`
+	Password           types.String  `tfsdk:"password"`
+	CycleCount         types.Int64   `tfsdk:"cycle_count"`
+	CycleType          types.String  `tfsdk:"cycle_type"`
+	AutoRenew          types.Bool    `tfsdk:"auto_renew"`
+	SubnetId           types.String  `tfsdk:"subnet_id"`
+	FixedIp            types.String  `tfsdk:"fixed_ip"`
+	Status             types.String  `tfsdk:"status"`
+	ExpireTime         types.String  `tfsdk:"expire_time"`
+	SystemDiskId       types.String  `tfsdk:"system_disk_id"`
+	UserData           types.String  `tfsdk:"user_data"`
+	MasterOrderId      types.String  `tfsdk:"master_order_id"`
+	ProjectId          types.String  `tfsdk:"project_id"`
+	Bandwidth          types.Int32   `tfsdk:"bandwidth"`
+	RegionId           types.String  `tfsdk:"region_id"`
+	AzName             types.String  `tfsdk:"az_name"`
+	IsDestroyInstance  types.Bool    `tfsdk:"is_destroy_instance"`
+	PayVoucherPrice    types.Float64 `tfsdk:"pay_voucher_price"`
+	Metadata           types.Map     `tfsdk:"metadata"`
+	DeletionProtection types.Bool    `tfsdk:"deletion_protection"`
+	Labels             []Label       `tfsdk:"labels"`
+	AffinityGroupId    types.String  `tfsdk:"affinity_group_id"`
+	FlavorName         types.String  `tfsdk:"flavor_name"`
+	EipAddress         types.String  `tfsdk:"eip_address"`
+	CreateTime         types.String  `tfsdk:"create_time"`
+	UpdateTime         types.String  `tfsdk:"update_time"`
+	SecurityProduct    types.String  `tfsdk:"security_product"`
+	MasterPortID       types.String  `tfsdk:"master_port_id"`
 }
 
 type Label struct {
@@ -1997,8 +2123,8 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[projectId],[az_name],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -2009,7 +2135,6 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
 	} else {
-
 		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
@@ -2017,19 +2142,34 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
-
-	cfg, err := c.getAndMergeEcs(ctx, config)
+	err = c.getAndMergeEcs(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	// 处理ImageId字段 仅在import的时候处理
+	config.ImageId = config.ActualImageID
+	config.PayVoucherPrice = types.Float64Value(0)
+	config.IsDestroyInstance = types.BoolValue(false)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
+	config.MasterOrderId = types.StringValue("unknown")
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }

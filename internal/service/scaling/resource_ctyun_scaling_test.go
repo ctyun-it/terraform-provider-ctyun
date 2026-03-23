@@ -583,11 +583,10 @@ func TestAccCtyunScalingNoneExpectedCount(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", id, vpcId, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -604,25 +603,7 @@ func TestAccCtyunScalingNoneExpectedCount(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s", id, vpcId, projectId), nil
-				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"add_instance_uuid_list",
-					"remove_instance_uuid_list",
-					"is_destroy",
-					"expected_count",
-					"project_id",
-				},
-			},
-			{
-				ResourceName: resourceName,
-				ImportState:  true,
-				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					return fmt.Sprintf("%s,%s", id, vpcId), nil
+					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

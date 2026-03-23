@@ -40,6 +40,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
 	sdk_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/sdk"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/acl"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/ccse"
 	common2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/common"
@@ -133,6 +134,9 @@ func (c *CtyunProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp
 		"project_id": schema.StringAttribute{
 			Optional:    true,
 			Description: "企业项目ID，不填则使用用户默认的企业项目",
+			Validators: []validator.String{
+				validator2.Project(),
+			},
 		},
 		"console_url": schema.StringAttribute{
 			Optional:    true,
@@ -388,13 +392,13 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		ebs.NewCtyunEbsVolumes(),
 		ebs.NewCtyunEbsSnapshots(),
 		ebs.NewCtyunEbsBackups(),
-		//ebs.NewCtyunEbsBackupRepos(),
+		ebs.NewCtyunEbsBackupRepos(),
 		ebs.NewCtyunEbsBackupPolicies(),
 		ebs.NewCtyunEbsSnapshotPolicies(),
 		ecs.NewCtyunEcsInstances(),
 		ecs.NewCtyunEcsAffinityGroups(),
 		ecs.NewCtyunEcsSnapshots(),
-		//ecs.NewCtyunEcsBackupRepos(),
+		ecs.NewCtyunEcsBackupRepos(),
 		ecs.NewCtyunEcsBackups(),
 		ecs.NewCtyunEcsBackupPolicies(),
 		vpc.NewCtyunVpcs(),
@@ -490,8 +494,8 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		ec2.NewCtyunEcSdwanInstances(),
 		// 添加SD-WAN数据源
 		sdwan2.NewCtyunSdwans(),
-		sdwan2.NewCtyunSdwanAcls(),
-		sdwan2.NewCtyunSdwanAclRules(),
+		//sdwan2.NewCtyunSdwanAcls(),
+		//sdwan2.NewCtyunSdwanAclRules(),
 		iam.NewCtyunIamUserAks(),
 		iam.NewCtyunIamUsers(),
 		iam.NewCtyunIamPolicies(),
@@ -522,7 +526,7 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		ebs.NewCtyunEbsAssociation(),
 		ebs.NewCtyunEbsSnapshot(),
 		ebs.NewCtyunEbsBackup(),
-		//ebs.NewCtyunEbsBackupRepo(),
+		ebs.NewCtyunEbsBackupRepo(),
 		ebs.NewCtyunEbsBackupPolicy(),
 		ebs.NewCtyunEcsBackupPolicyBindDisks(),
 		ebs.NewCtyunEbsBackupPolicyBindRepo(),
@@ -595,7 +599,7 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		sfs2.NewCtyunSfsPermissionGroup(),
 		sfs2.NewCtyunSfsPermissionGroupAssociation(),
 		sfs2.NewCtyunSfsPermissionGroupRule(),
-		//ecs.NewCtyunEcsBackupRepo(),
+		ecs.NewCtyunEcsBackupRepo(),
 		ecs.NewCtyunEcsBackup(),
 		ecs.NewCtyunEcsBackupPolicy(),
 		ecs.NewCtyunEcsBackupPolicyBindInstances(),
@@ -652,8 +656,8 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		ec2.NewCtyunEcSdwanInstance(),
 		// 添加SD-WAN资源
 		sdwan2.NewCtyunSdwan(),
-		sdwan2.NewCtyunSdwanAcl(),
-		sdwan2.NewCtyunSdwanAclRule(),
+		//sdwan2.NewCtyunSdwanAcl(),
+		//sdwan2.NewCtyunSdwanAclRule(),
 		iam.NewCtyunIamUserAk(),
 		dns.NewCtyunPrivateZone(),
 		dns.NewCtyunPrivateZoneRecord(),
@@ -664,6 +668,7 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		peer_connection2.NewCtyunVpcPeerConnection(),
 		peer_connection2.NewCtyunVpcPeerConnectionAttach(),
 		mysql2.NewCtyunMysqlAudit(),
+		zos.NewctyunZosSubscribe(),
 	)
 }
 

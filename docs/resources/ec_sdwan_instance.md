@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_sdwan_instance"
+---
+
 # ctyun_ec_sdwan_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220
+-> 管理云间高速SDWAN网络实例
 
 
 
@@ -15,35 +20,32 @@ terraform {
 }
 
 provider "ctyun" {
-  env        = "prod"
   project_id = "0"
 }
+
+resource "ctyun_express_connect" "example" {
+  name        = "express_connect_dependence"
+  description = "云间高速example专用"
+}
+
 resource "ctyun_ec_cloud_gateway" "example" {
   ec_id       = ctyun_express_connect.example.id
   name        = "cloud_gateway_xinan1"
   description = "云间高速开发测试专用"
   region_id   = "200000002368"
-  region_name = "cn-xinan1-xn1A-public-ctcloud"
+  region_name = "西南1"
 }
-resource "ctyun_express_connect" "example" {
-  name        = "express_connect_dependence"
-  description = "云间高速example专用"
-}
+
 resource "ctyun_sdwan" "demo" {
   name        = "sdwan_demo"
   description = "样列"
 }
 
-resource "ctyun_ec_cloud_gateway" "cloud_gateway_dependence" {
-  ec_id       = ctyun_express_connect.example.id
-  name        = "cloud_gateway_dependence"
-  description = "云间高速开发测试专用"
-}
 resource "ctyun_ec_sdwan_instance" "example" {
   ec_id       = ctyun_express_connect.example.id
   cgw_id      = ctyun_ec_cloud_gateway.example.id
   sdwan_id    = ctyun_sdwan.demo.id
-  rtb_id      = ctyun_ec_cloud_gateway.cloud_gateway_dependence.id
+  rtb_id      = ctyun_ec_cloud_gateway.example.rtb_id
   weights     = 100
   route_learn = 1
   route_sync  = 1
@@ -69,3 +71,15 @@ resource "ctyun_ec_sdwan_instance" "example" {
 ### Read-Only
 
 - `id` (String) 网络实例ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SDWAN网络实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_sdwan_instance.[导入配置名称] [sdwan_id],[ec_id],[cgw_id]
+# 示例
+terraform import ctyun_ec_sdwan_instance.ec_sdwan_instance_example sdwan-12345678,ec-11111111,cgw-87654321
+```

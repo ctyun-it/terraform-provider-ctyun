@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm_interface"
+---
+
 # ctyun_ebm_interface (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040142
+-> 管理物理机的弹性网卡
 
 
 
@@ -46,3 +51,15 @@ resource "ctyun_ebm_interface" "test" {
 
 - `id` (String) ID
 - `interface_id` (String) 网卡ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入物理机网卡
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebm_interface.[导入配置名称] [instance_id],[interface_id],<az_name>,<region_id>
+# 示例
+terraform import ctyun_ebm_interface.interface_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,if-123456789,cn-zj-hgh7-1a-public-ctcloud,200000003329
+```

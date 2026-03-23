@@ -1,5 +1,10 @@
+---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
+page_title: "CTYUN: ctyun_image_from_ecs"
+---
+
 # ctyun_image_from_ecs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726/10031013
+-> 管理私有镜像（从云主机创建）
 
 
 
@@ -137,7 +142,7 @@ resource "ctyun_image_from_ecs" "system_disk" {
 - `data_disk_id` (String) 数据盘ID，仅数据盘创建方式必填，需挂载于指定云主机。
 - `description` (String) 镜像描述。长度1~128字符，不能以空格开头或结尾。 支持更新
 - `enable_image_integrity_check` (Boolean) 是否启用镜像完整性校验，仅资源池支持时生效。
-- `labels` (Attributes List) 标签列表。最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾。 (see [below for nested schema](#nestedatt--labels))
+- `labels` (Attributes Set) 标签列表。最多10个标签，标签键不可重复，键值长度1~32字符，不能换行或以空格开头/结尾。 (see [below for nested schema](#nestedatt--labels))
 - `maximum_ram` (Number) 最大内存限制（GiB），仅系统盘、快照创建方式支持，需≥最小内存。 支持更新
 - `minimum_ram` (Number) 最小内存限制（GiB），仅系统盘、快照创建方式支持，取值0/1/2/4/8/16/32/64/128/256/512。支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
@@ -151,7 +156,28 @@ resource "ctyun_image_from_ecs" "system_disk" {
 <a id="nestedatt--labels"></a>
 ### Nested Schema for `labels`
 
-Required:
+Optional:
 
 - `label_key` (String) 标签键。
 - `label_value` (String) 标签值。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+#!/bin/bash
+# 导入ctyun_image_from_ecs资源的示例脚本
+# 使用方法: 
+# 1. 将此文件保存为 import.sh
+# 2. 替换下方的 <image-id> 和 <region-id> 为实际值
+# 3. 运行命令: bash import.sh
+
+# 示例:
+# terraform import ctyun_image_from_ecs.example <image-id>,<region-id>
+
+# 注意：请将下面的占位符替换为实际值
+# <image-id> - 镜像的实际ID
+# <region-id> - 区域ID
+
+terraform import ctyun_image_from_ecs.example <image-id>,<region-id>
+```

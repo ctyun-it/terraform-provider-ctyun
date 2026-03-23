@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -49,7 +50,7 @@ type ctyunEcsSnapshotsConfig struct {
 
 func (c *ctyunEcsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345`,
+		MarkdownDescription: utils.FormatDesc("查询云主机快照", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10335345"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -126,7 +127,7 @@ func (c *ctyunEcsSnapshots) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

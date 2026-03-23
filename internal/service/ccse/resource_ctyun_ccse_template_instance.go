@@ -59,7 +59,7 @@ package ccse
 //
 //func (c *ctyunCcseTemplateInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 //	response.Schema = schema.Schema{
-//		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631`,
+//		MarkdownDescription: utils.FormatDesc("CCSE", "https://www.ctyun.cn/document/10083472/10102631`,
 //		Attributes: map[string]schema.Attribute{
 //			"id": schema.StringAttribute{
 //				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -413,7 +413,7 @@ package ccse
 //	plan.TplVersion = types.StringValue(instance.ChartVersion)
 //	plan.ClusterID = types.StringValue(instance.ClusterId)
 //	plan.Name = types.StringValue(instance.Name)
-//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s", instance.Name, instance.Namespace, instance.ClusterId, plan.RegionID.ValueString()))
+//	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instance.Name, instance.Namespace, instance.ClusterId))
 //	return
 //}
 //

@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -26,10 +27,12 @@ var (
 
 type CtyunMysqlCopyParamTemplate struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_copy_param_template"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlCopyParamTemplate() resource.Resource {
 	return &CtyunMysqlCopyParamTemplate{}
@@ -44,12 +47,20 @@ func (c *CtyunMysqlCopyParamTemplate) Configure(ctx context.Context, request res
 }
 
 func (c *CtyunMysqlCopyParamTemplate) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	return
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	response.Diagnostics.AddError("不支持导入", fmt.Sprintf("%s不支持导入", c.name))
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10035290",
+		MarkdownDescription: utils.FormatDesc("复制MySQL参数模板", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10035290"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -64,16 +75,9 @@ func (c *CtyunMysqlCopyParamTemplate) Schema(ctx context.Context, request resour
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -144,7 +148,21 @@ func (c *CtyunMysqlCopyParamTemplate) Read(ctx context.Context, request resource
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var plan CtyunMysqlCopyParamTemplateConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlCopyParamTemplateConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *CtyunMysqlCopyParamTemplate) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -162,9 +180,7 @@ func (c *CtyunMysqlCopyParamTemplate) CtyunMysqlCopyParamTemplateConfig(ctx cont
 	header := &mysql.TeledbCopyParameterTemplateRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() || !config.ProjectID.IsUnknown() {
-		config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCopyParameterTemplateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -188,9 +204,7 @@ func (c *CtyunMysqlCopyParamTemplate) checkCopySuccess(ctx context.Context, conf
 	header := mysql.TeledbGetParameterTemplateListRequestHeader{
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
+
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetParameterTemplateListApi.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return err

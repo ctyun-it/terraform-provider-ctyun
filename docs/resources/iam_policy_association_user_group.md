@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_policy_association_user_group"
+---
+
 # ctyun_iam_policy_association_user_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392
+-> 管理策略和用户组的绑定关系
 
 
 

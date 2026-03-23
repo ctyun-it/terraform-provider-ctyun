@@ -1,0 +1,5 @@
+release-note:enhancement
+resource\ctyun_ccse_cluster support XSSD disk type
+
+release-note:enhancement
+resource\ctyun_ccse_node_pool support XSSD disk type

@@ -18,7 +18,6 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 	lockResourceFile := "resource_ctyun_postgresql_account_lock.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	instanceID := dependence.pgsqlID
 	testDB1 := "test1"
 	testDB2 := "test"
@@ -43,13 +42,11 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					initialPassword, "normal", "[]",
 					initialDescription,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "name", accountName),
 					resource.TestCheckResourceAttr(resourceName, "user_type", "normal"),
@@ -61,7 +58,7 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 			// 2. 更新账户测试（添加数据库授权）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, accountName,
 					initialPassword, "normal",
 					fmt.Sprintf(`[
@@ -81,7 +78,6 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 				},
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					updatedPassword, "normal",
 					fmt.Sprintf(`[
@@ -100,7 +96,6 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					lockResourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					updatedPassword, "normal", "[]",
 					updatedDescription, true,
@@ -118,10 +113,9 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 					if !ok {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
-					return fmt.Sprintf("%s,%s,%s,%s",
+					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
-						rs.Primary.Attributes["project_id"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -146,7 +140,7 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "is_lock", "user_type", "description", "project_id"}, // 密码敏感，导入时不验证
+				ImportStateVerifyIgnore: []string{"password", "is_lock", "user_type", "description"}, // 密码敏感，导入时不验证
 				PreConfig: func() {
 					wait10Seconds()
 				},
@@ -155,7 +149,6 @@ func TestAccCtyunPostgresqlAccount(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					lockResourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					updatedPassword, "normal", "[]",
 					updatedDescription, true,
@@ -176,7 +169,6 @@ func TestAccCtyunPostgresqlAdvancedAccount(t *testing.T) {
 	datasourceName := "data.ctyun_postgresql_accounts." + dnd
 	datasourceFile := "datasource_ctyun_postgresql_accounts.tf"
 
-	projectID := "0"
 	instanceID := dependence.pgsqlID
 	testDB := "test"
 
@@ -198,13 +190,11 @@ func TestAccCtyunPostgresqlAdvancedAccount(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					password, "advanced", "[]", // 无数据库授权
 					description, false,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "name", accountName),
 					resource.TestCheckResourceAttr(resourceName, "user_type", "advanced"),
@@ -234,7 +224,6 @@ func TestAccCtyunPostgresqlAdvancedAccount(t *testing.T) {
 				},
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
-					projectID,
 					instanceID, accountName,
 					password, "advanced", fmt.Sprintf(`[
 						{ grant_schema = "%s", privilege = "readwrite" }
@@ -253,7 +242,7 @@ func TestAccCtyunPostgresqlAdvancedAccount(t *testing.T) {
 			// 3. 验证高权限账户的锁定功能
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, accountName,
 					password, "advanced", "[]", // 无数据库授权
 					description, true,
@@ -270,7 +259,7 @@ func TestAccCtyunPostgresqlAdvancedAccount(t *testing.T) {
 			// 5. 清理资源
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, accountName,
 					password, "advanced", "[]", // 无数据库授权
 					description, true,

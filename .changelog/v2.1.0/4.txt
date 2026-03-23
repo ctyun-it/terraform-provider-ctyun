@@ -1,0 +1,8 @@
+release-note:enhancement
+resource\ctyun_ecs disk type support in uppercase
+
+release-note:enhancement
+resource\ctyun_ebs disk type support in uppercase
+
+release-note:enhancement
+datasource\ctyun_ebm_device_types add available field

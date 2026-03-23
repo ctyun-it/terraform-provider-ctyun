@@ -46,8 +46,9 @@ output "chart_values_json" {
 output "ecs_id" {
   value = ctyun_ecs.ecs_test.id
 }
+
 output "ecs_mirror_id" {
-  value = "3d2c356a-685a-4e8c-b904-bb0725bfc220"
+  value = lookup([for img in data.ctyun_ccse_images.ccse_images.images : img if img.os_distro == "CTyunOS"][0], "id")
 }
 
 # output "ebm_id" {
@@ -59,13 +60,19 @@ output "ecs_mirror_id" {
 # }
 #
 output "device_type" {
-  value =  local.device_type1
+  value =  local.first_cloud_boot_false.device_type
 }
+
+output "ebm_az" {
+  value =  local.first_cloud_boot_false.az_name
+}
+
 #
 # output "ebm_mirror_name" {
 #   value = "CTyunOS23.01@cpu_ccse_img_4.0_09"
 # }
 #
-# output "ebm_az" {
-#   value = local.az2
-# }
+
+output "ecs_az" {
+  value = ctyun_ecs.ecs_test.az_name
+}

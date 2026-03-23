@@ -87,8 +87,7 @@ func TestAccCtyunPrivateSNat(t *testing.T) {
 					id := ds.ID
 					natGatewayId := ds.Attributes["nat_gateway_id"]
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
-					return fmt.Sprintf("%s,%s,%s,%s", id, natGatewayId, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, natGatewayId, regionId), nil
 				},
 			},
 			// 1.4 资源销毁

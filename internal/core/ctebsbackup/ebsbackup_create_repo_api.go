@@ -92,4 +92,5 @@ type EbsbackupCreateRepoReturnObjResponse struct {
 	MasterOrderID string `json:"masterOrderID"` /*  订单ID。调用方在拿到masterOrderID之后，在若干错误情况下，可以使用materOrderID进一步确认订单状态及资源状态。  */
 	MasterOrderNO string `json:"masterOrderNO"` /*  订单号，可根据订单号查询具体资源ID。  */
 	RegionID      string `json:"regionID"`      /*  资源所属资源池ID。  */
+	RepositoryID  string `json:"repositoryID"`  /*  资源所属资源池ID。  */
 }

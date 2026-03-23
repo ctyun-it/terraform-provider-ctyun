@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库PostgreSQL版"
+page_title: "CTYUN: ctyun_postgresql_character_set"
+---
+
 # ctyun_postgresql_character_set (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10159978
+-> 查询PostgreSQL支持的字符集
 
 
 

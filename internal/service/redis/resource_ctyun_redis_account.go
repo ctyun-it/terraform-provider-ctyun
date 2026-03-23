@@ -2,11 +2,13 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -48,7 +50,7 @@ type CtyunRedisAccountConfig struct {
 
 func (c *ctyunRedisAccount) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10403139`,
+		MarkdownDescription: utils.FormatDesc("管理Redis实例的账户", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10403139"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,
@@ -162,6 +164,10 @@ func (c *ctyunRedisAccount) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "not found") {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -239,7 +245,7 @@ func (c *ctyunRedisAccount) ImportState(ctx context.Context, request resource.Im
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [账户名称],[实例ID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -249,27 +255,27 @@ func (c *ctyunRedisAccount) ImportState(ctx context.Context, request resource.Im
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &accountName, &instanceId)
+		err = terraform_extend.Split(request.ID, &instanceId, &accountName)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &accountName, &instanceId, &regionId)
+		err = terraform_extend.Split(request.ID, &instanceId, &accountName, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if accountName == "" {
-		err = fmt.Errorf("账户名称不能为空")
+		err = fmt.Errorf("name不能为空")
 		return
 	}
 	if instanceId == "" {
-		err = fmt.Errorf("实例ID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionId = types.StringValue(regionId)
@@ -404,7 +410,12 @@ func (c *ctyunRedisAccount) getAndMerge(ctx context.Context, plan *CtyunRedisAcc
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		msg := resp.Message
+		if strings.Contains(msg, "can't find") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
+		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Rows == nil {
 		err = common.InvalidReturnObjError
@@ -439,7 +450,7 @@ func (c *ctyunRedisAccount) getAndMerge(ctx context.Context, plan *CtyunRedisAcc
 		plan.Description = types.StringValue(accountData.AccountDescription)
 	}
 
-	id := fmt.Sprintf("%s,%s,%s", plan.Name.ValueString(), plan.InstanceId.ValueString(), plan.RegionId.ValueString())
+	id := fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.Name.ValueString())
 	plan.Id = types.StringValue(id)
 	return
 }

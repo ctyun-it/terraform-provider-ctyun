@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库PostgreSQL版"
+page_title: "CTYUN: ctyun_postgresql_database"
+---
+
 # ctyun_postgresql_database (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10159978
+-> 管理PostgreSQL实例的数据库
 
 
 
@@ -81,7 +86,7 @@ resource "ctyun_postgresql_database" "examples" {
   charset_collate = data.ctyun_postgresql_collation_time_zone.collations.collations[0].coll_name
   charset_type    = data.ctyun_postgresql_collation_time_zone.collations.collations[0].coll_type
   owner           = "root"
-  description     = "postgresql 样例"
+  description     = "postgresql样例"
 }
 ```
 
@@ -100,7 +105,7 @@ resource "ctyun_postgresql_database" "examples" {
 - `charset_type` (String) 字符分类，charset_name为utf8不传，其他的字符集必须传入
 - `description` (String) 数据库描述，支持更新。长度为2~256个字符。以中文、英文字母开头，可以包含数字、中文、英文、下划线（_）、短横线（-）
 - `owner` (String) 数据库所有者
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only

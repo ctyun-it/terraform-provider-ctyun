@@ -5,7 +5,7 @@ resource "ctyun_ccse_node_pool" "%[1]s" {
   visibility_post_host_script = "%[3]s"
   visibility_host_script = "%[4]s"
   instance_type            = "ecs"
-  mirror_id                = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+  mirror_id                = "%[16]s"
   mirror_type              = 1
   password                 = "%[14]s"
   max_pod_num              = 110
@@ -25,7 +25,7 @@ resource "ctyun_ccse_node_pool" "%[1]s" {
   ]
   az_infos = [
     {
-      az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+      az_name = "%[15]s"
     }
   ]
 }

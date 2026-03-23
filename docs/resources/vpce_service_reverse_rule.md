@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce_service_reverse_rule"
+---
+
 # ctyun_vpce_service_reverse_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048506
+-> 管理终端节点服务反向规则
 
 
 
@@ -52,3 +57,15 @@ resource "ctyun_vpce_service_reverse_rule" "test" {
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 规则ID
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPCE Service Reverse Rule
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpce_service_reverse_rule.[导入配置名称] [id],[endpoint_service_id],<region_id>
+# 示例
+terraform import ctyun_vpce_service_reverse_rule.example rule-123,service-123,region-123
+```

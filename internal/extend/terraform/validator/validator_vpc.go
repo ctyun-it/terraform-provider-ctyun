@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	VpcError = "不满足vpc格式"
+	VpcError = "虚拟私有云ID格式不正确"
 )
 
 type validatorVpc struct {

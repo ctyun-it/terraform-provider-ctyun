@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_dhcpoptionsets"
+---
+
 # ctyun_dhcpoptionsets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310
+-> 查询DHCP选项集
 
 
 
@@ -58,4 +63,12 @@ Read-Only:
 - `id` (String) DHCP选项集ID
 - `name` (String) 名称
 - `update_time` (String) 更新时间，为UTC格式
-- `vpc_list` (List of String) 关联的VPC列表
+- `vpc_list` (Attributes List) 关联的VPC列表 (see [below for nested schema](#nestedatt--dhcpoptionsets--vpc_list))
+
+<a id="nestedatt--dhcpoptionsets--vpc_list"></a>
+### Nested Schema for `dhcpoptionsets.vpc_list`
+
+Read-Only:
+
+- `vpc_id` (String) VPC ID
+- `vpc_name` (String) VPC名称

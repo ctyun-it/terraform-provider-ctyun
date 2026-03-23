@@ -1,5 +1,10 @@
+---
+subcategory: "NAT网关（CT-NAT Gateway）"
+page_title: "CTYUN: ctyun_nat_dnat"
+---
+
 # ctyun_nat_dnat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166499
+-> 管理公网NAT网关dnat规则
 
 
 
@@ -69,7 +74,7 @@ resource "ctyun_nat_dnat" "dnat_test" {
 - `description` (String) 描述，支持更新
 - `instance_id` (String) 云主机或物理机实例ID，当且仅当dnat_type为instance时必填，支持更新
 - `internal_ip` (String) 内部IP，当且仅当dnat_type为custom时必填，支持更新
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `server_type` (String) 服务器类型，当且仅当dnat_type为instance时必填，支持：VM / BM，支持更新
 
 ### Read-Only
@@ -78,5 +83,17 @@ resource "ctyun_nat_dnat" "dnat_test" {
 - `dnat_id` (String) Dnat规则的id
 - `external_ip` (String) 弹性公网IP地址
 - `id` (String) ID，同dnat_id
-- `ip_expire_time` (String) ip到期时间
+- `ip_expire_time` (String, Deprecated) 废弃字段
 - `state` (String) 运行状态: ACTIVE / FREEZING / CREATING
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入dnat规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_nat_dnat.[导入配置名称] [id],[nat_gateway_id],<region_id>
+# 示例
+terraform import ctyun_nat_dnat.dnat_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,nat-12345678,bb9fdb42056f11eda1610242ac110002
+```

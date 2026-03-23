@@ -1,5 +1,10 @@
+---
+subcategory: "海量文件服务OceanFS"
+page_title: "CTYUN: ctyun_oceanfs_permission_group"
+---
+
 # ctyun_oceanfs_permission_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853
+-> 管理海量文件服务权限组
 
 
 
@@ -21,7 +26,7 @@ provider "ctyun" {
 
 
 resource "ctyun_oceanfs_permission_group" "example" {
-  name        = "oceanf_pg_example"
+  name        = "oceanf-pg-example"
   description = "terraform样例"
 }
 ```
@@ -31,7 +36,7 @@ resource "ctyun_oceanfs_permission_group" "example" {
 
 ### Required
 
-- `name` (String) 权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成，不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。
+- `name` (String) 权限组名称。同一资源池下权限组名称不能重复。文件系统实例名称只能由数字、连字符（-）、字母组成（不支持下划线_），不能以数字和连字符（-）开头、且不能以连字符（-）结尾，长度2~255字符。字母不区分大小写。
 
 ### Optional
 
@@ -43,3 +48,15 @@ resource "ctyun_oceanfs_permission_group" "example" {
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 权限组id
 - `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入OceanFS权限组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_oceanfs_permission_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_oceanfs_permission_group.permission_group_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,bb9fdb42056f11eda1610242ac110002
+```

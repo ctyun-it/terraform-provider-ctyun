@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -14,19 +20,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
-	"regexp"
-	"strings"
-
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
-
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"regexp"
+	"strings"
 )
 
 var (
@@ -37,6 +35,7 @@ var (
 
 type ctyunRabbitmqQueue struct {
 	meta            *common.CtyunMetadata
+	name            string
 	rabbitmqService *business.RabbitmqService
 }
 
@@ -46,6 +45,7 @@ func NewCtyunRabbitmqQueue() resource.Resource {
 
 func (c *ctyunRabbitmqQueue) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_rabbitmq_queue"
+	c.name = response.TypeName
 }
 
 type CtyunRabbitmqQueueConfig struct {
@@ -70,7 +70,7 @@ type CtyunRabbitmqQueueConfig struct {
 
 func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10220893`,
+		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的队列", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -297,7 +297,7 @@ func (c *ctyunRabbitmqQueue) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.ResourceNotExistError) {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -344,8 +344,8 @@ func (c *ctyunRabbitmqQueue) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[vhost],[instanceID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[vhost],[instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -373,11 +373,11 @@ func (c *ctyunRabbitmqQueue) ImportState(ctx context.Context, request resource.I
 		return
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)

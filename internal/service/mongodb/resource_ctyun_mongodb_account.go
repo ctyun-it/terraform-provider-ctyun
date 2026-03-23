@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -35,6 +36,7 @@ func NewCtyunMongodbAccount() resource.Resource {
 
 type CtyunMongodbAccount struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunMongodbAccount) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -43,7 +45,7 @@ func (c *CtyunMongodbAccount) Metadata(ctx context.Context, req resource.Metadat
 
 func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10089535`,
+		MarkdownDescription: utils.FormatDesc("管理MongoDB实例的账户", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -75,16 +77,9 @@ func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaReq
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -200,6 +195,7 @@ func (c *CtyunMongodbAccount) Read(ctx context.Context, req resource.ReadRequest
 	if err != nil {
 		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -251,7 +247,7 @@ func (c *CtyunMongodbAccount) Update(ctx context.Context, req resource.UpdateReq
 	if err != nil {
 		return
 	}
-
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 }
 
@@ -278,32 +274,31 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[instID],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [name],[instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config MongodbAccountConfig
-	var regionID, projectID, instID, name string
+	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
 		err = terraform_extend.Split(request.ID, &name, &instID)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &projectID, &regionID)
+		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
 		if err != nil {
 			return
 		}
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if instID == "" {
-		err = fmt.Errorf("instdID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if name == "" {
@@ -313,7 +308,6 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instID, name))
 	config.InstanceID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
-	config.ProjectID = types.StringValue(projectID)
 	config.Name = types.StringValue(name)
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
@@ -353,9 +347,6 @@ func (c *CtyunMongodbAccount) create(ctx context.Context, plan MongodbAccountCon
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "开始创建MongoDB账号", map[string]interface{}{
 		"instance_id":  plan.InstanceID.ValueString(),
@@ -386,17 +377,20 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 	headers := &mongodb.MongodbDescribeAccountsRequestHeaders{
 		RegionID: plan.RegionID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	resp, err := c.meta.Apis.SdkMongodbApis.MongodbDescribeAccountsApi.Do(ctx, c.meta.Credential, describeReq, headers)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		return common.ResourceNotExistError
 	}
 	// 这里获取账号信息, 并更新到配置中  循环list 获取账号信息user字段 ==plan.user
 	for _, account := range resp.ReturnObj.List {
@@ -405,7 +399,6 @@ func (c *CtyunMongodbAccount) getAndMerge(ctx context.Context, plan *MongodbAcco
 			if plan.Database.IsNull() || plan.Database.IsUnknown() {
 				plan.Database = types.StringValue(account.DB)
 			}
-
 			// 如果roles块为空，则根据API返回的角色信息填充
 			if len(plan.Roles) == 0 && len(account.Roles) > 0 {
 				plan.Roles = make([]MongodbAccountRole, len(account.Roles))
@@ -438,9 +431,6 @@ func (c *CtyunMongodbAccount) updateAccountPassword(ctx context.Context, plan *M
 	headers := &mongodb.MongodbUpdateAccountPasswordRequestHeaders{
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
-	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
 	}
 
 	tflog.Info(ctx, "更新MongoDB账号密码", map[string]interface{}{
@@ -487,9 +477,6 @@ func (c *CtyunMongodbAccount) updateAccountPermission(ctx context.Context, plan 
 		RegionID:   plan.RegionID.ValueString(),
 		ProdInstId: plan.InstanceID.ValueString(),
 	}
-	if !plan.ProjectID.IsNull() {
-		headers.ProjectID = plan.ProjectID.ValueStringPointer()
-	}
 
 	tflog.Info(ctx, "更新MongoDB账号权限", map[string]interface{}{
 		"instance_id":  plan.InstanceID.ValueString(),
@@ -516,9 +503,6 @@ func (c *CtyunMongodbAccount) delete(ctx context.Context, state MongodbAccountCo
 	headers := &mongodb.MongodbDeleteAccountRequestHeaders{
 		RegionID:   state.RegionID.ValueString(),
 		ProdInstId: state.InstanceID.ValueString(),
-	}
-	if !state.ProjectID.IsNull() {
-		headers.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 
 	tflog.Info(ctx, "删除MongoDB账号", map[string]interface{}{

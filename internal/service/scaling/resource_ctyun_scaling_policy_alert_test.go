@@ -131,7 +131,7 @@ func TestAccCtyunScalingPolicyAlert(t *testing.T) {
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", id, groupId, policyType, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, groupId, regionId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"is_execute", "target_disable_scale_in"},
@@ -143,7 +143,7 @@ func TestAccCtyunScalingPolicyAlert(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					groupId := ds.Attributes["group_id"]
-					return fmt.Sprintf("%s,%s,%s", id, groupId, policyType), nil
+					return fmt.Sprintf("%s,%s", id, groupId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{"is_execute", "target_disable_scale_in"},

@@ -1,5 +1,10 @@
+---
+subcategory: "NAT网关（CT-NAT Gateway）"
+page_title: "CTYUN: ctyun_private_nat_dnat"
+---
+
 # ctyun_private_nat_dnat (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10378362
+-> 管理私网NAT网关dnat规则
 
 
 
@@ -87,13 +92,25 @@ resource "ctyun_private_nat_dnat" "private_dnat" {
 - `description` (String) DNAT描述支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `internal_ip` (String) 对应的内部IP(和port_id二选一) 支持更新
 - `port_id` (String) 对应的网卡ID(和internal_ip二选一) 支持更新
-- `region_id` (String) 资源池id，默认使用provider ctyun总region_id 或者环境变量
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `create_time` (String) 创建时间，为UTC格式
-- `device_id` (String) 网卡对应的设备ID
+- `device_id` (String, Deprecated) 废弃字段
 - `dnat_id` (String) PrivateDnat规则的id
 - `id` (String) ID，同dnat_id
-- `port_name` (String) 网卡名称
+- `port_name` (String, Deprecated) 废弃字段
 - `state` (String) 运行状态: running代表运行中, freeze代表已冻结, expired代表已到期
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入私网DNAT规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_private_nat_dnat.[导入配置名称] [id],[nat_gateway_id],<region_id>
+# 示例
+terraform import ctyun_private_nat_dnat.dnat_example dnat-12345,nat-67890,region-bb9fdb42056f11eda1610242ac110002
+```

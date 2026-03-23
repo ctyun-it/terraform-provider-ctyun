@@ -1,5 +1,10 @@
+---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
+page_title: "CTYUN: ctyun_scaling_ecs_protection"
+---
+
 # ctyun_scaling_ecs_protection (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10216534
+-> 配置弹性伸缩组云主机的伸缩保护
 
 
 
@@ -143,3 +148,16 @@ resource "ctyun_scaling_ecs_protection" "scaling_ecs_protect_example" {
 
 - `instance_id_list` (Set of String) 需要开启伸缩保护的的云主机uuid列表。伸缩组内云主机清单可以根据data.ctyun_scaling_ecs_list获取。支持更新。
 - `region_id` (String) 资源池ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入伸缩组 ECS 保护配置
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+# 注意：当前版本的伸缩组 ECS 保护资源配置不支持导入功能
+#terraform import ctyun_scaling_ecs_protection.[导入配置名称] [id],<region_id>
+# 示例
+#terraform import ctyun_scaling_ecs_protection.scaling_ecs_protection_example 123456789,<region-123456>
+```

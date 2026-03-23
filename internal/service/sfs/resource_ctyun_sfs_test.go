@@ -127,6 +127,14 @@ func TestAccCtyunSfsCycle(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "is_encrypt", "false"), // 验证加密
 					resource.TestCheckResourceAttrSet(resourceName, "status"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2. 资源更新测试（名称/大小/只读）
@@ -161,15 +169,14 @@ func TestAccCtyunSfsCycle(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
-					projectId := ds.Attributes["project_id"]
 					regionId := ds.Attributes["region_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"cycle_count", "kms_uuid", "cycle_type", "is_encrypt", "vpc_id", "subnet_id", "az_name", "used_size", "project_id"},
+				ImportStateVerifyIgnore: []string{"cycle_count", "kms_uuid", "cycle_type", "is_encrypt", "vpc_id", "subnet_id", "az_name", "used_size"},
 			},
 			// 4. 资源导入测试 1
 			{
@@ -191,7 +198,6 @@ func TestAccCtyunSfsCycle(t *testing.T) {
 					"az_name",
 					"used_size",
 					"update_time",
-					"project_id",
 				},
 			},
 			// 4. 清理资源

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -24,7 +25,7 @@ func (c *ctyunZones) Metadata(_ context.Context, req datasource.MetadataRequest,
 
 func (c *ctyunZones) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `**资源池可用区`,
+		MarkdownDescription: utils.FormatDesc("查询资源池可用区", "通用功能（COMMON）", ""),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -54,7 +55,7 @@ func (c *ctyunZones) Read(ctx context.Context, request datasource.ReadRequest, r
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

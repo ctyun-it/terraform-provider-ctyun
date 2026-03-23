@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -18,13 +23,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
 	"strings"
-
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
-
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 )
 
 var (
@@ -35,6 +33,7 @@ var (
 
 type ctyunRabbitmqExchange struct {
 	meta            *common.CtyunMetadata
+	name            string
 	rabbitmqService *business.RabbitmqService
 }
 
@@ -44,6 +43,7 @@ func NewCtyunRabbitmqExchange() resource.Resource {
 
 func (c *ctyunRabbitmqExchange) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_rabbitmq_exchange"
+	c.name = response.TypeName
 }
 
 type CtyunRabbitmqExchangeConfig struct {
@@ -62,7 +62,7 @@ type CtyunRabbitmqExchangeConfig struct {
 
 func (c *ctyunRabbitmqExchange) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967`,
+		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的交换器", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10001967"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -229,7 +229,7 @@ func (c *ctyunRabbitmqExchange) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.ResourceNotExistError) {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "不存在") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -304,11 +304,11 @@ func (c *ctyunRabbitmqExchange) ImportState(ctx context.Context, request resourc
 		return
 	}
 	if instanceID == "" {
-		err = fmt.Errorf("instanceID不能为空")
+		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -412,11 +412,7 @@ func (c *ctyunRabbitmqExchange) getExchangeByName(ctx context.Context, plan Ctyu
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
-		if resp.Message == "交换器不存在" {
-			err = common.ResourceNotExistError
-		} else {
-			err = fmt.Errorf("API return error. Message: %s", resp.Message)
-		}
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError

@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_backup_policy_bind_repo"
+---
+
 # ctyun_ebs_backup_policy_bind_repo (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037453
+-> 管理云硬盘备份存储库和备份策略的绑定关系
 
 
 
@@ -35,8 +40,21 @@ resource "ctyun_ebs_backup_policy_bind_repo" "test" {
 
 ### Optional
 
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘备份策略绑定存储库
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_backup_policy_bind_repo.[导入配置名称] [policy_id],[repository_id],<region_id>
+# 示例
+terraform import ctyun_ebs_backup_policy_bind_repo.example b4d9a692-cd51-4a95-9769-492e237f148c,c4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```

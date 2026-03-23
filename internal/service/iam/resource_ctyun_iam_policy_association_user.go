@@ -3,11 +3,13 @@ package iam
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -30,15 +32,17 @@ func NewCtyunPolicyAssociationUser() resource.Resource {
 type ctyunPolicyAssociationUser struct {
 	meta        *common.CtyunMetadata
 	userService *business.UserService
+	name        string
 }
 
 func (c *ctyunPolicyAssociationUser) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_iam_policy_association_user"
+	c.name = response.TypeName
 }
 
 func (c *ctyunPolicyAssociationUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392`,
+		MarkdownDescription: utils.FormatDesc("管理策略和用户的绑定关系", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10409392"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -167,8 +171,8 @@ func (c *ctyunPolicyAssociationUser) ImportState(ctx context.Context, request re
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [privilegeId]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

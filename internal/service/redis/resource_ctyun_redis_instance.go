@@ -2,12 +2,14 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -36,9 +38,10 @@ var (
 )
 
 type ctyunRedisInstance struct {
-	meta       *common.CtyunMetadata
-	vpcService *business.VpcService
-	sgService  *business.SecurityGroupService
+	meta         *common.CtyunMetadata
+	vpcService   *business.VpcService
+	sgService    *business.SecurityGroupService
+	redisService *business.RedisService
 }
 
 func NewCtyunRedisInstance() resource.Resource {
@@ -96,7 +99,7 @@ type CtyunRedisInstanceBackupPolicy struct {
 
 func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10029727`,
+		MarkdownDescription: utils.FormatDesc("管理Redis实例", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10029727"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{
@@ -131,7 +134,7 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -588,7 +591,7 @@ func (c *ctyunRedisInstance) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "can't find") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -684,6 +687,7 @@ func (c *ctyunRedisInstance) Configure(_ context.Context, request resource.Confi
 	c.meta = meta
 	c.vpcService = business.NewVpcService(meta)
 	c.sgService = business.NewSecurityGroupService(meta)
+	c.redisService = business.NewRedisService(meta)
 }
 
 func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -710,11 +714,11 @@ func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.I
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionId)
@@ -729,9 +733,9 @@ func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.I
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunRedisInstance) checkBeforeCreate(ctx context.Context, plan CtyunRedisInstanceConfig) (err error) {
-	regionID, projectID := plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}
@@ -982,6 +986,7 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 		plan.TlsVersion = types.StringValue(ssl.TlsVersion)
 		plan.ProtectedConn = types.StringValue(ssl.ProtectedConn)
 	} else {
+		plan.SslEnabled = types.BoolValue(false)
 		plan.TlsVersion = types.StringNull()
 		plan.ProtectedConn = types.StringNull()
 	}
@@ -1015,9 +1020,11 @@ func (c *ctyunRedisInstance) update(ctx context.Context, plan, state CtyunRedisI
 	}
 
 	if !plan.SslEnabled.Equal(state.SslEnabled) {
-		err = c.updateSSL(ctx, plan)
-		if err != nil {
-			return
+		if plan.SslEnabled.ValueBool() || state.SslEnabled.ValueBool() {
+			err = c.updateSSL(ctx, plan)
+			if err != nil {
+				return
+			}
 		}
 	}
 	if !plan.TemplateID.Equal(state.TemplateID) && plan.TemplateID.ValueString() != "" {
@@ -1162,21 +1169,11 @@ func (c *ctyunRedisInstance) getByName(ctx context.Context, plan CtyunRedisInsta
 // getById
 func (c *ctyunRedisInstance) getByID(ctx context.Context, plan CtyunRedisInstanceConfig) (instance *dcs2.Dcs2DescribeInstancesOverviewReturnObjUserInfoResponse, err error) {
 	id, regionID := plan.ID.ValueString(), plan.RegionID.ValueString()
-	params := &dcs2.Dcs2DescribeInstancesOverviewRequest{
-		RegionId:   regionID,
-		ProdInstId: id,
-	}
-	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2DescribeInstancesOverviewApi.Do(ctx, c.meta.SdkCredential, params)
+	resp, err := c.redisService.GetRedisByID(ctx, id, regionID)
 	if err != nil {
 		return
-	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
 	}
-	instance = resp.ReturnObj.UserInfo
+	instance = resp.UserInfo
 	return
 }
 

@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_backup_cancel"
+---
+
 # ctyun_mysql_backup_cancel (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10098797
+-> 取消MySQL实例的备份任务
 
 
 
@@ -111,5 +116,5 @@ resource "ctyun_mysql_backup_cancel" "example" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID

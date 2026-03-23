@@ -2,12 +2,14 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -27,6 +29,7 @@ var (
 
 type ctyunEcsAffinityGroup struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEcsAffinityGroup() resource.Resource {
@@ -48,7 +51,7 @@ type CtyunEcsAffinityGroupConfig struct {
 
 func (c *ctyunEcsAffinityGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597693`,
+		MarkdownDescription: utils.FormatDesc("管理云主机组", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10597693"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -144,6 +147,10 @@ func (c *ctyunEcsAffinityGroup) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -213,8 +220,8 @@ func (c *ctyunEcsAffinityGroup) ImportState(ctx context.Context, request resourc
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -237,11 +244,11 @@ func (c *ctyunEcsAffinityGroup) ImportState(ctx context.Context, request resourc
 	err = c.getAndMerge(ctx, &config)
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -292,9 +299,8 @@ func (c *ctyunEcsAffinityGroup) getAndMerge(ctx context.Context, plan *CtyunEcsA
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return
-	}
-	if len(resp.ReturnObj.Results) != 1 || resp.ReturnObj.Results[0].AffinityGroupPolicy == nil {
-		err = common.InvalidReturnObjResultsError
+	} else if len(resp.ReturnObj.Results) != 1 || resp.ReturnObj.Results[0].AffinityGroupPolicy == nil {
+		err = common.ResourceNotExistError
 		return
 	}
 	plan.Name = types.StringValue(resp.ReturnObj.Results[0].AffinityGroupName)

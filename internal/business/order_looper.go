@@ -3,6 +3,7 @@ package business
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"strconv"
@@ -69,7 +70,7 @@ func (o *OrderLooper) OrderLoop(ctx context.Context, credential ctyunsdk.Credent
 			default:
 				// 其他状态
 				sta := OrderStatusName[status]
-				respError = errors.New("轮询订购订单状态失败，轮询到的订单状态为：" + sta)
+				respError = fmt.Errorf("轮询订购订单状态失败，轮询到的订单状态为：%s，订单号：%s", sta, masterOrderId)
 				return false
 			}
 		},
@@ -118,7 +119,7 @@ func (o *OrderLooper) RefundLoop(ctx context.Context, credential ctyunsdk.Creden
 			default:
 				// 其他状态
 				sta := OrderStatusName[status]
-				respError = errors.New("轮询订购订单状态失败，轮询到的订单状态为：" + sta)
+				respError = fmt.Errorf("轮询订购订单状态失败，轮询到的订单状态为：%s，订单号：%s", sta, masterOrderId)
 				return false
 			}
 		},
@@ -168,7 +169,7 @@ func (o *OrderLooper) WaitOrderFinish(ctx context.Context, credential ctyunsdk.C
 			default:
 				// 其他状态
 				sta := OrderStatusName[status]
-				respError = errors.New("等待订单状态失败，轮询到的订单状态为：" + sta)
+				respError = fmt.Errorf("轮询订购订单状态失败，轮询到的订单状态为：%s，订单号：%s", sta, masterOrderId) // Changed from errors.New to fmt.Errorf
 				return false
 			}
 		},

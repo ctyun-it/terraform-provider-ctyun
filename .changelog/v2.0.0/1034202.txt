@@ -88,8 +88,8 @@ resource\ctyun_redis_association_eip: use eip_id replace eip_address
 release-note:enhancement
 resource\ctyun_redis_instance: support update
 
-release-not:deprecation
+release-note:deprecation
 datasource\ctyun_mongodb_association_eips
 
-release-not:deprecation
+release-note:deprecation
 datasource\ctyun_mysql_association_eips

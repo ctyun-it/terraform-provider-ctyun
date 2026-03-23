@@ -22,10 +22,12 @@ import (
 
 type CtyunExpressConnectRegionPeer struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunExpressConnectRegionPeer) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ec_region_peer"
+	c.name = response.TypeName
 }
 
 func (c *CtyunExpressConnectRegionPeer) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -45,8 +47,8 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[ecId],[packetId],[srcCgwId]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id], [ec_id], [packet_id], [src_cgw_id]", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -60,19 +62,19 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 	}
 
 	if id == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if ecId == "" {
-		err = fmt.Errorf("ecId不能为空")
+		err = fmt.Errorf("ec_id不能为空")
 		return
 	}
 	if packetId == "" {
-		err = fmt.Errorf("packetId不能为空")
+		err = fmt.Errorf("packet_id不能为空")
 		return
 	}
 	if srcCgwId == "" {
-		err = fmt.Errorf("srcCgwId不能为空")
+		err = fmt.Errorf("src_cgw_id不能为空")
 		return
 	}
 
@@ -89,7 +91,7 @@ func (c *CtyunExpressConnectRegionPeer) ImportState(ctx context.Context, request
 }
 func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038250",
+		MarkdownDescription: utils.FormatDesc("管理云间高速跨域连接", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038250"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -163,18 +165,23 @@ func (c *CtyunExpressConnectRegionPeer) Schema(ctx context.Context, request reso
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "跨域连接ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"src_region_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "本端资源池ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dst_region_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "对端资源池ID",
-			},
-			"peer_type": schema.Int32Attribute{
-				Computed:    true,
-				Description: "互通类型，1：境内，2: 跨境（中国大陆-亚太），3: 境外（亚太），4: 定制",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"update_time": schema.StringAttribute{
 				Computed:    true,
@@ -332,17 +339,57 @@ func (c *CtyunExpressConnectRegionPeer) getAndMerge(ctx context.Context, config 
 	}
 
 	for _, regionPeer := range regionPeerList {
-		if *regionPeer.PeerID == config.ID.ValueString() {
-			config.Name = types.StringValue(*regionPeer.PeerName)
-			config.EcID = types.StringValue(*regionPeer.EcID)
-			config.SrcCgwID = types.StringValue(*regionPeer.SrcCgwID)
-			config.DstCgwID = types.StringValue(*regionPeer.DstCgwID)
-			config.PacketID = types.StringValue(*regionPeer.PacketID)
-			config.Rate = types.Int32Value(*regionPeer.Rate)
-			config.SrcRegionID = types.StringValue(*regionPeer.SrcDcID)
-			config.DstRegionID = types.StringValue(*regionPeer.DstDcID)
-			config.PeerType = types.Int32Value(*regionPeer.PeerType)
-			config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
+		if regionPeer.PeerID != nil && *regionPeer.PeerID == config.ID.ValueString() {
+			if regionPeer.PeerName != nil {
+				config.Name = types.StringValue(*regionPeer.PeerName)
+			} else {
+				config.Name = types.StringNull()
+			}
+			if regionPeer.EcID != nil {
+				config.EcID = types.StringValue(*regionPeer.EcID)
+			} else {
+				config.EcID = types.StringNull()
+			}
+			if regionPeer.SrcCgwID != nil {
+				config.SrcCgwID = types.StringValue(*regionPeer.SrcCgwID)
+			} else {
+				config.SrcCgwID = types.StringNull()
+			}
+			if regionPeer.DstCgwID != nil {
+				config.DstCgwID = types.StringValue(*regionPeer.DstCgwID)
+			} else {
+				config.DstCgwID = types.StringNull()
+			}
+			if regionPeer.PacketID != nil {
+				config.PacketID = types.StringValue(*regionPeer.PacketID)
+			} else {
+				config.PacketID = types.StringNull()
+			}
+			if regionPeer.Rate != nil {
+				config.Rate = types.Int32Value(*regionPeer.Rate)
+			} else {
+				config.Rate = types.Int32Null()
+			}
+			if regionPeer.SrcDcID != nil {
+				config.SrcRegionID = types.StringValue(*regionPeer.SrcDcID)
+			} else {
+				config.SrcRegionID = types.StringNull()
+			}
+			if regionPeer.DstDcID != nil {
+				config.DstRegionID = types.StringValue(*regionPeer.DstDcID)
+			} else {
+				config.DstRegionID = types.StringNull()
+			}
+			if regionPeer.UpdateDate != nil {
+				config.UpdateTime = types.StringValue(utils.FromBJTimeToUTCZ(*regionPeer.UpdateDate))
+			} else {
+				config.UpdateTime = types.StringNull()
+			}
+			if regionPeer.RouteLearn != nil {
+				config.RouteLearn = types.Int32Value(*regionPeer.RouteLearn)
+			} else {
+				config.RouteLearn = types.Int32Null()
+			}
 			return nil
 		}
 	}
@@ -423,6 +470,5 @@ type CtyunExpressConnectRegionPeerConfig struct {
 	ID          types.String `tfsdk:"id"`
 	SrcRegionID types.String `tfsdk:"src_region_id"`
 	DstRegionID types.String `tfsdk:"dst_region_id"`
-	PeerType    types.Int32  `tfsdk:"peer_type"`
 	UpdateTime  types.String `tfsdk:"update_time"`
 }

@@ -87,5 +87,8 @@ type CtnatListPrivatenatReturnObjResponse struct {
 	ProjectID    string `json:"projectID"`    /*  项目ID  */
 	ProjectName  string `json:"projectName"`  /*  项目名称  */
 	AzID         string `json:"azID"`         /*  可用区ID  */
+	AzName       string `json:"azName"`       /*  可用区ID  */
 	CreateDate   string `json:"createDate"`   /*  创建时间  */
+	ExpiredTime  string `json:"expiredAt"`    /*  创建时间  */
+
 }

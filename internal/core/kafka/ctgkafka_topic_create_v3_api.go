@@ -58,7 +58,7 @@ type CtgkafkaTopicCreateV3Request struct {
 	PartitionNum                int32                                 `json:"partitionNum,omitempty"`      /*  分区数，取值范围[1, min(100, 实例剩余分区数量)]，实例剩余分区数量=实例分区上限-所有主题分区数之和。<br>您可以<a href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=48&api=7382&data=83&isNormal=1&vid=330">查询实例</a>获取对应实例下partitionNum获取分区数上限。  */
 	FactorNum                   int32                                 `json:"factorNum,omitempty"`         /*  副本数，取值范围[1, 3]，单机版默认值1，集群版默认值3。  */
 	PartitionCapacity           int32                                 `json:"partitionCapacity,omitempty"` /*  分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制，默认值-1。  */
-	RetentionTime               int32                                 `json:"retentionTime,omitempty"`     /*  消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。  */
+	RetentionTime               int64                                 `json:"retentionTime,omitempty"`     /*  消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。  */
 	MinReplicas                 int32                                 `json:"minReplicas,omitempty"`       /*  最小同步副本数，需小于等于factorNum，单机版默认值1，集群版默认值min(2, factorNum)。  */
 	MaxMessage                  int32                                 `json:"maxMessage,omitempty"`        /*  最大消息大小，单位字节，取值范围[1, 10485760]， 默认值：1048588。  */
 	NeedFlush                   *bool                                 `json:"needFlush"`                   /*  是否同步刷盘。<br><li>true：是<br><li>false：否<br><li>默认值false  */

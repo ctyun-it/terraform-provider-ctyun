@@ -25,7 +25,7 @@ func (c *ctyunEcCloudGateways) Metadata(_ context.Context, req datasource.Metada
 
 func (c *ctyunEcCloudGateways) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038220`,
+		MarkdownDescription: utils.FormatDesc("查询云企业路由器", "云间高速（标准版）（CT-EC, Express Connect Standard）", "https://www.ctyun.cn/document/10026763/10038220"),
 		Attributes: map[string]schema.Attribute{
 			"ec_id": schema.StringAttribute{
 				Required:    true,

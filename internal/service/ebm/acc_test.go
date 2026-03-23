@@ -10,17 +10,24 @@ import (
 const dependenceDir = "testdata/dependence"
 
 type Dependence struct {
-	vpcID            string
-	subnetID         string
-	securityGroupID  string
-	deviceType       string
-	systemRaid       string
-	dataRaid         string
-	imageUUID        string
-	ebsID            string
-	ebmID            string
-	securityGroupID2 string
-	az2              string
+	vpcID              string
+	subnetID           string
+	securityGroupID    string
+	deviceType         string
+	systemRaid         string
+	dataRaid           string
+	imageUUID          string
+	ebsID              string
+	ebmID              string
+	securityGroupID2   string
+	ebsAz              string
+	raidAz             string
+	standardAz         string
+	standardDeviceType string
+	standardSubnetID   string
+	standardSystemRaid string
+	standardDataRaid   string
+	standardImage      string
 }
 
 var dependence Dependence
@@ -38,17 +45,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	dependence = Dependence{
-		vpcID:            outputs["vpc_id"].Value,
-		subnetID:         outputs["subnet_id"].Value,
-		securityGroupID:  outputs["security_group_id"].Value,
-		deviceType:       outputs["device_type"].Value,
-		systemRaid:       outputs["system_raid"].Value,
-		dataRaid:         outputs["data_raid"].Value,
-		imageUUID:        outputs["image_uuid"].Value,
-		ebsID:            outputs["ebs_id"].Value,
-		ebmID:            outputs["ebm_id"].Value,
-		securityGroupID2: outputs["security_group_id2"].Value,
-		az2:              outputs["az2"].Value,
+		vpcID:              outputs["vpc_id"].Value,
+		subnetID:           outputs["subnet_id"].Value,
+		securityGroupID:    outputs["security_group_id"].Value,
+		deviceType:         outputs["device_type"].Value,
+		systemRaid:         outputs["system_raid"].Value,
+		dataRaid:           outputs["data_raid"].Value,
+		imageUUID:          outputs["image_uuid"].Value,
+		ebsID:              outputs["ebs_id"].Value,
+		ebmID:              outputs["ebm_id"].Value,
+		securityGroupID2:   outputs["security_group_id2"].Value,
+		ebsAz:              outputs["ebs_az"].Value,
+		raidAz:             outputs["raid_az"].Value,
+		standardAz:         outputs["standard_az"].Value,
+		standardDeviceType: outputs["standard_device_type"].Value,
+		standardSubnetID:   outputs["standard_subnet_id"].Value,
+		standardSystemRaid: outputs["standard_system_raid"].Value,
+		standardDataRaid:   outputs["standard_data_raid"].Value,
+		standardImage:      outputs["standard_image"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

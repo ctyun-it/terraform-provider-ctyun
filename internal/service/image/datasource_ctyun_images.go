@@ -2,9 +2,11 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -27,11 +29,11 @@ func (c *ctyunImages) Metadata(_ context.Context, req datasource.MetadataRequest
 
 func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
+		MarkdownDescription: utils.FormatDesc("查询云主机可用的镜像列表", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"visibility": schema.StringAttribute{
 				Required:    true,
-				Description: "镜像可见类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，app：甄选应用镜像",
+				Description: "镜像类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，community：甄选镜像，app：应用镜像，market：云市场镜像",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageVisibilities...),
 				},
@@ -64,6 +66,17 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 					int64validator.AtLeast(1),
 				},
 			},
+			"architecture": schema.StringAttribute{
+				Optional:    true,
+				Description: "系统架构。取值范围：aarch64：aarch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构",
+				Validators: []validator.String{
+					stringvalidator.OneOf("aarch64", "loongarch64", "sw_64", "x86_64"),
+				},
+			},
+			"flavor_name": schema.StringAttribute{
+				Optional:    true,
+				Description: "镜像规格名称",
+			},
 			"images": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
@@ -86,7 +99,7 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 						},
 						"architecture": schema.StringAttribute{
 							Computed:    true,
-							Description: "架构",
+							Description: "系统架构。取值范围：aarch64：AArch64 架构；loongarch64：LoongArch64 架构；sw_64：sw_64 架构；x86_64：x86_64 架构",
 						},
 					},
 				},
@@ -104,26 +117,28 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		resp.Diagnostics.AddError(msg, msg)
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)
 
-	visibility, err := business.ImageVisibilityMap.FromOriginalScene(config.Visibility.ValueString(), business.ImageVisibilityMapScene1)
-	if err != nil {
+	visibility, exist := business.ImageVisibilityMap[config.Visibility.ValueString()]
+	if !exist {
+		err := fmt.Errorf("不支持的镜像种类：%s", config.Visibility.ValueString())
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-
 	imageListResponse, err := c.meta.Apis.CtImageApis.ImageListApi.Do(ctx, c.meta.Credential, &ctimage.ImageListRequest{
 		RegionId:     regionId,
 		AzName:       azName,
-		Visibility:   visibility.(int),
+		Visibility:   visibility,
 		QueryContent: config.Name.ValueString(),
+		FlavorName:   config.FlavorName.ValueString(),
 		PageNo:       int(config.PageNo.ValueInt64()),
 		PageSize:     int(config.PageSize.ValueInt64()),
 	})
+
 	if err != nil {
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
@@ -131,6 +146,9 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 
 	var images []CtyunImageImagesConfig
 	for _, ig := range imageListResponse.Images {
+		if !config.Architecture.IsNull() && config.Architecture.ValueString() != ig.Architecture {
+			continue
+		}
 		images = append(images, CtyunImageImagesConfig{
 			Name:         types.StringValue(ig.ImageName),
 			Id:           types.StringValue(ig.ImageId),
@@ -160,11 +178,13 @@ type CtyunImageImagesConfig struct {
 }
 
 type CtyunImagesConfig struct {
-	Visibility types.String             `tfsdk:"visibility"`
-	Name       types.String             `tfsdk:"name"`
-	RegionId   types.String             `tfsdk:"region_id"`
-	AzName     types.String             `tfsdk:"az_name"`
-	Images     []CtyunImageImagesConfig `tfsdk:"images"`
-	PageSize   types.Int64              `tfsdk:"page_size"`
-	PageNo     types.Int64              `tfsdk:"page_no"`
+	Visibility   types.String             `tfsdk:"visibility"`
+	Name         types.String             `tfsdk:"name"`
+	RegionId     types.String             `tfsdk:"region_id"`
+	AzName       types.String             `tfsdk:"az_name"`
+	Architecture types.String             `tfsdk:"architecture"`
+	FlavorName   types.String             `tfsdk:"flavor_name"`
+	Images       []CtyunImageImagesConfig `tfsdk:"images"`
+	PageSize     types.Int64              `tfsdk:"page_size"`
+	PageNo       types.Int64              `tfsdk:"page_no"`
 }

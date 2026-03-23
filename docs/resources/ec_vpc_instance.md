@@ -1,5 +1,10 @@
+---
+subcategory: "云间高速（标准版）（CT-EC, Express Connect Standard）"
+page_title: "CTYUN: ctyun_ec_vpc_instance"
+---
+
 # ctyun_ec_vpc_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026763/10038256
+-> 管理云间高速VPC网络实例
 
 
 
@@ -19,7 +24,6 @@
 ### Optional
 
 - `exclusive_id` (String) 专属云资源池ID
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池id,如果不填这默认使用provider ctyun中的region_id或者环境变量
 - `route_learn` (Number) 路由学习开关，开启后云网关自动学习网络实例路由, 1-开启，0不开启
 - `route_sync` (Number) 路由同步开关，开启后云网关路由自动同步到网络实例,1-开启同步，0-不开启同步
@@ -27,3 +31,15 @@
 ### Read-Only
 
 - `id` (String) vpc网络实例id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPC网络实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ec_vpc_instance.[导入配置名称] [id],[ec_id],[cgw_id]
+# 示例
+terraform import ctyun_ec_vpc_instance.ec_vpc_instance_example vpc-ins-12345678,ec-87654321,cgw-11111111
+```

@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
@@ -34,20 +35,20 @@ func NewCtyunDhcpOptionSet() resource.Resource {
 
 type ctyunDhcpOptionSet struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunDhcpOptionSetConfig
 	var ID, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
 	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
 		ID = request.ID
@@ -57,16 +58,14 @@ func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.I
 			return
 		}
 	}
-
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
 	config.Id = types.StringValue(ID)
 	config.RegionId = types.StringValue(regionId)
 	err = c.getAndMerge(ctx, &config)
@@ -78,11 +77,12 @@ func (c *ctyunDhcpOptionSet) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunDhcpOptionSet) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_dhcpoptionset"
+	c.name = response.TypeName
 }
 
 func (c *ctyunDhcpOptionSet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028310`,
+		MarkdownDescription: utils.FormatDesc("管理DHCP选项集", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028310"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -108,7 +108,7 @@ func (c *ctyunDhcpOptionSet) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "集合名，支持拉丁字母、中文、数字，下划线，连字符，必须以中文/英文字母开头，不能以数字、_和-、http:/https:开头，长度2-32 支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}]+$"), "dhcp名称不符合规则"),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}fa5}-]+$"), "dhcp名称不符合规则"),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -195,7 +195,7 @@ func (c *ctyunDhcpOptionSet) Read(ctx context.Context, request resource.ReadRequ
 
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -290,6 +290,9 @@ func (c *ctyunDhcpOptionSet) getAndMerge(ctx context.Context, state *CtyunDhcpOp
 	})
 	if err != nil {
 		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiDhcpoptionsetsNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
 		return
@@ -302,7 +305,6 @@ func (c *ctyunDhcpOptionSet) getAndMerge(ctx context.Context, state *CtyunDhcpOp
 	state.Id = utils.SecStringValue(resp.ReturnObj.DhcpOptionSetsID)
 	state.Name = utils.SecStringValue(resp.ReturnObj.Name)
 	state.Description = utils.SecStringValue(resp.ReturnObj.Description)
-
 	state.DomainName = utils.SecStringValue(resp.ReturnObj.DomainName)
 
 	// 更新DNS列表

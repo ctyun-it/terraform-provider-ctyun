@@ -99,7 +99,7 @@ type EbmDescribeInstanceV4plusReturnObjResponse struct {
 	 */UpdatedTime *string `json:"updatedTime"` /*  最后更新时间
 	 */ExpiredTime *string `json:"expiredTime"` /*  到期时间
 	 */OnDemand *bool `json:"onDemand"` /*  付费方式，true表示按量付费，false为包周期
-	 */
+	 */ProjectID *string `json:"projectID"`
 }
 
 type EbmDescribeInstanceV4plusReturnObjFlavorResponse struct {

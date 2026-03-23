@@ -1,7 +1,12 @@
+---
+subcategory: "{{ (index (split .Description "\n") 1) | plainmarkdown | trimspace }}"
+page_title: "CTYUN: {{.Name}}"
+---
+
 # {{.Name}} ({{.Type}})
 
 {{- if len (.Description | trimspace) }}
-{{ .Description | trimspace }}
+{{ (index (split .Description "\n") 0) | trimspace }}
 {{- end }}
 
 

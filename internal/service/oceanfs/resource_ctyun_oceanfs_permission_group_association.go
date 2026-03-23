@@ -2,6 +2,7 @@ package oceanfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,11 +10,10 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -24,11 +24,13 @@ import (
 
 type CtyunOceanfsPermissionGroupAssociation struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_oceanfs_permission_group_association"
+	c.name = response.TypeName
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -49,21 +51,48 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [oceanfs_id],[vpc_id],[permission_group_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunOceanfsPermissionGroupAssociationConfig
-	var regionId, permissionGroupId, sfsId, vpcId, subnetId string
-	err = terraform_extend.Split(request.ID, &regionId, &permissionGroupId, &sfsId, &vpcId, &subnetId)
-	if err != nil {
+	var regionID, permissionGroupID, sfsID, vpcID string
+	if strings.Count(request.ID, common.ImportSeparator) < 3 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &sfsID, &vpcID, &permissionGroupID)
+		if err != nil {
+			return
+		}
+
+	} else {
+		err = terraform_extend.Split(request.ID, &sfsID, &vpcID, &permissionGroupID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if sfsID == "" {
+		err = fmt.Errorf("oceanfs_id不能为空")
 		return
 	}
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", vpcId, sfsId, regionId))
-	config.RegionID = types.StringValue(regionId)
-	config.SfsUID = types.StringValue(sfsId)
-	config.PermissionGroupFuid = types.StringValue(permissionGroupId)
-	config.VpcID = types.StringValue(vpcId)
-	config.SubnetID = types.StringValue(subnetId)
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if vpcID == "" {
+		err = fmt.Errorf("vpc_id不能为空")
+		return
+	}
+	if permissionGroupID == "" {
+		err = fmt.Errorf("permission_group_id不能为空")
+		return
+	}
+
+	config.SfsUID = types.StringValue(sfsID)
+	config.VpcID = types.StringValue(vpcID)
+	config.PermissionGroupFuid = types.StringValue(permissionGroupID)
+	config.RegionID = types.StringValue(regionID)
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -73,7 +102,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) ImportState(ctx context.Context
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10088966/10332853",
+		MarkdownDescription: utils.FormatDesc("管理海量文件服务和权限组的绑定关系", "海量文件服务OceanFS", "https://www.ctyun.cn/document/10088966/10332853"),
 		Attributes: map[string]schema.Attribute{
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,
@@ -117,28 +146,12 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Schema(ctx context.Context, req
 					validator2.VpcValidate(),
 				},
 			},
-			"is_vpce": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(true),
-				Description: "文件系统绑定VPC时是否自动创建VPC终端节点。开启后本服务将为您创建免费的VPC终端节点（VPCE），连接文件存储服务。创建VPCE后将返回该VPC专属的挂载地址，通常需要1~3分钟。取值：\ntrue：创建VPC终端节点（推荐）\nfalse：不创建VPC终端节点\n注：物理机必须通过VPCE专属挂载地址访问文件系统，其它计算服务如云主机、容器为非必须",
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
-			},
-			"subnet_id": schema.StringAttribute{
-				Description: "子网ID",
-				Required:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					validator2.SubnetValidate(),
-				},
-			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "oceanfs与权限组绑定id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -188,7 +201,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Read(ctx context.Context, reque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -198,41 +211,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Read(ctx context.Context, reque
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
-		}
-	}()
-	// 读取tf文件中配置
-
-	var plan CtyunOceanfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	// 读取state中的配置
-	var state CtyunOceanfsPermissionGroupAssociationConfig
-	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
-
-	err = c.update(ctx, &state, &plan)
-	if err != nil {
-		return
-	}
-
-	// 更新远端后，查询远端并同步一下本地信息
-	err = c.getAndMerge(ctx, &state)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
+	return
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -249,11 +228,11 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Delete(ctx context.Context, req
 	if response.Diagnostics.HasError() {
 		return
 	}
-
 	err = c.delete(ctx, config)
 	if err != nil {
 		return
 	}
+	time.Sleep(3 * time.Second)
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, config *CtyunOceanfsPermissionGroupAssociationConfig) error {
@@ -280,7 +259,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, con
 		return err
 	}
 
-	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.VpcID.ValueString(), config.SfsUID.ValueString(), config.RegionID.ValueString()))
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", config.SfsUID.ValueString(), config.VpcID.ValueString(), config.PermissionGroupFuid.ValueString()))
 	return nil
 }
 
@@ -290,7 +269,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getAndMerge(ctx context.Context
 		return err
 	}
 	if len(resp.ReturnObj.List) < 1 {
-		err = fmt.Errorf("未查询到vpc信息(SfsUID=%s)，请检查参数是否正确", config.SfsUID.ValueString())
+		err = common.ResourceNotExistError
 		return err
 	}
 	for _, item := range resp.ReturnObj.List {
@@ -298,7 +277,7 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getAndMerge(ctx context.Context
 			return nil
 		}
 	}
-	return fmt.Errorf("权限组绑定vpc未成功！")
+	return common.ResourceNotExistError
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Context, config *CtyunOceanfsPermissionGroupAssociationConfig) (*oceanfs.OceanfsListVpcPermissionResponse, error) {
@@ -313,6 +292,10 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Conte
 		err = fmt.Errorf("获取vpc列表失败(oceanfs_id = %s)，接口返回为nil。请与研发联系确认问题原因", config.SfsUID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Sfs.SfsInfo.ResourceNotExist") || strings.Contains(resp.Message, "resource not exists") {
+			err = common.ResourceNotExistError
+			return nil, err
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -320,29 +303,6 @@ func (c *CtyunOceanfsPermissionGroupAssociation) getSfsVpcList(ctx context.Conte
 		return nil, err
 	}
 	return resp, nil
-}
-
-func (c *CtyunOceanfsPermissionGroupAssociation) update(ctx context.Context, state *CtyunOceanfsPermissionGroupAssociationConfig, plan *CtyunOceanfsPermissionGroupAssociationConfig) error {
-	params := &oceanfs.OceanfsVpcChangePermissionRequest{
-		PermissionGroupFuid: plan.PermissionGroupFuid.ValueString(),
-		RegionID:            state.RegionID.ValueString(),
-		SfsUID:              state.SfsUID.ValueString(),
-		VpcID:               plan.VpcID.ValueString(),
-	}
-	resp, err := c.meta.Apis.SdkOceanfsApis.OceanfsVpcChangePermissionApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return err
-	} else if resp == nil {
-		err = fmt.Errorf("更新权限组绑定vpc失败(permission_group_id = %s, vpc_id = %s)，接口返回为nil。请与研发联系确认问题原因", state.PermissionGroupFuid.ValueString(), plan.VpcID.ValueString())
-		return err
-	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-		return err
-	}
-	// 绑定后需要轮询下
-	err = c.bindLoop(ctx, plan)
-	state.PermissionGroupFuid = plan.PermissionGroupFuid
-	return nil
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) delete(ctx context.Context, config CtyunOceanfsPermissionGroupAssociationConfig) error {
@@ -398,7 +358,5 @@ type CtyunOceanfsPermissionGroupAssociationConfig struct {
 	RegionID            types.String `tfsdk:"region_id"`
 	SfsUID              types.String `tfsdk:"oceanfs_id"`
 	VpcID               types.String `tfsdk:"vpc_id"`
-	IsVpce              types.Bool   `tfsdk:"is_vpce"`
-	SubnetID            types.String `tfsdk:"subnet_id"`
 	ID                  types.String `tfsdk:"id"`
 }

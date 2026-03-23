@@ -2,6 +2,7 @@ package acl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -33,11 +35,13 @@ var (
 
 type CtyunAclRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *CtyunAclRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_acl_rule"
+	c.name = response.TypeName
 }
 
 func (c *CtyunAclRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -58,69 +62,62 @@ func (c *CtyunAclRule) ImportState(ctx context.Context, request resource.ImportS
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID], [aclId], [direction],[projectId],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[acl_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunAclRuleConfig
-	var ID, aclId, direction, projectId, regionId string
-	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	var ID, aclId, regionId string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("id和acl_id必须输入")
+		return
+	case 1:
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId)
+		err = terraform_extend.Split(request.ID, &ID, &aclId)
 		if err != nil {
 			return
 		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 3 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId, &projectId)
-		if err != nil {
-			return
-		}
-	} else {
-		err = terraform_extend.Split(request.ID, &ID, &direction, &aclId, &projectId, &regionId)
+	default:
+		err = terraform_extend.Split(request.ID, &ID, &aclId, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if aclId == "" {
+		err = fmt.Errorf("acl_id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
-		return
-	}
-
-	if aclId == "" {
-		err = fmt.Errorf("aclId不能为空")
-		return
-	}
-	if direction == "" {
-		err = fmt.Errorf("direction不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
 	config.AclID = types.StringValue(aclId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
-	config.Direction = types.StringValue(direction)
 
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
+	if config.Priority.ValueInt32() == 32767 {
+		err = fmt.Errorf("仅支持导入自定义规则")
+		return
+	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028588",
+		MarkdownDescription: utils.FormatDesc("管理访问控制规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028588"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -135,16 +132,9 @@ func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaReques
 				},
 			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"acl_id": schema.StringAttribute{
 				Required:    true,
@@ -258,6 +248,9 @@ func (c *CtyunAclRule) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -313,8 +306,10 @@ func (c *CtyunAclRule) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -355,10 +350,8 @@ func (c *CtyunAclRule) Update(ctx context.Context, request resource.UpdateReques
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
-	if response.Diagnostics.HasError() {
-		return
-	}
 }
 
 func (c *CtyunAclRule) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -423,7 +416,6 @@ func (c *CtyunAclRule) create(ctx context.Context, config *CtyunAclRuleConfig) e
 	err = c.getRuleID(ctx, config)
 	if err != nil {
 		return err
-
 	}
 	return nil
 }
@@ -503,9 +495,6 @@ func (c *CtyunAclRule) getRuleList(ctx context.Context, config *CtyunAclRuleConf
 		RegionID: config.RegionID.ValueString(),
 		AclID:    config.AclID.ValueString(),
 	}
-	if !config.ProjectID.IsUnknown() && !config.ProjectID.IsNull() {
-		params.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListAclRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return nil, err
@@ -513,7 +502,12 @@ func (c *CtyunAclRule) getRuleList(ctx context.Context, config *CtyunAclRuleConf
 		err = fmt.Errorf("获取acl规则列表失败（acl id=%s），接口返回nil，请联系研发确认问题原因！", config.AclID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		msg := utils.SecString(resp.Message)
+		if msg == common.OpenapiAclNotFoundMsg {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", msg)
+		}
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -564,25 +558,19 @@ func (c *CtyunAclRule) getRuleDetail(ctx context.Context, config *CtyunAclRuleCo
 	if err != nil {
 		return nil, nil, err
 	}
-	if config.Direction.ValueString() == business.AclDirectionIngress {
-		ingressList := ruleList.InRules
-		for _, ingressRule := range ingressList {
-			if *ingressRule.AclRuleID == config.ID.ValueString() {
-				return ingressRule, nil, nil
-			}
+	ingressList := ruleList.InRules
+	for _, ingressRule := range ingressList {
+		if *ingressRule.AclRuleID == config.ID.ValueString() {
+			return ingressRule, nil, nil
 		}
-	} else if config.Direction.ValueString() == business.AclDirectionEgress {
-		egressList := ruleList.OutRules
-		for _, egressRule := range egressList {
-			if *egressRule.AclRuleID == config.ID.ValueString() {
-				return nil, egressRule, nil
-			}
-		}
-	} else {
-		err = fmt.Errorf("direction 取值有误！当前值为%s", config.Direction.ValueString())
-		return nil, nil, err
 	}
-	return nil, nil, nil
+	egressList := ruleList.OutRules
+	for _, egressRule := range egressList {
+		if *egressRule.AclRuleID == config.ID.ValueString() {
+			return nil, egressRule, nil
+		}
+	}
+	return nil, nil, common.ResourceNotExistError
 }
 
 func (c *CtyunAclRule) update(ctx context.Context, state *CtyunAclRuleConfig, plan *CtyunAclRuleConfig) error {

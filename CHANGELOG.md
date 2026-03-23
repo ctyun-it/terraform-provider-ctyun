@@ -1,5 +1,44 @@
 # Changelog
 
+## v2.1.0 - March 23, 2026
+
+### New Resources
+
+* ctyun_ecs_backup_repo
+* ctyun_ebs_backup_repo
+* ctyun_zos_subscribe
+
+### New Data Sources
+
+
+### Enhancements
+
+* most iaas resources support import
+* most computed fields have handled redundant "known after apply" issues
+* all resources have optimized the Read method and fixed errors caused by empty deletion
+* unused project_id fields in some resources have been marked as deprecated
+* resource\ctyun_ccse_cluster support XSSD disk type
+* resource\ctyun_ccse_node_pool support XSSD disk type
+* resource\ctyun_ecs disk type support in uppercase
+* resource\ctyun_ebs disk type support in uppercase
+* datasource\ctyun_ebm_device_types add available field
+* resource\ctyun_ecs add master_port_id field
+* resource\ctyun_ecs support retry when openapi return order err
+* resource\ctyun_vpc support enable dns
+* resource\ctyun_mongodb_instance handle order timeout error when unsubscribing
+
+### Bug Fixes
+
+
+### Deprecations
+
+* resource\ctyun_sdwan_acl
+* resource\ctyun_sdwan_acl_rule
+* datasource\ctyun_sdwan_acls
+* datasource\ctyun_sdwan_acl_rules
+
+
+
 ## v2.0.0 - December 18, 2025
 
 ### New Resources
@@ -342,4 +381,3 @@
 * resource/ctyun_bandwidth fix create
 
 ### Deprecations
-

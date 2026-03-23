@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_users"
+---
+
 # ctyun_iam_users (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289
+-> 查询用户列表
 
 
 

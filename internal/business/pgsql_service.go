@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
+	"strings"
 )
 
 type PgsqlService struct {
@@ -21,7 +22,7 @@ func (u PgsqlService) GetPgsqlFlavorByProdIdAndFlavorName(ctx context.Context, p
 		ProdType:     "1",
 		ProdCode:     "POSTGRESQL",
 		RegionID:     regionID,
-		InstanceType: PgsqlInstanceSeriesDict[series],
+		InstanceType: MysqlInstanceSeriesDict[series],
 	}
 	headers := &mysql.TeledbMysqlSpecsRequestHeader{}
 	resp, err := u.meta.Apis.SdkCtMysqlApis.TeledbMysqlSpecsApi.Do(ctx, u.meta.Credential, params, headers)
@@ -89,6 +90,9 @@ func (u PgsqlService) GetDetailByID(ctx context.Context, id string, projectId st
 	if err != nil {
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "PG_2001") || strings.Contains(resp.Message, "未找到实例") {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return nil, err
 	} else if resp.ReturnObj == nil {

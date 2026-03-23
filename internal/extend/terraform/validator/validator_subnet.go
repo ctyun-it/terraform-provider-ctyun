@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SubnetError = "不满足Subnet格式"
+	SubnetError = "子网ID格式不正确"
 )
 
 type validatorSubnet struct {

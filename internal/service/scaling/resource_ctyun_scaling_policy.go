@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -17,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -35,12 +35,14 @@ var (
 
 type ctyunScalingPolicy struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 	imageService  *business.ImageService
 }
 
 func (c *ctyunScalingPolicy) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_scaling_policy"
+	c.name = response.TypeName
 }
 
 func (c *ctyunScalingPolicy) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -61,46 +63,41 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[groupId],[policyType],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunScalingPolicyConfig
-	var ID, groupId, policyType, regionId string
+	var ID, groupId, regionId string
 	// 根据分隔符数量判断是否输入了regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 2 {
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType)
+		err = terraform_extend.Split(request.ID, &ID, &groupId)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &groupId, &policyType, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &groupId, &regionId)
 		if err != nil {
 			return
 		}
 	}
-
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
-		err = fmt.Errorf("ID必须是有效数字")
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if groupId == "" {
-		err = fmt.Errorf("groupId不能为空")
-		return
-	}
-	if policyType == "" {
-		err = fmt.Errorf("policyType不能为空")
+		err = fmt.Errorf("group_id不能为空")
 		return
 	}
 
@@ -111,7 +108,6 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 	config.ID = types.Int64Value(id)
 	config.RegionID = types.StringValue(regionId)
 	config.GroupID = types.Int64Value(groupID)
-	config.PolicyType = types.StringValue(policyType)
 	err = c.getAndMergeScalingPolicy(ctx, &config)
 	if err != nil {
 		return
@@ -121,7 +117,7 @@ func (c *ctyunScalingPolicy) ImportState(ctx context.Context, request resource.I
 
 func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241454`,
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩策略", "SCALING", "https://www.ctyun.cn/document/10027725/10241454"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -409,8 +405,6 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 			},
 			"target_disable_scale_in": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
 				Description: "是否禁用缩容，当status=disable时，支持更新。默认为false。",
 				Validators: []validator.Bool{
 					validator2.AlsoRequiresEqualBool(
@@ -421,13 +415,14 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 			},
 			"is_execute": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "控制是否需要执行弹性伸缩策略，true表示执行，false表示不执行。默认为false，支持更新",
-				Default:     booldefault.StaticBool(false),
 			},
 			"id": schema.Int64Attribute{
 				Computed:    true,
 				Description: "伸缩策略id",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Optional:    true,
@@ -435,6 +430,9 @@ func (c *ctyunScalingPolicy) Schema(ctx context.Context, request resource.Schema
 				Description: "告警规则状态：enable：启用。disable：停用，支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingPolicyStatuses...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -496,7 +494,7 @@ func (c *ctyunScalingPolicy) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMergeScalingPolicy(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -649,7 +647,11 @@ func (c *ctyunScalingPolicy) createScalingPolicy(ctx context.Context, config *Ct
 			ScaleOutEvaluationCount: config.TargetScaleOutEvaluationCount.ValueInt32(),
 			ScaleInEvaluationCount:  config.TargetScaleInEvaluationCount.ValueInt32(),
 			OperateRange:            config.TargetOperateRange.ValueInt32(),
-			DisableScaleIn:          config.TargetDisableScaleIn.ValueBool(),
+		}
+		if !config.TargetDisableScaleIn.IsNull() && !config.TargetDisableScaleIn.IsUnknown() && config.TargetDisableScaleIn.ValueBool() {
+			targetObj.DisableScaleIn = true
+		} else {
+			targetObj.DisableScaleIn = false
 		}
 		params.TargetObj = &targetObj
 	} else {
@@ -679,13 +681,13 @@ func (c *ctyunScalingPolicy) getAndMergeScalingPolicy(ctx context.Context, confi
 	if err != nil {
 		return err
 	}
-	if business.ScalingPolicyTypeDictRev[rule.RuleType] != config.PolicyType.ValueString() {
-		err = fmt.Errorf("伸缩策略详情有误，id为：%d，本地和控制台上策略类型不一致。本地策略类型为：%s，但是控制台上策略类型为：%s", config.ID.ValueInt64(), config.PolicyType.ValueString(), business.ScalingPolicyTypeDictRev[rule.RuleType])
-		return err
-	}
+	//if business.ScalingPolicyTypeDictRev[rule.RuleType] != config.PolicyType.ValueString() {
+	//	err = fmt.Errorf("伸缩策略详情有误，id为：%d，本地和控制台上策略类型不一致。本地策略类型为：%s，但是控制台上策略类型为：%s", config.ID.ValueInt64(), config.PolicyType.ValueString(), business.ScalingPolicyTypeDictRev[rule.RuleType])
+	//	return err
+	//}
 	config.Name = types.StringValue(rule.Name)
 	config.Status = types.StringValue(business.ScalingPolicyStatusDictRev[rule.Status])
-
+	config.PolicyType = types.StringValue(business.ScalingPolicyTypeDictRev[rule.RuleType])
 	if config.PolicyType.ValueString() == business.ScalingPolicyAlertStr {
 		// 告警策略
 		// 触发字段
@@ -765,7 +767,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 	// 伸缩策略只有列表查询，需要先查询到再通过遍历定位到具体策略
 	policyNum := resp.ReturnObj.NumberOfAll
 	if policyNum <= 0 {
-		return nil, fmt.Errorf("未查询到弹性伸缩组：%d下有任何伸缩策略", config.GroupID)
+		return nil, common.ResourceNotExistError
 	}
 
 	// 如果策略数量大于页面大小，则需要翻页获取。
@@ -791,7 +793,7 @@ func (c *ctyunScalingPolicy) getScalingPolicyDetail(ctx context.Context, config 
 			return nil, err
 		}
 	}
-	return nil, nil
+	return nil, common.ResourceNotExistError
 }
 
 func (c *ctyunScalingPolicy) requestRuleList(ctx context.Context, config *CtyunScalingPolicyConfig, pageNo int32, pageSize int32) (*scaling.ScalingRuleListResponse, error) {
@@ -1007,6 +1009,10 @@ func (c *ctyunScalingPolicy) updatePolicyStatus(ctx context.Context, state *Ctyu
 }
 
 func (c *ctyunScalingPolicy) executePolicy(ctx context.Context, state *CtyunScalingPolicyConfig, plan *CtyunScalingPolicyConfig) error {
+	// 若is_execute不填，默认为false，不执行
+	if plan.IsExecute.IsNull() || plan.IsExecute.IsUnknown() {
+		return nil
+	}
 	if plan.IsExecute.ValueBool() {
 		params := &scaling.ScalingRuleExecuteRequest{
 			RegionID: state.RegionID.ValueString(),

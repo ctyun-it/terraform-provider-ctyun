@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,6 +33,7 @@ var (
 
 type CtyunVpcPeerConnection struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
@@ -56,51 +59,48 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[instanceId],[projectID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var config CtyunVpcPeerConnectionConfig
-	var ID, regionId, projectId, instanceId string
+	var ID, regionId string
 	// 根据分隔符数量判断是否输入了regionID,projectId
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		projectId = c.meta.GetExtraIfEmpty(projectId, common.ExtraProjectId)
-		err = terraform_extend.Split(request.ID, &ID, &instanceId)
-		if err != nil {
-			return
-		}
-	} else if strings.Count(request.ID, common.ImportSeparator) == 2 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ID, &instanceId, &projectId)
+		ID = request.ID
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &ID, &instanceId, &projectId, &regionId)
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
 		if err != nil {
 			return
 		}
 	}
 
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
+	// id需要分析下，传入的uuid还是vpr-xxx格式
+	// 如果是vpr格式，instance_id和id都赋值
+	// 如果是uuid，仅给id赋值
+	if strings.HasPrefix(ID, "vpr-") {
+		config.InstanceID = types.StringValue(ID)
+	}
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
-	if projectId != "" {
-		config.ProjectID = types.StringValue(projectId)
-	}
-	if instanceId != "" {
-		config.InstanceID = types.StringValue(instanceId)
-	}
+
+	var projectID string
+	projectID = c.meta.GetExtraIfEmpty(projectID, common.ExtraProjectId)
+	config.ProjectID = types.StringValue(projectID)
+
 	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
@@ -110,7 +110,7 @@ func (c *CtyunVpcPeerConnection) ImportState(ctx context.Context, request resour
 
 func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: "-> 详细说明请见文档：https://www.ctyun.cn/document/10026760/10037873",
+		MarkdownDescription: utils.FormatDesc("管理对等连接", "对等连接（VPC peering connection）", "https://www.ctyun.cn/document/10026760/10037873"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "对等连接id",
@@ -120,7 +120,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"instance_id": schema.StringAttribute{
-				Description: "对等连接实例id，跨账号情况下使用，如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
+				Description: "对等连接实例id，跨账号情况下使用。如果该字段为空，说明status=pending，需要调用ctyun_vpc_peer_connection_attch同意",
 				Computed:    true,
 			},
 			"region_id": schema.StringAttribute{
@@ -140,7 +140,7 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -192,26 +192,28 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"request_vpc_name": schema.StringAttribute{
-				Description: "本端的vpc名称",
-				Computed:    true,
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"request_vpc_cidr": schema.StringAttribute{
-				Description: "本端的vpc cidr",
-				Computed:    true,
+				Computed:           true,
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"accept_vpc_name": schema.StringAttribute{
-				Description: "对端的vpc名称",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Default:            stringdefault.StaticString(""),
+				Computed:           true,
 			},
 			"accept_vpc_cidr": schema.StringAttribute{
-				Description: "对端的vpc cidr",
-				Computed:    true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
+				Description:        "废弃字段",
+				DeprecationMessage: "废弃字段",
+				Computed:           true,
+				Default:            stringdefault.StaticString(""),
 			},
 			"status": schema.StringAttribute{
 				Description: "对等连接状态，agree(已连接)/pending(等待审核)",
@@ -221,6 +223,9 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 			"user_type": schema.StringAttribute{
 				Description: "对等连接类型：current(同一个租户) / other(不同租户)",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tags": schema.SetNestedAttribute{
 				Description: "标签，支持更新",
@@ -242,8 +247,11 @@ func (c *CtyunVpcPeerConnection) Schema(ctx context.Context, request resource.Sc
 							},
 						},
 						"id": schema.StringAttribute{
-							Description: "标签id",
-							Computed:    true,
+							Description:   "标签id",
+							Computed:      true,
+							PlanModifiers: []planmodifier.String{
+								//stringplanmodifier.UseStateForUnknown(),
+							},
 						},
 					},
 				},
@@ -296,9 +304,9 @@ func (c *CtyunVpcPeerConnection) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotFound") || strings.Contains(err.Error(), "不存在") || strings.Contains(err.Error(), "not found") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -461,13 +469,12 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 	config.Name = types.StringValue(returnObj.Name)
 	config.RequestVpcID = types.StringValue(returnObj.RequestVpcID)
 	config.AcceptVpcID = types.StringValue(returnObj.AcceptVpcID)
-	config.RequestVpcName = types.StringValue(returnObj.RequestVpcName)
-	config.RequestVpcCidr = types.StringValue(returnObj.RequestVpcCidr)
-	config.AcceptVpcCidr = types.StringValue(returnObj.AcceptVpcCidr)
-	config.AcceptVpcName = types.StringValue(returnObj.AcceptVpcName)
+	config.RequestVpcName = types.StringValue("")
+	config.RequestVpcCidr = types.StringValue("")
+	config.AcceptVpcCidr = types.StringValue("")
+	config.AcceptVpcName = types.StringValue("")
 	config.UserType = types.StringValue(returnObj.UserType)
 	config.Status = types.StringValue(returnObj.Status)
-
 	// 处理tags的id
 	tagList := make([]CtyunVpcPeerConnectionTagsModel, 0)
 	tags, err := c.getTags(ctx, config)
@@ -481,7 +488,7 @@ func (c *CtyunVpcPeerConnection) getAndMerge(ctx context.Context, config *CtyunV
 		tag.ID = types.StringValue(*tagItem.LabelID)
 		tagList = append(tagList, tag)
 	}
-	if config.Tags.IsNull() {
+	if config.Tags.IsNull() && len(tagList) == 0 {
 		tagList = nil
 	}
 	tagListTmp, diags := types.SetValueFrom(ctx, utils.StructToTFObjectTypes(CtyunVpcPeerConnectionTagsModel{}), tagList)
@@ -522,6 +529,9 @@ func (c *CtyunVpcPeerConnection) getPeerConnectionDetail(ctx context.Context, co
 		err = fmt.Errorf("获取vpc对等连接详情失败(instance_id=%s)，接口返回nil，请联系研发确认问题原因！", config.ID.ValueString())
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.ErrorCode == common.OpenapiVpcPeeringNotFound {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
@@ -543,7 +553,12 @@ func (c *CtyunVpcPeerConnection) update(ctx context.Context, state *CtyunVpcPeer
 	} else {
 		params.InstanceID = state.ID.ValueString()
 	}
-
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
+	}
+	if !plan.ProjectID.IsNull() && !plan.ProjectID.IsUnknown() {
+		params.ProjectID = plan.ProjectID.ValueStringPointer()
+	}
 	err := c.reqModifyPeerConnection(ctx, params)
 	if err != nil {
 		return err

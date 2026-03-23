@@ -2,6 +2,7 @@ package vpce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -28,6 +29,7 @@ var (
 
 type ctyunVpceServiceTransitIP struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceServiceTransitIP() resource.Resource {
@@ -36,6 +38,7 @@ func NewCtyunVpceServiceTransitIP() resource.Resource {
 
 func (c *ctyunVpceServiceTransitIP) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service_transit_ip"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceTransitIPConfig struct {
@@ -50,12 +53,14 @@ type CtyunVpceServiceTransitIPConfig struct {
 
 func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507`,
+		MarkdownDescription: utils.FormatDesc("管理终端节点服务中转IP", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048507"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，使用中转IP地址，和transit_ip相等",
+				Computed:    true,
+				Description: "ID，使用中转IP地址，和transit_ip相等",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -97,19 +102,20 @@ func (c *ctyunVpceServiceTransitIP) Schema(_ context.Context, _ resource.SchemaR
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"create_time": schema.StringAttribute{
-				Description: "创建时间，为UTC格式",
 				Computed:    true,
+				Description: "创建时间，为UTC格式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"update_time": schema.StringAttribute{
-				Description: "更新时间，为UTC格式",
 				Computed:    true,
+				Description: "更新时间，为UTC格式",
 			},
 		},
 	}
@@ -158,7 +164,7 @@ func (c *ctyunVpceServiceTransitIP) Read(ctx context.Context, request resource.R
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "endpointServiceID ensure") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -203,38 +209,40 @@ func (c *ctyunVpceServiceTransitIP) ImportState(ctx context.Context, request res
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[endpointServiceID],[region_id]"
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [endpoint_service_id],[transit_ip],[region_id]"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceServiceTransitIPConfig
 	var ip, endpointServiceID, regionID string
-	// 根据分隔符数量判断是否输入了 regionID
-	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入transit_ip和endpoint_service_id")
+		return
+	case 1:
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID)
-
+		err = terraform_extend.Split(request.ID, &endpointServiceID, &ip)
 		if err != nil {
 			return
 		}
-	} else {
-		err = terraform_extend.Split(request.ID, &ip, &endpointServiceID, &regionID)
+	default:
+		err = terraform_extend.Split(request.ID, &endpointServiceID, &ip, &regionID)
 		if err != nil {
 			return
 		}
 	}
-
 	if ip == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("transit_ip不能为空")
 		return
 	}
 	if endpointServiceID == "" {
-		err = fmt.Errorf("endpointServiceID不能为空")
+		err = fmt.Errorf("endpoint_service_id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -285,6 +293,9 @@ func (c *ctyunVpceServiceTransitIP) getAndMerge(ctx context.Context, plan *Ctyun
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcListEndpointServiceTransitIPApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceServiceNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
@@ -303,7 +314,7 @@ func (c *ctyunVpceServiceTransitIP) getAndMerge(ctx context.Context, plan *Ctyun
 		}
 	}
 	if !exist {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 

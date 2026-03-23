@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_vpc" "vpc_test" {
-  name        = "tf-vpc-for-mon"
+  name        = "tf-vpc-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
@@ -20,7 +20,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-subnet-for-mon"
+  name        = "tf-subnet-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [

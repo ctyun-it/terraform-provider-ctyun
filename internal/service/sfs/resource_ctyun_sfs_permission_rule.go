@@ -2,6 +2,7 @@ package sfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,15 +20,18 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
+	"time"
 )
 
 type ctyunSfsPermissionGroupRule struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *ctyunSfsPermissionGroupRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_sfs_permission_rule"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSfsPermissionGroupRule) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -47,8 +52,8 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 	var err error
 	defer func() {
 		if err != nil {
-			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [ID],[permissionGroupID],[region_id]"
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[permission_group_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -67,15 +72,15 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 		}
 	}
 	if ID == "" {
-		err = fmt.Errorf("ID不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionID == "" {
-		err = fmt.Errorf("regionID不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	if permissionGroupID == "" {
-		err = fmt.Errorf("permissionGroupID不能为空")
+		err = fmt.Errorf("permission_group_id不能为空")
 		return
 	}
 	config.ID = types.StringValue(ID)
@@ -90,7 +95,7 @@ func (c *ctyunSfsPermissionGroupRule) ImportState(ctx context.Context, request r
 
 func (c *ctyunSfsPermissionGroupRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622`,
+		MarkdownDescription: utils.FormatDesc("管理弹性文件服务权限组规则", "弹性文件服务（CT-SFS，Scalable File Service）", "https://www.ctyun.cn/document/10027350/10192622"),
 		Attributes: map[string]schema.Attribute{
 			"permission_group_id": schema.StringAttribute{
 				Required:    true,
@@ -167,7 +172,6 @@ func (c *ctyunSfsPermissionGroupRule) Create(ctx context.Context, request resour
 	if err != nil {
 		return
 	}
-
 	// 创建后反查创建的信息
 	err = c.getAndMergeSfsPermissionGroupRule(ctx, &plan)
 	if err != nil {
@@ -196,8 +200,10 @@ func (c *ctyunSfsPermissionGroupRule) Read(ctx context.Context, request resource
 	// 查询远端
 	err = c.getAndMergeSfsPermissionGroupRule(ctx, &state)
 	if err != nil {
-		response.State.RemoveResource(ctx)
-		err = nil
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -294,6 +300,7 @@ func (c *ctyunSfsPermissionGroupRule) createSfsPermissionRule(ctx context.Contex
 		err = common.InvalidReturnObjError
 		return err
 	}
+	time.Sleep(1 * time.Second)
 	// 通过查询权限组列表，获取权限组规则id
 	ruleList, err := c.getRuleList(ctx, config)
 	if err != nil {
@@ -317,14 +324,15 @@ func (c *ctyunSfsPermissionGroupRule) getAndMergeSfsPermissionGroupRule(ctx cont
 	if err != nil {
 		return err
 	}
+	if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return err
+	}
 	if len(resp.ReturnObj.List) > 1 {
 		err = fmt.Errorf("查询权限组id=%s，权限组规则id=%s详情，返回信息条数>1。", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
 		return err
 	}
-	if len(resp.ReturnObj.List) == 0 {
-		err = fmt.Errorf("未查询到权限组id=%s，权限组规则id=%s详情", config.PermissionGroupFuid.ValueString(), config.ID.ValueString())
-		return err
-	}
+
 	rule := resp.ReturnObj.List[0]
 	config.AuthAddr = types.StringValue(rule.AuthAddr)
 	config.RwPermission = types.StringValue(rule.RwPermission)

@@ -50,17 +50,12 @@ func TestAccCtyunVip_basic(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id is required")
-					}
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
 					"ip_address",
 					"ipv6_address",
-					"vip_type",
-					"project_id",
 				},
 			},
 			{
@@ -76,7 +71,6 @@ func TestAccCtyunVip_basic(t *testing.T) {
 					"ip_address",
 					"ipv6_address",
 					"vip_type",
-					"project_id",
 				},
 			},
 			{

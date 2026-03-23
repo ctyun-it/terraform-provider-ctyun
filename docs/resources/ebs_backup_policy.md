@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_backup_policy"
+---
+
 # ctyun_ebs_backup_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037448
+-> 管理云硬盘备份策略
 
 
 
@@ -54,7 +59,7 @@ resource "ctyun_ebs_backup_policy" "test" {
 - `cycle_day` (Number) 备份周期（天），取值范围：[1, 30]，默认值为1。注：只有cycleType为day时有效。支持更新
 - `cycle_week` (String) 备份周期（星期），星期取值范围：0~6（代表周几，其中0为周日），默认值是0。注：只有cycleType为week时有效；如果一周有多天备份，以逗号隔开（如周日周三进行快照，则填写"0,3"）。支持更新
 - `full_backup_interval` (Number) 是否启用周期性全量备份。-1代表不开启，默认为-1；取值范围为[-1,100]，即每执行n次增量备份后，执行一次全量备份；若传入为0，代表每一次均为全量备份。支持更新
-- `project_id` (String) 企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为"0"
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `remain_first_of_cur_month` (Boolean) 是否保留每个月第一个备份，在retentionType为num时可设置，默认false，支持更新
 - `retention_day` (Number) 云硬盘备份保留天数，单位为天，取值范围：[1, 99999] ，默认值1。注：只有retentionType为date时有效。支持更新
@@ -85,3 +90,15 @@ Read-Only:
 
 - `repository_id` (String) 云硬盘备份库ID
 - `repository_name` (String) 云硬盘备份库名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘备份策略
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_backup_policy.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ebs_backup_policy.example b4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```
