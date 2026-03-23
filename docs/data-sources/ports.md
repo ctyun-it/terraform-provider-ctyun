@@ -1,5 +1,5 @@
 ---
-subcategory: "PORT"
+subcategory: "弹性网卡（Elastic Network Interface）"
 page_title: "CTYUN: ctyun_ports"
 ---
 

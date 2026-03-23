@@ -1,5 +1,5 @@
 ---
-subcategory: "VIP"
+subcategory: "虚拟IP（Virtual IP，VIP）"
 page_title: "CTYUN: ctyun_vip_association"
 ---
 

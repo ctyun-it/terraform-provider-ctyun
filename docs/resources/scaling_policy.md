@@ -1,5 +1,5 @@
 ---
-subcategory: "SCALING"
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
 page_title: "CTYUN: ctyun_scaling_policy"
 ---
 
