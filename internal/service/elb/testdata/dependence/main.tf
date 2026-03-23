@@ -46,18 +46,25 @@ resource "ctyun_elb_target_group" "test1" {
   name      = "tf-tg-for-target1_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "HTTP"
+  session_sticky_mode = "INSERT"
+  cookie_expire = "30"
 }
 
 resource "ctyun_elb_target_group" "test2" {
   name      = "tf-tg-for-target2_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 0
 }
 
 resource "ctyun_elb_target_group" "test3" {
   name      = "tf-tg-for-target3_3"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 1
 }
 
 resource "ctyun_elb_target_group" "test4" {

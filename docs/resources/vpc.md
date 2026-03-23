@@ -43,6 +43,7 @@ resource "ctyun_vpc" "vpc_test" {
 ### Optional
 
 - `description` (String) 描述，长度最大为128，支持更新
+- `enable_dns` (Boolean) 是否开启dns。false：不开启，true: 开启，默认为不开启false
 - `enable_ipv6` (Boolean) 是否开启IPv6网段。false：不开启，true: 开启，默认为不开启false
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID

@@ -1,12 +1,12 @@
 resource "ctyun_vpc" "vpc_test" {
-  name        = "tf-vpc-for-sfs"
+  name        = "tf-vpc-for-sfs-1${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
 }
 
 resource "ctyun_vpc" "vpc_test1" {
-  name        = "tf-vpc-for-sfs1"
+  name        = "tf-vpc-for-sfs-2${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
@@ -15,7 +15,7 @@ resource "ctyun_vpc" "vpc_test1" {
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-subnet-for-sfs"
+  name        = "tf-subnet-for-sfs-1${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -26,7 +26,7 @@ resource "ctyun_subnet" "subnet_test" {
 
 resource "ctyun_subnet" "subnet_test1" {
   vpc_id      = ctyun_vpc.vpc_test1.id
-  name        = "tf-subnet-for-sfs1"
+  name        = "tf-subnet-for-sfs-2${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -53,4 +53,8 @@ resource "ctyun_sfs_permission_group" "group_test" {
 resource "ctyun_sfs_permission_group" "group_test1" {
   name = "sfs-test2"
   description = "单元测试2"
+}
+
+locals {
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }

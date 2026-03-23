@@ -228,11 +228,11 @@ func (c *CtyunOceanfsPermissionGroupAssociation) Delete(ctx context.Context, req
 	if response.Diagnostics.HasError() {
 		return
 	}
-
 	err = c.delete(ctx, config)
 	if err != nil {
 		return
 	}
+	time.Sleep(3 * time.Second)
 }
 
 func (c *CtyunOceanfsPermissionGroupAssociation) create(ctx context.Context, config *CtyunOceanfsPermissionGroupAssociationConfig) error {

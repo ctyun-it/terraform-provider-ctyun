@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -132,7 +131,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"proxy_protocol": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。不支持更改",
+				Description: "1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。",
 				Default:     int32default.StaticInt32(0),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 1),
@@ -140,9 +139,6 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 						path.MatchRoot("protocol"),
 						types.StringValue(business.ListenerProtocolTCP),
 					),
-				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -425,8 +421,11 @@ func (c *CtyunElbTargetGroup) createTargetGroup(ctx context.Context, plan *Ctyun
 		Algorithm:     plan.Algorithm.ValueString(),
 		SessionSticky: nil,
 	}
-	if !plan.Protocol.IsNull() {
+	if plan.Protocol.ValueString() != "" {
 		params.Protocol = plan.Protocol.ValueString()
+	} else {
+		err = fmt.Errorf("protocol不能为空")
+		return
 	}
 	if !plan.HealthCheckID.IsNull() {
 		params.HealthCheckID = plan.HealthCheckID.ValueString()
@@ -494,26 +493,16 @@ func (c *CtyunElbTargetGroup) updateTargetGroupInfo(ctx context.Context, state *
 		RegionID:      state.RegionID.ValueString(),
 		ID:            state.ID.ValueString(),
 		TargetGroupID: state.ID.ValueString(),
-		Name:          state.Name.ValueString(),
-		HealthCheckID: state.HealthCheckID.ValueString(),
-		Algorithm:     state.Algorithm.ValueString(),
-		ProxyProtocol: state.ProxyProtocol.ValueInt32(),
+		Name:          plan.Name.ValueString(),
+		HealthCheckID: plan.HealthCheckID.ValueString(),
+		Algorithm:     plan.Algorithm.ValueString(),
+		ProxyProtocol: plan.ProxyProtocol.ValueInt32(),
 		SessionSticky: &ctelb.CtelbUpdateTargetGroupSessionStickyRequest{
 			SessionStickyMode: state.SessionStickyMode.ValueString(),
 			CookieExpire:      int32(state.CookieExpire.ValueInt64()),
 			RewriteCookieName: state.RewriteCookieName.ValueString(),
 			SourceIpTimeout:   int32(state.SourceIpTimeout.ValueInt64()),
 		},
-	}
-
-	if !plan.Name.Equal(state.Name) {
-		params.Name = plan.Name.ValueString()
-	}
-	if !plan.HealthCheckID.IsNull() && !plan.HealthCheckID.Equal(state.HealthCheckID) {
-		params.HealthCheckID = plan.HealthCheckID.ValueString()
-	}
-	if !plan.Algorithm.IsNull() && !plan.Algorithm.Equal(state.Algorithm) {
-		params.Algorithm = plan.Algorithm.ValueString()
 	}
 
 	if !plan.SessionStickyMode.IsNull() {

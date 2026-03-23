@@ -118,6 +118,7 @@ func (c *CtyunSdwan) Create(ctx context.Context, req resource.CreateRequest, res
 	if err != nil {
 		return
 	}
+	time.Sleep(3 * time.Second)
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return

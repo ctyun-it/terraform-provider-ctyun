@@ -36,7 +36,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	flavorName := dependence.flavorName
 	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
 	appointVip := fmt.Sprintf(`vip="%s"`, vip)
-	updatedFlavorName := dependence.flavorName
+	updatedFlavorName := dependence.flavorName2
 	updatedProdId := "MasterSlave1222"
 	updatedStorageSpace := 120
 

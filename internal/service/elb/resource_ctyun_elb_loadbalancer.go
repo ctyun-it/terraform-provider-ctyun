@@ -239,6 +239,11 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"az_name": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "可用区",
+			},
 		},
 	}
 }
@@ -363,6 +368,7 @@ func (c *CtyunElbLoadBalancerResource) Update(ctx context.Context, request resou
 	if err != nil {
 		return
 	}
+	state.AzName = plan.AzName
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -829,6 +835,7 @@ type CtyunElbLoadBalancerConfig struct {
 	CycleType       types.String `tfsdk:"cycle_type"`        //订购类型：month（包月） / year（包年）
 	CycleCount      types.Int64  `tfsdk:"cycle_count"`       //订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 	PayVoucherPrice types.String `tfsdk:"pay_voucher_price"` //代金券金额，支持到小数点后两位
+	AzName          types.String `tfsdk:"az_name"`
 }
 
 type EipInfoModel struct {

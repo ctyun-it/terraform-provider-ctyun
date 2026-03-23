@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
@@ -32,7 +33,7 @@ func (c *ctyunImages) Schema(_ context.Context, _ datasource.SchemaRequest, resp
 		Attributes: map[string]schema.Attribute{
 			"visibility": schema.StringAttribute{
 				Required:    true,
-				Description: "镜像可见类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，app：甄选应用镜像",
+				Description: "镜像类型：private：私有镜像，public：公共镜像，shared：共享镜像，safe：安全产品镜像，community：甄选镜像，app：应用镜像，market：云市场镜像",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageVisibilities...),
 				},
@@ -122,15 +123,16 @@ func (c *ctyunImages) Read(ctx context.Context, req datasource.ReadRequest, resp
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)
 
-	visibility, err := business.ImageVisibilityMap.FromOriginalScene(config.Visibility.ValueString(), business.ImageVisibilityMapScene1)
-	if err != nil {
+	visibility, exist := business.ImageVisibilityMap[config.Visibility.ValueString()]
+	if !exist {
+		err := fmt.Errorf("不支持的镜像种类：%s", config.Visibility.ValueString())
 		resp.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	imageListResponse, err := c.meta.Apis.CtImageApis.ImageListApi.Do(ctx, c.meta.Credential, &ctimage.ImageListRequest{
 		RegionId:     regionId,
 		AzName:       azName,
-		Visibility:   visibility.(int),
+		Visibility:   visibility,
 		QueryContent: config.Name.ValueString(),
 		FlavorName:   config.FlavorName.ValueString(),
 		PageNo:       int(config.PageNo.ValueInt64()),

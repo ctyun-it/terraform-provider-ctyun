@@ -90,7 +90,6 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 }
 
 func TestAccCtyunPgsqlInstanceProjectId(t *testing.T) {
-
 	rnd := utils.GenerateRandomString()
 	resourceFile := "resource_ctyun_postgresql_instance_test.tf"
 	resourceName := "ctyun_postgresql_instance." + rnd

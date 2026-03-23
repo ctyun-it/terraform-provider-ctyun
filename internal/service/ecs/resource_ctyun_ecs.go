@@ -744,9 +744,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	if err != nil {
 		return err
 	}
-	imageVisibility, err2 := business.ImageVisibilityMap.FromOriginalScene(imageResponse.Images[0].Visibility, business.ImageVisibilityMapScene1)
-	if err2 != nil {
-		return err2
+	imageVisibility, exist := business.ImageVisibilityMap[imageResponse.Images[0].Visibility]
+	if !exist {
+		return fmt.Errorf("不支持的镜像种类：%s", imageResponse.Images[0].Visibility)
 	}
 
 	// 是否按需参数
@@ -783,7 +783,6 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	azName := plan.AzName.ValueString()
 	projectId := plan.ProjectId.ValueString()
 
-	image_type := imageVisibility.(int)
 	boot_disk_size := int32(plan.SystemDiskSize.ValueInt64())
 	cycle_count := int32(plan.CycleCount.ValueInt64())
 	nic_is_master := true
@@ -816,7 +815,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		DisplayName:     plan.DisplayName.ValueString(),
 		FlavorName:      plan.FlavorName.ValueStringPointer(),
 		FlavorID:        plan.FlavorId.ValueStringPointer(),
-		ImageType:       int32(image_type),
+		ImageType:       int32(imageVisibility),
 		ImageID:         plan.ImageId.ValueString(),
 		BootDiskType:    diskType.(string),
 		BootDiskSize:    boot_disk_size,
@@ -860,15 +859,22 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	resp, err2 := c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
 	if err2 != nil {
 		return err2
-	}
-	if resp.StatusCode == common.ErrorStatusCode {
+	} else if resp == nil {
+		return common.InvalidReturnObjError
+	} else if resp.StatusCode != common.NormalStatusCode {
 		// 若接口返回：订单处理失败: 远程调用失败报错的话，等待5s，重试一次
-		if strings.Contains(*resp.Error, "Ecs.Order.ProcFailed") || strings.Contains(*resp.Message, "order proc failed") {
+		if strings.Contains(utils.SecString(resp.Error), "Ecs.Order.ProcFailed") || strings.Contains(utils.SecString(resp.Message), "order proc failed") {
 			time.Sleep(5 * time.Second)
 			resp, err2 = c.meta.Apis.SdkCtEcsApis.CtecsCreateInstanceV41Api.Do(ctx, c.meta.SdkCredential, params)
+			if err2 != nil {
+				return err2
+			} else if resp == nil {
+				return common.InvalidReturnObjError
+			} else if resp.StatusCode != common.NormalStatusCode {
+				err2 = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
+				return err2
+			}
 		}
-		err2 = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return err2
 	}
 
 	// 先设置重要的属性
