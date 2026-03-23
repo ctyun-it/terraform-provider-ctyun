@@ -1223,6 +1223,7 @@ func (c *CtyunMysqlInstance) generateAzInfos(ctx context.Context, config *CtyunM
 		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
+			return
 		}
 		// 定义一个az信息遍历下标
 		idx := 0
@@ -1327,6 +1328,9 @@ func (c *CtyunMysqlInstance) getUpgradeAzInfo(ctx context.Context, state *CtyunM
 			return
 		}
 		err = c.getAddNodeDist(ctx, azInfoList, nodeDist, state, int(addNodeNum))
+		if err != nil {
+			return
+		}
 	}
 	return
 }
