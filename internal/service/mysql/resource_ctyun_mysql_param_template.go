@@ -533,6 +533,7 @@ func (c *CtyunMysqlParamTemplate) compareParameters(ctx context.Context, state *
 		stateParameter, ok := stateParameterMap[parameterID]
 		if !ok {
 			err = fmt.Errorf("参数不支持增加，parameter_name=%s为新增参数，state阶段不存在。", planParameterItem.ParameterName)
+			return nil, nil, err
 		}
 		flag, err2 := c.compareDetail(stateParameter, planParameterItem)
 		if err2 != nil {

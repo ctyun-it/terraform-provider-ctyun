@@ -171,6 +171,9 @@ func (c *CtyunPgsqlParamTemplates) Read(ctx context.Context, request datasource.
 	}
 	config.RegionID = types.StringValue(regionId)
 	templateList, err := c.getPgsqlParameterTemplateList(ctx, config)
+	if err != nil {
+		return
+	}
 	var parameterTemplates []ParameterTemplateInfo
 	for _, templateItem := range templateList {
 		var template ParameterTemplateInfo
