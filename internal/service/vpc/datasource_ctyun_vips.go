@@ -53,11 +53,7 @@ type CtyunVipsConfig struct {
 
 func (c *CtyunVips) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-<<<<<<< HEAD
 		MarkdownDescription: utils.FormatDesc("查询虚拟IP", "虚拟IP（Virtual IP，VIP）", "https://www.ctyun.cn/document/10026755/10028310"),
-=======
-		MarkdownDescription: utils.FormatDesc("查询虚拟IP", "VIP", "https://www.ctyun.cn/document/10026755/10028310"),
->>>>>>> a527f4c5a75df1829a2bf97af49cf86513680061
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
