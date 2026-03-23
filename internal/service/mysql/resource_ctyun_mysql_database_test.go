@@ -19,7 +19,7 @@ func TestAccCtyunMysqlDatabase(t *testing.T) {
 	datasourceFile := "datasource_ctyun_mysql_databases.tf"
 
 	charsetDatasourceName := "data.ctyun_mysql_character_set." + dnd
-	charsetDatasourceFile := "c.tf"
+	charsetDatasourceFile := "datasource_ctyun_mysql_character_set.tf"
 
 	// 从环境变量获取测试依赖资源
 	mysqlInstanceID := dependence.mysqlID

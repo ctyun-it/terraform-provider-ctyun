@@ -466,6 +466,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		}
 		if len(regionAzList) < 1 {
 			err = errors.New("该资源池AZ信息获取为空，无法直接分配节点AZ信息")
+			return err
 		}
 		azInfo.AvailabilityZoneName = regionAzList[0].AvailabilityZoneId
 	}
