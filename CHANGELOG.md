@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.1.0 - March 23, 2026
+## v2.1.0 - March 25, 2026
 
 ### New Resources
 
