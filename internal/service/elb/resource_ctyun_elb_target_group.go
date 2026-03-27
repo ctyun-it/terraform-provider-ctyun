@@ -73,7 +73,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			},
 			"protocol": schema.StringAttribute{
 				Optional:    true,
-				Description: "支持 TCP / UDP / HTTP / HTTPS, 该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE",
+				Description: "创建时必填，支持TCP/UDP/HTTP/HTTPS, 该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ListenerProtocols...),
 				},
@@ -131,7 +131,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"proxy_protocol": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。",
+				Description: "1 开启，0 关闭，只有protocol=tcp的时候，可填写（关闭/开启proxy_protocol），其他协议默认关闭。",
 				Default:     int32default.StaticInt32(0),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 1),

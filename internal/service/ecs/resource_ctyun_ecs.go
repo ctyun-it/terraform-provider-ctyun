@@ -871,21 +871,26 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 			} else if resp == nil {
 				return common.InvalidReturnObjError
 			} else if resp.StatusCode != common.NormalStatusCode {
-				err2 = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
-				return err2
+				return fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
+			} else if resp.ReturnObj == nil {
+				return common.InvalidReturnObjResultsError
 			}
+		} else {
+			return fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
 		}
+	} else if resp.ReturnObj == nil {
+		return common.InvalidReturnObjResultsError
 	}
-
+	masterOrderID := utils.SecString(resp.ReturnObj.MasterOrderID)
 	// 先设置重要的属性
 	plan.RegionId = types.StringValue(regionId)
 	plan.AzName = types.StringValue(azName)
 	plan.ProjectId = types.StringValue(projectId)
-	plan.MasterOrderId = types.StringValue(*resp.ReturnObj.MasterOrderID)
+	plan.MasterOrderId = types.StringValue(masterOrderID)
 
 	// 轮询订单状态
 	helper := business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
-	loop, err2 := helper.OrderLoop(ctx, c.meta.Credential, *resp.ReturnObj.MasterOrderID)
+	loop, err2 := helper.OrderLoop(ctx, c.meta.Credential, masterOrderID)
 	if err2 != nil {
 		return err2
 	}

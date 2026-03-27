@@ -1,5 +1,24 @@
 # Changelog
 
+## v2.1.1 - March 27, 2026
+
+### New Resources
+
+
+### New Data Sources
+
+
+### Enhancements
+
+
+### Bug Fixes
+
+* resource\ctyun_ecs: fix error handling logic during creation
+
+### Deprecations
+
+
+
 ## v2.1.0 - March 25, 2026
 
 ### New Resources

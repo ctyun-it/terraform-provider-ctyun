@@ -1,0 +1,2 @@
+release-note:bug
+resource\ctyun_ecs: fix error handling logic during creation
