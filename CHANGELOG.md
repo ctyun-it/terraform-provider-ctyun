@@ -10,6 +10,7 @@
 
 ### Enhancements
 
+* resource\ctyun_zos_bucket: querying acl via the endpoint is no longer supported
 
 ### Bug Fixes
 

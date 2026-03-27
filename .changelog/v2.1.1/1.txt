@@ -1,2 +1,5 @@
 release-note:bug
 resource\ctyun_ecs: fix error handling logic during creation
+
+release-note:enhancement
+resource\ctyun_zos_bucket: querying acl via the endpoint is no longer supported
