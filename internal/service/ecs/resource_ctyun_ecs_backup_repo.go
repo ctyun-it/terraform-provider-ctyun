@@ -129,7 +129,7 @@ func (c *ctyunEcsBackupRepo) Schema(_ context.Context, _ resource.SchemaRequest,
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
-				Description: "订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年 ",
+				Description: "订购周期类型，取值范围：month：按月，year：按年。最长订购周期为5年 ",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypesMY...),
 				},

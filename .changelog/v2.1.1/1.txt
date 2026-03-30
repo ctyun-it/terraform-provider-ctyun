@@ -3,3 +3,9 @@ resource\ctyun_ecs: fix error handling logic during creation
 
 release-note:enhancement
 resource\ctyun_zos_bucket: querying acl via the endpoint is no longer supported
+
+release-note:enhancement
+resource\ctyun_ecs_backup_repo: fix cycle_type description
+
+release-note:enhancement
+resource\ctyun_ebs_backup_repo: fix cycle_type description
