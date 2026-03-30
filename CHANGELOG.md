@@ -11,6 +11,8 @@
 ### Enhancements
 
 * resource\ctyun_zos_bucket: querying acl via the endpoint is no longer supported
+* resource\ctyun_ecs_backup_repo: fix cycle_type description
+* resource\ctyun_ebs_backup_repo: fix cycle_type description
 
 ### Bug Fixes
 
