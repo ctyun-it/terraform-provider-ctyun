@@ -81,7 +81,7 @@ type CtiamQueryUsersReturnObjResultResponse struct {
 	Prohibit     int32                                           `json:"prohibit"`     /*  禁用账号，只针对子账号才能是禁用的状态 是否启用( 0启用 , 1 禁用)  */
 	LoginName    *string                                         `json:"loginName"`    /*  登录名  */
 	UserNickName *string                                         `json:"userNickName"` /*  用户自定义登录名前缀  */
-	VirtualEmail *string                                         `json:"virtualEmail"` /*  是否虚拟邮箱，true为虚拟邮箱  */
+	//VirtualEmail *string                                         `json:"virtualEmail"` /*  是否虚拟邮箱，true为虚拟邮箱  */
 }
 
 type CtiamQueryUsersReturnObjResultGroupsResponse struct {

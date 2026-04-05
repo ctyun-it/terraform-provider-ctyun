@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -135,7 +134,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 			"disk_size": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "磁盘容量，单位为GB，取值范围：最小5（默认值），最大1024。注意：磁盘容量不能小于镜像文件的大小；若小于镜像文件的大小，则实际的磁盘容量将使用镜像文件的大小",
+				Description: "磁盘容量，单位为GB，取值范围：最小5，最大1024。注意：若填写，则不能小于镜像文件的大小",
 				PlanModifiers: []planmodifier.Int64{
 					int64planmodifier.UseStateForUnknown(),
 					int64planmodifier.RequiresReplace(),
@@ -143,7 +142,6 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Validators: []validator.Int64{
 					int64validator.Between(5, 1024),
 				},
-				Default: int64default.StaticInt64(5),
 			},
 			"type": schema.StringAttribute{
 				Optional:    true,
@@ -197,16 +195,16 @@ func (c *ctyunImage) Create(ctx context.Context, request resource.CreateRequest,
 		return
 	}
 
-	size, err := utils.GetFileSize(plan.FileSource.ValueString())
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if size > plan.DiskSize.ValueInt64() {
-		err = fmt.Errorf("镜像文件大小为%dGB，disk_size必须大于等于该值", size)
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
+	//size, err := utils.GetFileSize(plan.FileSource.ValueString())
+	//if err != nil {
+	//	response.Diagnostics.AddError(err.Error(), err.Error())
+	//	return
+	//}
+	//if size > plan.DiskSize.ValueInt64() {
+	//	err = fmt.Errorf("镜像文件大小为%dGB，disk_size必须大于等于该值", size)
+	//	response.Diagnostics.AddError(err.Error(), err.Error())
+	//	return
+	//}
 
 	// 创建实例
 	regionId := plan.RegionId.ValueString()

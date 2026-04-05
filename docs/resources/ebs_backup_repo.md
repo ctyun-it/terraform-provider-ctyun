@@ -28,7 +28,7 @@ resource "ctyun_ebs_backup_repo" "test" {
   name =  "tf-test-ctyun_ebs_backup_repo"
   size = 100
   cycle_count = "5"
-  cycle_type  = "MONTH"
+  cycle_type  = "month"
 }
 ```
 
@@ -38,7 +38,7 @@ resource "ctyun_ebs_backup_repo" "test" {
 ### Required
 
 - `cycle_count` (Number) 订购时长，该参数需要与cycleType一同使用。注：最长订购周期为60个月（5年）
-- `cycle_type` (String) 订购周期类型，取值范围：MONTH：按月，YEAR：按年。最长订购周期为5年
+- `cycle_type` (String) 订购周期类型，取值范围：month：按月，year：按年。最长订购周期为5年
 - `name` (String) 云硬盘备份存储库名称，满足以下规则：长度为2-63字符，头尾不支持输入空格。支持更新
 
 ### Optional

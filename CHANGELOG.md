@@ -1,5 +1,27 @@
 # Changelog
 
+## v2.1.1 - March 30, 2026
+
+### New Resources
+
+
+### New Data Sources
+
+
+### Enhancements
+
+* resource\ctyun_zos_bucket: querying acl via the endpoint is no longer supported
+* resource\ctyun_ecs_backup_repo: fix cycle_type description
+* resource\ctyun_ebs_backup_repo: fix cycle_type description
+
+### Bug Fixes
+
+* resource\ctyun_ecs: fix error handling logic during creation
+
+### Deprecations
+
+
+
 ## v2.1.0 - March 25, 2026
 
 ### New Resources

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctzos"
@@ -72,7 +71,6 @@ type CtyunZosBucketConfig struct {
 	RetentionDay   types.Int64  `tfsdk:"retention_day"`
 	RetentionYear  types.Int64  `tfsdk:"retention_year"`
 	CreateTime     types.String `tfsdk:"create_time"`
-	client         *s3.S3
 }
 
 func (c *ctyunZosBucket) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -370,6 +368,7 @@ func (c *ctyunZosBucket) Update(ctx context.Context, request resource.UpdateRequ
 	if err != nil {
 		return
 	}
+	state.ACL = plan.ACL
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -853,46 +852,11 @@ func (c *ctyunZosBucket) getAndMerge(ctx context.Context, plan *CtyunZosBucketCo
 	if err != nil {
 		return
 	}
-	// 获取ACL
-	err = c.getAcl(ctx, plan)
-	if err != nil {
-		return
-	}
 	// 获取合规保留策略
 	err = c.getLockConfig(ctx, plan)
 	if err != nil {
 		return
 	}
-	return
-}
-
-// initClient 获取s3 client
-func (c *ctyunZosBucket) initClient(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
-	if plan.client == nil {
-		// 获取s3 client
-		plan.client, err = business.NewZosService(c.meta).BuildS3Client(ctx, plan.RegionID.ValueString())
-		if err != nil {
-			return
-		}
-	}
-	return
-}
-
-func (c *ctyunZosBucket) getAcl(ctx context.Context, plan *CtyunZosBucketConfig) (err error) {
-	err = c.initClient(ctx, plan)
-	if err != nil {
-		return
-	}
-	input := &s3.GetBucketAclInput{
-		Bucket: plan.Bucket.ValueStringPointer(),
-	}
-	output, err := plan.client.GetBucketAcl(input)
-	if err != nil {
-		return
-	}
-	grants := output.Grants
-	acl := utils.ParseAcl(grants)
-	plan.ACL = types.StringValue(acl)
 	return
 }
 
