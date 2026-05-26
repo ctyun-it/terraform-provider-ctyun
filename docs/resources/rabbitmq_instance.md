@@ -88,7 +88,6 @@ resource "ctyun_rabbitmq_instance" "test" {
 - `node_num` (Number) 节点数。支持1、3、5、7、9，支持更新
 - `security_group_id` (String) 安全组ID
 - `spec_name` (String) 实例的规格类型，建议使用ctyun_rabbitmq_specs查看，支持更新
-- `subnet_id` (String) 子网ID
 - `vpc_id` (String) 虚拟私有云ID
 - `zone_list` (Set of String) 实例所在可用区信息，只能传一个或三个可用区，可通过ctyun_regions查看
 
@@ -97,6 +96,7 @@ resource "ctyun_rabbitmq_instance" "test" {
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String) 子网ID，创建时必填，导入时不填
 
 ### Read-Only
 
@@ -108,3 +108,15 @@ resource "ctyun_rabbitmq_instance" "test" {
 - `master_order_id` (String) 主订单号
 - `name` (String) 名称
 - `ssl_endpoint` (String) SSL接入点
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入RabbitMQ实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_rabbitmq_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_rabbitmq_instance.instance_example inst123456,<region_id>
+```

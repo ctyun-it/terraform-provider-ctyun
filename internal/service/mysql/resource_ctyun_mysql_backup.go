@@ -56,7 +56,7 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -65,12 +65,12 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instId)
+		err = terraform_extend.Split(request.ID, &instId, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
+		err = terraform_extend.Split(request.ID, &instId, &name, &regionId)
 		if err != nil {
 			return
 		}
@@ -90,7 +90,6 @@ func (c *CtyunMysqlBackup) ImportState(ctx context.Context, request resource.Imp
 	cfg.RegionID = types.StringValue(regionId)
 	cfg.Name = types.StringValue(name)
 	cfg.InstID = types.StringValue(instId)
-	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", name, instId))
 	err = c.getAndMergeMysqlBackup(ctx, &cfg)
 	if err != nil {
 		return
@@ -138,7 +137,8 @@ func (c *CtyunMysqlBackup) Schema(ctx context.Context, request resource.SchemaRe
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "备份集备注",
+				Computed:    true,
+				Description: "备注",
 				Validators: []validator.String{
 					validator2.Desc(),
 				},
@@ -188,7 +188,6 @@ func (c *CtyunMysqlBackup) Create(ctx context.Context, request resource.CreateRe
 	if err != nil {
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.Name.ValueString(), plan.InstID.ValueString()))
 	// 创建后，获取mysql详情
 	err = c.getAndMergeMysqlBackup(ctx, &plan)
 	if err != nil {
@@ -315,6 +314,11 @@ func (c *CtyunMysqlBackup) getAndMergeMysqlBackup(ctx context.Context, config *C
 	if len(backupList) > 1 {
 		err = fmt.Errorf("通过backupName=%s,mysql实例id=%s查询到多条备份集", config.Name.ValueString(), config.InstID.ValueString())
 		return err
+	}
+	config.ID = config.Name
+	if len(resp.List[0].Records) > 0 {
+		config.Description = types.StringValue(resp.List[0].Records[0].Description)
+		config.TaskType = types.StringValue(resp.List[0].Records[0].TaskType)
 	}
 	return nil
 }

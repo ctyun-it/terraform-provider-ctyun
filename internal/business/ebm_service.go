@@ -45,7 +45,16 @@ func (c EbmService) GetEbmStatus(ctx context.Context, id, regionID, azName strin
 	if err != nil {
 		return
 	}
-	return strings.ToLower(*instance.EbmState), err
+	return strings.ToLower(utils.SecString(instance.EbmState)), err
+}
+
+// GetEbmImageID 查询物理机镜像id
+func (c EbmService) GetEbmImageID(ctx context.Context, id, regionID, azName string) (status string, err error) {
+	instance, err := c.GetEbmInfo(ctx, id, regionID, azName)
+	if err != nil {
+		return
+	}
+	return utils.SecString(instance.ImageID), err
 }
 
 func (c EbmService) GetDeviceType(ctx context.Context, deviceType, regionID, azName string) (spec ctebm.EbmDeviceTypeListReturnObjResultsResponse, err error) {

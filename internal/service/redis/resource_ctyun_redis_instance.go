@@ -42,6 +42,7 @@ type ctyunRedisInstance struct {
 	vpcService   *business.VpcService
 	sgService    *business.SecurityGroupService
 	redisService *business.RedisService
+	orderLooper  *business.OrderLooper
 }
 
 func NewCtyunRedisInstance() resource.Resource {
@@ -102,19 +103,25 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 		MarkdownDescription: utils.FormatDesc("管理Redis实例", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10029727"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				Computed:    true,
-				Description: "ID",
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("instance_name")),
+				},
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "主订单号",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -165,6 +172,9 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"actual_cycle_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "服务端当前实际计费类型（可能与 cycle_type 不一致，如包周期未到期时）。",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 			"az_name": schema.StringAttribute{
 				Optional:    true,
@@ -259,7 +269,7 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"shard_count": schema.Int32Attribute{
 				Computed:    true,
 				Optional:    true,
-				Description: "分片数量，当edition取值为DirectClusterSingle时: 3~256。当edition取值为DirectCluster时: 3~256。当edition取值为ClusterOriginalProxy时: 3~64。当edition取其他值时不填。",
+				Description: "分片数量，当edition取值为DirectClusterSingle或DirectCluster时可填3-256。当edition取其他值时不填。",
 				PlanModifiers: []planmodifier.Int32{
 					int32planmodifier.UseStateForUnknown(),
 					int32planmodifier.RequiresReplace(),
@@ -269,10 +279,11 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 						path.MatchRoot("edition"),
 						types.StringValue(business.RedisEditionDirectClusterSingle),
 						types.StringValue(business.RedisEditionDirectCluster),
-						types.StringValue(business.RedisEditionClusterOriginalProxy),
 					),
+					int32validator.Between(3, 256),
 					validator2.ConflictsWithEqualInt32(
 						path.MatchRoot("edition"),
+						types.StringValue(business.RedisEditionClusterOriginalProxy),
 						types.StringValue(business.RedisEditionStandardSingle),
 						types.StringValue(business.RedisEditionStandardDual),
 						types.StringValue(business.RedisEditionOriginalMultipleReadLvs),
@@ -282,25 +293,27 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"copies_count": schema.Int32Attribute{
 				Computed:    true,
 				Optional:    true,
-				Description: "副本数量，当edition取值为OriginalMultipleReadLvs/StandardDual/DirectCluster/ClusterOriginalProxy时必填（取值范围2-6），当edition取其他值时不填。",
+				Description: "副本数量，当edition取值为StandardDual/DirectCluster/ClusterOriginalProxy时可填1-10，当edition取值为OriginalMultipleReadLvs时可填2~10，当edition为其他值时不可填写。",
 				PlanModifiers: []planmodifier.Int32{
 					int32planmodifier.UseStateForUnknown(),
 					int32planmodifier.RequiresReplace(),
 				},
 				Validators: []validator.Int32{
-					validator2.AlsoRequiresEqualInt32(
+					validator2.CrossFieldInt32(
 						path.MatchRoot("edition"),
-						types.StringValue(business.RedisEditionOriginalMultipleReadLvs),
-						types.StringValue(business.RedisEditionStandardDual),
-						types.StringValue(business.RedisEditionDirectCluster),
-						types.StringValue(business.RedisEditionClusterOriginalProxy),
+						[]any{business.RedisEditionStandardDual, business.RedisEditionDirectCluster, business.RedisEditionClusterOriginalProxy},
+						[]int32{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+					),
+					validator2.CrossFieldInt32(
+						path.MatchRoot("edition"),
+						[]any{business.RedisEditionOriginalMultipleReadLvs},
+						[]int32{2, 3, 4, 5, 6, 7, 8, 9, 10},
 					),
 					validator2.ConflictsWithEqualInt32(
 						path.MatchRoot("edition"),
 						types.StringValue(business.RedisEditionStandardSingle),
 						types.StringValue(business.RedisEditionDirectClusterSingle),
 					),
-					int32validator.Between(2, 6),
 				},
 			},
 			"instance_name": schema.StringAttribute{
@@ -345,9 +358,9 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "实例密码。长度8-26字符。必须同时包含大写字母、小写字母、数字、英文格式特殊符号(@%^*_+!$-=.)中的三种类型。不能有空格。支持更新",
+				Optional:    true,
 				Sensitive:   true,
+				Description: "密码，创建时必填，导入时不填。长度8-26字符。必须同时包含大写字母、小写字母、数字、英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。不能有空格。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(8, 26),
 					validator2.RedisPassword(),
@@ -357,7 +370,6 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 				Optional:    true,
 				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -365,24 +377,12 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplaceIf(
-						func(ctx context.Context, request planmodifier.BoolRequest, response *boolplanmodifier.RequiresReplaceIfFuncResponse) {
-							var planCycleType string
-							request.Plan.GetAttribute(ctx, path.Root("cycle_type"), &planCycleType)
-
-							var stateCycleType string
-							request.State.GetAttribute(ctx, path.Root("cycle_type"), &stateCycleType)
-							if stateCycleType == planCycleType || stateCycleType == business.OrderCycleTypeOnDemand {
-								response.RequiresReplace = true
-							}
-							return
-						},
-						"不支持修改自动续订参数", "不支持修改自动续订参数",
-					),
+					boolplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"auto_renew_cycle_count": schema.Int32Attribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "自动续订时长，单位月，支持1, 2, 3, 5, 6, 7, 12, 24, 36",
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
@@ -396,27 +396,14 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 					int32validator.OneOf(1, 2, 3, 5, 6, 7, 12, 24, 36),
 				},
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplaceIf(
-						func(ctx context.Context, request planmodifier.Int32Request, response *int32planmodifier.RequiresReplaceIfFuncResponse) {
-							var planCycleType string
-							request.Plan.GetAttribute(ctx, path.Root("cycle_type"), &planCycleType)
-
-							var stateCycleType string
-							request.State.GetAttribute(ctx, path.Root("cycle_type"), &stateCycleType)
-							if stateCycleType == planCycleType || stateCycleType == business.OrderCycleTypeOnDemand {
-								response.RequiresReplace = true
-							}
-							return
-						},
-						"不支持修改自动续订参数", "不支持修改自动续订参数",
-					),
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"maintenance_time": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "实例维护时间窗口，总时长必须为2小时，默认：00:00-02:00，支持更新",
-				Default:     stringdefault.StaticString("00:00-02:00"),
+				Description: "实例维护时间窗口，总时长必须为2小时，默认：02:00-04:00，支持更新",
+				Default:     stringdefault.StaticString("02:00-04:00"),
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(regexp.MustCompile("^([0-1][0-9]|2[0-3]):[0-5][0-9]-([0-1][0-9]|2[0-3]):[0-5][0-9]$"), "时间格式错误"),
 				},
@@ -483,14 +470,23 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"protected_conn": schema.StringAttribute{
 				Computed:    true,
 				Description: "受保护的连接地址",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("ssl_enabled")),
+				},
 			},
 			"tls_version": schema.StringAttribute{
 				Computed:    true,
 				Description: "TLS版本",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("ssl_enabled")),
+				},
 			},
 			"connection_address": schema.StringAttribute{
 				Computed:    true,
 				Description: "连接地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"template_id": schema.StringAttribute{
 				Optional:    true,
@@ -509,6 +505,9 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"expire_time": schema.StringAttribute{
 				Description: "到期时间，为UTC格式，按需时为空",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 		},
 	}
@@ -688,6 +687,7 @@ func (c *ctyunRedisInstance) Configure(_ context.Context, request resource.Confi
 	c.vpcService = business.NewVpcService(meta)
 	c.sgService = business.NewSecurityGroupService(meta)
 	c.redisService = business.NewRedisService(meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
 func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -695,7 +695,7 @@ func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -728,11 +728,27 @@ func (c *ctyunRedisInstance) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	_, cycleCount, err := utils.CalculateMonth(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int32Value(cycleCount)
+	} else {
+		cfg.CycleCount = types.Int32Null()
+	}
+	cfg.CycleType = cfg.ActualCycleType
+	cfg.MasterOrderID = types.StringValue("unknown")
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunRedisInstance) checkBeforeCreate(ctx context.Context, plan CtyunRedisInstanceConfig) (err error) {
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
 	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
@@ -765,9 +781,9 @@ func (c *ctyunRedisInstance) checkSpecParams(ctx context.Context, plan CtyunRedi
 		if shardCount < 3 || shardCount > 256 {
 			return fmt.Errorf("edition为DirectClusterSingle或DirectCluster，shard_count需要在3-256")
 		}
-	case "ClusterOriginalP":
+	case business.RedisEditionClusterOriginalProxy:
 		if shardCount < 3 || shardCount > 64 {
-			return fmt.Errorf("edition为ClusterOriginalP，shard_count需要在3-64")
+			return fmt.Errorf("edition为ClusterOriginalProxy，shard_count需要在3-64")
 		}
 	}
 	if shardCount == 0 {
@@ -917,7 +933,9 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 	if err != nil {
 		return
 	}
-
+	plan.HostType = types.StringValue(business.RedisHostTypeMap[instance.HostType])
+	plan.Version = types.StringValue(business.RedisTypeToApiVersion[instance.Type])
+	plan.Edition = types.StringValue(business.RedisTypeToApiEdition[instance.Type])
 	if len(instance.AzList) > 0 {
 		plan.AzName = types.StringValue(instance.AzList[0].AzEngName)
 	}
@@ -925,8 +943,8 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 		plan.SecondaryAzName = types.StringValue(instance.AzList[1].AzEngName)
 	}
 	plan.ActualCycleType = types.StringValue(map[int32]string{0: business.OrderCycleTypeMonth, 1: business.OrderCycleTypeOnDemand}[instance.PayType])
-	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
-		plan.AutoRenew = types.BoolValue(false)
+	if plan.ActualCycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		plan.AutoRenew = types.BoolNull()
 		plan.AutoRenewCycleCount = types.Int32Null()
 	}
 	plan.ConnectionAddress = types.StringValue(instance.ConnectionAddress)
@@ -956,11 +974,16 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 			plan.SubnetID = types.StringValue(p.AttrVal)
 		case "securityGroupUuid":
 			plan.SecurityGroupID = types.StringValue(p.AttrVal)
-		//case "autoRenewStatus":
-		//	plan.AutoRenew = types.BoolValue(map[string]bool{"false": false, "true": true}[p.AttrVal])
+		case "autoRenewStatus":
+			if plan.ActualCycleType.ValueString() != business.OrderCycleTypeOnDemand {
+				plan.AutoRenew = types.BoolValue(map[string]bool{"false": false, "true": true}[p.AttrVal])
+			}
 		case "projectId":
 			plan.ProjectID = types.StringValue(p.AttrVal)
-		case "autoRenewPeriod":
+		case "autoRenewCycleCount":
+			if plan.ActualCycleType.ValueString() != business.OrderCycleTypeOnDemand {
+				plan.AutoRenewCycleCount = types.Int32Value(utils.StringToInt32Must(p.AttrVal))
+			}
 		}
 	}
 	policy, err := c.getBackupPolicy(ctx, *plan)
@@ -1045,7 +1068,6 @@ func (c *ctyunRedisInstance) updateCycle(ctx context.Context, plan, state CtyunR
 		err = c.transToPrePaid(ctx, plan)
 	} else {
 		err = c.transChargeType(ctx, plan)
-		time.Sleep(30 * time.Second)
 	}
 	return
 }
@@ -1066,11 +1088,15 @@ func (c *ctyunRedisInstance) transToPrePaid(ctx context.Context, state CtyunRedi
 		err = common.InvalidReturnObjError
 		return
 	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, resp.ReturnObj.MasterOrderId)
 	return
 }
 
 // transChargeType 按需转包周期
 func (c *ctyunRedisInstance) transChargeType(ctx context.Context, plan CtyunRedisInstanceConfig) (err error) {
+	if plan.AutoRenew.ValueBool() == true {
+		return fmt.Errorf("按需转包周期时，实例不能指定自动续订")
+	}
 	params := &dcs2.Dcs2TransChargeTypeRequest{
 		RegionId:   plan.RegionID.ValueString(),
 		ProdInstId: plan.ID.ValueString(),
@@ -1092,6 +1118,7 @@ func (c *ctyunRedisInstance) transChargeType(ctx context.Context, plan CtyunRedi
 		err = common.InvalidReturnObjError
 		return
 	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, resp.ReturnObj.MasterOrderId)
 	return
 }
 

@@ -57,7 +57,7 @@ variable "password" {
 
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -100,3 +100,15 @@ resource "ctyun_postgresql_association_eip" "pgsql_association_eip_test" {
 
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL关联EIP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_postgresql_association_eip.association_example 20d1e9aa262246bf86b2915c6364715e,eip-qjefnklk36,<region_id>
+```

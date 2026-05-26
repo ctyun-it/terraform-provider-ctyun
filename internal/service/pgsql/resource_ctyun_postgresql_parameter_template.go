@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -18,8 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -128,10 +130,10 @@ func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.S
 				},
 			},
 			"source_template_id": schema.Int64Attribute{
-				Required:    true,
-				Description: "参考的参数模板ID，可以根据data.ctyun_postgresql_param_templates查询",
+				Optional:    true,
+				Description: "参考的参数模板ID，创建时必填。可以根据data.ctyun_postgresql_param_templates查询",
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreInt64(),
 				},
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
@@ -139,6 +141,7 @@ func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.S
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "参数模板的描述，支持更新，若不为空，则长度限制：1-1024",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 1024),
@@ -147,6 +150,9 @@ func (c *CtyunPgsqlParamTemplate) Schema(ctx context.Context, request resource.S
 			"id": schema.Int64Attribute{
 				Computed:    true,
 				Description: "参数模板id",
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"template_parameters": schema.MapAttribute{
 				Optional:    true,
@@ -239,6 +245,11 @@ func (c *CtyunPgsqlParamTemplate) Update(ctx context.Context, request resource.U
 		return
 	}
 
+	if !plan.SourceTemplateId.IsUnknown() && !plan.SourceTemplateId.IsNull() && state.SourceTemplateId.IsNull() {
+		state.SourceTemplateId = plan.SourceTemplateId
+		response.Diagnostics.AddWarning("source_template_id的更新仅写入状态文件", "在import时，状态文件中source_template_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
 	err = c.updatePgsqlParameters(ctx, &state, &plan)
 	if err != nil {
 		return
@@ -290,6 +301,10 @@ func (c *CtyunPgsqlParamTemplate) Delete(ctx context.Context, request resource.D
 }
 
 func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.Context, config *CtyunPgsqlParameterTemplateConfig) error {
+	if config.SourceTemplateId.IsNull() || config.SourceTemplateId.IsUnknown() {
+		err := fmt.Errorf("创建postgresql 参数模板时，source_template_id必填！")
+		return err
+	}
 	params := &pgsql.PgsqlCreateParameterTemplateRequest{
 		SourceTemplateId: config.SourceTemplateId.ValueInt64(),
 		Name:             config.Name.ValueString(),
@@ -321,6 +336,7 @@ func (c *CtyunPgsqlParamTemplate) getAndMergePostgresqlParameterTemplate(ctx con
 	}
 	config.ID = types.Int64Value(detail.PgTemplateId)
 	config.Description = types.StringValue(detail.Description)
+	config.Name = types.StringValue(detail.Name)
 	if config.TemplateParameters.IsNull() {
 		config.TemplateParameters = types.MapNull(types.StringType)
 	}

@@ -56,7 +56,7 @@ variable "password" {
 
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -98,3 +98,15 @@ resource "ctyun_postgresql_backup" "example" {
 - `end_time` (String) 备份结束时间，时间格式为utc
 - `id` (Number) 备份集ID
 - `start_time` (String) 备份开始时间，时间格式为utc
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL备份
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_backup.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_postgresql_backup.backup_example 20d1e9aa262246bf86b2915c6364715e,pgsql-964_20260508095105",<region_id>
+```

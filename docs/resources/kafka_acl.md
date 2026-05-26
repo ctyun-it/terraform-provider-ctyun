@@ -41,11 +41,8 @@ resource "ctyun_kafka_acl" "tbidgqvfbs" {
 
 ### Required
 
-- `instance_id` (String) 实例ID。
-- `name` (String) 策略名称，规则如下：
-以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。
-长度3-64。
-名称不可重复。
+- `instance_id` (String) 实例ID
+- `name` (String) 策略名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。长度3-64。名称不可重复。
 - `rules` (Attributes Set) ACL规则 (see [below for nested schema](#nestedatt--rules))
 
 ### Optional
@@ -63,10 +60,22 @@ resource "ctyun_kafka_acl" "tbidgqvfbs" {
 
 Required:
 
-- `operation` (String) 操作，READ:消费，WRITE:生产 支持更新
-- `permission` (String) 权限，ALLOW:允许，DENY:拒绝，默认：ALLOW 支持更新
-- `user_name` (String) 用户名，必须是已经集群中创建了的用户，支持更新
+- `operation` (String) 操作，READ:消费，WRITE:生产
+- `permission` (String) 权限，ALLOW:允许，DENY:拒绝
+- `user_name` (String) 用户名，必须是已经集群中创建了的用户
 
 Optional:
 
-- `ip` (String) ip或网段，多个用半角分号分开，默认*，表示所有ip 支持更新
+- `ip` (String) ip或网段，多个用半角分号分开，默认*，表示所有ip
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka ACL
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_acl.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_kafka_acl.kafak_acl_example 12345678-1234-1234-1234-123456789012,kafka_acl_name,bb9fdb42056f11eda1610242ac110002
+```

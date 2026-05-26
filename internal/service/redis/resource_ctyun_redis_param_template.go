@@ -8,12 +8,13 @@ import (
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -71,9 +72,11 @@ func (c *ctyunRedisParamTemplate) Schema(_ context.Context, _ resource.SchemaReq
 		MarkdownDescription: utils.FormatDesc("管理Redis参数模板", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10156164"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "模板ID",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "模板ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -101,6 +104,9 @@ func (c *ctyunRedisParamTemplate) Schema(_ context.Context, _ resource.SchemaReq
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cache_mode": schema.StringAttribute{
 				Required:    true,
@@ -113,32 +119,25 @@ func (c *ctyunRedisParamTemplate) Schema(_ context.Context, _ resource.SchemaReq
 				},
 			},
 			"sys_template": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "是否为系统模板 true：系统模板 false：自定义模板",
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
-				},
+				Optional:           true,
+				Description:        "是否为系统模板",
+				DeprecationMessage: "废弃字段，请不要指定",
 			},
 			"params": schema.SetNestedAttribute{
 				Description: "输入的参数列表",
 				Optional:    true,
-				Computed:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"param_name": schema.StringAttribute{
 							Required:    true,
 							Description: "参数名称",
-							PlanModifiers: []planmodifier.String{
-								stringplanmodifier.RequiresReplace(),
-							},
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
 							},
 						},
 						"current_value": schema.StringAttribute{
 							Required:    true,
-							Description: "目标值 支持更新",
+							Description: "目标值",
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
 							},
@@ -149,6 +148,9 @@ func (c *ctyunRedisParamTemplate) Schema(_ context.Context, _ resource.SchemaReq
 			"params_return": schema.SetNestedAttribute{
 				Description: "返回的参数列表",
 				Computed:    true,
+				PlanModifiers: []planmodifier.Set{
+					explanmodifier.UseSetStateIfDependencyUnchanged(path.Root("params")),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"param_name": schema.StringAttribute{
@@ -205,7 +207,7 @@ func (c *ctyunRedisParamTemplate) Create(ctx context.Context, request resource.C
 		return
 	}
 	plan.ID = types.StringValue(id)
-	err = c.getAndMerge(ctx, nil, &plan)
+	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
 	}
@@ -227,15 +229,13 @@ func (c *ctyunRedisParamTemplate) Read(ctx context.Context, request resource.Rea
 	}
 
 	// 查询远端
-	err = c.getAndMerge(ctx, nil, &state)
+	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if err != nil {
-			if errors.Is(err, common.ResourceNotExistError) {
-				err = nil
-				response.State.RemoveResource(ctx)
-			}
-			return
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
 		}
+		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
@@ -266,11 +266,12 @@ func (c *ctyunRedisParamTemplate) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
-	err = c.getAndMerge(ctx, &plan, &state)
+	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
 	}
-
+	state.SysTemplate = plan.SysTemplate
+	state.Params = plan.Params
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -308,7 +309,7 @@ func (c *ctyunRedisParamTemplate) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [templateID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -328,7 +329,7 @@ func (c *ctyunRedisParamTemplate) ImportState(ctx context.Context, request resou
 	}
 
 	if templateId == "" {
-		err = fmt.Errorf("template_id不能为空")
+		err = fmt.Errorf("id不能为空")
 		return
 	}
 	if regionId == "" {
@@ -338,10 +339,16 @@ func (c *ctyunRedisParamTemplate) ImportState(ctx context.Context, request resou
 	cfg.RegionId = types.StringValue(regionId)
 	cfg.ID = types.StringValue(templateId)
 	// 查询远端
-	err = c.getAndMerge(ctx, nil, &cfg)
+	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
 		return
 	}
+	cfg.Params = types.SetNull(types.ObjectType{
+		AttrTypes: map[string]attr.Type{
+			"param_name":    types.StringType,
+			"current_value": types.StringType,
+		},
+	})
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -372,7 +379,9 @@ func (c *ctyunRedisParamTemplate) createParamTemplate(ctx context.Context, plan 
 			})
 		}
 	}
-
+	if len(params) == 0 {
+		return fmt.Errorf("创建模板时至少指定一个参数")
+	}
 	paramsReq := &ctgdcs2.Dcs2CreateRedisTemplateRequest{
 		RegionId: plan.RegionId.ValueString(),
 		Template: template,
@@ -397,7 +406,6 @@ func (c *ctyunRedisParamTemplate) updateParamTemplate(ctx context.Context, plan,
 		Name:        plan.Name.ValueString(),
 		Description: plan.Description.ValueString(),
 		CacheMode:   state.CacheMode.ValueString(),
-		SysTemplate: plan.SysTemplate.ValueBoolPointer(),
 	}
 
 	// 处理参数列表
@@ -416,14 +424,28 @@ func (c *ctyunRedisParamTemplate) updateParamTemplate(ctx context.Context, plan,
 				CurrentValue: paramModel.CurrentValue.ValueString(),
 			})
 		}
-	}
+	} else {
+		// 更新时没有指定params，从已有参数中取一个，以便于请求接口
+		var paramModels []ParamReturnModel
+		diags := state.ParamsReturn.ElementsAs(ctx, &paramModels, false)
+		if diags.HasError() {
+			err = fmt.Errorf("failed to parse params: %v", diags.Errors())
+			return
+		}
 
+		for _, paramModel := range paramModels {
+			params = append(params, &ctgdcs2.Dcs2EditRedisTemplateParamsRequest{
+				ParamName:    paramModel.ParamName.ValueString(),
+				CurrentValue: paramModel.CurrentValue.ValueString(),
+			})
+			break
+		}
+	}
 	paramsReq := &ctgdcs2.Dcs2EditRedisTemplateRequest{
 		RegionId: plan.RegionId.ValueString(),
 		Template: template,
 		Params:   params,
 	}
-
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2EditRedisTemplateApi.Do(ctx, c.meta.SdkCredential, paramsReq)
 	if err != nil {
 		return
@@ -452,7 +474,7 @@ func (c *ctyunRedisParamTemplate) deleteParamTemplate(ctx context.Context, state
 }
 
 // getAndMerge 从远端查询参数模板信息
-func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *CtyunRedisParamTemplateConfig) (err error) {
+func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, state *CtyunRedisParamTemplateConfig) (err error) {
 	// 调用API查询参数模板详情
 	params := &ctgdcs2.Dcs2DescribeRedisTemplateDetailRequest{
 		RegionId:   state.RegionId.ValueString(),
@@ -463,11 +485,10 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		msg := resp.Message
-		if msg == "未找到模板数据" {
+		if strings.Contains(resp.Message, "未找到模板数据") {
 			err = common.ResourceNotExistError
 		} else {
-			err = fmt.Errorf("API return error. Message: %s", msg)
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		}
 		return
 	} else if resp.ReturnObj == nil || resp.ReturnObj.Template == nil {
@@ -479,9 +500,7 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 	state.Name = types.StringValue(resp.ReturnObj.Template.Name)
 	state.Description = types.StringValue(resp.ReturnObj.Template.Description)
 	state.CacheMode = types.StringValue(resp.ReturnObj.Template.CacheMode)
-	if resp.ReturnObj.Template.SysTemplate != nil {
-		state.SysTemplate = types.BoolValue(*resp.ReturnObj.Template.SysTemplate)
-	}
+	//state.SysTemplate = utils.SecBoolValue(resp.ReturnObj.Template.SysTemplate)
 
 	// 处理完整的参数列表（用于params_return）- 包含所有参数信息
 	if len(resp.ReturnObj.Params) > 0 {
@@ -491,35 +510,12 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 				ParamName:    types.StringValue(param.ParamName),
 				CurrentValue: types.StringValue(param.CurrentValue),
 			}
-
-			// 设置可选字段
-			if param.Description != "" {
-				paramModel.Description = types.StringValue(param.Description)
-			} else {
-				paramModel.Description = types.StringNull()
-			}
-
-			if param.ValueRange != "" {
-				paramModel.ValueRange = types.StringValue(param.ValueRange)
-			} else {
-				paramModel.ValueRange = types.StringNull()
-			}
-
-			if param.DefaultValue != "" {
-				paramModel.DefaultValue = types.StringValue(param.DefaultValue)
-			} else {
-				paramModel.DefaultValue = types.StringNull()
-			}
-
-			if param.NeedRestart != nil {
-				paramModel.NeedRestart = types.BoolValue(*param.NeedRestart)
-			} else {
-				paramModel.NeedRestart = types.BoolNull()
-			}
-
+			paramModel.Description = types.StringValue(param.Description)
+			paramModel.ValueRange = types.StringValue(param.ValueRange)
+			paramModel.DefaultValue = types.StringValue(param.DefaultValue)
+			paramModel.NeedRestart = types.BoolValue(*param.NeedRestart)
 			paramModels = append(paramModels, paramModel)
 		}
-
 		paramObjType := types.ObjectType{
 			AttrTypes: map[string]attr.Type{
 				"param_name":    types.StringType,
@@ -530,7 +526,6 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 				"need_restart":  types.BoolType,
 			},
 		}
-
 		paramsValue, diags := types.SetValueFrom(ctx, paramObjType, paramModels)
 		if diags.HasError() {
 			err = fmt.Errorf("failed to set params_return: %v", diags)
@@ -546,69 +541,6 @@ func (c *ctyunRedisParamTemplate) getAndMerge(ctx context.Context, plan, state *
 				"value_range":   types.StringType,
 				"default_value": types.StringType,
 				"need_restart":  types.BoolType,
-			},
-		})
-	}
-	if plan != nil && !plan.Params.IsNull() && !plan.Params.IsUnknown() {
-		state.Params = plan.Params
-	}
-	// 处理参数列表（用于params）- 只包含state中已有的参数
-	if len(resp.ReturnObj.Params) > 0 && !state.Params.IsNull() && !state.Params.IsUnknown() {
-		// 获取state中指定的参数名
-		var stateParamModels []ParamInputModel
-		diags := state.Params.ElementsAs(ctx, &stateParamModels, false)
-		if diags.HasError() {
-			err = fmt.Errorf("failed to parse state params: %v", diags.Errors())
-			return
-		}
-
-		// 创建参数名到参数值的映射
-		stateParamMap := make(map[string]string)
-		for _, paramModel := range stateParamModels {
-			stateParamMap[paramModel.ParamName.ValueString()] = paramModel.CurrentValue.ValueString()
-		}
-
-		// 过滤API返回的参数，只保留state中已有的参数
-		var filteredParamModels []ParamInputModel
-		for _, param := range resp.ReturnObj.Params {
-			// 只保留state中已有的参数
-			if _, exists := stateParamMap[param.ParamName]; exists {
-				filteredParamModels = append(filteredParamModels, ParamInputModel{
-					ParamName:    types.StringValue(param.ParamName),
-					CurrentValue: types.StringValue(param.CurrentValue),
-				})
-			}
-		}
-
-		// 更新state中的参数列表
-		if len(filteredParamModels) > 0 {
-			paramObjType := types.ObjectType{
-				AttrTypes: map[string]attr.Type{
-					"param_name":    types.StringType,
-					"current_value": types.StringType,
-				},
-			}
-
-			paramsValue, diags := types.SetValueFrom(ctx, paramObjType, filteredParamModels)
-			if diags.HasError() {
-				err = fmt.Errorf("failed to set params: %v", diags)
-				return
-			}
-			state.Params = paramsValue
-		} else {
-			state.Params = types.SetNull(types.ObjectType{
-				AttrTypes: map[string]attr.Type{
-					"param_name":    types.StringType,
-					"current_value": types.StringType,
-				},
-			})
-		}
-	} else {
-		// 如果state中没有指定参数或者为空，则设置为正确的空值类型
-		state.Params = types.SetNull(types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"param_name":    types.StringType,
-				"current_value": types.StringType,
 			},
 		})
 	}

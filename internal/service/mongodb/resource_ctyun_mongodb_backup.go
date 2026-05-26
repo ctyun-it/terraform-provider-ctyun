@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -18,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"strings"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
@@ -106,7 +108,7 @@ func (r *CtyunMongodbBackupResource) Schema(ctx context.Context, req resource.Sc
 				Optional:    true,
 				Description: "备份描述",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
@@ -192,6 +194,11 @@ func (r *CtyunMongodbBackupResource) Update(ctx context.Context, req resource.Up
 		return
 	}
 
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() && state.Description.IsNull() {
+		state.Description = plan.Description
+		resp.Diagnostics.AddWarning("description的更新仅写入状态文件", "在import时，状态文件中description为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
 	state.ProjectID = plan.ProjectID
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
@@ -243,7 +250,7 @@ func (c *CtyunMongodbBackupResource) ImportState(ctx context.Context, request re
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -252,12 +259,12 @@ func (c *CtyunMongodbBackupResource) ImportState(ctx context.Context, request re
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instId)
+		err = terraform_extend.Split(request.ID, &instId, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
+		err = terraform_extend.Split(request.ID, &instId, &name, &regionId)
 		if err != nil {
 			return
 		}
@@ -366,8 +373,10 @@ func (r *CtyunMongodbBackupResource) getAndMerge(ctx context.Context, plan *Ctyu
 		plan.Name = types.StringValue(backupInfo.BackupName)
 	}
 	// 添加 Description 字段的空指针检查
-	if backupInfo.Description != nil {
-		plan.Description = types.StringValue(*backupInfo.Description)
-	}
+	//if backupInfo.Description != nil {
+	//	plan.Description = types.StringValue(*backupInfo.Description)
+	//} else {
+	//	plan.Description = types.StringNull()
+	//}
 	return
 }

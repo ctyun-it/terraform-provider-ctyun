@@ -99,7 +99,6 @@ resource "ctyun_redis_instance" "tbidgqvfbs" {
 - `edition` (String) 实例类型，SeriesInfo中的seriesCode值，可参考<a href="https://www.ctyun.cn/document/10029420/11030280">产品规格说明</a>
 - `engine_version` (String) Redis引擎版本，SeriesInfo中的engineTypeItems(引擎版本可选值)，当version取值为BASIC时，版本号取值：5.0，6.0，7.0，当version取值为PLUS，版本号取值：6.0，7.0，支持更新
 - `instance_name` (String) 实例名称，大小写字母开头。只能包含大小写字母、数字及分隔符(-)。大小写字母或数字结尾。长度4~40个字符。实例名称不可重复。
-- `password` (String, Sensitive) 实例密码。长度8-26字符。必须同时包含大写字母、小写字母、数字、英文格式特殊符号(@%^*_+!$-=.)中的三种类型。不能有空格。支持更新
 - `security_group_id` (String) 安全组ID
 - `shard_mem_size` (Number) 分片规格，当version取值为BASIC，取值：1、2、4、8、16、32、64，当version取值为PLUS时，取值：8、16、32、64
 - `subnet_id` (String) 子网ID
@@ -111,16 +110,17 @@ resource "ctyun_redis_instance" "tbidgqvfbs" {
 - `auto_renew_cycle_count` (Number) 自动续订时长，单位月，支持1, 2, 3, 5, 6, 7, 12, 24, 36
 - `az_name` (String) 主可用区，如果不填则默认使用provider ctyun中的az_name或环境变量中的CTYUN_AZ_NAME
 - `backup_policy` (Attributes) 实例的备份策略配置 (see [below for nested schema](#nestedatt--backup_policy))
-- `copies_count` (Number) 副本数量，当edition取值为OriginalMultipleReadLvs/StandardDual/DirectCluster/ClusterOriginalProxy时必填（取值范围2-6），当edition取其他值时不填。
+- `copies_count` (Number) 副本数量，当edition取值为StandardDual/DirectCluster/ClusterOriginalProxy时可填1-10，当edition取值为OriginalMultipleReadLvs时可填2~10，当edition为其他值时不可填写。
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新
 - `data_disk_type` (String) 磁盘类型，支持SAS和SSD，默认SAS
 - `host_type` (String) 主机类型，默认S，X86取值：S：通用型、C：计算增强型、M：内存型、HS：海光通用型、HC：海光计算增强型，ARM取值：KS：鲲鹏通用型、KC：鲲鹏计算增强型
-- `maintenance_time` (String) 实例维护时间窗口，总时长必须为2小时，默认：00:00-02:00，支持更新
+- `maintenance_time` (String) 实例维护时间窗口，总时长必须为2小时，默认：02:00-04:00，支持更新
+- `password` (String, Sensitive) 密码，创建时必填，导入时不填。长度8-26字符。必须同时包含大写字母、小写字母、数字、英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。不能有空格。支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `protection_status` (Boolean) 退订保护开关，默认为不保护，支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `secondary_az_name` (String) 备可用区
-- `shard_count` (Number) 分片数量，当edition取值为DirectClusterSingle时: 3~256。当edition取值为DirectCluster时: 3~256。当edition取值为ClusterOriginalProxy时: 3~64。当edition取其他值时不填。
+- `shard_count` (Number) 分片数量，当edition取值为DirectClusterSingle或DirectCluster时可填3-256。当edition取其他值时不填。
 - `ssl_enabled` (Boolean) ssl加密设置，设置该值会触发重启，只有version为BASIC且engine_version为6.0、7.0且edition为StandardSingle、StandardDual、DirectClusterSingle或DirectCluster时才能设置，支持更新
 - `template_id` (String) 参数模板ID，用于应用参数模板，支持更新
 - `version` (String) 版本类型，SeriesInfo中的version值，支持BASIC和PLUS，默认BASIC
@@ -146,3 +146,15 @@ Required:
 - `period` (String) 备份周期，用英文逗号分隔，1-7表示周一到周日，例如：2,5表示周二周五进行备份，支持更新
 - `retention_day` (Number) 备份保留天数（1-7），支持更新
 - `time` (Number) 每日备份执行时间（0-23），支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入Redis实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_redis_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_redis_instance.test b9cc9df4e96144acb7c051262112bab4,<region_id>
+```

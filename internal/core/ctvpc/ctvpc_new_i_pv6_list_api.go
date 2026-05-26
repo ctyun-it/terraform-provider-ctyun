@@ -72,16 +72,31 @@ type CtvpcNewIPv6ListRequest struct {
 }
 
 type CtvpcNewIPv6ListResponse struct {
-	StatusCode  int32                                `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
-	Message     *string                              `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
-	Description *string                              `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
-	ErrorCode   *string                              `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
-	ReturnObj   []*CtvpcNewIPv6ListReturnObjResponse `json:"returnObj"`             /*  业务数据  */
-	Error       *string                              `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	StatusCode  int32                              `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
+	Message     *string                            `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
+	Description *string                            `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
+	ErrorCode   *string                            `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	ReturnObj   *CtvpcNewIPv6ListReturnObjResponse `json:"returnObj"`             /*  业务数据  */
+	Error       *string                            `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
 type CtvpcNewIPv6ListReturnObjResponse struct {
-	TotalCount   int32 `json:"totalCount"`   /*  列表条目数  */
-	CurrentCount int32 `json:"currentCount"` /*  分页查询时每页的行数。  */
-	TotalPage    int32 `json:"totalPage"`    /*  总页数  */
+	TotalCount   int32           `json:"totalCount"`   /*  列表条目数  */
+	CurrentCount int32           `json:"currentCount"` /*  分页查询时每页的行数。  */
+	TotalPage    int32           `json:"totalPage"`    /*  总页数  */
+	IPv6s        []*CtvpcIPv6Obj `json:"ipv6s"`
+}
+
+type CtvpcIPv6Obj struct {
+	ID              string `json:"ID"`
+	VpcID           string `json:"vpcID"`
+	SubnetID        string `json:"subnetID"`
+	IpAddress       string `json:"ipAddress"`
+	AssociationID   string `json:"associationID"`
+	AssociationType int    `json:"associationType"`
+	BandwidthID     string `json:"bandwidthID"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updatedAt"`
+	AddressPoolType string `json:"addressPoolType"`
+	Isp             string `json:"isp"`
 }

@@ -105,7 +105,7 @@ resource "ctyun_mysql_backup" "backup_test" {
 
 ### Optional
 
-- `description` (String) 备份集备注
+- `description` (String) 备注
 - `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `task_type` (String) 备份类型,默认全量物理备份 全量物理备份:full 全量逻辑备份:logic_full。逻辑备份支持资源池：（华北2、西安7），具体可查看文档：https://www.ctyun.cn/document/10033813/10902204
@@ -114,3 +114,15 @@ resource "ctyun_mysql_backup" "backup_test" {
 
 - `id` (String) id
 - `name` (String) 备份名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入MySQL备份资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_backup.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_mysql_backup.example 3dd1482933a243f9bd4e8ecb3cafbddb,AutoBackupAfterSpecialOperation_20260414112615,bb9fdb42056f11eda1610242ac110002
+```

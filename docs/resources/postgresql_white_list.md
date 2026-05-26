@@ -55,7 +55,7 @@ resource "ctyun_security_group" "sg_test" {
 }
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -82,14 +82,15 @@ resource "ctyun_postgresql_white_list" "example" {
 ### Required
 
 - `instance_id` (String) MySQL实例ID
-- `ip_list` (Set of String) ip列表,数量限制：1-1000
-- `mode` (String) 修改模式，支持更新。 cover(覆盖) ， append(追加) ， delete(删除,若分组下的ip被全部删除，则会将该分组也删除，默认分组(default)则会被设置成只允许本机访问，即只有127.0.0.1这个白名单ip)
 
 ### Optional
 
+- `ip_list` (Set of String) ip列表,数量限制：1-1000。创建、更新时必填，导入时可不填写
+- `mode` (String) 修改模式。创建时必填，导入时可不填写。 cover(覆盖) ， append(追加) ， delete(删除),若分组下的ip被全部删除，则会将该分组也删除，默认分组(default)则会被设置成只允许本机访问，即只有127.0.0.1这个白名单ip)
 - `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
+- `id` (String) 白名单id
 - `ip_list_result` (Set of String) 变更后最终的ip列表,数量限制：1-1000

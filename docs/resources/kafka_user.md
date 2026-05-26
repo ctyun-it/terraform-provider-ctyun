@@ -40,21 +40,13 @@ resource "ctyun_kafka_user" "tbidgqvfbs" {
 
 ### Required
 
-- `instance_id` (String) 实例ID。
-- `name` (String) 用户名称，规则如下：
-以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。
-长度3-64。
-名称不可重复。
-- `password` (String) 密码，规则如下：
-长度8-26字符。
-必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。
-不能有空格。支持更新
+- `instance_id` (String) 实例ID
+- `name` (String) 用户名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。长度3-64。名称不可重复。
 
 ### Optional
 
-- `description` (String) 用户描述，规则如下：
-不能以+,-,@,= 特殊字符开头。
-长度不能大于200。支持更新
+- `description` (String) 描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新
+- `password` (String, Sensitive) 密码，创建时必填，导入时不填。长度8-26字符。必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。不能有空格。支持更新
 - `permission_info` (Attributes Set) 用户ACL权限 (see [below for nested schema](#nestedatt--permission_info))
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
@@ -75,3 +67,15 @@ Optional:
 
 - `ip` (String) ip或网段，* 表示所有ip，默认：* 支持更新
 - `permission` (String) 权限，ALLOW:允许，DENY:拒绝，默认：ALLOW 支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka用户
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_user.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_kafka_user.kafka_user_example instance-123456,user_test,region-11111111
+```

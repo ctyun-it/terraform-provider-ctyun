@@ -2,11 +2,9 @@ package iam
 
 import (
 	"context"
-	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,13 +15,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
-	"strconv"
 )
 
 var (
 	_ resource.Resource                = &ctyunIdp{}
 	_ resource.ResourceWithConfigure   = &ctyunIdp{}
-	_ resource.ResourceWithImportState = &ctyunIdp{}
 )
 
 func NewCtyunIdp() resource.Resource {
@@ -216,35 +212,6 @@ func (c *ctyunIdp) Delete(ctx context.Context, request resource.DeleteRequest, r
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-}
-
-func (c *ctyunIdp) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-	var cfg CtyunIdpConfig
-	var idpId string
-	err = terraform_extend.Split(request.ID, &idpId)
-	if err != nil {
-		return
-	}
-
-	value, err := strconv.ParseInt(idpId, 10, 64)
-	if err != nil {
-		return
-	}
-
-	cfg.Id = types.Int64Value(value)
-	instance, err := c.getAndMergeIdp(ctx, cfg)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
 func (c *ctyunIdp) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {

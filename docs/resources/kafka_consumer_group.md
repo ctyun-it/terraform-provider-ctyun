@@ -36,14 +36,12 @@ resource "ctyun_kafka_consumer_group" "tbidgqvfbs" {
 
 ### Required
 
-- `instance_id` (String) 实例ID。支持更新
-- `name` (String) 消费组名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成 长度3-64。 名称不可重复。 支持更新
+- `instance_id` (String) 实例ID
+- `name` (String) 消费组名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成 长度3-64。 名称不可重复
 
 ### Optional
 
-- `description` (String) 消费组描述，规则如下：
-不能以+,-,@,= 特殊字符开头。
-长度不能大于200。支持更新
+- `description` (String) 描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `reset_config` (Attributes) 重置消费点配置 (see [below for nested schema](#nestedatt--reset_config))
 
@@ -74,3 +72,15 @@ Optional:
 
 - `partition` (Number) 主题分区号 支持更新
 - `shift_by` (Number) 主题分区消费位点向左或向右移动的相对位置，例如当前offset是1000，当shiftBy=-10重置后offset=990，当shiftBy=10重置后offset=1010。支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka消费者组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_consumer_group.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_kafka_consumer_group.kafka_consumer_group_example instance-123456,kafka-consumer-group-test,region-11111111
+```

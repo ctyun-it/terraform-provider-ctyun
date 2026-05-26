@@ -53,10 +53,19 @@ func TestAccCtyunMysqlBackup(t *testing.T) {
 			},
 			// 2. 导入测试
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "task_type"}, // 不需要忽略任何字段
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
 			},
 			// 验证 backups datasource
 			{
@@ -123,8 +132,8 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, _ := s.RootModule().Resources[resourceName]
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -138,8 +147,8 @@ func TestAccCtyunMysqlBackupImportState(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rs, _ := s.RootModule().Resources[resourceName]
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,

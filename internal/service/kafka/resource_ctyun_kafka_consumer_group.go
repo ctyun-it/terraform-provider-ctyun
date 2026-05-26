@@ -73,13 +73,15 @@ func (c *ctyunKafkaConsumerGroup) Schema(_ context.Context, _ resource.SchemaReq
 		MarkdownDescription: utils.FormatDesc("管理KAFKA的消费组", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10145103"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int32Attribute{
-				PlanModifiers: []planmodifier.Int32{int32planmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "消费组名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成 长度3-64。 名称不可重复。 支持更新",
+				Description: "消费组名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成 长度3-64。 名称不可重复",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 64),
 					stringvalidator.RegexMatches(
@@ -87,23 +89,33 @@ func (c *ctyunKafkaConsumerGroup) Schema(_ context.Context, _ resource.SchemaReq
 						"必须以英文字母、数字、下划线开头，只能包含英文字母、数字、句点、中划线、下划线",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "实例ID。支持更新",
+				Description: "实例ID",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "消费组描述，规则如下：\n不能以+,-,@,= 特殊字符开头。\n长度不能大于200。支持更新",
+				Computed:    true,
+				Description: "描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 200),
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^[^+\-@=].*$`),
 						"不能以+,-,@,=特殊字符开头",
 					),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"region_id": schema.StringAttribute{
@@ -200,7 +212,10 @@ func (c *ctyunKafkaConsumerGroup) Create(ctx context.Context, request resource.C
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.ResetConfig != nil {
+		err = fmt.Errorf("创建消费组时不支持重置消费点")
+		return
+	}
 	// 创建
 	err = c.create(ctx, plan)
 	if err != nil {
@@ -389,11 +404,10 @@ func (c *ctyunKafkaConsumerGroup) create(ctx context.Context, plan CtyunKafkaCon
 
 // update 更新
 func (c *ctyunKafkaConsumerGroup) update(ctx context.Context, plan, state CtyunKafkaConsumerGroupConfig) (err error) {
-
 	params := &ctgkafka.CtgkafkaConsumerGroupUpdateRequest{
 		RegionId:    state.RegionID.ValueString(),
-		ProdInstId:  plan.InstanceId.ValueString(),
-		GroupName:   plan.Name.ValueString(),
+		ProdInstId:  state.InstanceId.ValueString(),
+		GroupName:   state.Name.ValueString(),
 		Description: plan.Description.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkKafkaApis.CtgkafkaConsumerGroupUpdateApi.Do(ctx, c.meta.SdkCredential, params)
@@ -413,10 +427,6 @@ func (c *ctyunKafkaConsumerGroup) update(ctx context.Context, plan, state CtyunK
 func (c *ctyunKafkaConsumerGroup) reset(ctx context.Context, plan, state CtyunKafkaConsumerGroupConfig) (err error) {
 	// 检查 ResetConfig 是否存在
 	if plan.ResetConfig == nil {
-		return
-	}
-	// 检查必要参数是否存在
-	if plan.ResetConfig.Type.IsNull() || plan.ResetConfig.TopicName.IsNull() {
 		return
 	}
 

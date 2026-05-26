@@ -23,10 +23,13 @@ resource "ctyun_security_group" "security_group_test" {
 }
 
 resource "ctyun_eip" "eip_test" {
-  name                = "tf-eip-for-mongodb"
+  name                = "eip-for-mongodb-${local.random_string}"
   bandwidth           = 1
   cycle_type          = "on_demand"
   demand_billing_type = "upflowc"
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 
@@ -55,25 +58,7 @@ resource "ctyun_mongodb_instance" "mongodb_eip" {
   security_group_id      =  ctyun_security_group.security_group_test.id
   name                   = "mongodb-${local.random_string}"
   prod_id                = "Single34"
-  storage_type           = "SATA"
-  storage_space          = 100
-  backup_storage_type    = "OS"
-  password = var.password
-  lifecycle {
-    ignore_changes = [name]
-  }
-}
-
-resource "ctyun_mongodb_instance" "mongodb_ei2p" {
-  cycle_type             = "month"
-  cycle_count  = 2
-  vpc_id                 = ctyun_vpc.vpc_test.id
-  flavor_name            = local.flavor_name
-  subnet_id              = ctyun_subnet.subnet_test.id
-  security_group_id      =  ctyun_security_group.security_group_test.id
-  name                   = "mongodb-${local.random_string}22"
-  prod_id                = "Single34"
-  storage_type           = "SATA"
+  storage_type           = "SSD"
   storage_space          = 100
   backup_storage_type    = "OS"
   password = var.password

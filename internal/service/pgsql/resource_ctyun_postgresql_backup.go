@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -18,8 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -54,7 +56,7 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -63,12 +65,12 @@ func (c *CtyunPostgresqlBackup) ImportState(ctx context.Context, request resourc
 
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instId)
+		err = terraform_extend.Split(request.ID, &instId, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instId, &regionId)
+		err = terraform_extend.Split(request.ID, &instId, &name, &regionId)
 		if err != nil {
 			return
 		}
@@ -145,7 +147,7 @@ func (c *CtyunPostgresqlBackup) Schema(ctx context.Context, request resource.Sch
 					validator2.Desc(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"id": schema.Int64Attribute{
@@ -243,6 +245,11 @@ func (c *CtyunPostgresqlBackup) Update(ctx context.Context, request resource.Upd
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
+	}
+
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() && state.Description.IsNull() {
+		state.Description = plan.Description
+		response.Diagnostics.AddWarning("description的更新仅写入状态文件", "在import时，状态文件中description为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 
 	state.ProjectID = plan.ProjectID

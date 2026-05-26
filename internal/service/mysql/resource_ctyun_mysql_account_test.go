@@ -3,11 +3,12 @@ package mysql_test
 import (
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 // 测试MySQL账户资源
@@ -22,7 +23,7 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 
 	// 从环境变量获取测试依赖资源
 	mysqlInstanceID := dependence.mysqlID
-	accountPassword := utils.GenerateRandomString() + "&R3?=@"
+	accountPassword := utils.GenerateRandomString() + "&R3?@"
 	newPassword := utils.GenerateRandomString() + "New2@"
 	accountName := "test_account_" + rnd
 
@@ -107,13 +108,13 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 					}
 					// 构造导入ID: "id,region_id"
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description"},
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			// 3. 资源导入测试
 			{
@@ -126,12 +127,12 @@ func TestAccCtyunMysqlAccount(t *testing.T) {
 					}
 					// 构造导入ID: "id,region_id"
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description"},
+				ImportStateVerifyIgnore: []string{"password"},
 			},
 			{
 

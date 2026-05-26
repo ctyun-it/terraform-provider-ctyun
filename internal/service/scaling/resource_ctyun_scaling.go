@@ -830,7 +830,7 @@ func (c *ctyunScaling) updateScaling(ctx context.Context, state *CtyunScalingCon
 	}
 	//  判断SubnetIDList是否需要更新
 	if !plan.SubnetIDList.IsNull() && !plan.SubnetIDList.Equal(state.SubnetIDList) {
-		// 先判断伸缩组状态，如果状态为停用可以更新。 status = 2
+		// 先判断伸缩组状态，如果状态为停用支持更新。 status = 2
 		detail, err := c.getScalingDetail(ctx, state)
 		if err != nil {
 			return err
@@ -1324,7 +1324,7 @@ func (c *ctyunScaling) updateInstanceByUUIDList(ctx context.Context, state *Ctyu
 			return err
 		}
 
-		// 轮询确认是否可以更新
+		// 轮询确认是否支持更新
 		err = c.updateInstanceBeforeLoop(ctx, state, 60)
 		if err != nil {
 			return err
@@ -1352,7 +1352,7 @@ func (c *ctyunScaling) updateInstanceByUUIDList(ctx context.Context, state *Ctyu
 			err = fmt.Errorf("待删除的云主机中有部分未加入伸缩组，符合删除条件列表为：%s", strings.Join(removeIntersection, ", "))
 			return err
 		}
-		// 轮询确认是否可以更新
+		// 轮询确认是否支持更新
 		err = c.updateInstanceBeforeLoop(ctx, state, 60)
 		if err != nil {
 			return err

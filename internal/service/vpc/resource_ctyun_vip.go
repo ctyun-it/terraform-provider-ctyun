@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -19,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
@@ -92,6 +93,7 @@ func (c *CtyunVip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"ip_address": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "ip地址",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -261,7 +263,7 @@ func (c *CtyunVip) create(ctx context.Context, plan *CtyunVipConfig) (err error)
 		req.NetworkID = &vpcId
 	}
 
-	if !plan.IpAddress.IsNull() {
+	if !plan.IpAddress.IsNull() && !plan.IpAddress.IsUnknown() {
 		ipAddress := plan.IpAddress.ValueString()
 		req.IpAddress = &ipAddress
 	}

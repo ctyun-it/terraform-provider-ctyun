@@ -7,6 +7,7 @@ import (
 	ctgdcs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -64,9 +66,11 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 		MarkdownDescription: utils.FormatDesc("管理Redis迁移任务", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10518385"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "任务ID",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "任务ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -119,6 +123,9 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间(秒)",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"complete_time": schema.StringAttribute{
 				Computed:    true,
@@ -137,38 +144,37 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 						},
 					},
 					"ip_addr": schema.StringAttribute{
-						Required:    true,
-						Description: "连接地址",
+						Optional:    true,
+						Description: "连接地址，创建时必填，导入时不填",
 						Validators: []validator.String{
 							stringvalidator.UTF8LengthAtLeast(1),
 						},
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							planmodifier2.NullIgnoreString(),
 						},
 					},
 					"original_cluster": schema.BoolAttribute{
 						Optional:    true,
-						Description: "是否是原生cluster集群 输入实例ID可不填，否则必填。",
+						Description: "是否是原生cluster集群",
 					},
 					"account_name": schema.StringAttribute{
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Description: "数据库账号",
-						Validators: []validator.String{
-							stringvalidator.UTF8LengthAtLeast(1),
-						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
+						Default: stringdefault.StaticString(""),
 					},
 					"password": schema.StringAttribute{
-						Required:    true,
-						Description: "数据库密码",
+						Optional:    true,
+						Description: "数据库密码，创建时必填，导入时不填",
 						Validators: []validator.String{
 							stringvalidator.UTF8LengthAtLeast(1),
 						},
 						Sensitive: true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							planmodifier2.NullIgnoreString(),
 						},
 					},
 				},
@@ -188,13 +194,13 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 						},
 					},
 					"ip_addr": schema.StringAttribute{
-						Required:    true,
-						Description: "连接地址",
+						Optional:    true,
+						Description: "连接地址，创建时必填，导入时不填",
 						Validators: []validator.String{
 							stringvalidator.UTF8LengthAtLeast(1),
 						},
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							planmodifier2.NullIgnoreString(),
 						},
 					},
 					"original_cluster": schema.BoolAttribute{
@@ -202,24 +208,23 @@ func (c *ctyunRedisMigrationTask) Schema(_ context.Context, _ resource.SchemaReq
 						Description: "是否是原生cluster集群",
 					},
 					"account_name": schema.StringAttribute{
-						Required:    true,
+						Optional:    true,
+						Computed:    true,
 						Description: "数据库账号",
-						Validators: []validator.String{
-							stringvalidator.UTF8LengthAtLeast(1),
-						},
 						PlanModifiers: []planmodifier.String{
 							stringplanmodifier.RequiresReplace(),
 						},
+						Default: stringdefault.StaticString(""),
 					},
 					"password": schema.StringAttribute{
-						Required:    true,
-						Description: "数据库密码",
+						Optional:    true,
+						Description: "数据库密码，创建时必填，导入时不填",
 						Validators: []validator.String{
 							stringvalidator.UTF8LengthAtLeast(1),
 						},
 						Sensitive: true,
 						PlanModifiers: []planmodifier.String{
-							stringplanmodifier.RequiresReplace(),
+							planmodifier2.NullIgnoreString(),
 						},
 					},
 				},
@@ -329,8 +334,22 @@ func (c *ctyunRedisMigrationTask) Update(ctx context.Context, request resource.U
 	if err != nil {
 		return
 	}
-
-	// 迁移任务不支持更新，直接返回
+	if !plan.SourceDbInfo.IpAddr.IsUnknown() && !plan.SourceDbInfo.IpAddr.IsNull() && state.SourceDbInfo.IpAddr.IsNull() {
+		state.SourceDbInfo.IpAddr = plan.SourceDbInfo.IpAddr
+		response.Diagnostics.AddWarning("source_db_info.ip_addr的更新仅写入状态文件", "在import时，状态文件中source_db_info.ip_addr为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.SourceDbInfo.Password.IsUnknown() && !plan.SourceDbInfo.Password.IsNull() && state.SourceDbInfo.Password.IsNull() {
+		state.SourceDbInfo.Password = plan.SourceDbInfo.Password
+		response.Diagnostics.AddWarning("source_db_info.password的更新仅写入状态文件", "在import时，状态文件中source_db_info.password为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.TargetDbInfo.IpAddr.IsUnknown() && !plan.TargetDbInfo.IpAddr.IsNull() && state.TargetDbInfo.IpAddr.IsNull() {
+		state.TargetDbInfo.IpAddr = plan.TargetDbInfo.IpAddr
+		response.Diagnostics.AddWarning("target_db_info.ip_addr的更新仅写入状态文件", "在import时，状态文件中target_db_info.ip_addr为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.TargetDbInfo.Password.IsUnknown() && !plan.TargetDbInfo.Password.IsNull() && state.TargetDbInfo.Password.IsNull() {
+		state.TargetDbInfo.Password = plan.TargetDbInfo.Password
+		response.Diagnostics.AddWarning("target_db_info.password的更新仅写入状态文件", "在import时，状态文件中target_db_info.password为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -347,6 +366,12 @@ func (c *ctyunRedisMigrationTask) Delete(ctx context.Context, request resource.D
 		return
 	}
 
+	if state.Status.ValueInt32() == 1 { // 只有运行中的任务才能结束
+		err = c.operateTransferTask(ctx, state, 2)
+		if err != nil {
+			return
+		}
+	}
 	// 删除迁移任务记录
 	err = c.deleteMigrationTask(ctx, state)
 	if err != nil {
@@ -368,7 +393,7 @@ func (c *ctyunRedisMigrationTask) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [id],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

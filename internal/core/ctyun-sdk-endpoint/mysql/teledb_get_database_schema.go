@@ -83,4 +83,6 @@ type TeledbGetDatabaseSchemaResponseReturnObjUserVo struct {
 type TeledbGetDatabaseSchemaResponseReturnObj struct {
 	UserVOList  []TeledbGetDatabaseSchemaResponseReturnObjUserVo `json:"userVOList"`
 	GrantSchema string                                           `json:"grantSchema"`
+	Remark      string                                           `json:"remark"`
+	CharsetName string                                           `json:"charsetName"`
 }

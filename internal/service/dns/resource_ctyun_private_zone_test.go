@@ -2,11 +2,12 @@ package dns_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 // 测试用例1: 基础创建测试
@@ -241,7 +242,7 @@ func TestAccCtyunPrivateZone_MultipleVPCs(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{}, // 可选忽略
+				ImportStateVerifyIgnore: []string{"project_id"}, // 可选忽略
 			},
 			// 3.1 只导入ID测试
 			{
@@ -257,7 +258,7 @@ func TestAccCtyunPrivateZone_MultipleVPCs(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"region_id"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{"project_id"}, // 可选忽略
 			},
 			// 4. 清理资源
 			{

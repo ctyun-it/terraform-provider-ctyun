@@ -9,13 +9,14 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -40,7 +41,7 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -48,12 +49,12 @@ func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.
 	var name, instanceID, regionId string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instanceID)
+		err = terraform_extend.Split(request.ID, &instanceID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instanceID, &regionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &name, &regionId)
 		if err != nil {
 			return
 		}
@@ -129,6 +130,9 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"group_white_list_count": schema.Int32Attribute{
 				Computed:    true,
 				Description: "白名单分组组内数量",
+				PlanModifiers: []planmodifier.Int32{
+					explanmodifier.UseInt32StateIfDependencyUnchanged(path.Root("group_white_list")),
+				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
@@ -141,16 +145,12 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
-			"access_machine_type": schema.StringAttribute{
-				Computed:           true,
-				DeprecationMessage: "废除字段",
-				Description:        "废除字段",
-				Default:            stringdefault.StaticString(""),
-			},
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "id 唯一标识",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "id 唯一标识",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -225,7 +225,6 @@ func (c *CtyunMysqlWhiteList) Update(ctx context.Context, request resource.Updat
 		}
 	}()
 	// 读取tf文件中配置
-
 	var plan CtyunMysqlWhiteListConfig
 	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -366,22 +365,27 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		err = common.ResourceNotExistError
 		return
 	}
-	for _, whileListInfo := range resp.ReturnObj {
-		if whileListInfo.GroupName == config.GroupName.ValueString() {
-			config.GroupWhiteListCount = types.Int32Value(whileListInfo.GroupWhiteListCount)
-			config.AccessMachineType = types.StringValue("")
-			config.GroupName = types.StringValue(whileListInfo.GroupName)
-			config.CreatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.CreateTime))
-			config.UpdatedTime = types.StringValue(utils.FromUnixToUTC(whileListInfo.UpdateTime))
-			if whileListInfo.WhiteList == nil {
-				whileListInfo.WhiteList = make([]string, 0)
+	var exist bool
+	for _, item := range resp.ReturnObj {
+		if item.GroupName == config.GroupName.ValueString() {
+			config.GroupWhiteListCount = types.Int32Value(item.GroupWhiteListCount)
+			config.CreatedTime = types.StringValue(utils.FromUnixToUTC(item.CreateTime))
+			config.UpdatedTime = types.StringValue(utils.FromUnixToUTC(item.UpdateTime))
+			if item.WhiteList == nil {
+				item.WhiteList = make([]string, 0)
 			}
-			groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, whileListInfo.WhiteList)
+			groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, item.WhiteList)
 			if diags.HasError() {
-				return
+				return fmt.Errorf("convert whiteList failed: %v", diags)
 			}
 			config.GroupWhiteList = groupWhiteList
+			exist = true
+			break
 		}
+	}
+	if !exist {
+		err = common.ResourceNotExistError
+		return
 	}
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", config.ProdInstID.ValueString(), config.GroupName.ValueString()))
 	if config.GroupWhiteList.IsNull() || config.GroupWhiteList.IsUnknown() {
@@ -435,7 +439,6 @@ type CtyunMysqlWhiteListConfig struct {
 	GroupWhiteListCount types.Int32  `tfsdk:"group_white_list_count"`
 	CreatedTime         types.String `tfsdk:"create_time"`
 	UpdatedTime         types.String `tfsdk:"update_time"`
-	AccessMachineType   types.String `tfsdk:"access_machine_type"` // 访问类型
 	ID                  types.String `tfsdk:"id"`
 }
 

@@ -2,13 +2,14 @@ package mongodb_test
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"strconv"
-	"testing"
-	"time"
 )
 
 // 集群版，传azList，更新mongos 和shard spec
@@ -74,17 +75,16 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
-					"backup_storage_type", "availability_zone_info", "running_control", "cycle_type", "subnet_id",
-					"cycle_count", "master_order_id", "prod_id", "is_upgrade_back_up", "storage_type", "shard_num",
-					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count"},
+					"backup_storage_type", "availability_zone_info", "running_control",
+					"master_order_id", "shard_num", "cycle_count",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count", "prod_id"},
 			},
 			// import state验证2
 			{
@@ -97,9 +97,9 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) 
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
-					"backup_storage_type", "availability_zone_info", "running_control", "cycle_type", "subnet_id",
-					"cycle_count", "master_order_id", "prod_id", "is_upgrade_back_up", "storage_type", "shard_num",
-					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count"},
+					"backup_storage_type", "availability_zone_info", "running_control",
+					"master_order_id", "shard_num", "cycle_count",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count", "prod_id"},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
@@ -408,7 +408,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Replica3R34"
 	readPort := 12345
-	storageType := "SAS"
+	storageType := "SSD"
 	storageSpace := 100
 	backupStorageType := "OS"
 	azName := dependence.azName

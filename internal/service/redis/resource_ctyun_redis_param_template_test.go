@@ -94,7 +94,7 @@ func TestAccCtyunRedisParamTemplate(t *testing.T) {
 					return fmt.Sprintf("%s,%s", templateId, regionId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"params", "params_return"},
+				ImportStateVerifyIgnore: []string{"params", "sys_template"},
 			},
 			{
 				ResourceName: resourceName,
@@ -106,7 +106,7 @@ func TestAccCtyunRedisParamTemplate(t *testing.T) {
 					return fmt.Sprintf("%s", templateId), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"params", "params_return"},
+				ImportStateVerifyIgnore: []string{"params", "sys_template"},
 			},
 			// 清理
 			{

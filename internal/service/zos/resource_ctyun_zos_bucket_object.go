@@ -380,7 +380,7 @@ func (c *ctyunZosBucketObject) ImportState(ctx context.Context, request resource
 	defer func() {
 		if err != nil {
 			title := c.name + "导入失败：" + err.Error()
-			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [bucket],[key],[region_id]"
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [bucket],[key],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

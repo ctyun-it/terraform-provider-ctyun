@@ -53,13 +53,15 @@ func (c *ctyunRedisAccount) Schema(_ context.Context, _ resource.SchemaRequest, 
 		MarkdownDescription: utils.FormatDesc("管理Redis实例的账户", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10403139"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "资源唯一标识符",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "资源唯一标识符",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "账户名称，规则如下：\n以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。\n长度3-64。\n名称不可重复。",
+				Description: "账户名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。长度3-64。名称不可重复。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 64),
 					stringvalidator.RegexMatches(
@@ -94,8 +96,8 @@ func (c *ctyunRedisAccount) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "密码，规则如下：\n长度8-26字符。\n必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。\n不能有空格。支持更新",
+				Optional:    true,
+				Description: "密码，创建时必填，导入时不填。长度8-26字符。必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。不能有空格。支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(8, 26),
 				},
@@ -103,9 +105,13 @@ func (c *ctyunRedisAccount) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "账户描述信息。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(255),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"privilege": schema.StringAttribute{
@@ -114,6 +120,9 @@ func (c *ctyunRedisAccount) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "账户权限，可选值：ro(只读)、rw(读写) 支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf("ro", "rw"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -132,7 +141,10 @@ func (c *ctyunRedisAccount) Create(ctx context.Context, request resource.CreateR
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	// 创建账户
 	err = c.create(ctx, plan)
 	if err != nil {
@@ -245,7 +257,7 @@ func (c *ctyunRedisAccount) ImportState(ctx context.Context, request resource.Im
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -317,64 +329,85 @@ func (c *ctyunRedisAccount) create(ctx context.Context, plan CtyunRedisAccountCo
 
 // update 更新账户信息
 func (c *ctyunRedisAccount) update(ctx context.Context, plan, state CtyunRedisAccountConfig) (err error) {
-	// 如果密码变更，使用密码修改API
-	if plan.Password.ValueString() != state.Password.ValueString() {
-		passwordParams := &ctgdcs2.Dcs2ModifyAccountPasswordRequest{
-			RegionId:           state.RegionId.ValueString(),
-			ProdInstId:         state.InstanceId.ValueString(),
-			AccountName:        plan.Name.ValueString(),
-			AccountPassword:    plan.Password.ValueString(),
-			OldAccountPassword: state.Password.ValueString(),
-		}
+	err = c.updatePassword(ctx, plan, state)
+	if err != nil {
+		return
+	}
+	err = c.updateDesc(ctx, plan, state)
+	if err != nil {
+		return
+	}
+	err = c.updatePrivilege(ctx, plan, state)
+	if err != nil {
+		return
+	}
+	return
+}
 
-		passwordResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2ModifyAccountPasswordApi.Do(ctx, c.meta.SdkCredential, passwordParams)
-		if err != nil {
-			return err
-		} else if passwordResp.StatusCode != common.NormalStatusCode {
-			return fmt.Errorf("API return error. Message: %s", passwordResp.Message)
-		} else if passwordResp.ReturnObj == nil {
-			return common.InvalidReturnObjError
-		}
+// updatePassword 修改密码
+func (c *ctyunRedisAccount) updatePassword(ctx context.Context, plan, state CtyunRedisAccountConfig) (err error) {
+	if plan.Password.Equal(state.Password) {
+		return
+	}
+	passwordParams := &ctgdcs2.Dcs2ResetAccountPasswordRequest{
+		RegionId:        state.RegionId.ValueString(),
+		ProdInstId:      state.InstanceId.ValueString(),
+		AccountName:     state.Name.ValueString(),
+		AccountPassword: plan.Password.ValueString(),
+	}
+	passwordResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2ResetAccountPasswordApi.Do(ctx, c.meta.SdkCredential, passwordParams)
+	if err != nil {
+		return err
+	} else if passwordResp.StatusCode != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", passwordResp.Message)
+	} else if passwordResp.ReturnObj == nil {
+		return common.InvalidReturnObjError
+	}
+	return
+}
+
+// updateDesc修改描述
+func (c *ctyunRedisAccount) updateDesc(ctx context.Context, plan, state CtyunRedisAccountConfig) (err error) {
+	if plan.Description.Equal(state.Description) {
+		return
+	}
+	descriptionParams := &ctgdcs2.Dcs2ModifyAccountDescriptionRequest{
+		RegionId:           state.RegionId.ValueString(),
+		ProdInstId:         state.InstanceId.ValueString(),
+		AccountName:        state.Name.ValueString(),
+		AccountDescription: plan.Description.ValueString(),
 	}
 
-	// 如果描述变更，使用描述修改API
-	if plan.Description.ValueString() != state.Description.ValueString() {
-		descriptionParams := &ctgdcs2.Dcs2ModifyAccountDescriptionRequest{
-			RegionId:           state.RegionId.ValueString(),
-			ProdInstId:         state.InstanceId.ValueString(),
-			AccountName:        plan.Name.ValueString(),
-			AccountDescription: plan.Description.ValueString(),
-		}
-
-		descriptionResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2ModifyAccountDescriptionApi.Do(ctx, c.meta.SdkCredential, descriptionParams)
-		if err != nil {
-			return err
-		} else if descriptionResp.StatusCode != common.NormalStatusCode {
-			return fmt.Errorf("API return error. Message: %s", descriptionResp.Message)
-		} else if descriptionResp.ReturnObj == nil {
-			return common.InvalidReturnObjError
-		}
+	descriptionResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2ModifyAccountDescriptionApi.Do(ctx, c.meta.SdkCredential, descriptionParams)
+	if err != nil {
+		return err
+	} else if descriptionResp.StatusCode != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", descriptionResp.Message)
+	} else if descriptionResp.ReturnObj == nil {
+		return common.InvalidReturnObjError
 	}
+	return
+}
 
-	// 如果权限变更，使用权限修改API
-	if plan.Privilege.ValueString() != state.Privilege.ValueString() {
-		privilegeParams := &ctgdcs2.Dcs2GrantAccountPrivilegeRequest{
-			RegionId:         state.RegionId.ValueString(),
-			ProdInstId:       state.InstanceId.ValueString(),
-			AccountName:      plan.Name.ValueString(),
-			AccountPrivilege: plan.Privilege.ValueString(),
-		}
-
-		privilegeResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2GrantAccountPrivilegeApi.Do(ctx, c.meta.SdkCredential, privilegeParams)
-		if err != nil {
-			return err
-		} else if privilegeResp.StatusCode != common.NormalStatusCode {
-			return fmt.Errorf("API return error. Message: %s", privilegeResp.Message)
-		} else if privilegeResp.ReturnObj == nil {
-			return common.InvalidReturnObjError
-		}
+// updatePrivilege 修改权限
+func (c *ctyunRedisAccount) updatePrivilege(ctx context.Context, plan, state CtyunRedisAccountConfig) (err error) {
+	if plan.Privilege.Equal(state.Privilege) {
+		return
 	}
-
+	privilegeParams := &ctgdcs2.Dcs2GrantAccountPrivilegeRequest{
+		RegionId:         state.RegionId.ValueString(),
+		ProdInstId:       state.InstanceId.ValueString(),
+		AccountName:      state.Name.ValueString(),
+		AccountPrivilege: plan.Privilege.ValueString(),
+	}
+	privilegeResp, err := c.meta.Apis.SdkDcs2Apis.Dcs2GrantAccountPrivilegeApi.Do(ctx, c.meta.SdkCredential, privilegeParams)
+	if err != nil {
+		return err
+	} else if privilegeResp.StatusCode != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", privilegeResp.Message)
+	} else if privilegeResp.ReturnObj == nil {
+		return common.InvalidReturnObjError
+	}
 	return
 }
 
@@ -385,7 +418,6 @@ func (c *ctyunRedisAccount) destroy(ctx context.Context, plan CtyunRedisAccountC
 		ProdInstId:  plan.InstanceId.ValueString(),
 		AccountName: plan.Name.ValueString(),
 	}
-
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2DeleteAccountApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
@@ -435,21 +467,8 @@ func (c *ctyunRedisAccount) getAndMerge(ctx context.Context, plan *CtyunRedisAcc
 		err = fmt.Errorf("account %s not found", plan.Name.ValueString())
 		return
 	}
-
-	// 设置权限信息
-	if accountData.RawType != "" {
-		plan.Privilege = types.StringValue(accountData.RawType)
-	} else {
-		plan.Privilege = types.StringValue("rw") // 默认权限
-	}
-
-	// 设置描述信息
-	if accountData.AccountDescription == "" {
-		plan.Description = types.StringNull()
-	} else {
-		plan.Description = types.StringValue(accountData.AccountDescription)
-	}
-
+	plan.Privilege = types.StringValue(accountData.RawType)
+	plan.Description = types.StringValue(accountData.AccountDescription)
 	id := fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.Name.ValueString())
 	plan.Id = types.StringValue(id)
 	return

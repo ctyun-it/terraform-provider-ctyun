@@ -83,7 +83,7 @@ resource "ctyun_mysql_database" "db" {
 
 - `charset_name` (String) 字符集
 - `instance_id` (String) mysql实例id
-- `name` (String) 数据库名称,mysql库名限制建议:以小写字母开头，且以小写字母或数字结尾，可包含数字或下划线，不含其他特殊字符
+- `name` (String) 数据库名称，mysql库名限制建议:以小写字母开头，且以小写字母或数字结尾，可包含数字或下划线，不含其他特殊字符
 
 ### Optional
 
@@ -105,3 +105,15 @@ Read-Only:
 - `insert_priv` (Boolean) 写入权限
 - `read_only` (Boolean) 用户读写权限
 - `select_priv` (Boolean) 查询权限
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入MySQL数据库资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_database.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_mysql_database.example 3dd1482933a243f9bd4e8ecb3cafbddb,db1,bb9fdb42056f11eda1610242ac110002
+```

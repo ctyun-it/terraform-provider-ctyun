@@ -222,7 +222,7 @@ resource "ctyun_ecs" "ecs_test" {
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
   security_group_ids  = [ctyun_ccse_cluster.test.base_info.security_group_id]
-  system_disk_type    = "ssd"
+  system_disk_type    = "sas"
   system_disk_size    = 40
   vpc_id              =  local.real_vpc_id
   password            = var.password

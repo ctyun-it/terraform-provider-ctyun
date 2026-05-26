@@ -139,9 +139,11 @@ func (c *CtyunMysqlParamTemplate) Schema(ctx context.Context, request resource.S
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "参数模板描述",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					validator2.Desc(),

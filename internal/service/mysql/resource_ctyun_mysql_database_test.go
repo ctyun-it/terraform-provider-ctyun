@@ -84,8 +84,8 @@ func TestAccCtyunMysqlDatabase(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -102,8 +102,8 @@ func TestAccCtyunMysqlDatabase(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,

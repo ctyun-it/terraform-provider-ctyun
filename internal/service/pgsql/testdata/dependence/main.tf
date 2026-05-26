@@ -52,13 +52,13 @@ resource "ctyun_eip" "eip_test" {
 
 resource "ctyun_postgresql_instance" "test" {
   cycle_type            = "on_demand"
-  prod_id               = "Single1222"
+  prod_id               = 10003011
   flavor_name           = local.flavor_name
   storage_type          = "SSD"
   storage_space         = 100
   name                  = "pgsql-test-tf3"
   password              = var.password
-  case_sensitive        = true
+  case_sensitive        = false
   vpc_id                = ctyun_vpc.vpc_test.id
   subnet_id             = ctyun_subnet.subnet_test.id
   security_group_id     = ctyun_security_group.security_group_test1.id

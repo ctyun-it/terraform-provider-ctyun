@@ -35,6 +35,9 @@ var dependence Dependence
 func TestMain(m *testing.M) {
 	// 初始化依赖资源
 	fmt.Println("开始初始化依赖资源")
+	os.Setenv("CTYUN_REGION_ID", "200000002368")
+	os.Setenv("CTYUN_PROJECT_ID", "0")
+	os.Setenv("CTYUN_AZ_NAME", "cn-xinan1-xn1A-public-ctcloud")
 	outputs, err := terraform.ApplyResource(dependenceDir)
 	if err != nil {
 		fmt.Println(err)

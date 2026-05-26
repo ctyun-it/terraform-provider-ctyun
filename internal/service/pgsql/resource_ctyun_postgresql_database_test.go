@@ -2,12 +2,13 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
-	"time"
 )
 
 func TestAccCtyunPostgresqlDatabase(t *testing.T) {
@@ -113,13 +114,13 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"charset_collate", "charset_type", "owner", "charset_name", "description"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{}, // 可选忽略
 				PreConfig: func() {
 					wait20Seconds()
 				},
@@ -133,12 +134,12 @@ func TestAccCtyunPostgresqlDatabase(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"charset_collate", "charset_type", "owner", "charset_name", "description"}, // 可选忽略
+				ImportStateVerifyIgnore: []string{}, // 可选忽略
 				PreConfig: func() {
 					wait20Seconds()
 				},

@@ -2,12 +2,13 @@ package scaling_test
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"strconv"
-	"testing"
 )
 
 // 多az，单安全组->多安全组
@@ -29,9 +30,9 @@ func TestAccCtyunScaling(t *testing.T) {
 	moveOutStrategy := "earlier_config"
 	vpcId := dependence.vpcID
 	minCount := 1
-	maxCount := 1
+	maxCount := 3
 
-	expectedCount := 1
+	expectedCount := 2
 	healthPeriod := 300
 	useLb := 1
 	lbList := fmt.Sprintf(`[{"port": 12306, "lb_id": "%s", "weight": 1, "host_group_id": "%s"}]`, dependence.loadbalancerID, dependence.targetGroupID)
@@ -53,8 +54,8 @@ func TestAccCtyunScaling(t *testing.T) {
 	//updatedSubnetIDList := fmt.Sprintf(`["%s", "%s"]`, dependence.subnetID, dependence.subnetID1)
 	updatemoveOutStrategy := "earlier_vm"
 	updateMinCount := 2
-	updatedMaxCount := 2
-	updatedExpectedCount := 2
+	updatedMaxCount := 5
+	updatedExpectedCount := 3
 	updateHealthPeriod := 10080
 	updatedConfigList := fmt.Sprintf(`[%d, %d]`, scalingConfigID, scalingConfigID1)
 	azStrategyPriorityDistribution := "priority_distribution"
@@ -137,9 +138,9 @@ func TestAccCtyunScaling1(t *testing.T) {
 	moveOutStrategy := "later_config"
 	vpcId := dependence.vpcID
 	minCount := 1
-	maxCount := 1
+	maxCount := 5
 
-	expectedCount := 1
+	expectedCount := 2
 	healthPeriod := 300
 	useLb := 1
 	lbList := fmt.Sprintf(`[{"port": 12306, "lb_id": "%s", "weight": 1, "host_group_id": "%s"}]`, dependence.loadbalancerID, dependence.targetGroupID)
@@ -279,7 +280,7 @@ func TestAccCtyunScalingEcs(t *testing.T) {
 	minCount := 1
 	maxCount := 50
 
-	expectedCount := 1
+	expectedCount := 2
 	healthPeriod := 300
 	useLb := 2
 	//lbList := fmt.Sprintf(`[{"port": 12306, "lb_id": "%s", "weight": 1, "host_group_id": "%s"}]`, dependence.loadbalancerID, dependence.targetGroupID)
@@ -341,12 +342,12 @@ func TestAccCtyunScalingEcs(t *testing.T) {
 			// 更新name-> new; health_mode:云主机健康检查->云主机健康检查, subnet不修改，移除策略 earlier_config->earlier_vm，min_count: 1->2, max_count: 1->2， expected_count: 2->2, health_period:300->10080,
 			// configList 增加一个config配置，az_strategy : uniform_distribution-> priority_distribution
 			{
-				Config: utils.LoadTestCase(resourceFile1, rnd, updateSecurityGroupIDList, updateName, healthModeLb, subnetIDList, updateMoveOutStrategy, vpcId, updateMinCount, updatedMaxCount, updatedExpectedCount,
+				Config: utils.LoadTestCase(resourceFile1, rnd, updateSecurityGroupIDList, updateName, healthMode, subnetIDList, updateMoveOutStrategy, vpcId, updateMinCount, updatedMaxCount, updatedExpectedCount,
 					updateHealthPeriod, useLb, updatedConfigList, updatedAddInstanceUUIDList, updatedRemoveInstanceUUIDList, azStrategyPriorityDistribution),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updateName),
-					resource.TestCheckResourceAttr(resourceName, "health_mode", healthModeLb),
+					resource.TestCheckResourceAttr(resourceName, "health_mode", healthMode),
 					resource.TestCheckResourceAttr(resourceName, "move_out_strategy", updateMoveOutStrategy),
 					resource.TestCheckResourceAttr(resourceName, "min_count", fmt.Sprintf("%d", updateMinCount)),
 					resource.TestCheckResourceAttr(resourceName, "max_count", fmt.Sprintf("%d", updatedMaxCount)),
@@ -392,9 +393,9 @@ func TestAccCtyunScalingEcs1(t *testing.T) {
 	moveOutStrategy := "earlier_config"
 	vpcId := dependence.vpcID
 	minCount := 1
-	maxCount := 1
+	maxCount := 3
 
-	expectedCount := 1
+	expectedCount := 2
 	healthPeriod := 300
 	useLb := 1
 	lbList := fmt.Sprintf(`[{"port": 12306, "lb_id": "%s", "weight": 1, "host_group_id": "%s"}]`, dependence.loadbalancerID, dependence.targetGroupID)
@@ -418,7 +419,7 @@ func TestAccCtyunScalingEcs1(t *testing.T) {
 	updateMoveOutStrategy := "earlier_vm"
 	updateMinCount := 1
 	updatedMaxCount := 50
-	updatedExpectedCount := 1
+	updatedExpectedCount := 2
 	updateHealthPeriod := 10080
 	updatedConfigList := fmt.Sprintf(`[%d, %d]`, scalingConfigID, scalingConfigID1)
 	updatedInstanceUUIDList := fmt.Sprintf(`["%s", "%s"]`, dependence.instanceUUID1, dependence.instanceUUID)

@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -59,7 +60,7 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -86,7 +87,6 @@ func (c *CtyunMysqlBackupSetting) ImportState(ctx context.Context, request resou
 
 	cfg.RegionID = types.StringValue(regionId)
 	cfg.InstID = types.StringValue(instId)
-	cfg.ID = types.StringValue(fmt.Sprintf("%s-setting", instId))
 	err = c.getAndMergeMysqlBackupSetting(ctx, &cfg)
 	if err != nil {
 		return
@@ -136,6 +136,9 @@ func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.S
 				Optional:    true,
 				Computed:    true,
 				Description: "高频备份 true=开启，false=关闭。默认关闭，支持更新。",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"frequency_backup_unit_time": schema.Int64Attribute{
 				Optional:    true,
@@ -174,6 +177,9 @@ func (c *CtyunMysqlBackupSetting) Schema(ctx context.Context, request resource.S
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -203,8 +209,6 @@ func (c *CtyunMysqlBackupSetting) Create(ctx context.Context, request resource.C
 	if err != nil {
 		return
 	}
-	// id赋值， instance id + "-" + settings
-	plan.ID = types.StringValue(fmt.Sprintf("%s-setting", plan.InstID.ValueString()))
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -345,6 +349,7 @@ func (c *CtyunMysqlBackupSetting) processWeek(ctx context.Context, weeks []int32
 }
 
 func (c *CtyunMysqlBackupSetting) getAndMergeMysqlBackupSetting(ctx context.Context, config *CtyunMysqlBackupSettingConfig) error {
+	config.ID = types.StringValue(fmt.Sprintf("%s-setting", config.InstID.ValueString()))
 	resp, err := c.getMysqlBackupSettingInfo(ctx, config)
 	if err != nil {
 		return err

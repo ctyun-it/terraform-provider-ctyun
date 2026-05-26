@@ -9,6 +9,7 @@ import (
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
@@ -165,6 +165,9 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"visibility_host_script": schema.StringAttribute{
 				Optional:    true,
@@ -172,6 +175,9 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "部署前执行自定义脚本，base64编码，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"instance_type": schema.StringAttribute{
@@ -252,7 +258,6 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 					),
 				},
 			},
-
 			"password": schema.StringAttribute{
 				Optional:    true,
 				Description: "用户密码，与key_pair_name有且只能有一个，需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头",
@@ -265,7 +270,6 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 							),
 							validator2.EcsPassword(),
 						),
-
 						stringvalidator.All(
 							validator2.AlsoRequiresEqualString(
 								path.MatchRoot("instance_type"),
@@ -285,21 +289,27 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"use_affinity_group": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否使用主机组，默认不使用",
-				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"affinity_group_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "云主机组id",
+				Description: "云主机组id，use_affinity_group为true时必填",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
+					validator2.AlsoRequiresEqualString(
+						path.MatchRoot("use_affinity_group"),
+						types.BoolValue(true),
+					),
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("use_affinity_group"),
+						types.BoolValue(false),
+					),
 				},
 			},
 			"max_pod_num": schema.Int32Attribute{
@@ -494,6 +504,18 @@ func (c *ctyunCcseNodePool) Update(ctx context.Context, request resource.UpdateR
 		return
 	}
 
+	if !plan.UseAffinityGroup.IsUnknown() && !plan.UseAffinityGroup.IsNull() && state.UseAffinityGroup.IsNull() {
+		state.UseAffinityGroup = plan.UseAffinityGroup
+		response.Diagnostics.AddWarning("use_affinity_group的更新仅写入状态文件", "在import时，状态文件中use_affinity_group为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.AffinityGroupID.IsUnknown() && !plan.AffinityGroupID.IsNull() && state.AffinityGroupID.IsNull() {
+		state.AffinityGroupID = plan.AffinityGroupID
+		response.Diagnostics.AddWarning("affinity_group_id的更新仅写入状态文件", "在import时，状态文件中affinity_group_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Password.IsUnknown() && !plan.Password.IsNull() && state.Password.IsNull() {
+		state.Password = plan.Password
+		response.Diagnostics.AddWarning("password的更新仅写入状态文件", "在import时，状态文件中password为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -852,6 +874,16 @@ func (c *ctyunCcseNodePool) getAndMerge(ctx context.Context, plan *CtyunCcseNode
 	if err != nil {
 		return
 	}
+	plan.AzInfos = []CtyunCcseNodePoolAzInfo{}
+	for _, az := range pool.AzInfo {
+		plan.AzInfos = append(plan.AzInfos, CtyunCcseNodePoolAzInfo{
+			AzName: types.StringValue(az.AzName),
+		})
+	}
+	plan.SysDisk = &CtyunCcseNodePoolDisk{
+		Type: types.StringValue(pool.SysDiskType),
+		Size: types.Int32Value(pool.SysDiskSize),
+	}
 	plan.NodePoolName = types.StringValue(pool.NodePoolName)
 	plan.MirrorType = types.Int32Value(pool.ImageType)
 	plan.NodeNum = types.Int32Value(pool.NormalNodeNum)
@@ -876,23 +908,12 @@ func (c *ctyunCcseNodePool) getAndMerge(ctx context.Context, plan *CtyunCcseNode
 		return
 	}
 	p := records[0]
-	if plan.SysDisk != nil {
-		plan.SysDisk.Size = types.Int32Value(p.SysDiskSize)
-		plan.SysDisk.Type = types.StringValue(p.SysDiskType)
-	}
 	plan.VisibilityPostHostScript = types.StringValue(p.VisibilityPostHostScript)
 	plan.VisibilityHostScript = types.StringValue(p.VisibilityHostScript)
 	plan.MaxPodNum = types.Int32Value(p.MaxPodNum)
 	plan.AutoRenew = types.BoolValue(map[int32]bool{0: false, 1: true}[p.AutoRenewStatus])
 	plan.ItemDefName = types.StringValue(p.VmSpecName)
 	plan.KeyPairName = types.StringValue(p.KeyName)
-
-	switch plan.InstanceType.ValueString() {
-	case business.CcseSlaveInstanceTypeEcs:
-		plan.MirrorID = types.StringValue(p.ImageUuid)
-	case business.CcseSlaveInstanceTypeEbm:
-		plan.MirrorName = types.StringValue(p.ImageName)
-	}
 
 	switch p.BillMode {
 	case "1":
@@ -903,8 +924,10 @@ func (c *ctyunCcseNodePool) getAndMerge(ctx context.Context, plan *CtyunCcseNode
 	}
 	if strings.HasPrefix(p.VmSpecName, "physical") {
 		plan.InstanceType = types.StringValue(business.CcseSlaveInstanceTypeEbm)
+		plan.MirrorName = types.StringValue(p.ImageName)
 	} else {
 		plan.InstanceType = types.StringValue(business.CcseSlaveInstanceTypeEcs)
+		plan.MirrorID = types.StringValue(p.ImageUuid)
 	}
 	plan.DataDisks = nil
 	for _, disk := range p.DataDisks {

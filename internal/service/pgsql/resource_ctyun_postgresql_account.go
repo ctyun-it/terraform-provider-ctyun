@@ -4,23 +4,23 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
@@ -55,7 +55,7 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -63,12 +63,12 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 	var regionID, name, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instID)
+		err = terraform_extend.Split(request.ID, &instID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
+		err = terraform_extend.Split(request.ID, &instID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -85,7 +85,6 @@ func (c *CtyunPostgresqlAccount) ImportState(ctx context.Context, request resour
 		err = fmt.Errorf("name不能为空")
 		return
 	}
-	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
 	config.Name = types.StringValue(name)
@@ -138,9 +137,9 @@ func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.Sc
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
-				Description: "数据库账号密码，支持更新。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)",
+				Description: "数据库账号密码，创建时必填 。支持更新，导入时不填。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(8, 32),
 				},
@@ -154,20 +153,16 @@ func (c *CtyunPostgresqlAccount) Schema(ctx context.Context, request resource.Sc
 			},
 			"user_type": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     stringdefault.StaticString(business.PgsqlAccountTypeNormal),
 				Description: "账号类型，取值范围：normal-普通账号，advanced-高权限账号。默认为普通账号",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.PgsqlAccountTypes...),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"is_lock": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
 				Description: "判断账号是否需要锁定，取值范围：true-锁定账号，false-解锁账号。默认为false。支持更新",
 			},
 			"schema_privilege_list": schema.SetNestedAttribute{
@@ -252,7 +247,6 @@ func (c *CtyunPostgresqlAccount) Create(ctx context.Context, request resource.Cr
 	if err != nil {
 		return
 	}
-	plan.ID = types.StringValue(plan.InstID.ValueString() + "-" + plan.Name.ValueString())
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -307,6 +301,11 @@ func (c *CtyunPostgresqlAccount) Update(ctx context.Context, request resource.Up
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
+	}
+
+	if !plan.UserType.IsUnknown() && !plan.UserType.IsNull() && state.UserType.IsNull() {
+		state.UserType = plan.UserType
+		response.Diagnostics.AddWarning("user_type的更新仅写入状态文件", "在import时，状态文件中user_type为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 
 	err = c.updatePgsqlAccount(ctx, &state, &plan)
@@ -365,11 +364,21 @@ func (c *CtyunPostgresqlAccount) Delete(ctx context.Context, request resource.De
 }
 
 func (c *CtyunPostgresqlAccount) CreatePostgresqlAccount(ctx context.Context, config *CtyunPostgresqlAccountConfig) error {
+	userType := config.UserType.ValueString()
+	if config.UserType.IsNull() || config.UserType.IsUnknown() {
+		userType = business.PgsqlAccountTypeNormal
+	}
+
+	if config.Password.IsNull() || config.Password.IsUnknown() {
+		err := fmt.Errorf("账号创建时，password必填！")
+		return err
+	}
+
 	params := &pgsql.PgsqlCreateAccountRequest{
 		ProdInstId: config.InstID.ValueString(),
 		Username:   config.Name.ValueString(),
 		Password:   config.Password.ValueString(),
-		UserType:   config.UserType.ValueString(),
+		UserType:   userType,
 	}
 
 	header := &pgsql.PgsqlCreateAccountRequestHeader{
@@ -448,6 +457,7 @@ func (c *CtyunPostgresqlAccount) getAndMergePostgresqlAccount(ctx context.Contex
 	if err != nil {
 		return err
 	}
+	config.ID = types.StringValue(config.InstID.ValueString() + "," + config.Name.ValueString())
 	config.RolSuper = types.BoolValue(resp.RolSuper)
 	config.RolInherit = types.BoolValue(resp.RolInherit)
 	config.RolCreateRole = types.BoolValue(resp.RolCreateRole)

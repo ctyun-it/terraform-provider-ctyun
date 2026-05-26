@@ -120,6 +120,7 @@ type CtgkafkaInstQueryReturnObjDataResponse struct {
 	Vipv6            string                                            `json:"vipv6,omitempty"`            /*  实例vipv6。  */
 	DiskType         string                                            `json:"diskType,omitempty"`         /*  磁盘类型。  */
 	Protocols        *CtgkafkaInstQueryReturnObjDataProtocolsResponse  `json:"protocols"`                  /*  实例接入点信息，当请求参数传入prodInstId时有值。  */
+	SecurityGroupID  string                                            `json:"securityGroupId"`
 }
 
 type CtgkafkaInstQueryReturnObjDataNodeListResponse struct {

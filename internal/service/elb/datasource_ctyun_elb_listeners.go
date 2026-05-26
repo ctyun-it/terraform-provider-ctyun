@@ -7,10 +7,8 @@ import (
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -131,15 +129,12 @@ func (c *ctyunElbListeners) Schema(ctx context.Context, request datasource.Schem
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"target_group_id": schema.StringAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "后端服务组ID",
 									},
 									"weight": schema.Int32Attribute{
-										Optional:    true,
+										Computed:    true,
 										Description: "权重，取值范围：1-256。默认为100",
-										Validators: []validator.Int32{
-											int32validator.Between(1, 256),
-										},
 									},
 								},
 							},

@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -18,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
@@ -53,7 +54,7 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -61,12 +62,12 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 	var name, regionID, instID string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instID)
+		err = terraform_extend.Split(request.ID, &instID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
+		err = terraform_extend.Split(request.ID, &instID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -83,7 +84,6 @@ func (c *CtyunPgsqlDatabase) ImportState(ctx context.Context, request resource.I
 		err = fmt.Errorf("instance_id不能为空")
 		return
 	}
-	config.ID = types.StringValue(fmt.Sprintf("%s", instID+"-"+name))
 	config.Name = types.StringValue(name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
@@ -196,6 +196,9 @@ func (c *CtyunPgsqlDatabase) Schema(ctx context.Context, request resource.Schema
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "postgresql实例数据库id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -225,7 +228,6 @@ func (c *CtyunPgsqlDatabase) Create(ctx context.Context, request resource.Create
 	if err != nil {
 		return
 	}
-	plan.ID = types.StringValue(plan.InstID.ValueString() + "-" + plan.Name.ValueString())
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -380,6 +382,7 @@ func (c *CtyunPgsqlDatabase) getAndMergePgsqlDatabase(ctx context.Context, confi
 	config.CharSetType = types.StringValue(databaseDetail.DbType)
 	config.Owner = types.StringValue(databaseDetail.DBOwner)
 	config.Description = types.StringValue(databaseDetail.DBDescription)
+	config.ID = types.StringValue(config.InstID.ValueString() + "," + config.Name.ValueString())
 	return nil
 }
 
@@ -412,8 +415,8 @@ func (c *CtyunPgsqlDatabase) getDatabaseDetail(ctx context.Context, config *Ctyu
 		for _, v := range resp.ReturnObj {
 			if v.DBName == config.Name.ValueString() {
 				detail = v
+				return
 			}
-			return
 		}
 		err = common.ResourceNotExistError
 		return

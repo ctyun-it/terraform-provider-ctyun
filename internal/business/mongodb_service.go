@@ -79,6 +79,9 @@ func (u MongodbService) GetHostIpByInstID(ctx context.Context, instID string, re
 	if err != nil {
 		return "", err
 	}
+	if detail.Host == "" {
+		return "", fmt.Errorf("实例 %s 没有唯一host，暂时不支持绑定eip", instID)
+	}
 	return detail.Host, nil
 }
 
@@ -104,4 +107,22 @@ func (u MongodbService) GetMongodbDetail(ctx context.Context, instID string, reg
 	}
 	detail := resp.ReturnObj
 	return detail, nil
+}
+
+func (u MongodbService) GetShardAndMongosNum(ctx context.Context, regionID string, instID string) (int32, int32, error) {
+	detail, err := u.GetMongodbDetail(ctx, instID, regionID)
+	if err != nil {
+		return 0, 0, err
+	}
+	shardNum := int32(0)
+	mongosNum := int32(0)
+	nodeInfoVos := detail.NodeInfoVOS
+	for _, node := range nodeInfoVos {
+		if node.Role == "Shard" {
+			shardNum += 1
+		} else if node.Role == "Mongos" {
+			mongosNum += 1
+		}
+	}
+	return shardNum, mongosNum, nil
 }

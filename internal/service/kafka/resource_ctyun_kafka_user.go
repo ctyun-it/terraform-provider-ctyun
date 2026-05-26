@@ -69,13 +69,15 @@ func (c *ctyunKafkaUser) Schema(_ context.Context, _ resource.SchemaRequest, res
 		MarkdownDescription: utils.FormatDesc("管理KAFKA的用户", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10145597"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int32Attribute{
-				Computed:      true,
-				Description:   "资源唯一标识符",
-				PlanModifiers: []planmodifier.Int32{int32planmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "资源唯一标识符",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "用户名称，规则如下：\n以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。\n长度3-64。\n名称不可重复。",
+				Description: "用户名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。长度3-64。名称不可重复。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 64),
 					stringvalidator.RegexMatches(
@@ -89,7 +91,7 @@ func (c *ctyunKafkaUser) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "实例ID。",
+				Description: "实例ID",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -110,16 +112,17 @@ func (c *ctyunKafkaUser) Schema(_ context.Context, _ resource.SchemaRequest, res
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "密码，规则如下：\n长度8-26字符。\n必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。\n不能有空格。支持更新",
+				Optional:    true,
+				Sensitive:   true,
+				Description: "密码，创建时必填，导入时不填。长度8-26字符。必须同时包含大写字母、小写字母、数字和英文格式特殊符号(@%^*_+!$-=.)中的至少三种类型。不能有空格。支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(8, 26),
 				},
 			},
-
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "用户描述，规则如下：\n不能以+,-,@,= 特殊字符开头。\n长度不能大于200。支持更新",
+				Computed:    true,
+				Description: "描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 200),
 					stringvalidator.RegexMatches(
@@ -127,13 +130,17 @@ func (c *ctyunKafkaUser) Schema(_ context.Context, _ resource.SchemaRequest, res
 						"不能以+,-,@,=特殊字符开头",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
-				Computed:      true,
-				Description:   "创建时间，为UTC格式",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-
 			"permission_info": schema.SetNestedAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -190,6 +197,10 @@ func (c *ctyunKafkaUser) Create(ctx context.Context, request resource.CreateRequ
 		return
 	}
 
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	// 创建
 	err = c.create(ctx, plan)
 	if err != nil {
@@ -467,16 +478,9 @@ func (c *ctyunKafkaUser) getAndMerge(ctx context.Context, plan *CtyunKafkaUserCo
 	}
 
 	userData := resp.ReturnObj.Data[0]
-	// 设置ID
 	plan.Id = types.Int32Value(userData.Id)
-	// 设置用户名
 	plan.UserName = types.StringValue(userData.Username)
-	// 设置描述 - 处理空字符串情况
-	if userData.Description == "" {
-		plan.Description = types.StringNull()
-	} else {
-		plan.Description = types.StringValue(userData.Description)
-	}
+	plan.Description = types.StringValue(userData.Description)
 	plan.CreateTime = types.StringValue(utils.ConvertToUTCZ(utils.Layout2, userData.Ctime))
 
 	err = c.getAndMergeUserTopicsAcl(ctx, plan)
@@ -514,7 +518,7 @@ func (c *ctyunKafkaUser) updatePermissionInfo(ctx context.Context, plan, state C
 	add, del := utils.DifferenceStructArray[CtyunKafkaAclPermissionInfo](plan.permissionInfoList, state.permissionInfoList)
 	plan.permissionInfoList = del
 	err = c.updateUserTopicsAcl(ctx, plan, "DELETE")
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "topic不存在") {
 		return
 	}
 	plan.permissionInfoList = add
@@ -575,48 +579,13 @@ func (c *ctyunKafkaUser) updateUserTopicsAcl(ctx context.Context, plan CtyunKafk
 }
 
 func (c *ctyunKafkaUser) getAndMergeUserTopicsAcl(ctx context.Context, plan *CtyunKafkaUserConfig) (err error) {
-	var topicsToQuery []string
-
-	// 从现有的PermissionInfo中提取topics（如果有的话）
-	if !plan.PermissionInfo.IsNull() && !plan.PermissionInfo.IsUnknown() {
-		var permissionInfoList []CtyunKafkaAclPermissionInfo
-		diags := plan.PermissionInfo.ElementsAs(ctx, &permissionInfoList, false)
-		if diags.HasError() {
-			// 处理错误
-		} else {
-			// 提取所有唯一的topic名称
-			topicMap := make(map[string]bool)
-			for _, info := range permissionInfoList {
-				if !info.Topic.IsNull() && !info.Topic.IsUnknown() {
-					topicMap[info.Topic.ValueString()] = true
-				}
-			}
-
-			for topic := range topicMap {
-				topicsToQuery = append(topicsToQuery, topic)
-			}
-		}
-	}
-	if len(topicsToQuery) == 0 {
-		// 如果没有topics要查询，确保PermissionInfo被正确初始化
-		plan.PermissionInfo = types.SetNull(types.ObjectType{
-			AttrTypes: map[string]attr.Type{
-				"permission": types.StringType,
-				"ip":         types.StringType,
-				"operation":  types.StringType,
-				"topic":      types.StringType,
-			},
-		})
-		return
-	}
-
 	// 分别查询READ和WRITE操作的ACL信息
-	readAclList, err := c.queryUserTopicsAcl(ctx, plan, "READ", topicsToQuery[0])
+	readAclList, err := c.queryUserTopicsAcl(ctx, plan, "READ")
 	if err != nil {
 		return err
 	}
 
-	writeAclList, err := c.queryUserTopicsAcl(ctx, plan, "WRITE", topicsToQuery[0])
+	writeAclList, err := c.queryUserTopicsAcl(ctx, plan, "WRITE")
 	if err != nil {
 		return err
 	}
@@ -665,13 +634,12 @@ func (c *ctyunKafkaUser) getAndMergeUserTopicsAcl(ctx context.Context, plan *Cty
 }
 
 // queryUserTopicsAcl 查询指定操作类型的用户ACL信息
-func (c *ctyunKafkaUser) queryUserTopicsAcl(ctx context.Context, plan *CtyunKafkaUserConfig, operation string, topic string) ([]*ctgkafka.CtgkafkaSaslUserTopicsAclReturnObjDataResponse, error) {
+func (c *ctyunKafkaUser) queryUserTopicsAcl(ctx context.Context, plan *CtyunKafkaUserConfig, operation string) ([]*ctgkafka.CtgkafkaSaslUserTopicsAclReturnObjDataResponse, error) {
 	params := &ctgkafka.CtgkafkaSaslUserTopicsAclRequest{
 		RegionId:   plan.RegionId.ValueString(),
 		ProdInstId: plan.InstanceId.ValueString(),
 		Username:   plan.UserName.ValueString(),
 		Operation:  operation,
-		Topic:      topic,
 	}
 
 	resp, err := c.meta.Apis.SdkKafkaApis.CtgkafkaSaslUserTopicsAclApi.Do(ctx, c.meta.SdkCredential, params)

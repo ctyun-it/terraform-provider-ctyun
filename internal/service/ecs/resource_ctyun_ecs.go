@@ -117,7 +117,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
 					validator2.UUID(),
-					stringvalidator.ConflictsWith(path.MatchRoot("flavor_name")),
+					stringvalidator.ExactlyOneOf(path.MatchRoot("flavor_name")),
 				},
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
@@ -129,7 +129,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。",
 				Validators: []validator.String{
-					stringvalidator.ConflictsWith(path.MatchRoot("flavor_id")),
+					stringvalidator.ExactlyOneOf(path.MatchRoot("flavor_id")),
 				},
 				PlanModifiers: []planmodifier.String{
 					explanmodifier.CheckValueWhenChangeString(path.Root("status"), business.EcsStatusStopped),
@@ -356,6 +356,22 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				PlanModifiers: []planmodifier.Int32{
 					int32planmodifier.RequiresReplace(),
+				},
+			},
+			"demand_billing_type": schema.StringAttribute{
+				Optional:    true,
+				Description: "自动创建的弹性IP的计费模式，当传递了bandwidth且cycle_type为on_demand时可传递，bandwidth：按带宽，upflowc：按流量",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					validator2.ConflictsWithEqualString(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
+					stringvalidator.AlsoRequires(path.MatchRoot("bandwidth")),
+					stringvalidator.OneOf(business.EipDemandBillingTypes...),
 				},
 			},
 			"eip_address": schema.StringAttribute{
@@ -607,7 +623,7 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
-	//更新续订开关
+	// 更新续订开关，按需主机，或被标记成要转按需的主机不能更新
 	err = c.updateAutoRenew(ctx, state, plan)
 	if err != nil {
 		return
@@ -841,6 +857,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	if plan.Bandwidth.ValueInt32() > 0 {
 		params.ExtIP = "1"
 		params.Bandwidth = plan.Bandwidth.ValueInt32()
+		if plan.DemandBillingType.String() != "" {
+			params.DemandBillingType = plan.DemandBillingType.ValueStringPointer()
+		}
 	}
 	if plan.ProjectId.ValueString() != "" {
 		params.ProjectID = plan.ProjectId.ValueStringPointer()
@@ -2062,6 +2081,9 @@ func (c *ctyunEcs) updateAutoRenew(ctx context.Context, state, plan CtyunEcsConf
 	if plan.AutoRenew.Equal(state.AutoRenew) && plan.CycleType.Equal(state.CycleType) {
 		return
 	}
+	if plan.CycleType.ValueString() == business.OnDemandCycleType {
+		return
+	}
 	params := &ctecs2.CtecsEcsUpdateAutoRenewConfigRequest{
 		RegionID:        state.RegionId.ValueString(),
 		InstanceIDList:  state.Id.ValueString(),
@@ -2103,6 +2125,7 @@ type CtyunEcsConfig struct {
 	MasterOrderId      types.String  `tfsdk:"master_order_id"`
 	ProjectId          types.String  `tfsdk:"project_id"`
 	Bandwidth          types.Int32   `tfsdk:"bandwidth"`
+	DemandBillingType  types.String  `tfsdk:"demand_billing_type"`
 	RegionId           types.String  `tfsdk:"region_id"`
 	AzName             types.String  `tfsdk:"az_name"`
 	IsDestroyInstance  types.Bool    `tfsdk:"is_destroy_instance"`

@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	ctyunsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
@@ -70,15 +71,40 @@ type TeledbGetAccountInfoRequestHeader struct {
 	RegionID  string `json:"region_id"` // 资源池ID，必填
 }
 type TeledbGetAccountInfoResponse struct {
-	StatusCode int32                                   `json:"statusCode"`      // 接口状态码
-	Error      *string                                 `json:"error,omitempty"` // 错误码，失败时返回，成功时为空
-	Message    string                                  `json:"message"`         // 描述信息
-	ReturnObj  []TeledbGetAccountInfoResponseReturnObj `json:"returnObj"`
+	StatusCode int32                             `json:"statusCode"`      // 接口状态码
+	Error      *string                           `json:"error,omitempty"` // 错误码，失败时返回，成功时为空
+	Message    string                            `json:"message"`         // 描述信息
+	ReturnObj  TeledbGetAccountInfoReturnObjList `json:"returnObj"`       // 这里改用自定义类型
 }
 
 type TeledbGetAccountInfoResponseReturnObj struct {
 	SchemaPrivilegeVOList []SchemaPrivilegeVO `json:"schemaPrivilegeVOList"`
 	AccountName           string              `json:"accountName"`
+	Remark                string              `json:"remark"`
+}
+
+// 自定义数组类型，实现 UnmarshalJSON
+type TeledbGetAccountInfoReturnObjList []TeledbGetAccountInfoResponseReturnObj
+
+// 核心：处理 数组 / 对象 兼容
+// 完全按你给的格式实现，无任何额外处理
+func (c *TeledbGetAccountInfoReturnObjList) UnmarshalJSON(data []byte) error {
+	// 1. 先尝试解析成数组
+	var arr []TeledbGetAccountInfoResponseReturnObj
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*c = arr
+		return nil
+	}
+
+	// 2. 如果失败，尝试解析成空对象
+	var obj map[string]interface{}
+	if err := json.Unmarshal(data, &obj); err == nil {
+		*c = TeledbGetAccountInfoReturnObjList{}
+		return nil
+	}
+
+	// 3. 都不是才返回错误
+	return fmt.Errorf("不支持的returnObj格式: %s", string(data))
 }
 
 //GrantSchema  string `json:"grantSchema"`

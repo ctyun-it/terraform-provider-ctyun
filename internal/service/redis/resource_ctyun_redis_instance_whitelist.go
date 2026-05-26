@@ -52,9 +52,11 @@ func (c *ctyunRedisInstanceWhitelist) Schema(_ context.Context, _ resource.Schem
 		MarkdownDescription: utils.FormatDesc("管理Redis实例白名单", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10398174"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "资源唯一标识符",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "资源唯一标识符",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -90,9 +92,13 @@ func (c *ctyunRedisInstanceWhitelist) Schema(_ context.Context, _ resource.Schem
 			},
 			"ip": schema.StringAttribute{
 				Optional:    true,
-				Description: "白名单列表，可填写IP地址(如192.168.1.1)或IP段(如192.168.1.0/24)，多个IP用英文逗号隔开。当mode=delete时此参数为空 支持更新",
+				Computed:    true,
+				Description: "白名单列表，可填写IP地址(如192.168.1.1)或IP段(如192.168.1.0/24)，多个IP用英文逗号隔开。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -222,7 +228,7 @@ func (c *ctyunRedisInstanceWhitelist) ImportState(ctx context.Context, request r
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [分组名称],[instance_id],[name],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

@@ -14,6 +14,8 @@ const (
 	RedisHostTypeHC = "HC"
 	RedisHostTypeKS = "KS"
 	RedisHostTypeKC = "KC"
+	RedisHostTypeFS = "FS"
+	RedisHostTypeFC = "FC"
 
 	RedisEditionStandardSingle          = "StandardSingle"          // 单机
 	RedisEditionStandardDual            = "StandardDual"            // 主备
@@ -37,6 +39,8 @@ var RedisHostType = []string{
 	RedisHostTypeHC,
 	RedisHostTypeKS,
 	RedisHostTypeKC,
+	RedisHostTypeFS,
+	RedisHostTypeFC,
 }
 
 var RedisEdition = []string{
@@ -46,4 +50,46 @@ var RedisEdition = []string{
 	RedisEditionDirectCluster,
 	RedisEditionClusterOriginalProxy,
 	RedisEditionOriginalMultipleReadLvs,
+}
+
+var RedisHostTypeMap = map[string]string{
+	"通用型":         RedisHostTypeS,
+	"计算增强型":     RedisHostTypeC,
+	"内存型":         RedisHostTypeM,
+	"海光通用型":     RedisHostTypeHS,
+	"海光计算增强型": RedisHostTypeHC,
+	"鲲鹏通用型":     RedisHostTypeKS,
+	"鲲鹏计算增强型": RedisHostTypeKC,
+	"飞腾通用型":     RedisHostTypeFS,
+	"飞腾计算增强型": RedisHostTypeFC,
+}
+
+var RedisTypeToApiEdition = map[int]string{
+	5:  RedisEditionDirectCluster,
+	6:  RedisEditionDirectClusterSingle,
+	8:  RedisEditionDirectCluster,
+	9:  RedisEditionDirectClusterSingle,
+	10: RedisEditionStandardDual,
+	11: RedisEditionStandardSingle,
+	12: RedisEditionStandardDual,
+	13: RedisEditionStandardSingle,
+	14: RedisEditionOriginalMultipleReadLvs,
+	16: RedisEditionOriginalMultipleReadLvs,
+	17: RedisEditionClusterOriginalProxy,
+	18: RedisEditionClusterOriginalProxy,
+}
+
+var RedisTypeToApiVersion = map[int]string{
+	5:  "BASIC",
+	6:  "BASIC",
+	8:  "PLUS",
+	9:  "PLUS",
+	10: "BASIC",
+	11: "BASIC",
+	12: "PLUS",
+	13: "PLUS",
+	14: "BASIC",
+	16: "PLUS",
+	17: "BASIC",
+	18: "PLUS",
 }

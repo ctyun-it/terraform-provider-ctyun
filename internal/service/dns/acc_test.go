@@ -2,9 +2,10 @@ package dns_test
 
 import (
 	"fmt"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 )
 
 const dependenceDir = "testdata/dependence"

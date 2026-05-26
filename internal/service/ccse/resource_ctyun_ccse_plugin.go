@@ -9,6 +9,7 @@ import (
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -59,9 +60,11 @@ func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, re
 		MarkdownDescription: utils.FormatDesc("管理云容器引擎插件", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10102631"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -110,7 +113,7 @@ func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validator2.Yaml(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"values_json": schema.StringAttribute{
@@ -121,12 +124,15 @@ func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validator2.Json(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"namespace": schema.StringAttribute{
 				Computed:    true,
 				Description: "命名空间",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -407,6 +413,8 @@ func (c *ctyunCcsePlugin) update(ctx context.Context, plan, state *CtyunCcsePlug
 	if err != nil {
 		return
 	}
+	state.ValuesYaml = plan.ValuesYaml
+	state.ValuesJson = plan.ValuesJson
 	return
 }
 

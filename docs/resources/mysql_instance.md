@@ -133,7 +133,6 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 ### Required
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
-- `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新
 - `name` (String) 实例名称，支持更新。要求：长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符
 - `prod_id` (String) 产品id，支持更新。取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。
 - `security_group_id` (String) 安全组Id
@@ -149,6 +148,7 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 - `backup_storage_space` (Number) 备份存储空间(单位:G，范围100,32768)，若storage_space和backup_storage_space都不为空，优先升配备份节点存储空间，支持更新
 - `backup_storage_type` (String) 备份空间磁盘存储类型：SSD=超高IO，SATA=普通IO，SAS=高IO
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
+- `flavor_name` (String) 规格名称，创建时必填，导入时不填。形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新
 - `password` (String, Sensitive) 实例密码，支持更新。密码为8-26位，需为字母、数字和特殊字符~!@#$%^*_-+{[]}:,.?/的组合，区分大小写
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
@@ -185,3 +185,15 @@ Required:
 - `availability_zone_count` (Number) 该AZ内存在的实例节点数量，支持更新。
 - `availability_zone_name` (String) 资源池可用区名称，支持更新。
 - `node_type` (String) 表示分布AZ的节点类型，master/slave，支持更新。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_mysql_instance.instance_example 3dd1482933a243f9bd4e8ecb3cafbddb,bb9fdb42056f11eda1610242ac110002
+```

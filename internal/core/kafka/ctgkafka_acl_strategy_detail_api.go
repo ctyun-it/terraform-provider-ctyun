@@ -58,10 +58,11 @@ type CtgkafkaAclStrategyDetailResponse struct {
 }
 
 type CtgkafkaAclStrategyDetailReturnObjResponse struct {
-	Name     string                                             `json:"name"`     /*  策略名称。  */
-	TopicNum int32                                              `json:"topicNum"` /*  匹配的topic数。  */
-	Topics   []string                                           `json:"topics"`   /*  匹配的topic。  */
-	Rules    []*CtgkafkaAclStrategyDetailReturnObjRulesResponse `json:"rules"`    /*  ACL规则  */
+	Name        string                                             `json:"name"`     /*  策略名称。  */
+	TopicNum    int32                                              `json:"topicNum"` /*  匹配的topic数。  */
+	Topics      []string                                           `json:"topics"`   /*  匹配的topic。  */
+	Rules       []*CtgkafkaAclStrategyDetailReturnObjRulesResponse `json:"rules"`    /*  ACL规则  */
+	UseNewTopic int                                                `json:"useNewTopic"`
 }
 
 type CtgkafkaAclStrategyDetailReturnObjRulesResponse struct {

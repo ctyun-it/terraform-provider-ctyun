@@ -56,7 +56,7 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -64,12 +64,12 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instID)
+		err = terraform_extend.Split(request.ID, &instID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
+		err = terraform_extend.Split(request.ID, &instID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -86,7 +86,6 @@ func (c *CtyunMysqlAccount) ImportState(ctx context.Context, request resource.Im
 		err = fmt.Errorf("name不能为空")
 		return
 	}
-	config.ID = types.StringValue(instID + "-" + name)
 	config.InstID = types.StringValue(instID)
 	config.RegionID = types.StringValue(regionID)
 	config.Name = types.StringValue(name)
@@ -139,22 +138,27 @@ func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaR
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
-				Description: "数据库账号密码，支持更新。不建议使用弱密码，长度[8,20]位",
+				Description: "数据库账号的密码，创建时填写，导入时不填，支持更新。不建议使用弱密码，长度[8,20]位",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(8, 20),
 				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "备注，支持更新",
 				Validators: []validator.String{
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"schema_privilege_list": schema.SetNestedAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "数据库权限配置列表，支持更新。",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -177,7 +181,10 @@ func (c *CtyunMysqlAccount) Schema(ctx context.Context, request resource.SchemaR
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "mysql用户id",
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -195,7 +202,10 @@ func (c *CtyunMysqlAccount) Create(ctx context.Context, request resource.CreateR
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	err = c.mysqlService.WaitInstanceStatus(
 		ctx,
 		plan.InstID.ValueString(),
@@ -218,7 +228,6 @@ func (c *CtyunMysqlAccount) Create(ctx context.Context, request resource.CreateR
 	if err != nil {
 		return
 	}
-	plan.ID = types.StringValue(plan.InstID.ValueString() + "-" + plan.Name.ValueString())
 	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -385,28 +394,28 @@ func (c *CtyunMysqlAccount) encodeBase64(password string) string {
 
 // getAndMergeMysqlAccount 查询mysql账号
 func (c *CtyunMysqlAccount) getAndMergeMysqlAccount(ctx context.Context, config *CtyunMysqlAccountConfig) error {
+	config.ID = types.StringValue(config.InstID.ValueString() + "," + config.Name.ValueString())
 	respPrivilege, err := c.getMysqlAccountInfo(ctx, config)
 	if err != nil {
 		return err
 	}
-	var privileges []MysqlSchemaPrivilegeModel
-	if respPrivilege.SchemaPrivilegeVOList != nil {
-		for _, privilegeItem := range respPrivilege.SchemaPrivilegeVOList {
-			var privilege MysqlSchemaPrivilegeModel
-			privilege.GrantSchema = types.StringValue(privilegeItem.GrantSchema)
-			schemaPrivilege := c.getPrivilege(privilegeItem)
-			if schemaPrivilege == "" {
-				continue
-			}
-			privilege.Privilege = types.StringValue(schemaPrivilege)
-			privileges = append(privileges, privilege)
+	config.Description = types.StringValue(respPrivilege.Remark)
+	privileges := []MysqlSchemaPrivilegeModel{}
+	for _, privilegeItem := range respPrivilege.SchemaPrivilegeVOList {
+		var privilege MysqlSchemaPrivilegeModel
+		privilege.GrantSchema = types.StringValue(privilegeItem.GrantSchema)
+		schemaPrivilege := c.getPrivilege(privilegeItem)
+		if schemaPrivilege == "" {
+			continue
 		}
-		var diags diag.Diagnostics
-		config.SchemaPrivilegeList, diags = types.SetValueFrom(ctx, utils.StructToTFObjectTypes(MysqlSchemaPrivilegeModel{}), &privileges)
-		if diags.HasError() {
-			err = errors.New(diags[0].Detail())
-			return err
-		}
+		privilege.Privilege = types.StringValue(schemaPrivilege)
+		privileges = append(privileges, privilege)
+	}
+	var diags diag.Diagnostics
+	config.SchemaPrivilegeList, diags = types.SetValueFrom(ctx, utils.StructToTFObjectTypes(MysqlSchemaPrivilegeModel{}), &privileges)
+	if diags.HasError() {
+		err = errors.New(diags[0].Detail())
+		return err
 	}
 	return nil
 }
@@ -465,7 +474,6 @@ func (c *CtyunMysqlAccount) updateMysqlAccount(ctx context.Context, state *Ctyun
 		if err != nil {
 			return err
 		}
-		state.Description = plan.Description
 	}
 	return nil
 }
@@ -656,7 +664,7 @@ func (c *CtyunMysqlAccount) updateRemark(ctx context.Context, config *CtyunMysql
 	params := &mysql.TeledbUpdateAccountRemarkRequest{
 		OuterProdInstId: config.InstID.ValueString(),
 		AccountName:     config.Name.ValueString(),
-		Remark:          config.Description.ValueStringPointer(),
+		Remark:          &desc,
 	}
 	header := &mysql.TeledbUpdateAccountRemarkRequestHeader{
 		InstID:   config.InstID.ValueString(),

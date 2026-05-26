@@ -154,7 +154,7 @@ func (c *ctyunMongodbInstances) Schema(ctx context.Context, request datasource.S
 						},
 						"prod_inst_id": schema.StringAttribute{
 							Description: "实例ID",
-							Required:    true, // 通常作为数据源的唯一标识
+							Computed:    true, // 通常作为数据源的唯一标识
 						},
 						"project_name": schema.StringAttribute{
 							Description: "企业项目名称",

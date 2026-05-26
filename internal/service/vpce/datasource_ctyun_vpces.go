@@ -98,48 +98,48 @@ func (c *ctyunVpces) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点ID",
 						},
 						"endpoint_service_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点服务ID",
 						},
 						"type": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "接口还是反向，interface:接口，reverse:反向",
 						},
 						"name": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点名称",
 						},
 						"vpc_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "所属的专有网络id",
 						},
 						"subnet_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "子网ID",
 						},
 						"subnet_ip": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "子网IP",
 						},
 						"whitelist_cidr": schema.SetAttribute{
 							ElementType: types.StringType,
-							Required:    true,
+							Computed:    true,
 							Description: "白名单",
 						},
 						"status": schema.Int32Attribute{
-							Required:    true,
+							Computed:    true,
 							Description: "endpoint状态,1表示已链接，2表示未链接",
 						},
 						"create_time": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
 						"update_time": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
 					},

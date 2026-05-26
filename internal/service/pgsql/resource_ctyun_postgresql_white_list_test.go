@@ -1,10 +1,11 @@
 package pgsql_test
 
 import (
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-	"testing"
 )
 
 func TestAccCtyunPgsqlWhiteList(t *testing.T) {
@@ -17,7 +18,6 @@ func TestAccCtyunPgsqlWhiteList(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_white_list.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	instanceID := dependence.pgsqlID
 
 	// 测试数据
@@ -31,12 +31,11 @@ func TestAccCtyunPgsqlWhiteList(t *testing.T) {
 			// 1. 创建白名单测试（覆盖模式）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "cover",
 					initialIPs,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "project_id", projectID),
 					resource.TestCheckResourceAttr(resourceName, "instance_id", instanceID),
 					resource.TestCheckResourceAttr(resourceName, "mode", "cover"),
 					resource.TestCheckResourceAttr(resourceName, "ip_list_result.#", "2"),
@@ -55,7 +54,7 @@ func TestAccCtyunPgsqlWhiteList(t *testing.T) {
 			// 2. 更新白名单测试（追加模式）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "append",
 					updatedIPs,
 				),
@@ -69,8 +68,7 @@ func TestAccCtyunPgsqlWhiteList(t *testing.T) {
 			},
 			// 3. 更新白名单测试（删除模式）
 			{
-				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+				Config: utils.LoadTestCase(resourceFile, rnd,
 					instanceID, "delete",
 					removedIPs,
 				),
@@ -83,7 +81,7 @@ func TestAccCtyunPgsqlWhiteList(t *testing.T) {
 			// 4. 清理资源（恢复初始状态）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "cover",
 					initialIPs,
 				),
@@ -101,7 +99,6 @@ func TestAccCtyunPgsqlWhiteListCoverOnly(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_white_list.tf"
 
 	// 从环境变量获取测试依赖资源
-	projectID := "0"
 	instanceID := dependence.pgsqlID
 
 	// 测试数据
@@ -114,7 +111,7 @@ func TestAccCtyunPgsqlWhiteListCoverOnly(t *testing.T) {
 			// 1. 创建白名单测试（覆盖模式）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "cover",
 					initialIPs,
 				),
@@ -128,7 +125,7 @@ func TestAccCtyunPgsqlWhiteListCoverOnly(t *testing.T) {
 			// 2. 更新白名单测试（覆盖模式）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "cover",
 					updatedIPs,
 				),
@@ -142,7 +139,7 @@ func TestAccCtyunPgsqlWhiteListCoverOnly(t *testing.T) {
 			// 3. 清理资源（恢复初始状态）
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd, projectID,
+					resourceFile, rnd,
 					instanceID, "cover",
 					initialIPs,
 				),

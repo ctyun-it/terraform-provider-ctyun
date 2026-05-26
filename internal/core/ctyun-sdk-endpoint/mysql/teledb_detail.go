@@ -144,6 +144,8 @@ type DetailRespReturnObj struct {
 	IsMGR                       int32                                  `json:"isMGR"`
 	DiskLogUsedRated            int32                                  `json:"diskLogUsedRated"`
 	SecurityGroupList           []DetailRespReturnObjSecurityGroupList `json:"securityGroupList"`
+	ParentOuterProdInstId       string                                 `json:"parentOuterProdInstId"`
+	MainAvailableArea           string                                 `json:"mainAvailableArea"`
 }
 
 type AzInfo struct {

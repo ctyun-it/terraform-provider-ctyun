@@ -29,9 +29,10 @@ var (
 )
 
 type CtyunMysqlAssociationEip struct {
-	meta       *common.CtyunMetadata
-	name       string
-	eipService *business.EipService
+	meta         *common.CtyunMetadata
+	name         string
+	eipService   *business.EipService
+	mysqlService *business.MysqlService
 }
 
 func (c *CtyunMysqlAssociationEip) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -73,7 +74,6 @@ func (c *CtyunMysqlAssociationEip) ImportState(ctx context.Context, request reso
 	config.InstID = types.StringValue(instanceID)
 	config.EipID = types.StringValue(eipID)
 	config.RegionID = types.StringValue(regionID)
-
 	config.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, eipID))
 	err = c.getAndMergeBindEip(ctx, &config)
 	if err != nil {
@@ -209,7 +209,7 @@ func (c *CtyunMysqlAssociationEip) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMergeBindEip(ctx, &state)
 	if err != nil {
-		if errors.Is(err, common.ResourceNotExistError) {
+		if errors.Is(err, common.ResourceNotExistError) || strings.Contains(err.Error(), "不存在绑定关系") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -285,6 +285,7 @@ func (c *CtyunMysqlAssociationEip) Configure(ctx context.Context, request resour
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.eipService = business.NewEipService(c.meta)
+	c.mysqlService = business.NewMysqlService(c.meta)
 }
 
 func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *CtyunAssociationEipConfig) (err error) {
@@ -312,14 +313,20 @@ func (c *CtyunMysqlAssociationEip) MysqlBindEip(ctx context.Context, config *Cty
 }
 
 func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, config *CtyunAssociationEipConfig) (err error) {
-
+	var returnOjb *mysql.DetailRespReturnObj
+	returnOjb, err = c.mysqlService.GetDetailByID(
+		ctx,
+		config.InstID.ValueString(),
+		config.RegionID.ValueString(),
+	)
+	if err != nil {
+		return
+	}
 	params := &mysql.TeledbBoundEipListRequest{
 		RegionID: config.RegionID.ValueString(),
 		EipID:    config.EipID.ValueStringPointer(),
 	}
-
 	headers := &mysql.TeledbBoundEipListRequestHeader{}
-
 	resp, err2 := c.meta.Apis.SdkCtMysqlApis.TeledbBoundEipListApi.Do(ctx, c.meta.Credential, params, headers)
 	if err2 != nil {
 		err = err2
@@ -340,12 +347,9 @@ func (c *CtyunMysqlAssociationEip) getAndMergeBindEip(ctx context.Context, confi
 	}
 
 	eipInfo := resp.ReturnObj.Data[0]
-	// eip未绑定
-	if eipInfo.Status == "DOWN" || eipInfo.BindStatus == 0 {
-		err = common.ResourceNotExistError
-		return
+	if eipInfo.Eip != returnOjb.EIP {
+		return fmt.Errorf("%s和%s之间不存在绑定关系", config.InstID.ValueString(), config.EipID.ValueString())
 	}
-
 	config.EipStatus = types.Int32Value(eipInfo.BindStatus)
 	config.Status = types.StringValue(eipInfo.Status)
 	return

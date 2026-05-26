@@ -50,6 +50,7 @@ resource "ctyun_private_zone" "private_zone_example" {
 ### Optional
 
 - `description` (String) 内网DNS描述，支持更新
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `proxy_pattern` (String) 可选值：zone：当前可用区不进行递归解析，record：不完全劫持，进行递归解析代理，大小写不敏感。默认值zone，支持更新。
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `tags` (Attributes Set) 标签 (see [below for nested schema](#nestedatt--tags))

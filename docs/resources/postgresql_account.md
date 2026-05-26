@@ -58,7 +58,7 @@ resource "ctyun_security_group" "sg_test" {
 // 开通样例
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -88,12 +88,12 @@ resource "ctyun_postgresql_account" "account_test" {
 
 - `instance_id` (String) MySQL实例ID
 - `name` (String) 数据库账号名称，,格式限制: 1.名称唯一；2. 以字母开头，以字母或数字结尾；3.由小写字母、数字或下划线组成；4. 长度：2~63个字符
-- `password` (String, Sensitive) 数据库账号密码，支持更新。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)
 
 ### Optional
 
 - `description` (String) 备注，支持更新
 - `is_lock` (Boolean) 判断账号是否需要锁定，取值范围：true-锁定账号，false-解锁账号。默认为false。支持更新
+- `password` (String, Sensitive) 数据库账号密码，创建时必填 。支持更新，导入时不填。由大写字母、小写字母、特殊字符、数字中三种或者三种以上组成(特殊字符：@!#$%^&*()_-=)
 - `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `schema_privilege_list` (Attributes Set) 账号需要授权的数据库列表 (see [below for nested schema](#nestedatt--schema_privilege_list))
@@ -117,3 +117,15 @@ Required:
 
 - `grant_schema` (String) 需要授权的数据库名称，支持更新
 - `privilege` (String) 授权数据库的权限，取值范围：readwrite-读写，readonly-只读，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL账号
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_account.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_postgresql_account.account_example 20d1e9aa262246bf86b2915c6364715e,myaccount,<region_id>
+```

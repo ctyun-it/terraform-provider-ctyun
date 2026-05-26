@@ -218,10 +218,7 @@ type AddUserAgentHttpHook struct {
 }
 
 func (h AddUserAgentHttpHook) BeforeRequest(_ context.Context, request *http.Request) {
-	// 不添加请求头会出现被风控的现象
-	if request.Header.Get("User-Agent") == "" {
-		request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
-	}
+
 }
 
 func (h AddUserAgentHttpHook) AfterResponse(_ context.Context, _ *http.Response) {

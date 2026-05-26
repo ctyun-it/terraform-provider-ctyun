@@ -210,7 +210,7 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, false),
+				Default: defaults2.AcquireFromGlobalString(common.ExtraAzName, true),
 			},
 
 			"provisioned_iops": schema.Int64Attribute{

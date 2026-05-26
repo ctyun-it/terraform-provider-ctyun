@@ -94,5 +94,5 @@ type AmqpExchangeQueryV3ReturnObjDataItemsResponse struct {
 	Vhost       string `json:"vhost"` /*  虚拟机名称  */
 	Argument    struct {
 		XDelayedType string `json:"x-delayed-type"`
-	} `json:"argument"` /*  交换器参数  */
+	} `json:"arguments"` /*  交换器参数  */
 }

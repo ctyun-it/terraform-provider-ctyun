@@ -9,12 +9,14 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -67,13 +69,15 @@ func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, resp
 		MarkdownDescription: utils.FormatDesc("管理KAFKA的访问控制", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/11078051"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "资源唯一标识符",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "资源唯一标识符",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "策略名称，规则如下：\n以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。\n长度3-64。\n名称不可重复。",
+				Description: "策略名称，规则如下：以英文字母、数字、下划线开头，且只能由英文字母、数字、句点、中划线、下划线组成。长度3-64。名称不可重复。",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(3, 64),
 					stringvalidator.RegexMatches(
@@ -87,7 +91,7 @@ func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "实例ID。",
+				Description: "实例ID",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -121,34 +125,41 @@ func (c *ctyunKafkaAcl) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"rules": schema.SetNestedAttribute{
 				Description: "ACL规则",
 				Required:    true,
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.Set{
+					setplanmodifier.RequiresReplace(),
+				},
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"permission": schema.StringAttribute{
 							Required:    true,
-							Description: "权限，ALLOW:允许，DENY:拒绝，默认：ALLOW 支持更新",
+							Description: "权限，ALLOW:允许，DENY:拒绝",
 							Validators: []validator.String{
 								stringvalidator.OneOf("ALLOW", "DENY"),
 							},
 						},
 						"user_name": schema.StringAttribute{
 							Required:    true,
-							Description: "用户名，必须是已经集群中创建了的用户，支持更新",
-							Validators: []validator.String{
-								stringvalidator.UTF8LengthAtLeast(1),
-							},
-						},
-						"ip": schema.StringAttribute{
-							Optional:    true,
-							Description: "ip或网段，多个用半角分号分开，默认*，表示所有ip 支持更新",
+							Description: "用户名，必须是已经集群中创建了的用户",
 							Validators: []validator.String{
 								stringvalidator.UTF8LengthAtLeast(1),
 							},
 						},
 						"operation": schema.StringAttribute{
 							Required:    true,
-							Description: "操作，READ:消费，WRITE:生产 支持更新",
+							Description: "操作，READ:消费，WRITE:生产",
 							Validators: []validator.String{
 								stringvalidator.OneOf("READ", "WRITE"),
+							},
+						},
+						"ip": schema.StringAttribute{
+							Optional:    true,
+							Computed:    true,
+							Description: "ip或网段，多个用半角分号分开，默认*，表示所有ip",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
 							},
 						},
 					},
@@ -235,7 +246,6 @@ func (c *ctyunKafkaAcl) Update(ctx context.Context, request resource.UpdateReque
 	if err != nil {
 		return
 	}
-	state.UseNewTopic = plan.UseNewTopic
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
@@ -326,9 +336,6 @@ func (c *ctyunKafkaAcl) ImportState(ctx context.Context, request resource.Import
 
 // calcRule 将types.Set类型的Rule转换为[]CtyunKafkaAclRule
 func (c *ctyunKafkaAcl) calcRules(ctx context.Context, plan *CtyunKafkaAclConfig) (err error) {
-	if plan.Rules.IsUnknown() || plan.Rules.IsNull() {
-		return
-	}
 	plan.rules = []CtyunKafkaAclRule{}
 	diags := plan.Rules.ElementsAs(ctx, &plan.rules, false)
 	if diags.HasError() {
@@ -347,16 +354,14 @@ func (c *ctyunKafkaAcl) create(ctx context.Context, plan CtyunKafkaAclConfig) (e
 		UseNewTopic: map[bool]string{true: "1", false: "2"}[plan.UseNewTopic.ValueBool()],
 	}
 
-	if len(plan.rules) > 0 {
-		params.Rules = make([]*ctgkafka.CtgkafkaAclStrategyCreateRulesRequest, 0, len(plan.rules))
-		for _, rule := range plan.rules {
-			params.Rules = append(params.Rules, &ctgkafka.CtgkafkaAclStrategyCreateRulesRequest{
-				Permission: rule.Permission.ValueString(),
-				UserName:   rule.UserName.ValueString(),
-				Ip:         rule.Ip.ValueString(),
-				Operation:  rule.Operation.ValueString(),
-			})
-		}
+	params.Rules = make([]*ctgkafka.CtgkafkaAclStrategyCreateRulesRequest, 0, len(plan.rules))
+	for _, rule := range plan.rules {
+		params.Rules = append(params.Rules, &ctgkafka.CtgkafkaAclStrategyCreateRulesRequest{
+			Permission: rule.Permission.ValueString(),
+			UserName:   rule.UserName.ValueString(),
+			Ip:         rule.Ip.ValueString(),
+			Operation:  rule.Operation.ValueString(),
+		})
 	}
 
 	resp, err := c.meta.Apis.SdkKafkaApis.CtgkafkaAclStrategyCreateApi.Do(ctx, c.meta.SdkCredential, params)
@@ -434,6 +439,7 @@ func (c *ctyunKafkaAcl) getAndMerge(ctx context.Context, plan *CtyunKafkaAclConf
 
 	// 设置基本属性
 	plan.Id = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.Name.ValueString()))
+	plan.UseNewTopic = types.BoolValue(resp.ReturnObj.UseNewTopic == 1)
 	if resp.ReturnObj.TopicNum > 0 {
 		// 设置topics
 		topicsSet, diags := types.SetValueFrom(ctx, types.StringType, resp.ReturnObj.Topics)
@@ -450,16 +456,10 @@ func (c *ctyunKafkaAcl) getAndMerge(ctx context.Context, plan *CtyunKafkaAclConf
 	if len(resp.ReturnObj.Rules) > 0 {
 		rules := make([]CtyunKafkaAclRule, 0, len(resp.ReturnObj.Rules))
 		for _, rule := range resp.ReturnObj.Rules {
-			// 处理可选字段 ip，如果为空则设置为 Null
-			ipValue := types.StringNull()
-			if rule.Ip != "" && rule.Ip != "*" {
-				ipValue = types.StringValue(rule.Ip)
-			}
-
 			rules = append(rules, CtyunKafkaAclRule{
 				Permission: types.StringValue(rule.Permission),
 				UserName:   types.StringValue(rule.UserName),
-				Ip:         ipValue,
+				Ip:         types.StringValue(rule.Ip),
 				Operation:  types.StringValue(rule.Operation),
 			})
 		}

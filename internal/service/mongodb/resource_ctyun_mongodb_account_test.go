@@ -110,13 +110,13 @@ func TestAccMongodbAccount_basicImportState(t *testing.T) {
 					}
 					// 构造导入ID: "id,region_id"
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description", "project_id", "database", "roles"},
+				ImportStateVerifyIgnore: []string{"password", "project_id", "database", "roles"},
 			},
 			// 3. 资源导入测试
 			{
@@ -129,12 +129,12 @@ func TestAccMongodbAccount_basicImportState(t *testing.T) {
 					}
 					// 构造导入ID: "id,region_id"
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"password", "description", "project_id", "roles"},
+				ImportStateVerifyIgnore: []string{"password", "project_id", "roles"},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, instance_id, name, database, privileges, password),

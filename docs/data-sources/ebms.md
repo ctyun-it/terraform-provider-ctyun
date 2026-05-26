@@ -76,14 +76,11 @@ Read-Only:
 <a id="nestedatt--instances--network_card_list"></a>
 ### Nested Schema for `instances.network_card_list`
 
-Required:
-
-- `master` (Boolean) 是否主节点(True代表主节点)
-- `subnet_id` (String) 子网id
-
-Optional:
+Read-Only:
 
 - `fixed_ip` (String) 内网IPv4地址
 - `interface_id` (String) 物理机网卡id
 - `ipv6` (String) 内网IPv6地址
+- `master` (Boolean) 是否主节点(True代表主节点)
 - `port_uuid` (String) 弹性网卡id
+- `subnet_id` (String) 子网id

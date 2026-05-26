@@ -37,27 +37,27 @@ resource "ctyun_kafka_topic" "tbidgqvfbs" {
 
 ### Required
 
-- `instance_id` (String) 实例ID。
+- `instance_id` (String) 实例ID
 - `name` (String) 主题名称，英文字母、数字、下划线开头，且只能由英文字母、数字、中划线、下划线组成，长度为3-64个字符。
 - `partition_num` (Number) 分区数，取值范围[1, min(100, 实例剩余分区数量)]，实例剩余分区数量=实例分区上限-所有主题分区数之和。支持更新
 
 ### Optional
 
-- `cleanup_policy` (String) 日志保留策略。<br><li>delete<br><li>compact<br><li>默认值：delete。支持更新
-- `description` (String) 主题描述，规则如下：<br><li>不能以+,-,@,= 特殊字符开头。 <br><li>长度不能大于200。支持更新
+- `cleanup_policy` (String) 日志保留策略，支持delete和compact，默认delete，支持更新
+- `description` (String) 描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新
 - `factor_num` (Number) 副本数，取值范围[1, 3]，单机版默认值1，集群版默认值3。
-- `local_retention_ms` (Number) 本地保留时长，单位ms。 取值范围[180000, 315360000000] 支持更新
+- `local_retention_ms` (Number) 本地保留时长，单位ms。取值范围[180000, 315360000000]，支持更新
 - `max_message` (Number) 最大消息大小，单位字节，取值范围[1, 10485760]， 默认值1048588。支持更新
-- `min_replicas` (Number) 最小同步副本数，需小于等于factorNum，单机版默认值1，集群版默认值min(2, factorNum)。支持更新
-- `need_flush` (Boolean) 是否同步刷盘。<br><li>true：是<br><li>false：否<br><li>默认值false 支持更新
+- `min_replicas` (Number) 最小同步副本数，需小于等于factor_num，单机版默认值1，集群版默认值min(2, factor_num)。支持更新
+- `need_flush` (Boolean) 是否同步刷盘，默认值false，支持更新
 - `partition_capacity` (Number) 分区容量限制，单位GB，取值-1或范围[1, 100]。-1表示无限制，默认值-1。支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
-- `remote_storage_enable` (Boolean) 是否开启对象存储。<br><li>true：是<br><li>false：否<br><li>默认值false 支持更新
+- `remote_storage_enable` (Boolean) 是否开启对象存储，默认false，支持更新
 - `retention_time` (Number) 消息保留时长，单位毫秒，取值-1或范围[36000, 315360000000]，单位毫秒，-1表示永久保留。 默认值259200000。支持更新
-- `segment_bytes` (Number) 分片大小，单位byte。 取值范围[268435456, 10737418240]，默认值：1073741824 支持更新
-- `segment_ms` (Number) 日志滚动时间，单位ms。 取值范围[86400000, 7776000000]，默认值：259200000 支持更新
-- `timestamp_type` (String) 消息时间戳类型。<br><li>CreateTime<br><li>LogAppendTime<br><li>默认值CreateTime 支持更新
-- `unclean_leader_election_enable` (Boolean) 是否允许不同步的副本参与leader选举。<br><li>false<br><li>true<br><li>默认值：false。支持更新
+- `segment_bytes` (Number) 分片大小，单位byte。取值范围[268435456, 10737418240]，默认值：1073741824，支持更新
+- `segment_ms` (Number) 日志滚动时间，单位ms。取值范围[86400000, 7776000000]，默认值：259200000，支持更新
+- `timestamp_type` (String) 消息时间戳类型。支持CreateTime和LogAppendTime，默认值CreateTime，支持更新
+- `unclean_leader_election_enable` (Boolean) 是否允许不同步的副本参与leader选举，默认false，支持更新
 
 ### Read-Only
 
@@ -97,3 +97,15 @@ Read-Only:
 - `is_leader` (Boolean) 是否是主副本
 - `lag` (Number) 该副本当前落后hw的消息数
 - `size` (Number) 副本消息大小，单位字节
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入kafka主题
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_kafka_topic.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_kafka_topic.kafka_topic_example instance-123456,kafka-topic-test,region-11111111
+```

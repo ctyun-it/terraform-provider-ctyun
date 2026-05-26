@@ -2,8 +2,9 @@ package ctvpc
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtvpcCreatePrivateZoneApi
@@ -53,6 +54,7 @@ type CtvpcCreatePrivateZoneRequest struct {
 	ProxyPattern *string `json:"proxyPattern,omitempty"` /*  zone：当前可用区不进行递归解析。 record：不完全劫持，进行递归解析代理, 大小写不敏感  */
 	TTL          int32   `json:"TTL"`                    /*  zone ttl, 单位秒。default is 300，大于等于300，小于等于2147483647  */
 	Description  *string `json:"description,omitempty"`  /*  zone描述，长度不超过256个字符  */
+	ProjectID    *string `json:"projectID,omitempty"`
 }
 
 type CtvpcCreatePrivateZoneResponse struct {

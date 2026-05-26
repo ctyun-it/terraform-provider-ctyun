@@ -78,8 +78,8 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["group_name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["group_name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
@@ -96,8 +96,8 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["group_name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["group_name"],
 					), nil
 				},
 				ImportStateVerify:       true,

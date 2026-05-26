@@ -102,7 +102,7 @@ func (c *ctyunRedisSpecs) Schema(_ context.Context, _ datasource.SchemaRequest, 
 						},
 						"series_name": schema.StringAttribute{
 							Computed:    true,
-							Description: "状series_name",
+							Description: "产品系列名称",
 						},
 						"series_id": schema.Int64Attribute{
 							Computed:    true,

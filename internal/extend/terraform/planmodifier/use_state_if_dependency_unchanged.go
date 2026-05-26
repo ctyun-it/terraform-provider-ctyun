@@ -58,7 +58,72 @@ func (c useState) PlanModifyString(ctx context.Context, req planmodifier.StringR
 func UseListStateIfDependencyUnchanged(dependency path.Path) planmodifier.List {
 	return &useState{dependency: dependency}
 }
+
 func (c useState) PlanModifyList(ctx context.Context, req planmodifier.ListRequest, resp *planmodifier.ListResponse) {
+	if req.StateValue.IsNull() {
+		return
+	}
+
+	if !req.PlanValue.IsUnknown() {
+		return
+	}
+
+	if req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	var dependencyPlan attr.Value
+	var dependencyState attr.Value
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, c.dependency, &dependencyPlan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, c.dependency, &dependencyState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if dependencyPlan != nil && dependencyState != nil && dependencyPlan.Equal(dependencyState) {
+		resp.PlanValue = req.StateValue
+	}
+}
+
+func UseSetStateIfDependencyUnchanged(dependency path.Path) planmodifier.Set {
+	return &useState{dependency: dependency}
+}
+
+func (c useState) PlanModifySet(ctx context.Context, req planmodifier.SetRequest, resp *planmodifier.SetResponse) {
+	if req.StateValue.IsNull() {
+		return
+	}
+
+	if !req.PlanValue.IsUnknown() {
+		return
+	}
+
+	if req.ConfigValue.IsUnknown() {
+		return
+	}
+
+	var dependencyPlan attr.Value
+	var dependencyState attr.Value
+	resp.Diagnostics.Append(req.Plan.GetAttribute(ctx, c.dependency, &dependencyPlan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, c.dependency, &dependencyState)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if dependencyPlan != nil && dependencyState != nil && dependencyPlan.Equal(dependencyState) {
+		resp.PlanValue = req.StateValue
+	}
+}
+
+func UseInt32StateIfDependencyUnchanged(dependency path.Path) planmodifier.Int32 {
+	return &useState{dependency: dependency}
+}
+
+func (c useState) PlanModifyInt32(ctx context.Context, req planmodifier.Int32Request, resp *planmodifier.Int32Response) {
 	if req.StateValue.IsNull() {
 		return
 	}

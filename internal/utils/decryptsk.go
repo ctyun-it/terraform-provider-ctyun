@@ -3,8 +3,12 @@ package utils
 import (
 	"bytes"
 	"crypto/cipher"
+	"encoding/base64"
 	"encoding/hex"
 	"github.com/Taoja/sm4/sm4"
+	"github.com/fernet/fernet-go"
+	"strconv"
+	"time"
 )
 
 // 加密，SM4-ECB-PKCS5Padding
@@ -109,4 +113,26 @@ func (x *ecbDecrypter) CryptBlocks(dst, src []byte) {
 		src = src[x.blockSize:]
 		dst = dst[x.blockSize:]
 	}
+}
+
+func GenerateCryptoContent(rawData string) (data string) {
+	rawKey := make([]byte, 32)
+	for i := 0; i < len(rawKey); i++ {
+		rawKey[i] = '\x00'
+	}
+	encodedKey := base64.URLEncoding.EncodeToString(rawKey)
+	// 原数据使用base64编码 + 时间戳
+	baseDate64 :=
+		strconv.Itoa(int(time.Now().Unix())) + ":" + base64.StdEncoding.EncodeToString([]byte(rawData))
+	//fmt.Println("baseDate64=", baseDate64)
+	key, _ := fernet.DecodeKeys(encodedKey)
+	tok, err := fernet.EncryptAndSign([]byte(baseDate64), key[0])
+	if err != nil {
+		panic(err)
+	}
+	//解码，验证内容是否正确
+	//msg := fernet.VerifyAndDecrypt(tok, 60*time.Second, key)
+	//fmt.Printf("decrypt data: %s\n", string(msg))
+	//fmt.Printf("token generate: %s\n", string(tok))
+	return string(tok)
 }

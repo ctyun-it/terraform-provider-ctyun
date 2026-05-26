@@ -2,11 +2,12 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
@@ -16,7 +17,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 	backupStorageType := `backup_storage_type="SSD"`
 	resourceFile := "resource_ctyun_pgsql_instance.tf"
 	cycleType := "month"
-	prodId := "Single1222"
+	prodId := 10003011
 	storageType := "SSD"
 	StorageSpace := 100
 	name := "pgsql-t-" + utils.GenerateRandomString()
@@ -31,7 +32,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 	azInfo := fmt.Sprintf(`availability_zone_info=[{"availability_zone_name":"%s", "availability_zone_count":1, "node_type":"master"}]`, azName)
 	period := fmt.Sprint(`cycle_count=1`)
 
-	updatedProdID := "Master2Slave1222"
+	updatedProdID := 10003024
 	updatedAzInfo := fmt.Sprintf(`availability_zone_info=[{"availability_zone_name":"%s", "availability_zone_count":2, "node_type":"master"}]`, azName)
 
 	resource.Test(t, resource.TestCase{
@@ -53,7 +54,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
 					func(s *terraform.State) error {
 						ds := s.RootModule().Resources[resourceName].Primary
@@ -73,7 +74,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003024)),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
 				),
 			},

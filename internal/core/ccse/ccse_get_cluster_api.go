@@ -110,4 +110,5 @@ type CcseGetClusterReturnObjResponse struct {
 	ClusterAlias         string `json:"clusterAlias"`         /*  集群显示名称  */
 	SeriesType           string `json:"seriesType"`
 	NodeScale            string `json:"nodeScale"`
+	ProjectId            string `json:"projectId"`
 }

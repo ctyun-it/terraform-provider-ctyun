@@ -1,0 +1,14 @@
+release-note:new-resource
+ctyun_flow_package
+
+release-note:new-resource
+ctyun_ipv6_bandwidth
+
+release-note:new-resource
+ctyun_ipv6_bandwidth_association
+
+release-note:new-data-source
+ctyun_flow_packages
+
+release-note:new-data-source
+ctyun_ipv6_bandwidths

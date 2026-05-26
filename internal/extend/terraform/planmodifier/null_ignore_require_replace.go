@@ -129,3 +129,34 @@ func (m nullModifierSet) PlanModifySet(ctx context.Context, req planmodifier.Set
 	}
 	resp.RequiresReplace = true
 }
+
+func NullIgnoreInt64() planmodifier.Int64 {
+	return nullModifierInt64{}
+}
+
+type nullModifierInt64 struct{}
+
+func (m nullModifierInt64) Description(_ context.Context) string {
+	return "旧值为null，忽略更新"
+}
+
+func (m nullModifierInt64) MarkdownDescription(_ context.Context) string {
+	return "旧值为null，忽略更新"
+}
+
+func (m nullModifierInt64) PlanModifyInt64(ctx context.Context, req planmodifier.Int64Request, resp *planmodifier.Int64Response) {
+	if req.State.Raw.IsNull() {
+		return
+	}
+	if req.Plan.Raw.IsNull() {
+		return
+	}
+	if req.ConfigValue.IsNull() {
+		return
+	}
+	if req.StateValue.IsNull() {
+		resp.RequiresReplace = false
+		return
+	}
+	resp.RequiresReplace = true
+}

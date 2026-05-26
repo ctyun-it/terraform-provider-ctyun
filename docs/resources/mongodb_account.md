@@ -93,12 +93,12 @@ resource "ctyun_mongodb_account" "example" {
 
 - `instance_id` (String) MongoDB实例ID
 - `name` (String) 账号名称，以字母开头，由字母、数字和下划线组成，长度2-16个字符
-- `password` (String, Sensitive) 实例密码，长度为8~26个字符，支持更新，必须包含大写字母、小写字母、数字和特殊字符~!@#%^*_=+ 支持更新
 - `roles` (Attributes List) 角色列表，支持更新 (see [below for nested schema](#nestedatt--roles))
 
 ### Optional
 
-- `database` (String) 数据库名称，默认为admin 支持更新
+- `database` (String) 数据库名称，默认为admin。支持更新
+- `password` (String, Sensitive) 实例密码，长度为8~26个字符，支持更新，导入时不填写。必须包含大写字母、小写字母、数字和特殊字符~!@#%^*_=+ 支持更新
 - `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
@@ -113,3 +113,15 @@ Required:
 
 - `db` (String) 数据库名称 支持更新
 - `role` (String) 角色，可选值：read、readWrite、readWriteAnyDatabase等，默认为readWrite 支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb账号
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_account.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_mongodb_account.mongodb_account_example ff532dfa5e3744928bcb16daf50b4b69,user_example
+```

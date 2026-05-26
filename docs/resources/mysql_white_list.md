@@ -47,7 +47,6 @@ resource "ctyun_mysql_white_list" "test" {
 
 ### Read-Only
 
-- `access_machine_type` (String, Deprecated) 废除字段
 - `create_time` (String) 创建时间，为UTC格式
 - `group_white_list_count` (Number) 白名单分组组内数量
 - `id` (String) id 唯一标识

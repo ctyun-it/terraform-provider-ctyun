@@ -4,26 +4,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
-	_ resource.Resource                = &CtyunPgsqlWhiteList{}
-	_ resource.ResourceWithConfigure   = &CtyunPgsqlWhiteList{}
-	_ resource.ResourceWithImportState = &CtyunPgsqlWhiteList{}
+	_ resource.Resource              = &CtyunPgsqlWhiteList{}
+	_ resource.ResourceWithConfigure = &CtyunPgsqlWhiteList{}
 )
 
 type CtyunPgsqlWhiteList struct {
@@ -45,42 +45,6 @@ func (c *CtyunPgsqlWhiteList) Configure(ctx context.Context, request resource.Co
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
-}
-
-func (c *CtyunPgsqlWhiteList) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],<region_id>", c.name)
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-	var config CtyunPostgresqlWhiteListConfig
-	var instanceId, regionId string
-	if strings.Count(request.ID, common.ImportSeparator) < 1 {
-		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
-		instanceId = request.ID
-	} else {
-		if err != nil {
-			return
-		}
-	}
-	if instanceId == "" {
-		err = fmt.Errorf("id不能为空")
-		return
-	}
-	if regionId == "" {
-		err = fmt.Errorf("region_id不能为空")
-		return
-	}
-	config.InstID = types.StringValue(instanceId)
-	config.RegionID = types.StringValue(regionId)
-	err = c.getAndMergePostgresqlWhiteList(ctx, &config)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunPgsqlWhiteList) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
@@ -115,21 +79,24 @@ func (c *CtyunPgsqlWhiteList) Schema(ctx context.Context, request resource.Schem
 				Description:        "企业项目ID",
 			},
 			"mode": schema.StringAttribute{
-				Required:    true,
-				Description: "修改模式，支持更新。 cover(覆盖) ， append(追加) ， delete(删除,若分组下的ip被全部删除，则会将该分组也删除，默认分组(default)则会被设置成只允许本机访问，即只有127.0.0.1这个白名单ip)",
+				Optional:    true,
+				Description: "修改模式。创建时必填，导入时可不填写。 cover(覆盖) ， append(追加) ， delete(删除),若分组下的ip被全部删除，则会将该分组也删除，默认分组(default)则会被设置成只允许本机访问，即只有127.0.0.1这个白名单ip)",
 				Validators: []validator.String{
 					stringvalidator.OneOf("cover", "append", "delete"),
 				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.NullIgnoreString(),
+				},
 			},
 			"ip_list": schema.SetAttribute{
-				Required:    true,
-				Description: "ip列表,数量限制：1-1000",
+				Optional:    true,
+				Description: "ip列表,数量限制：1-1000。创建、更新时必填，导入时可不填写",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeBetween(1, 1000),
 				},
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreSet(),
 				},
 			},
 			"ip_list_result": schema.SetAttribute{
@@ -139,6 +106,10 @@ func (c *CtyunPgsqlWhiteList) Schema(ctx context.Context, request resource.Schem
 				Validators: []validator.Set{
 					setvalidator.SizeBetween(1, 1000),
 				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "白名单id",
 			},
 		},
 	}
@@ -217,6 +188,15 @@ func (c *CtyunPgsqlWhiteList) Update(ctx context.Context, request resource.Updat
 		return
 	}
 
+	if !plan.Mode.IsUnknown() && !plan.Mode.IsNull() && state.Mode.IsNull() {
+		state.Mode = plan.Mode
+		response.Diagnostics.AddWarning("mode的更新仅写入状态文件", "在import时，状态文件中mode为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.IpList.IsUnknown() && !plan.IpList.IsNull() && state.IpList.IsNull() {
+		state.IpList = plan.IpList
+		response.Diagnostics.AddWarning("ip_list的更新仅写入状态文件", "在import时，状态文件中ip_list为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
 	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
@@ -226,6 +206,14 @@ func (c *CtyunPgsqlWhiteList) Delete(ctx context.Context, request resource.Delet
 }
 
 func (c *CtyunPgsqlWhiteList) updateWhiteListRequest(ctx context.Context, config *CtyunPostgresqlWhiteListConfig) error {
+	if config.Mode.IsNull() || config.Mode.IsUnknown() {
+		err := errors.New("创建、更新阶段mode必填！")
+		return err
+	}
+	if config.IpList.IsNull() || config.IpList.IsUnknown() {
+		err := errors.New("创建、更新阶段ip_list必填！")
+		return err
+	}
 	var ips []string
 	diags := config.IpList.ElementsAs(ctx, &ips, false)
 	if diags.HasError() {
@@ -264,6 +252,13 @@ func (c *CtyunPgsqlWhiteList) getAndMergePostgresqlWhiteList(ctx context.Context
 		return err
 	}
 	config.IpListResult = ips
+	config.ID = types.StringValue(fmt.Sprintf("%s_white_list", config.InstID.ValueString()))
+	if config.IpList.IsNull() || config.IpList.IsUnknown() {
+		config.IpList = types.SetNull(types.StringType)
+	}
+	if config.Mode.IsNull() || config.Mode.IsUnknown() {
+		config.Mode = types.StringNull()
+	}
 	return nil
 }
 
@@ -303,4 +298,5 @@ type CtyunPostgresqlWhiteListConfig struct {
 	Mode         types.String `tfsdk:"mode"`
 	IpList       types.Set    `tfsdk:"ip_list"`
 	IpListResult types.Set    `tfsdk:"ip_list_result"`
+	ID           types.String `tfsdk:"id"`
 }

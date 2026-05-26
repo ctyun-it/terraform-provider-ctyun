@@ -123,6 +123,9 @@ type Dcs2DescribeInstancesOverviewReturnObjUserInfoResponse struct {
 	ReadReplica           string                                                          `json:"readReplica,omitempty"`           /*  只读副本数  */
 	AutoScaleFlag         *bool                                                           `json:"autoScaleFlag"`                   /*  是否开启弹性伸缩  */
 	CpuArchType           string                                                          `json:"cpuArchType,omitempty"`           /*  cpu架构<li>x86<li>arm  */
+	HostType              string                                                          `json:"hostType"`
+	InstanceTypeName      string                                                          `json:"instanceTypeName"`
+	Type                  int                                                             `json:"type"`
 }
 
 type Dcs2DescribeInstancesOverviewReturnObjNodesResponse struct {

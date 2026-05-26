@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"regexp"
 	"strings"
 	"time"
@@ -93,13 +94,18 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 		MarkdownDescription: utils.FormatDesc("管理KAFKA实例", "分布式消息服务Kafka", "https://www.ctyun.cn/document/10029624/10030700"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("instance_name")),
+				},
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
@@ -316,12 +322,13 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"actual_cycle_type": schema.StringAttribute{
 				Computed:    true,
 				Description: "服务端当前实际计费类型（可能与 cycle_type 不一致，如包周期未到期时）。",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -329,8 +336,7 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.UseStateForUnknown(),
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"auto_renew_cycle_count": schema.Int32Attribute{
@@ -348,14 +354,12 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 					int32validator.Between(1, 6),
 				},
 				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreInt32(),
 				},
 			},
 			"restart": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "是否重启，默认为false",
+				Description: "是否重启",
 			},
 			"last_restart_time": schema.StringAttribute{
 				Computed:    true,
@@ -371,6 +375,9 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"expire_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
 			},
 		},
 	}
@@ -411,7 +418,6 @@ func (c *ctyunKafkaInstance) Create(ctx context.Context, request resource.Create
 	if err != nil {
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -473,7 +479,14 @@ func (c *ctyunKafkaInstance) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
-
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.AutoRenewCycleCount.IsUnknown() && !plan.AutoRenewCycleCount.IsNull() && state.AutoRenewCycleCount.IsNull() {
+		state.AutoRenewCycleCount = plan.AutoRenewCycleCount
+		response.Diagnostics.AddWarning("auto_renew_cycle_count的更新仅写入状态文件", "在import时，状态文件中auto_renew_cycle_count为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -561,7 +574,6 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 		err = fmt.Errorf("region_id不能为空")
 		return
 	}
-
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ID = types.StringValue(id)
 	// 查询远端
@@ -569,6 +581,19 @@ func (c *ctyunKafkaInstance) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	_, cycleCount, err := utils.CalculateMonth(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int32Value(cycleCount)
+	} else {
+		cfg.CycleCount = types.Int32Null()
+	}
+	cfg.CycleType = cfg.ActualCycleType
+	cfg.MasterOrderID = types.StringValue("unknown")
+
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
@@ -788,9 +813,10 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 	if len(instance.Version) >= 3 {
 		plan.EngineVersion = types.StringValue(instance.Version[:3])
 	}
+	plan.ProjectID = types.StringValue(instance.OuterProjectId)
 	plan.SpecName = types.StringValue(instance.Specifications)
 	plan.NodeNum = types.Int32Value(int32(len(instance.NodeList)))
-
+	plan.SecurityGroupID = types.StringValue(instance.SecurityGroupID)
 	plan.DiskType = types.StringValue(instance.DiskType)
 	plan.DiskSize = types.Int32Value(utils.StringToInt32Must(instance.Space))
 	plan.VpcID = types.StringValue(instance.VpcId)
@@ -805,6 +831,20 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 		plan.SaslPort = types.Int32Value(utils.StringToInt32Must(instance.NodeList[0].SaslPort))
 		plan.SslPort = types.Int32Value(utils.StringToInt32Must(instance.NodeList[0].ListenNodePort))
 		plan.HttpPort = types.Int32Value(utils.StringToInt32Must(instance.NodeList[0].HttpPort))
+		z := []string{}
+		zm := map[string]bool{}
+		for _, node := range instance.NodeList {
+			if !zm[node.AzName] {
+				z = append(z, node.AzName)
+				zm[node.AzName] = true
+			}
+		}
+		zones, diags := basetypes.NewSetValueFrom(ctx, types.StringType, z)
+		if diags.HasError() {
+			err = fmt.Errorf("未查询到可用区 %v", diags.Errors())
+			return
+		}
+		plan.ZoneList = zones
 	}
 
 	config, err := c.getInstanceConfig(ctx, *plan)
@@ -812,9 +852,6 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 		return
 	}
 	plan.RetentionHours = types.Int32Value(utils.StringToInt32Must(config["log.retention.hours"].Value))
-	if plan.ZoneList.IsNull() {
-		plan.ZoneList = types.SetNull(types.StringType)
-	}
 
 	return
 	// 下列字段没有地方获取
@@ -822,7 +859,6 @@ func (c *ctyunKafkaInstance) getAndMerge(ctx context.Context, plan *CtyunKafkaIn
 	//CycleCount
 	//AutoRenew
 	//AutoRenewCycleCount
-	//SecurityGroupID
 }
 
 func (c *ctyunKafkaInstance) checkBeforeUpdate(ctx context.Context, plan, state CtyunKafkaInstanceConfig) (err error) {
