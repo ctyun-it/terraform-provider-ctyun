@@ -86,6 +86,7 @@ type CtgkafkaTopicQueryV3ReturnObjDataResponse struct {
 	PartitionNum int32                                             `json:"partitionNum"` /*  主题分区数量。  */
 	Factor       int32                                             `json:"factor"`       /*  主题副本数。  */
 	Configs      *CtgkafkaTopicQueryV3ReturnObjDataConfigsResponse `json:"configs"`      /*  主题配置信息，Map的key为配置名称，value为配置值。  */
+	Description  *string                                           `json:"description"`
 }
 
 type CtgkafkaTopicQueryV3ReturnObjDataConfigsResponse struct {

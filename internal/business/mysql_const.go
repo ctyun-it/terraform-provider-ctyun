@@ -219,7 +219,7 @@ var MysqlBillMode = map[string]string{
 
 var MysqlBillModeRev = map[int32]string{
 	0: MonthCycleType,
-	2: YearCycleType,
+	//2: YearCycleType,
 	4: OnDemandCycleType,
 }
 

@@ -1,7 +1,7 @@
 resource "ctyun_postgresql_instance" "%[1]s" {
   cycle_type              = "%[2]s"
   flavor_name             = "%[3]s"
-  prod_id                =  "%[4]s"
+  prod_id                =  %[4]d
   storage_type           = "%[5]s"
   storage_space          =  %[6]d
   name                   = "%[7]s"

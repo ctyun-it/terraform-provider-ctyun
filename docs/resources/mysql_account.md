@@ -84,18 +84,18 @@ resource "ctyun_mysql_account" "example" {
 
 - `instance_id` (String) MySQL实例ID
 - `name` (String) 数据库账号名称
-- `password` (String, Sensitive) 数据库账号密码，支持更新。不建议使用弱密码，长度[8,20]位
 
 ### Optional
 
 - `description` (String) 备注，支持更新
+- `password` (String, Sensitive) 数据库账号的密码，创建时填写，导入时不填，支持更新。不建议使用弱密码，长度[8,20]位
 - `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `schema_privilege_list` (Attributes Set) 数据库权限配置列表，支持更新。 (see [below for nested schema](#nestedatt--schema_privilege_list))
 
 ### Read-Only
 
-- `id` (String) mysql用户id
+- `id` (String) ID
 
 <a id="nestedatt--schema_privilege_list"></a>
 ### Nested Schema for `schema_privilege_list`
@@ -104,3 +104,15 @@ Required:
 
 - `grant_schema` (String) 授权数据库名称，支持更新。
 - `privilege` (String) 数据库权限，支持更新。取值范围：read_only, ddl, dml, rw
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mysql账号
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_account.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_mysql_account.account_example 3dd1482933a243f9bd4e8ecb3cafbddb,myaccount,bb9fdb42056f11eda1610242ac110002
+```

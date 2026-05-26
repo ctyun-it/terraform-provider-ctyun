@@ -42,9 +42,21 @@ resource "ctyun_redis_instance_whitelist" "test" {
 
 ### Optional
 
-- `ip` (String) 白名单列表，可填写IP地址(如192.168.1.1)或IP段(如192.168.1.0/24)，多个IP用英文逗号隔开。当mode=delete时此参数为空 支持更新
+- `ip` (String) 白名单列表，可填写IP地址(如192.168.1.1)或IP段(如192.168.1.0/24)，多个IP用英文逗号隔开。支持更新
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) 资源唯一标识符
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入Redis实例白名单
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_redis_instance_whitelist.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_redis_instance_whitelist.test b9cc9df4e96144acb7c051262112bab4,white,<region_id>
+```

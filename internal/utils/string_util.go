@@ -38,6 +38,22 @@ func SecString(str *string) string {
 	return *str
 }
 
+// SecInt32 *int32转int32
+func SecInt32(i *int32) int32 {
+	if i == nil {
+		return 0
+	}
+	return *i
+}
+
+// SecInt64 *int64转int64
+func SecInt64(i *int64) int64 {
+	if i == nil {
+		return 0
+	}
+	return *i
+}
+
 // SecStringValue *string转types.String
 func SecStringValue(str *string) types.String {
 	if str == nil {

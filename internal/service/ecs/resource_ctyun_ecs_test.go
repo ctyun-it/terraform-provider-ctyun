@@ -43,8 +43,7 @@ func TestAccCtyunEcs(t *testing.T) {
 		`status = "stopped"
    cycle_type         = "month"
    cycle_count         = 1
-  security_group_ids     = ["%s"]
-  is_destroy_instance  = true`, dependence.securityGroupID)
+  security_group_ids     = ["%s"]`, dependence.securityGroupID)
 
 	//affinityGroupAssociationResourceName := "ctyun_ecs_affinity_group_association." + and
 
@@ -95,6 +94,7 @@ func TestAccCtyunEcs(t *testing.T) {
 					"flavor_id",
 					"master_order_id",
 					"security_group_ids",
+					"is_destroy_instance",
 				},
 			},
 			{
@@ -116,6 +116,7 @@ func TestAccCtyunEcs(t *testing.T) {
 					"flavor_id",
 					"master_order_id",
 					"security_group_ids",
+					"is_destroy_instance",
 				},
 			},
 			// 2.节省关机

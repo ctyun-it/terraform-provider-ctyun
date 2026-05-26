@@ -54,7 +54,7 @@ func (a *Dcs2EditRedisTemplateApi) Do(ctx context.Context, credential core.Crede
 type Dcs2EditRedisTemplateRequest struct {
 	RegionId string                                `json:"regionId,omitempty"` /*  资源池ID。获取方法如下：<br>方法一：通过查看附录文档<a  target="_blank" rel="noopener noreferrer" href="https://www.ctyun.cn/document/10029420/11067697">分布式缓存服务Redis资源池</a>获取资源池ID。<br>方法二：可调用  <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a> 接口获取resPoolCode字段。  */
 	Template *Dcs2EditRedisTemplateTemplateRequest `json:"template"`           /*  模板。  */
-	Params   []*Dcs2EditRedisTemplateParamsRequest `json:"params"`             /*  参数列表。  */
+	Params   []*Dcs2EditRedisTemplateParamsRequest `json:"params,omitempty"`   /*  参数列表。  */
 }
 
 type Dcs2EditRedisTemplateTemplateRequest struct {
@@ -62,7 +62,7 @@ type Dcs2EditRedisTemplateTemplateRequest struct {
 	Name        string `json:"name,omitempty"`        /*  参数名称。  */
 	Description string `json:"description,omitempty"` /*  参数描述。  */
 	CacheMode   string `json:"cacheMode,omitempty"`   /*  适合的实例架构版本，可调用  <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=15104&isNormal=1&vid=270">查询参数模板列表</a> 接口，使用Template表cacheMode字段。  */
-	SysTemplate *bool  `json:"sysTemplate"`           /*  是否系统模板。  */
+	//SysTemplate *bool  `json:"sysTemplate"`           /*  是否系统模板。  */
 }
 
 type Dcs2EditRedisTemplateParamsRequest struct {

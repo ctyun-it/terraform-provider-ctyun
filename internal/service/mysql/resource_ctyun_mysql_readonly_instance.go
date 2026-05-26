@@ -17,8 +17,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -77,6 +75,18 @@ func (c *CtyunMysqlReadOnlyInstance) ImportState(ctx context.Context, request re
 	if err != nil {
 		return
 	}
+
+	// 确保创建时间和到期时间是RFC3339的
+	_, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleCount > 0 {
+		config.CycleCount = types.Int32Value(cycleCount)
+	} else {
+		config.CycleCount = types.Int32Null()
+	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -143,9 +153,7 @@ func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resourc
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -153,17 +161,17 @@ func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resourc
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
-				Required:    true,
-				Description: "规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。",
+				Optional:    true,
+				Description: "规格名称，创建时必填，导入时不填。形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"region_id": schema.StringAttribute{
@@ -224,18 +232,36 @@ func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resourc
 			},
 			"availability_zone_name": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "可用区id，如果不填写，默认为第一个可用区",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "可读实例id",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "可读实例id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -306,6 +332,32 @@ func (c *CtyunMysqlReadOnlyInstance) Read(ctx context.Context, request resource.
 }
 
 func (c *CtyunMysqlReadOnlyInstance) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// tf文件中的
+	var plan CtyunMysqlReadOnlyInstanceConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// state中的
+	var state CtyunMysqlReadOnlyInstanceConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.FlavorName.IsUnknown() && !plan.FlavorName.IsNull() && state.FlavorName.IsNull() {
+		state.FlavorName = plan.FlavorName
+		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中flavor_name为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	return
 }
 
@@ -346,6 +398,9 @@ func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunM
 	// 根据父实例版本，确定prod id
 	plan.prodID = business.MysqlReadNodeVersionProdIdDict[plan.prodVersion]
 	// 先根据spec_name调用云主机规格接口
+	if plan.FlavorName.ValueString() == "" {
+		return fmt.Errorf("创建时规格必须填写")
+	}
 	_, err := c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
 	if err != nil {
 		return err
@@ -422,6 +477,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		InstId:          config.InstID.ValueStringPointer(),
 		Name:            config.Name.ValueString(),
 		BillMode:        business.MysqlBillMode[cycleType],
+		Period:          config.CycleCount.ValueInt32(),
 		ProdVersion:     config.prodVersion,
 		ProdId:          business.MysqlProdIdDict[config.prodID],
 		RegionId:        config.RegionID.ValueString(),
@@ -455,8 +511,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 	var azInfo mysql.AvailabilityZoneInfoRequest
 	azInfo.AvailabilityZoneCount = 1
 	azInfo.NodeType = business.MysqlNodeTypeReadNode
-	// 若 az info不为空，用户指定az
-	if !config.AvailabilityZoneName.IsNull() {
+	if config.AvailabilityZoneName.ValueString() != "" {
 		azInfo.AvailabilityZoneName = config.AvailabilityZoneName.ValueString()
 	} else {
 		// 直接放到az1上
@@ -552,8 +607,15 @@ func (c *CtyunMysqlReadOnlyInstance) getAndMerge(ctx context.Context, config *Ct
 	if err != nil {
 		return err
 	}
+	config.InstID = types.StringValue(resp.ReturnObj.ParentOuterProdInstId)
+	config.StorageType = types.StringValue(resp.ReturnObj.DiskType)
+	config.StorageSpace = types.Int32Value(resp.ReturnObj.DiskSize)
+	config.CreateTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.CreateTime))
+	config.ExpireTime = types.StringValue(utils.FromUnixToUTC(resp.ReturnObj.ExpireTime))
+	config.CycleType = types.StringValue(business.MysqlBillModeRev[resp.ReturnObj.ProdBillType])
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
 	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
+	config.AvailabilityZoneName = types.StringValue(resp.ReturnObj.MainAvailableArea)
 	return nil
 }
 
@@ -724,6 +786,8 @@ type CtyunMysqlReadOnlyInstanceConfig struct {
 	Name                 types.String `tfsdk:"name"`                   // 只读实例名称
 	AvailabilityZoneName types.String `tfsdk:"availability_zone_name"` // 可用区信息
 	ID                   types.String `tfsdk:"id"`
+	CreateTime           types.String `tfsdk:"create_time"`
+	ExpireTime           types.String `tfsdk:"expire_time"`
 	vpcID                string
 	subnetID             string
 	securityGroupID      string

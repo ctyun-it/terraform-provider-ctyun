@@ -1,5 +1,62 @@
 # Changelog
 
+## v2.2.0 - May 21, 2026
+
+### New Resources
+
+* ctyun_rocketmq_instance
+* ctyun_rocketmq_group
+* ctyun_rocketmq_topic
+* ctyun_search_instance
+* ctyun_function
+* ctyun_function_trigger
+* ctyun_function_domain
+* ctyun_function_alias
+* ctyun_function_version
+* ctyun_flow_package
+* ctyun_ipv6_bandwidth
+* ctyun_ipv6_bandwidth_association
+* ctyun_cloud_assistant_command
+* ctyun_cloud_assistant_invocation
+* ctyun_cloud_assistant_run_command
+
+### New Data Sources
+
+* ctyun_rocketmq_instances
+* ctyun_rocketmq_groups
+* ctyun_rocketmq_topics
+* ctyun_rocketmq_specs
+* ctyun_search_instances
+* ctyun_functions
+* ctyun_function_triggers
+* ctyun_function_domains
+* ctyun_function_aliases
+* ctyun_function_versions
+* ctyun_flow_packages
+* ctyun_ipv6_bandwidths
+* ctyun_cloud_assistant_commands
+* ctyun_cloud_assistant_invocation_results
+
+### Enhancements
+
+* kafka: support import
+* rabbitmq: support import
+* redis: support import
+* ccse: support import
+* iam: support import
+* mysql: support import
+* postgresql: support import
+* mongodb: support import
+* include User-Agent and custom header fields in OpenAPI requests to support tracking statistics.
+* modify the postgresql prod id attribute
+
+### Bug Fixes
+
+
+### Deprecations
+
+
+
 ## v2.1.1 - March 30, 2026
 
 ### New Resources

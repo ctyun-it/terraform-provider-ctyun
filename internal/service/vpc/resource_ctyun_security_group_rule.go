@@ -104,7 +104,7 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
-				Description: "协议类型: tcp、udp、icmp、any，当此值填写any时，range的值不能设置",
+				Description: "协议类型: tcp、udp、icmp、any，当此值填写any或icmp时，range的值不能设置",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -162,6 +162,7 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 					validator2.ConflictsWithEqualString(
 						path.MatchRoot("protocol"),
 						types.StringValue(business.SecurityGroupRuleProtocolAny),
+						types.StringValue(business.SecurityGroupRuleProtocolIcmp),
 					),
 					validator2.Range("-", 1, 65535),
 				},

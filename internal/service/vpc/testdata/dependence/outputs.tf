@@ -40,3 +40,12 @@ output "dhcp_id" {
 output "route_table_id" {
   value = ctyun_vpc_route_table.test.id
 }
+
+
+output "ipv6_bandwidth_id" {
+  value = ctyun_ipv6_bandwidth.test.id
+}
+
+output "vip_ipv6_address" {
+  value = ctyun_vip.test.ipv6_address
+}

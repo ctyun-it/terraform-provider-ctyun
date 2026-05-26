@@ -58,7 +58,7 @@ func TestAccCtyunRabbitmqVhost(t *testing.T) {
 					if name == "" || instanceId == "" || regionId == "" {
 						return "", fmt.Errorf("name, instance_id and region_id are required")
 					}
-					return fmt.Sprintf("%s,%s,%s", name, instanceId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", instanceId, name, regionId), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},
@@ -70,7 +70,7 @@ func TestAccCtyunRabbitmqVhost(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					name := ds.Attributes["name"]
 					instanceId := ds.Attributes["instance_id"]
-					return fmt.Sprintf("%s,%s", name, instanceId), nil
+					return fmt.Sprintf("%s,%s", instanceId, name), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

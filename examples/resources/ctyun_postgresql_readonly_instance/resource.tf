@@ -42,7 +42,7 @@ resource "ctyun_security_group" "sg_test" {
 }
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100

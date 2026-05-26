@@ -1,0 +1,2 @@
+release-note:enhancement
+include User-Agent and custom header fields in OpenAPI requests to support tracking statistics.

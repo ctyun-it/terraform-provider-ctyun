@@ -54,10 +54,6 @@ output "t" {
 <a id="nestedatt--instances"></a>
 ### Nested Schema for `instances`
 
-Required:
-
-- `prod_inst_id` (String) 实例ID
-
 Optional:
 
 - `used_space` (String) 已使用空间
@@ -88,6 +84,7 @@ Read-Only:
 - `prod_db_engine` (String) 数据库引擎版本
 - `prod_id` (String) 产品ID
 - `prod_inst_flag` (String) 实例标识（格式：实例ID 实例名称）
+- `prod_inst_id` (String) 实例ID
 - `prod_inst_set_name` (String) 实例对应的SET名
 - `prod_order_status` (Number) 订单状态: 0->订单正常, 1->订单冻结, 2->订单注销, 3->施工中, 4->施工失败
 - `prod_running_status` (Number) 实例运行状态: 0->运行正常, 1->重启中, 2->备份操作中, 3->恢复操作中, 4->转换ssl, 5->异常, 6->修改参数组中, 7->已冻结, 8->已注销, 9->施工中, 10->施工失败, 11->扩容中, 12->主备切换中

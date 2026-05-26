@@ -77,6 +77,7 @@ resource "ctyun_ecs" "test" {
 - `bandwidth` (Number) 带宽大小，传递时会自动创建弹性IP并绑定，单位为Mbit/s，取值范围：[1, 2000]
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年 支持更新
 - `deletion_protection` (Boolean) 是否开启实例删除保护，默认为false，按需实例支持更新
+- `demand_billing_type` (String) 自动创建的弹性IP的计费模式，当传递了bandwidth且cycle_type为on_demand时可传递，bandwidth：按带宽，upflowc：按流量
 - `fixed_ip` (String) 加入子网后的ip地址
 - `flavor_id` (String) 规格id，请用ctyun_ecs_flavors查询具体id，变更前需要先关机，支持更新。
 - `flavor_name` (String) 云主机规格名称，规格ID和规格名称两者均可使用，必填其中一个，变更前需要先关机，支持更新。

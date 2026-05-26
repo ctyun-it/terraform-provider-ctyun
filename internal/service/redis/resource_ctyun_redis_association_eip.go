@@ -55,11 +55,11 @@ func (c *ctyunRedisAssociationEip) Schema(_ context.Context, _ resource.SchemaRe
 		MarkdownDescription: utils.FormatDesc("管理Redis实例和弹性IP的绑定关系", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10132173"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-				Computed:    true,
-				Description: "ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -201,7 +201,7 @@ func (c *ctyunRedisAssociationEip) ImportState(ctx context.Context, request reso
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[eipID],[regionID]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[eip_id],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()

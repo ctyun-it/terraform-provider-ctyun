@@ -62,10 +62,10 @@ type CtecsCloudAssistantDescribeInvocationResultsResponse struct {
 }
 
 type CtecsCloudAssistantDescribeInvocationResultsReturnObjResponse struct {
-	Results    *CtecsCloudAssistantDescribeInvocationResultsReturnObjResultsResponse `json:"results"`              /*  命令执行结果集合  */
-	PageNo     int32                                                                 `json:"pageNo,omitempty"`     /*  当前页码  */
-	TotalCount int32                                                                 `json:"totalCount,omitempty"` /*  命令总个数  */
-	PageSize   int32                                                                 `json:"pageSize,omitempty"`   /*  每页行数  */
+	Results    []*CtecsCloudAssistantDescribeInvocationResultsReturnObjResultsResponse `json:"results"`              /*  命令执行结果集合  */
+	PageNo     int32                                                                   `json:"pageNo,omitempty"`     /*  当前页码  */
+	TotalCount int32                                                                   `json:"totalCount,omitempty"` /*  命令总个数  */
+	PageSize   int32                                                                   `json:"pageSize,omitempty"`   /*  每页行数  */
 }
 
 type CtecsCloudAssistantDescribeInvocationResultsReturnObjResultsResponse struct {

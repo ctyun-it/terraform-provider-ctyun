@@ -143,31 +143,27 @@ func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"interface_id": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "物理机网卡id",
 									},
 									"port_uuid": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "弹性网卡id",
 									},
 									"fixed_ip": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "内网IPv4地址",
 									},
 									"master": schema.BoolAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "是否主节点(True代表主节点)",
 									},
 									"ipv6": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "内网IPv6地址",
 									},
 									"subnet_id": schema.StringAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "子网id",
 									},
 								},

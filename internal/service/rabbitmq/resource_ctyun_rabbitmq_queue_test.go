@@ -147,7 +147,7 @@ func TestAccCtyunRabbitmqQueueAll(t *testing.T) {
 					if name == "" || vhost == "" || instanceId == "" || regionId == "" {
 						return "", fmt.Errorf("name, vhost, instance_id and region_id are required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", name, vhost, instanceId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", instanceId, vhost, name, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -157,6 +157,7 @@ func TestAccCtyunRabbitmqQueueAll(t *testing.T) {
 					"x_max_length",
 					"x_message_ttl",
 					"x_max_priority",
+					"x_max_length_bytes",
 					"x_overflow",
 					"x_queue_mode",
 				},
@@ -168,7 +169,7 @@ func TestAccCtyunRabbitmqQueueAll(t *testing.T) {
 					name := ds.Attributes["name"]
 					vhost := ds.Attributes["vhost"]
 					instanceId := ds.Attributes["instance_id"]
-					return fmt.Sprintf("%s,%s,%s", name, vhost, instanceId), nil
+					return fmt.Sprintf("%s,%s,%s", instanceId, vhost, name), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

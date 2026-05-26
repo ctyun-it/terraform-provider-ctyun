@@ -9,6 +9,7 @@ import (
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -31,8 +32,11 @@ var (
 )
 
 type ctyunCcseNodeAssociation struct {
-	meta *common.CtyunMetadata
-	name string
+	meta        *common.CtyunMetadata
+	name        string
+	ecsService  *business.EcsService
+	ebmService  *business.EbmService
+	ccseService *business.CcseService
 }
 
 func NewCtyunCcseNodeAssociation() resource.Resource {
@@ -123,7 +127,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Description: "部署后执行自定义脚本，base64编码",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -133,7 +137,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Description: "部署前执行自定义脚本，base64编码",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -160,8 +164,8 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "用户密码，需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头",
+				Optional:    true,
+				Description: "用户密码，纳管时必填，导入时不填。需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头",
 				Validators: []validator.String{
 					stringvalidator.Any(
 						stringvalidator.All(
@@ -182,7 +186,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 					),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Sensitive: true,
 			},
@@ -274,6 +278,30 @@ func (c *ctyunCcseNodeAssociation) Read(ctx context.Context, request resource.Re
 }
 
 func (c *ctyunCcseNodeAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	// tf文件中的
+	var plan CtyunCcseNodeAssociationConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// state中的
+	var state CtyunCcseNodeAssociationConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	if !plan.VisibilityHostScript.IsUnknown() && !plan.VisibilityHostScript.IsNull() && state.VisibilityHostScript.IsNull() {
+		state.VisibilityHostScript = plan.VisibilityHostScript
+		response.Diagnostics.AddWarning("visibility_host_script的更新仅写入状态文件", "在import时，状态文件中visibility_host_script为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.VisibilityPostHostScript.IsUnknown() && !plan.VisibilityPostHostScript.IsNull() && state.VisibilityPostHostScript.IsNull() {
+		state.VisibilityPostHostScript = plan.VisibilityPostHostScript
+		response.Diagnostics.AddWarning("visibility_post_host_script的更新仅写入状态文件", "在import时，状态文件中visibility_post_host_script为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Password.IsUnknown() && !plan.Password.IsNull() && state.Password.IsNull() {
+		state.Password = plan.Password
+		response.Diagnostics.AddWarning("password的更新仅写入状态文件", "在import时，状态文件中password为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	return
 }
 
@@ -306,6 +334,9 @@ func (c *ctyunCcseNodeAssociation) Configure(_ context.Context, request resource
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.ecsService = business.NewEcsService(meta)
+	c.ebmService = business.NewEbmService(meta)
+	c.ccseService = business.NewCcseService(meta)
 }
 
 func (c *ctyunCcseNodeAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
@@ -510,7 +541,26 @@ func (c *ctyunCcseNodeAssociation) getAndMerge(ctx context.Context, plan *CtyunC
 	plan.IsEvict = types.BoolValue(map[int32]bool{1: true, 0: false}[node.IsEvict])
 	plan.NodeType = types.StringValue(map[int32]string{1: "master", 0: "slave"}[node.NodeType])
 	plan.NodeStatus = types.StringValue(node.NodeStatus)
+	plan.AzName = types.StringValue(node.ZoneCode)
+	plan.InstanceID = types.StringValue(node.EcsId)
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.ClusterID.ValueString(), plan.Name.ValueString()))
+
+	var imageID string
+	if strings.HasPrefix(node.EcsId, "ss-") {
+		imageID, err = c.ebmService.GetEbmImageID(ctx, node.EcsId, plan.RegionID.ValueString(), node.ZoneCode)
+		if err != nil {
+			return
+		}
+		plan.MirrorID = types.StringValue(imageID)
+		plan.InstanceType = types.StringValue("ebm")
+	} else {
+		imageID, err = c.ecsService.GetEcsImageID(ctx, node.EcsId, plan.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+		plan.MirrorID = types.StringValue(imageID)
+		plan.InstanceType = types.StringValue("ecs")
+	}
 	return
 }
 

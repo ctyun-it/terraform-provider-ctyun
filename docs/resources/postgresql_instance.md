@@ -57,7 +57,7 @@ resource "ctyun_security_group" "sg_test" {
 // 开通样例
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -74,7 +74,7 @@ resource "ctyun_postgresql_instance" "test" {
 // 升配pgsql--对磁盘扩容(在升配主storage时候，确保备用磁盘空间>主磁盘空间)
 resource "ctyun_postgresql_instance" "test1" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 120
@@ -91,7 +91,7 @@ resource "ctyun_postgresql_instance" "test1" {
 // 升配规格 2C4G->2C8G
 resource "ctyun_postgresql_instance" "test2" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -107,7 +107,7 @@ resource "ctyun_postgresql_instance" "test2" {
 // 升配规格 单节点->1主2备
 resource "ctyun_postgresql_instance" "test3" {
   cycle_type          = "on_demand"
-  prod_id             = "MasterSlave1222"
+  prod_id             = 10003012
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -127,9 +127,8 @@ resource "ctyun_postgresql_instance" "test3" {
 ### Required
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
-- `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_postgresql_specs查询支持的规格，支持更新。
 - `name` (String) 实例名称（长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符）。支持更新，但不支持更新为重名实例名称
-- `prod_id` (String) 产品ID，支持更新。取值范围包括：Single1222-（单实例12.22版本）, MasterSlave1222（一主一备12.22版本）, Single1419（单实例14.19版本）, MasterSlave1419（一主一备14.19版本）, Single1322（单实例13.22版本）, MasterSlave1322（一主一备13.22版本）, ReadOnly1222（只读实例12.22版本）, ReadOnly1322（只读实例13.22版本）, ReadOnly1419（只读实例14.19版本）, Single1514（单实例15.14版本）, MasterSlave1514（一主一备15.14版本）, ReadOnly1514（只读实例15.14版本）, Master2Slave1222（一主两备12.22版本）, Master2Slave1419（一主两备14.19版本）, Master2Slave1322（一主两备13.22版本）, Master2Slave1514（一主两备15.14版本）, Single1610（单实例16.10版本）, MasterSlave1610（一主一备16.10版本）, Master2Slave1610（一主两备16.10版本）, ReadOnly1610（只读实例16.10版本）。注：扩容过程中，不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(prod_id)扩容同时进行
+- `prod_id` (Number) 产品ID，支持更新。取值可以根据data.ctyun_postgresql_specs查询
 - `security_group_id` (String) 安全组Id，支持多个安全组，用英文逗号分割(,)。支持更新，最少得有一个安全组
 - `storage_space` (Number) 主存储空间(单位:G，范围100-32768)。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行
 - `storage_type` (String) 主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2
@@ -138,14 +137,15 @@ resource "ctyun_postgresql_instance" "test3" {
 
 ### Optional
 
-- `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
+- `auto_renew` (Boolean) 是否自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
 - `availability_zone_info` (Attributes List) pgsql实例节点指定可用区字段，选填，若未填写根据实例节点数分配至各个az。示例：若创建一个一主两备的pgsql，对应的availability_zone_info为：[{availabilityZoneName:cn-huadong1-jsnj1A-public-ctcloud,availabilityZoneCount:1,nodeType:master},{availabilityZoneName:cn-huadong1-jsnj1A-public-ctcloud,availabilityZoneCount:1,nodeType:slave},{availabilityZoneName:cn-huadong1-jsnj1A-public-ctcloud,availabilityZoneCount:1,nodeType:slave}] (see [below for nested schema](#nestedatt--availability_zone_info))
 - `backup_storage_space` (Number) 备份存储空间大小。支持更新，主存储空间(storage_space)若备份存储空间(backup_storage_space)同时更新，先更新backup_storage_space。
-- `backup_storage_type` (String) 备份存储类型: OS=对象存储, SSD=超高IO, SATA=普通IO, SAS=高IO。注：当填写OS时，无需填写backup_storage_size
+- `backup_storage_type` (String) 备份存储类型: OS=对象存储, SSD=超高IO, SATA=普通IO, SAS=高IO。注：当填写OS时，无需填写backup_storage_size。当选择OS时，需要注意当前资源池是否支持对象存储
 - `case_sensitive` (Boolean) 是否区分大小写: true=区分, false=不区分。默认不区分
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
+- `flavor_name` (String) 规格名称，创建时必填，导入时可不填。形如c7.2xlarge.4，可从data.ctyun_postgresql_specs查询支持的规格，支持更新。
 - `is_mgr` (Boolean) 是否开启MRG，默认false
-- `password` (String, Sensitive) 实例密码，支持更新。8-32位由大写字母、小写字母、数字、特殊字符中的任意三种组成 特殊字符为!@#$%^&*()_+-=
+- `password` (String, Sensitive) 实例密码，支持更新，导入时不填。8-32位由大写字母、小写字母、数字、特殊字符中的任意三种组成 特殊字符为!@#$%^&*()_+-=
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID。若环境变量为空，则默认为0
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `running_control` (String) 控制是否暂停，启用和重启实例。支持更新，取值范围：stop, start, restart
@@ -155,10 +155,10 @@ resource "ctyun_postgresql_instance" "test3" {
 
 - `alive` (Number) 实例是否存活,0:存活，-1:异常
 - `create_time` (String) 创建时间，为UTC格式
-- `disk_rated` (Number) 磁盘使用率
+- `disk_rated` (Number) 磁盘使用率， 该字段已废弃
 - `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) postgresql实例id
-- `master_order_id` (String) 订单id
+- `master_order_id` (String) 主订单id
 - `outer_prod_inst_id` (String) 对外的实例ID，对应PaaS平台
 - `prod_db_engine` (String) 数据库实例引擎
 - `prod_order_status` (Number) 订单状态，0：正常，1：冻结，2：删除，3：操作中，4：失败,2005:扩容中
@@ -176,3 +176,15 @@ Required:
 - `availability_zone_count` (Number) 资源池可用区总数，支持更新。
 - `availability_zone_name` (String) 资源池可用区名称，支持更新。可以根据data.ctyun_zones查询
 - `node_type` (String) 节点类型(master/slave)，支持更新。
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_postgresql_instance.instance_example 20d1e9aa262246bf86b2915c6364715e,<region_id>
+```

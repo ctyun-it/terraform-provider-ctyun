@@ -5,23 +5,24 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"regexp"
-	"strings"
 )
 
 var (
@@ -94,9 +95,9 @@ func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaReq
 			},
 			// 实现一个validator方法
 			"password": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Sensitive:   true,
-				Description: "实例密码，长度为8~26个字符，支持更新，必须包含大写字母、小写字母、数字和特殊字符~!@#%^*_=+ 支持更新",
+				Description: "实例密码，长度为8~26个字符，支持更新，导入时不填写。必须包含大写字母、小写字母、数字和特殊字符~!@#%^*_=+ 支持更新",
 				Validators: []validator.String{
 					validator2.DBPassword(
 						8,
@@ -106,12 +107,13 @@ func (c *CtyunMongodbAccount) Schema(ctx context.Context, req resource.SchemaReq
 						"~!@#%^*_=+",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.NullIgnoreString(),
+				},
 			},
 			"database": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
-				Description: "数据库名称，默认为admin 支持更新",
-				Default:     stringdefault.StaticString("admin"),
+				Description: "数据库名称，默认为admin。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -275,7 +277,7 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -283,12 +285,12 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 	var regionID, instID, name string
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instID)
+		err = terraform_extend.Split(request.ID, &instID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instID, &regionID)
+		err = terraform_extend.Split(request.ID, &instID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -314,7 +316,6 @@ func (c *CtyunMongodbAccount) ImportState(ctx context.Context, request resource.
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
-
 }
 func (c *CtyunMongodbAccount) create(ctx context.Context, plan MongodbAccountConfig) (err error) {
 	// 创建账号权限列表
@@ -341,6 +342,9 @@ func (c *CtyunMongodbAccount) create(ctx context.Context, plan MongodbAccountCon
 	// 只有当database字段被设置时才添加到请求中
 	if !plan.Database.IsNull() && !plan.Database.IsUnknown() {
 		createReq.DatabaseName = plan.Database.ValueStringPointer()
+	} else {
+		databaseName := "admin"
+		createReq.DatabaseName = &databaseName
 	}
 
 	headers := &mongodb.MongodbCreateAccountRequestHeaders{
@@ -425,7 +429,12 @@ func (c *CtyunMongodbAccount) updateAccountPassword(ctx context.Context, plan *M
 	updatePasswordReq := &mongodb.MongodbUpdateAccountPasswordRequest{
 		AccountName:     plan.Name.ValueString(),
 		AccountPassword: encodedPassword,
-		Database:        plan.Database.ValueString(),
+	}
+
+	if plan.Database.IsNull() || plan.Database.IsUnknown() {
+		updatePasswordReq.Database = "admin"
+	} else {
+		updatePasswordReq.Database = plan.Database.ValueString()
 	}
 
 	headers := &mongodb.MongodbUpdateAccountPasswordRequestHeaders{
@@ -471,6 +480,9 @@ func (c *CtyunMongodbAccount) updateAccountPermission(ctx context.Context, plan 
 	// 只有当database字段被设置时才添加到请求中
 	if !plan.Database.IsNull() && !plan.Database.IsUnknown() {
 		modifyPermissionReq.DatabaseName = plan.Database.ValueStringPointer()
+	} else {
+		databaseName := "admin"
+		modifyPermissionReq.DatabaseName = &databaseName
 	}
 
 	headers := &mongodb.MongodbModifyAccountPermissionRequestHeaders{

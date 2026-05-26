@@ -185,8 +185,12 @@ func (c *ctyunKeypair) Delete(ctx context.Context, request resource.DeleteReques
 		RegionID:    state.RegionId.ValueString(),
 		KeyPairName: state.Name.ValueString(),
 	}
-	_, err := c.meta.Apis.SdkCtEcsApis.CtecsDeleteKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
+	resp, err := c.meta.Apis.SdkCtEcsApis.CtecsDeleteKeypairV41Api.Do(ctx, c.meta.SdkCredential, &params)
 	if err != nil {
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}

@@ -37,3 +37,29 @@ func (c CcseService) GetCcseInfo(ctx context.Context, id, regionID string) (inst
 	instance = resp.ReturnObj
 	return
 }
+
+func (c CcseService) GetCcseDefaultPool(ctx context.Context, clusterID, regionID string) (pool *ccse.CcseListNodePoolsReturnObjRecordsResponse, err error) {
+	return c.GetCcseNodePoolByName(ctx, clusterID, regionID, "default")
+}
+func (c CcseService) GetCcseNodePoolByName(ctx context.Context, clusterID, regionID, poolName string) (pool *ccse.CcseListNodePoolsReturnObjRecordsResponse, err error) {
+	params := &ccse.CcseListNodePoolsRequest{
+		RegionId:     regionID,
+		ClusterId:    clusterID,
+		NodePoolName: poolName,
+	}
+	resp, err := c.meta.Apis.SdkCcseApis.CcseListNodePoolsApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		if resp.Error == common.OpenapiCCSENotExist {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
+		return
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Records) == 0 {
+		err = common.InvalidReturnObjError
+		return
+	}
+	return resp.ReturnObj.Records[0], nil
+}

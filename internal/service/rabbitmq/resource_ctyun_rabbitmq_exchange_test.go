@@ -60,8 +60,7 @@ func TestAccCtyunRabbitmqExchange(t *testing.T) {
 					name1 := ds.Attributes["name"]
 					vhost := ds.Attributes["vhost"]
 					instanceID := ds.Attributes["instance_id"]
-					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s,%s,%s", name1, vhost, instanceID, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", instanceID, vhost, name1), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"internal",
@@ -124,7 +123,7 @@ func TestAccCtyunRabbitmqExchangeAll(t *testing.T) {
 					if name == "" || vhost == "" || instanceId == "" || regionId == "" {
 						return "", fmt.Errorf("name, vhost, instance_id and region_id are required")
 					}
-					return fmt.Sprintf("%s,%s,%s,%s", name, vhost, instanceId, regionId), nil
+					return fmt.Sprintf("%s,%s,%s,%s", instanceId, vhost, name, regionId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

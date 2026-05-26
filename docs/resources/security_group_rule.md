@@ -69,7 +69,7 @@ resource "ctyun_security_group_rule" "security_group_rule_egress_any" {
 - `action` (String) 拒绝策略，accept：允许，drop：拒绝
 - `direction` (String) 规则方向，egress：出方向，ingress：入方向
 - `ether_type` (String) IP类型：ipv4、ipv6
-- `protocol` (String) 协议类型: tcp、udp、icmp、any，当此值填写any时，range的值不能设置
+- `protocol` (String) 协议类型: tcp、udp、icmp、any，当此值填写any或icmp时，range的值不能设置
 - `security_group_id` (String) 安全组id
 
 ### Optional

@@ -30,6 +30,8 @@ func (this *AmqpInstancesQueryApi) Do(ctx context.Context, credential ctyunsdk.C
 	}
 	builder.AddParam("pageNum", fmt.Sprintf("%d", req.PageNum))
 	builder.AddParam("pageSize", fmt.Sprintf("%d", req.PageSize))
+	builder.AddParam("prodInstId", req.ProdInstId)
+	builder.AddParam("clusterName", req.ClusterName)
 	builder.AddHeader("regionId", req.RegionId)
 	resp, err := this.client.RequestToEndpoint(ctx, EndpointName, builder)
 	if err != nil {
@@ -44,9 +46,11 @@ func (this *AmqpInstancesQueryApi) Do(ctx context.Context, credential ctyunsdk.C
 }
 
 type AmqpInstancesQueryRequest struct {
-	RegionId string `json:"regionId"`
-	PageNum  int32  `json:"pageNum"`
-	PageSize int32  `json:"pageSize"`
+	RegionId    string `json:"regionId"`
+	PageNum     int32  `json:"pageNum"`
+	PageSize    int32  `json:"pageSize"`
+	ProdInstId  string `json:"prodInstId"`
+	ClusterName string `json:"clusterName"`
 }
 
 type AmqpInstancesQueryResponse struct {
@@ -61,17 +65,21 @@ type AmqpInstancesQueryResponseReturnObj struct {
 }
 
 type AmqpInstancesQueryResponseReturnObjData struct {
-	Cluster       string      `json:"cluster"`       // 实例id
-	Subnet        string      `json:"subnet"`        // 子网名称？
-	Prod          string      `json:"prod"`          // 规格
-	EngineType    string      `json:"engineType"`    // 引擎类型
-	BillMode      string      `json:"billMode"`      // 账单
-	SecurityGroup string      `json:"securityGroup"` // 安全组名称
-	ProdType      interface{} `json:"prodType"`
-	Network       string      `json:"network"`     // vpc名称?
-	ExpireTime    string      `json:"expireTime"`  // 过期时间
-	CreateTime    string      `json:"createTime"`  // 创建时间
-	ClusterName   string      `json:"clusterName"` // 实例名称
-	ProdInstId    string      `json:"prodInstId"`  // 实例id
-	Status        int32       `json:"status"`      // 状态
+	Cluster           string      `json:"cluster"`       // 实例id
+	Subnet            string      `json:"subnet"`        // 子网名称？
+	Prod              string      `json:"prod"`          // 规格
+	EngineType        string      `json:"engineType"`    // 引擎类型
+	BillMode          string      `json:"billMode"`      // 账单
+	SecurityGroup     string      `json:"securityGroup"` // 安全组名称
+	ProdType          interface{} `json:"prodType"`
+	Network           string      `json:"network"`     // vpc名称?
+	ExpireTime        string      `json:"expireTime"`  // 过期时间
+	CreateTime        string      `json:"createTime"`  // 创建时间
+	ClusterName       string      `json:"clusterName"` // 实例名称
+	ProdInstId        string      `json:"prodInstId"`  // 实例id
+	Status            int32       `json:"status"`      // 状态
+	VpcUuid           string      `json:"vpcUuid"`
+	SecurityGroupCode string      `json:"securityGroupCode"`
+	OuterProjectId    string      `json:"outerProjectId"`
+	AzNames           []string    `json:"azNames"`
 }

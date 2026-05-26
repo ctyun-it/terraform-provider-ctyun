@@ -192,7 +192,7 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"route_table_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "路由表ID 可以更新",
+				Description: "路由表ID 支持更新",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},

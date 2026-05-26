@@ -51,7 +51,7 @@ resource "ctyun_redis_param_template" "test" {
 - `description` (String) 参数模板描述 支持更新
 - `params` (Attributes Set) 输入的参数列表 (see [below for nested schema](#nestedatt--params))
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
-- `sys_template` (Boolean) 是否为系统模板 true：系统模板 false：自定义模板
+- `sys_template` (Boolean, Deprecated) 是否为系统模板
 
 ### Read-Only
 
@@ -63,7 +63,7 @@ resource "ctyun_redis_param_template" "test" {
 
 Required:
 
-- `current_value` (String) 目标值 支持更新
+- `current_value` (String) 目标值
 - `param_name` (String) 参数名称
 
 
@@ -78,3 +78,15 @@ Read-Only:
 - `need_restart` (Boolean) 是否需要重启
 - `param_name` (String) 参数名称
 - `value_range` (String) 参数范围
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入Redis的参数模板
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_redis_param_template.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_redis_param_template.test b008622562e7439ca4120f5953feeefa1775183107601,<region_id>
+```

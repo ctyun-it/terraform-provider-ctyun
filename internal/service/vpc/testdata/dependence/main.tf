@@ -105,3 +105,19 @@ resource "ctyun_vpc_route_table" "test" {
   vpc_id =ctyun_vpc.vpc_test.id
   name = "test_subnet"
 }
+
+resource "ctyun_ipv6_bandwidth" "test" {
+  name = "ipv6-xdsfdfa-depend"
+  cycle_type = "on_demand"
+  bandwidth = 1
+}
+
+resource "ctyun_vip" "test" {
+  vpc_id  = ctyun_vpc.vpc_test.id
+  subnet_id = ctyun_subnet.subnet_test.id
+  vip_type = "v6"
+}
+
+resource "ctyun_ipv6_gateway" "test"{
+  vpc_id= ctyun_vpc.vpc_test.id
+}

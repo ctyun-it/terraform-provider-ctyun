@@ -5,6 +5,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -19,20 +25,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"math"
-	"regexp"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var (
@@ -88,6 +86,21 @@ func (c *CtyunMysqlInstance) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
+
+	// 导入时，单独处理cycle_count。因为Openapi获取不到
+	_, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if config.CycleType.ValueString() == business.OnDemandCycleType {
+		config.CycleCount = types.Int32Null()
+	} else if cycleCount > 60 {
+		// 如果cycleCount > 60，默认为按需类型
+		config.CycleType = types.StringValue(business.OnDemandCycleType)
+		config.CycleCount = types.Int32Null()
+	} else {
+		config.CycleCount = types.Int32Value(cycleCount)
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
@@ -116,8 +129,8 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 		MarkdownDescription: utils.FormatDesc("管理MySQL实例", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10134365"),
 		Attributes: map[string]schema.Attribute{
 			"flavor_name": schema.StringAttribute{
-				Required:    true,
-				Description: "规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新",
+				Optional:    true,
+				Description: "规格名称，创建时必填，导入时不填。形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -166,9 +179,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -176,7 +187,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"region_id": schema.StringAttribute{
@@ -269,15 +280,13 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"backup_storage_type": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "备份空间磁盘存储类型：SSD=超高IO，SATA=普通IO，SAS=高IO",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSATA, business.StorageTypeSAS),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
-				Default: stringdefault.StaticString(business.StorageTypeSATA),
 			},
 			"backup_storage_space": schema.Int32Attribute{
 				Optional:    true,
@@ -320,10 +329,16 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "实例Id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -512,6 +527,18 @@ func (c *CtyunMysqlInstance) Update(ctx context.Context, request resource.Update
 		return
 	}
 
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.BackupStorageType.IsUnknown() && !plan.BackupStorageType.IsNull() && state.BackupStorageType.IsNull() {
+		state.BackupStorageType = plan.BackupStorageType
+		response.Diagnostics.AddWarning("backup_storage_type的更新仅写入状态文件", "在import时，状态文件中backup_storage_type为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.FlavorName.IsUnknown() && !plan.FlavorName.IsNull() && state.FlavorName.IsNull() {
+		state.FlavorName = plan.FlavorName
+		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中flavor_name为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	// 校验规格
 	err = c.checkSpec(ctx, &plan)
 	if err != nil {
@@ -522,7 +549,6 @@ func (c *CtyunMysqlInstance) Update(ctx context.Context, request resource.Update
 		return
 	}
 	state.FlavorName = plan.FlavorName
-
 	// 更新远端后，查询远端并同步一下本地信息
 	err = c.getAndMergeMysqlInstance(ctx, &state)
 	if err != nil {
@@ -568,6 +594,9 @@ func (c *CtyunMysqlInstance) Delete(ctx context.Context, request resource.Delete
 // checkSpec 检查规格
 func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInstanceConfig) error {
 	// 先根据spec_name调用云主机规格接口
+	if plan.FlavorName.ValueString() == "" {
+		return fmt.Errorf("创建时规格必须填写")
+	}
 	_, err := c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
 	if err != nil {
 		return err
@@ -625,9 +654,7 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 		CpuType:     business.MysqlCpuTypeDict[config.cpuType],
 		OsType:      business.MysqlOSTypeDict[config.osType],
 	}
-
 	params.SecurityGroupId = config.SecurityGroupID.ValueString()
-
 	if !config.Password.IsNull() && !config.Password.IsUnknown() {
 		password := business.Encode(config.Password.ValueString())
 		params.Password = password
@@ -637,36 +664,34 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 	} else {
 		params.AutoRenewStatus = map[bool]int32{true: 1, false: 0}[config.AutoRenew.ValueBool()]
 	}
-
 	header := &mysql.TeledbCreateRequestHeader{}
 	if config.ProjectID.ValueString() != "" {
 		header.ProjectID = config.ProjectID.ValueStringPointer()
 		params.ProjectID = config.ProjectID.ValueStringPointer()
 	}
-
 	var MysqlNodeInfos []mysql.MysqlNodeInfoListRequest
-
 	mysqlNodeInfo := mysql.MysqlNodeInfoListRequest{}
 	mysqlNodeInfo.NodeType = business.NodeTypeDict[config.ProdID.ValueString()]
 	mysqlNodeInfo.InstSpec = business.MysqlInstanceSeriesDict[config.instanceSeries]
 	mysqlNodeInfo.StorageType = config.StorageType.ValueString()
 	mysqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
 	mysqlNodeInfo.ProdPerformanceSpec = config.prodPerformanceSpec
-	mysqlNodeInfo.BackupStorageType = config.BackupStorageType.ValueString()
+	backupStorageType := config.BackupStorageType.ValueString()
+	if backupStorageType == "" {
+		backupStorageType = business.StorageTypeSATA
+	}
+	mysqlNodeInfo.BackupStorageType = backupStorageType
 	mysqlNodeInfo.BackupStorageSpace = config.BackupStorageSpace.ValueInt32()
 	mysqlNodeInfo.Disks = 1
 	// 处理availabilityZoneInfo可用区信息
-
 	var availabilityZoneInfos []mysql.AvailabilityZoneInfoRequest
 	err = c.generateAzInfos(ctx, config, &availabilityZoneInfos)
 	if err != nil {
 		return
 	}
-
 	mysqlNodeInfo.AvailabilityZoneInfo = availabilityZoneInfos
 	MysqlNodeInfos = append(MysqlNodeInfos, mysqlNodeInfo)
 	params.MysqlNodeInfoList = MysqlNodeInfos
-
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateApi.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return

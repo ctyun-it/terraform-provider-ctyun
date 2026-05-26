@@ -55,7 +55,7 @@ resource "ctyun_security_group" "sg_test" {
 }
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -83,8 +83,7 @@ resource "ctyun_postgresql_readonly_instance" "example" {
 ### Required
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
-- `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。
-- `instance_id` (String) mysql数据库实例ID，为该实例管理只读实例
+- `instance_id` (String) mysql数据主库实例ID，创建的只读实例为该数据库的只读节点
 - `name` (String) 实例名称（实例名称 (长度4到100，必须以字母或中文开头，只能包含字母(不区分大小写)、中文、数字、-或_)）
 
 ### Optional
@@ -92,9 +91,24 @@ resource "ctyun_postgresql_readonly_instance" "example" {
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月
 - `availability_zone_name` (String) 可用区id，如果不填写，默认为第一个可用区
 - `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
+- `flavor_name` (String) 规格名称，创建时必填，导入时不填。形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) 可读实例id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL只读实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_readonly_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_postgresql_readonly_instance.readonly_example f9f1b75c219d4b1194011b088486a5f7,<region_id>
+```

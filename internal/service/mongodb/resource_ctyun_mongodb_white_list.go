@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
@@ -21,8 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"strings"
-	"time"
 )
 
 var (
@@ -63,7 +64,7 @@ func (c *CtyunMongodbWhiteList) Schema(ctx context.Context, req resource.SchemaR
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "资源唯一标识，格式为 instance_id,ip_whitelist_name",
+				Description: "资源唯一标识，格式为 instance_id,group_name",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
@@ -251,7 +252,19 @@ func (c *CtyunMongodbWhiteList) ImportState(ctx context.Context, req resource.Im
 	}()
 	var cfg CtyunMongodbWhiteListConfig
 	var instanceID, groupName, regionId string
-	err = terraform_extend.Split(req.ID, &instanceID, &groupName, &regionId)
+
+	if strings.Count(req.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(req.ID, &instanceID, &groupName)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(req.ID, &instanceID, &groupName, &regionId)
+		if err != nil {
+			return
+		}
+	}
 	if err != nil {
 		return
 	}
@@ -382,7 +395,7 @@ func (c *CtyunMongodbWhiteList) getAndMerge(ctx context.Context, plan *CtyunMong
 	for _, group := range resp.ReturnObj.WhitelistGroup {
 		if group.GroupName == plan.GroupName.ValueString() {
 			// 更新状态
-			plan.ID = types.StringValue(fmt.Sprintf("%d,%s", group.Id, plan.InstanceID.ValueString()))
+			plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceID.ValueString(), plan.GroupName.ValueString()))
 			plan.WhiteListId = types.Int32Value(group.Id)
 
 			// 设置IP列表，API返回的是逗号分隔的字符串

@@ -2,12 +2,13 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
-	"time"
 )
 
 func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
@@ -16,7 +17,7 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_instance_test.tf"
 	resourceName := "ctyun_postgresql_instance." + rnd
 	cycleType := "on_demand"
-	prodId := "Single1222"
+	prodId := 10003011
 	flavorName := dependence.flavorName
 	storageType := "SSD"
 	storageSpace := 100
@@ -57,15 +58,13 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
 					regionId := ds.Attributes["region_id"]
-					projectId := ds.Attributes["project_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
 					}
-					return fmt.Sprintf("%s,%s,%s", id, projectId, regionId), nil
+					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
-					"backup_storage_type", "availability_zone_info", "running_control", "cycle_count", "master_order_id", "case_sensitive", "is_mgr"},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "case_sensitive", "master_order_id", "password"},
 			},
 			// import state验证2
 			{
@@ -76,9 +75,8 @@ func TestAccCtyunPgsqlInstanceImportState(t *testing.T) {
 					id := ds.ID
 					return fmt.Sprintf("%s", id), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
-					"backup_storage_type", "availability_zone_info", "running_control", "cycle_count", "master_order_id", "case_sensitive", "is_mgr"},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "case_sensitive", "master_order_id", "password"},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, prodId, flavorName, storageType,
@@ -94,7 +92,7 @@ func TestAccCtyunPgsqlInstanceProjectId(t *testing.T) {
 	resourceFile := "resource_ctyun_postgresql_instance_test.tf"
 	resourceName := "ctyun_postgresql_instance." + rnd
 	cycleType := "on_demand"
-	prodId := "Single1222"
+	prodId := 10003011
 	flavorName := dependence.flavorName
 	storageType := "SSD"
 	storageSpace := 100
@@ -153,7 +151,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 	datasourceFile := "datasource_ctyun_pgsql_instances.tf"
 
 	cycleType := "on_demand"
-	prodId := "Single1222"
+	prodId := 10003011
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SATA"`
 	StorageSpace := 100
@@ -171,7 +169,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 
 	updatedName := "pgsql-new" + utils.GenerateRandomString()
 	//updatedSecurityGroupID := dependence.securityGroupID2
-	updatedProdID := "MasterSlave1222"
+	updatedProdID := 10003012
 	updatedStorageSpace := 120
 	updatedAzInfo := fmt.Sprintf(`availability_zone_info=[{"availability_zone_name":"%s", "availability_zone_count":1, "node_type":"slave"}]`, azName)
 	updatedBackupStorageSpace := fmt.Sprintf(`backup_storage_space="%d"`, updatedStorageSpace)
@@ -195,7 +193,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName)),
 			},
 			// update验证--姓名, 安全组，规格扩容
@@ -206,7 +204,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", StorageSpace)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
@@ -220,7 +218,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", StorageSpace)),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_space", fmt.Sprintf("%d", updatedStorageSpace)),
@@ -234,7 +232,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", updatedStorageSpace)),
 				),
@@ -247,7 +245,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
@@ -258,7 +256,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
@@ -269,7 +267,7 @@ func TestAccCtyunPgsqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012)),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
@@ -308,7 +306,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 
 	cycleType := "on_demand"
 	flavorName := dependence.flavorName
-	prodId := "Single1419"
+	prodId := 10003013
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type = "SATA"`
 	storageSpace := 100
@@ -319,7 +317,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 	securityGroupID := dependence.securityGroupID
 	backupStorageSpace := `backup_storage_space=100`
 
-	updatedProdId := "MasterSlave1419"
+	updatedProdId := 10003014
 	updatedStorageSpace := 150
 	updatedBackupStorageSpace := `backup_storage_space = 200`
 	updatedFlavorName := dependence.flavorName2
@@ -343,7 +341,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", prodId),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", prodId)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", storageSpace)),
@@ -359,7 +357,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", updatedProdId),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", updatedProdId)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName)),
 			},
 			// 升级1主1备结点, 同时升级备份空间，主存储空间和spec
@@ -370,7 +368,7 @@ func TestAccCtyunPgsqlInstanceNoAZInfo(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", updatedProdId),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", updatedProdId)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", updatedStorageSpace)),
@@ -403,7 +401,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 
 	cycleType := "on_demand"
 	flavorName := dependence.flavorName
-	prodId := "Master2Slave1514"
+	prodId := 10003027
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SAS"`
 	storageSpace := 100
@@ -436,7 +434,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", prodId),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", prodId)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", storageSpace)),
@@ -451,7 +449,7 @@ func TestAccCtyunPgsqlInstanceNoAZ2Info(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", prodId),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", prodId)),
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", fmt.Sprintf("%d", updatedStorageSpace)),

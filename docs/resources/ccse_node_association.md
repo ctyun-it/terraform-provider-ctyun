@@ -49,11 +49,11 @@ variable "password" {
 - `instance_id` (String) 主机ID
 - `instance_type` (String) 实例类型，支持ecs（云主机）、ebm（裸金属）
 - `mirror_id` (String) 镜像id，可查看<a href="https://www.ctyun.cn/document/10083472/11004475">节点规格和节点镜像</a>
-- `password` (String, Sensitive) 用户密码，需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\且不能以斜线号/开头
 
 ### Optional
 
 - `az_name` (String) 可用区名称
+- `password` (String, Sensitive) 用户密码，纳管时必填，导入时不填。需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\且不能以斜线号/开头
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `visibility_host_script` (String) 部署前执行自定义脚本，base64编码
 - `visibility_post_host_script` (String) 部署后执行自定义脚本，base64编码

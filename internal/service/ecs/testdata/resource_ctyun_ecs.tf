@@ -8,5 +8,6 @@ resource "ctyun_ecs" "%[1]s" {
   vpc_id             = "%[7]s"
   subnet_id          = "%[8]s"
   key_pair_name      = "%[9]s"
+  is_destroy_instance  = true
   %[10]s
 }

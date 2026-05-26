@@ -60,8 +60,8 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，支持更新，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
+				Optional:    true,
+				Description: "密码，创建时必填，导入时不填。密码必须包含数字大小写字母，密码长度必须在8-26位之间，支持更新，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
 				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(8, 26),
@@ -115,7 +115,10 @@ func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateReques
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	var userGroupIds []types.String
 	plan.UserGroupIds.ElementsAs(ctx, &userGroupIds, true)
 	var ugs []ctiam.UserGroup

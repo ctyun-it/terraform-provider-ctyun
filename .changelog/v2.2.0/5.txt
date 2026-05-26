@@ -1,0 +1,14 @@
+release-note:new-resource
+ctyun_cloud_assistant_command
+
+release-note:new-resource
+ctyun_cloud_assistant_invocation
+
+release-note:new-resource
+ctyun_cloud_assistant_run_command
+
+release-note:new-data-source
+ctyun_cloud_assistant_commands
+
+release-note:new-data-source
+ctyun_cloud_assistant_invocation_results

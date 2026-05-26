@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -65,9 +66,11 @@ func (c *ctyunRabbitmqExchange) Schema(_ context.Context, _ resource.SchemaReque
 		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的交换器", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10001967"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -129,7 +132,6 @@ func (c *ctyunRabbitmqExchange) Schema(_ context.Context, _ resource.SchemaReque
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"durable": schema.BoolAttribute{
@@ -139,7 +141,6 @@ func (c *ctyunRabbitmqExchange) Schema(_ context.Context, _ resource.SchemaReque
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"internal": schema.BoolAttribute{
@@ -149,14 +150,13 @@ func (c *ctyunRabbitmqExchange) Schema(_ context.Context, _ resource.SchemaReque
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"alternate_exchange": schema.StringAttribute{
 				Optional:    true,
 				Description: "备用交换机名称",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 128),
@@ -240,7 +240,31 @@ func (c *ctyunRabbitmqExchange) Read(ctx context.Context, request resource.ReadR
 }
 
 func (c *ctyunRabbitmqExchange) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// 读取tf文件中配置
+	var plan CtyunRabbitmqExchangeConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 
+	// 读取state中的配置
+	var state CtyunRabbitmqExchangeConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if !plan.AlternateExchange.IsUnknown() && !plan.AlternateExchange.IsNull() && state.AlternateExchange.IsNull() {
+		state.AlternateExchange = plan.AlternateExchange
+		response.Diagnostics.AddWarning("alternate_exchange的更新仅写入状态文件", "在import时，状态文件中alternate_exchange为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunRabbitmqExchange) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -276,7 +300,7 @@ func (c *ctyunRabbitmqExchange) ImportState(ctx context.Context, request resourc
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [name],[vhost],[instanceID],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[vhost],[name],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -285,12 +309,12 @@ func (c *ctyunRabbitmqExchange) ImportState(ctx context.Context, request resourc
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 3 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &vhost, &instanceID)
+		err = terraform_extend.Split(request.ID, &instanceID, &vhost, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &vhost, &instanceID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &vhost, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -430,7 +454,6 @@ func (c *ctyunRabbitmqExchange) getExchangeByName(ctx context.Context, plan Ctyu
 			return
 		}
 	}
-
 	return
 }
 
@@ -443,13 +466,13 @@ func (c *ctyunRabbitmqExchange) getAndMerge(ctx context.Context, plan *CtyunRabb
 	plan.AutoDelete = types.BoolValue(exchange.Auto_delete)
 	plan.Durable = types.BoolValue(exchange.Durable)
 	plan.Type = types.StringValue(exchange.RawType)
+	plan.Internal = types.BoolValue(exchange.Internal)
 	if exchange.Argument.XDelayedType != "" {
 		plan.XDelayedType = types.StringValue(exchange.Argument.XDelayedType)
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s",
-		plan.Name.ValueString(),
-		plan.Vhost.ValueString(),
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s",
 		plan.InstanceID.ValueString(),
-		plan.RegionID.ValueString()))
+		plan.Vhost.ValueString(),
+		plan.Name.ValueString()))
 	return
 }

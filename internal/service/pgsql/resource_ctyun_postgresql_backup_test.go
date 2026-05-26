@@ -2,11 +2,12 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunPostgresqlBackup(t *testing.T) {
@@ -52,13 +53,13 @@ func TestAccCtyunPostgresqlBackup(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "start_time", "end_time", "backup_result", "backup_type"},
+				ImportStateVerifyIgnore: []string{"description", "start_time"},
 			},
 			{
 				ResourceName: resourceName,
@@ -69,12 +70,12 @@ func TestAccCtyunPostgresqlBackup(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "start_time", "end_time", "backup_result", "backup_type", "project_id"},
+				ImportStateVerifyIgnore: []string{"description", "start_time"},
 			},
 			// 3. 清理资源
 			{

@@ -70,13 +70,13 @@ func TestAccMongodbBackup_basic(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["region_id"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "project_id"}, // 子网列表可能变化
+				ImportStateVerifyIgnore: []string{"project_id", "description"}, // 子网列表可能变化
 
 			},
 			{
@@ -88,12 +88,12 @@ func TestAccMongodbBackup_basic(t *testing.T) {
 						return "", fmt.Errorf("resource not found: %s", resourceName)
 					}
 					return fmt.Sprintf("%s,%s",
-						rs.Primary.Attributes["name"],
 						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["name"],
 					), nil
 				},
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"description", "project_id"}, // 子网列表可能变化
+				ImportStateVerifyIgnore: []string{"project_id", "description"}, // 子网列表可能变化
 
 			},
 			//datasource 测试

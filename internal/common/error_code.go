@@ -49,16 +49,19 @@ const (
 	OpenapiPrivateZoneRecordNotFound = "Openapi.PrivateZoneRecord.NotFound"
 	OpenapiHavipNotFound             = "Openapi.Havip.NotFound"
 	OpenapiVpcPeeringNotFound        = "Openapi.VpcPeering.NotFound"
-
+	OpenapiIPv6BandwidthNotFound     = "Openapi.Ipv6Bandwidth.NotFound"
+	OpenapiFlowPackageNotFound       = "Openapi.Flowpackage.NotFound"
 	OpenapiVpcPortNotFound           = "Openapi.Parameter.Error"
 	OpenapiCCSENotExist              = "CCE_2024"
 	OpenapiDcs2NotFound              = "DCS2_1001"
+	OpenapiDcs2Invalid               = "DCS2_2001"
 	CtiamNoPermission                = "CTIAM_0005"
 	CtiamNoPrivilege                 = "CTIAM_1044"
 
 	ErrorStatusCode        = 900
 	NormalStatusCode       = 800
 	NormalStatusCodeString = "800"
+	FaasNormalStatusCode   = 0
 )
 
 var InvalidReturnObjError = errors.New("invalid return object")

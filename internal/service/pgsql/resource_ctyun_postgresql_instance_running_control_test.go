@@ -2,13 +2,14 @@ package pgsql_test
 
 import (
 	"fmt"
+	"math/rand"
+	"testing"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"math/rand"
-	"testing"
-	"time"
 )
 
 func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
@@ -19,7 +20,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	resourceFile := "resource_ctyun_pgsql_instance.tf"
 
 	cycleType := "on_demand"
-	prodId := "Single1222"
+	prodId := 10003011
 	storageType := "SSD"
 	backupStorageType := `backup_storage_type="SATA"`
 	StorageSpace := 100
@@ -37,7 +38,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 	vip := fmt.Sprintf("192.168.1.%d", rand.Intn(101)+100)
 	appointVip := fmt.Sprintf(`vip="%s"`, vip)
 	updatedFlavorName := dependence.flavorName2
-	updatedProdId := "MasterSlave1222"
+	updatedProdId := 10003012
 	updatedStorageSpace := 120
 
 	resource.Test(t, resource.TestCase{
@@ -59,7 +60,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "vip", vip),
 				),
 			},
@@ -71,7 +72,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222")),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012))),
 			},
 			// 开机
 			{
@@ -81,7 +82,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222")),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012))),
 			},
 			// 重启
 			{
@@ -91,7 +92,7 @@ func TestAccCtyunPgsqlRunningControlInstance(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave1222")),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003012))),
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, updatedFlavorName, updatedProdId, storageType, updatedStorageSpace, name, password, caseCensitive,

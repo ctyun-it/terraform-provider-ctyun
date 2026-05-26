@@ -2,11 +2,12 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
@@ -55,8 +56,8 @@ func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"cycle_type", "cycle_count", "auto_renew", "flavor_name",
-					"availability_zone_name", "instance_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"cycle_count", "auto_renew", "flavor_name",
+					"availability_zone_name"}, // 不需要忽略任何字段
 			},
 			// 3. 导入测试
 			{
@@ -72,8 +73,8 @@ func TestAccCtyunPostgresqlReadOnlyInstance(t *testing.T) {
 					), nil
 				},
 				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"cycle_type", "cycle_count", "auto_renew", "flavor_name",
-					"availability_zone_name", "instance_id", "project_id"}, // 不需要忽略任何字段
+				ImportStateVerifyIgnore: []string{"cycle_count", "auto_renew", "flavor_name",
+					"availability_zone_name"}, // 不需要忽略任何字段
 			},
 			// 4. 清理资源
 			{

@@ -47,12 +47,12 @@ func (a *CtecsInvokeCommandApi) Do(ctx context.Context, credential core.Credenti
 }
 
 type CtecsInvokeCommandRequest struct {
-	RegionID         string                              `json:"regionID,omitempty"`         /*  资源池ID  */
-	InstanceIDs      string                              `json:"instanceIDs,omitempty"`      /*  待执行命令的云主机、物理机ID列表, 使用英文, 分割  */
-	CommandID        string                              `json:"commandID,omitempty"`        /*  命令ID  */
-	Timeout          int32                               `json:"timeout,omitempty"`          /*  执行命令的超时时间  */
-	WorkingDirectory string                              `json:"workingDirectory,omitempty"` /*  命令在云主机中运行目录。说明：若在Windows系统云主机下执行Python命令，需传Python安装全路径  */
-	Parameter        *CtecsInvokeCommandParameterRequest `json:"parameter"`                  /*  自定义参数，说明：key仅支持大小写字母(A-a)、数字(0-9)、横线(-)和下划线(_)，key和value均只支持string  */
+	RegionID         string             `json:"regionID,omitempty"`         /*  资源池ID  */
+	InstanceIDs      string             `json:"instanceIDs,omitempty"`      /*  待执行命令的云主机、物理机ID列表, 使用英文, 分割  */
+	CommandID        string             `json:"commandID,omitempty"`        /*  命令ID  */
+	Timeout          int32              `json:"timeout,omitempty"`          /*  执行命令的超时时间  */
+	WorkingDirectory string             `json:"workingDirectory,omitempty"` /*  命令在云主机中运行目录。说明：若在Windows系统云主机下执行Python命令，需传Python安装全路径  */
+	Parameter        *map[string]string `json:"parameter,omitempty"`        /*  自定义参数，说明：key仅支持大小写字母(A-a)、数字(0-9)、横线(-)和下划线(_)，key和value均只支持string  */
 }
 
 type CtecsInvokeCommandParameterRequest struct{}

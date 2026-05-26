@@ -75,6 +75,8 @@ const (
 	PgsqlStorageTypeBackUp = "backup"
 	PgsqlStorageTypeMaster = "master"
 
+	PgsqlNodeTypeMaster = "master"
+
 	PgsqlAccountTypeNormal   = "normal"
 	PgsqlAccountTypeAdvanced = "advanced"
 
@@ -96,6 +98,11 @@ const (
 	PgsqlBackupResultFailStr    = "fail"
 
 	PgsqlNodeTypeReadNode = "readNode"
+
+	PgsqlProdSpecNameRead   = "只读实例"
+	PgsqlProdSpecNameSingle = "单机版"
+	PgsqlProdSpecNameMS     = "一主一备"
+	PgsqlProdSpecNameM2S    = "一主两备"
 )
 
 var PgsqlBackupTypeMap = map[string]int32{
@@ -363,4 +370,11 @@ var PgsqlInstanceSeriesDict = map[string]string{
 var PgsqlAccountTypes = []string{
 	PgsqlAccountTypeAdvanced,
 	PgsqlAccountTypeNormal,
+}
+
+var PgsqlProdSpecNodeNumDict = map[string]int32{
+	PgsqlProdSpecNameRead:   1,
+	PgsqlProdSpecNameSingle: 1,
+	PgsqlProdSpecNameMS:     2,
+	PgsqlProdSpecNameM2S:    3,
 }

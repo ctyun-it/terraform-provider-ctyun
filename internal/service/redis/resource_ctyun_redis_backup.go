@@ -13,7 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -57,9 +59,11 @@ func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, r
 		MarkdownDescription: utils.FormatDesc("管理Redis实例的备份", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/10142282"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				Computed:      true,
-				Description:   "资源唯一标识符",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "资源唯一标识符",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -85,22 +89,29 @@ func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, r
 			},
 			"remark": schema.StringAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "备注信息，不超过128个字符",
 				Validators: []validator.String{
 					stringvalidator.LengthAtMost(128),
 				},
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "备份名，格式为YYYYMMDDHHMMSS",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"create_time": schema.StringAttribute{
-				Computed:      true,
-				Description:   "创建时间，为UTC格式",
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
@@ -109,6 +120,9 @@ func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"type": schema.Int32Attribute{
 				Computed:    true,
 				Description: "备份类型: 0(手动备份), 1(自动备份)",
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"ip_type": schema.StringAttribute{
 				Optional:    true,
@@ -117,6 +131,7 @@ func (c *ctyunRedisBackup) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					stringvalidator.OneOf("publicIp", "privateIp"),
 				},
+				Default: stringdefault.StaticString("privateIp"),
 			},
 			"download_urls": schema.MapAttribute{
 				ElementType: types.StringType,
@@ -153,13 +168,16 @@ func (c *ctyunRedisBackup) Create(ctx context.Context, request resource.CreateRe
 	if err != nil {
 		return
 	}
-
 	// 查询备份信息
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
 	}
-
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
+	err = c.getBackupRdbDownLoadUrl(ctx, &plan)
+	if err != nil {
+		return
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
@@ -193,6 +211,33 @@ func (c *ctyunRedisBackup) Read(ctx context.Context, request resource.ReadReques
 }
 
 func (c *ctyunRedisBackup) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var plan CtyunRedisBackupConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	var state CtyunRedisBackupConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	state.IpType = plan.IpType
+	// 查询备份信息
+	err = c.getAndMerge(ctx, &plan)
+	if err != nil {
+		return
+	}
+	err = c.getBackupRdbDownLoadUrl(ctx, &state)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunRedisBackup) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -229,7 +274,7 @@ func (c *ctyunRedisBackup) ImportState(ctx context.Context, request resource.Imp
 	defer func() {
 		if err != nil {
 			title := "导入失败：" + err.Error()
-			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],[region_id]"
+			detail := "导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[name],<region_id>"
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -266,9 +311,13 @@ func (c *ctyunRedisBackup) ImportState(ctx context.Context, request resource.Imp
 	cfg.InstanceId = types.StringValue(instanceId)
 	cfg.RegionId = types.StringValue(regionId)
 	cfg.Name = types.StringValue(restoreName)
-
+	cfg.IpType = types.StringValue("privateIp")
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
+	if err != nil {
+		return
+	}
+	err = c.getBackupRdbDownLoadUrl(ctx, &cfg)
 	if err != nil {
 		return
 	}
@@ -356,8 +405,7 @@ func (c *ctyunRedisBackup) getAndMerge(ctx context.Context, plan *CtyunRedisBack
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		msg := resp.Message
-		if strings.Contains(msg, "can't find") {
+		if strings.Contains(resp.Message, "can't find") {
 			err = common.ResourceNotExistError
 		} else {
 			err = fmt.Errorf("API return error. Message: %s RequestId: %s", resp.Message, resp.RequestId)
@@ -389,25 +437,8 @@ func (c *ctyunRedisBackup) getAndMerge(ctx context.Context, plan *CtyunRedisBack
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(backupData.CreateTime))
 	plan.Status = types.StringValue(backupData.Status)
 	plan.Type = types.Int32Value(backupData.RawType)
-	if backupData.Remark != "" {
-		plan.Remark = types.StringValue(backupData.Remark)
-	} else {
-		plan.Remark = types.StringNull()
-	}
-
-	// 如果IpType未设置，设置默认值
-	if plan.IpType.IsNull() || plan.IpType.IsUnknown() {
-		plan.IpType = types.StringValue("privateIp")
-	}
-	// 如果DownloadUrls未设置，设置为空map
-	if plan.DownloadUrls.IsNull() || plan.DownloadUrls.IsUnknown() {
-		emptyMap := types.MapNull(types.StringType)
-		plan.DownloadUrls = emptyMap
-	}
-
-	// 设置ID
+	plan.Remark = types.StringValue(backupData.Remark)
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), backupData.RestoreName))
-
 	return
 }
 
@@ -449,15 +480,11 @@ func (c *ctyunRedisBackup) getBackupTasks(ctx context.Context, plan *CtyunRedisB
 // getBackupRdbDownLoadUrl 查询备份文件下载链接
 func (c *ctyunRedisBackup) getBackupRdbDownLoadUrl(ctx context.Context, plan *CtyunRedisBackupConfig) (err error) {
 	// 如果IpType未设置，使用默认值
-	ipType := "privateIp"
-	if !plan.IpType.IsNull() && !plan.IpType.IsUnknown() {
-		ipType = plan.IpType.ValueString()
-	}
 	params := &ctgdcs2.Dcs2GetRdbDownLoadUrlRequest{
 		RegionId:    plan.RegionId.ValueString(),
 		ProdInstId:  plan.InstanceId.ValueString(),
 		RestoreName: plan.Name.ValueString(),
-		IpType:      ipType,
+		IpType:      plan.IpType.ValueString(),
 	}
 
 	resp, err := c.meta.Apis.SdkDcs2Apis.Dcs2GetRdbDownLoadUrlApi.Do(ctx, c.meta.SdkCredential, params)
@@ -493,9 +520,6 @@ func (c *ctyunRedisBackup) getBackupRdbDownLoadUrl(ctx context.Context, plan *Ct
 		err = fmt.Errorf("unexpected return object type: %T", resp.ReturnObj)
 		return
 	}
-
-	// 设置IpType
-	plan.IpType = types.StringValue(ipType)
 
 	return
 }

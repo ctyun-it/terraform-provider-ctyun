@@ -75,7 +75,7 @@ func TestAccCtyunMysqlInstanceUpdatePassword(t *testing.T) {
 					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew", "cycle_count",
 					"backup_storage_type", "availability_zone_info", "running_control", "master_order_id", "project_id"},
 			},
 			{
@@ -153,7 +153,6 @@ func TestAccCtyunMysqlInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
-					resource.TestCheckResourceAttr(resourceName, "auto_renew", "false"),
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single57"),
 					resource.TestCheckResourceAttr(resourceName, "write_port", "13306"),
 				),

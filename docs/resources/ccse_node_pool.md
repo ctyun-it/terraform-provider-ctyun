@@ -102,7 +102,7 @@ resource "ctyun_ccse_node_pool" "example" {
 
 ### Optional
 
-- `affinity_group_id` (String) 云主机组id
+- `affinity_group_id` (String) 云主机组id，use_affinity_group为true时必填
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，支持更新
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年，支持更新
 - `data_disks` (Attributes List) 数据盘信息，支持更新 (see [below for nested schema](#nestedatt--data_disks))

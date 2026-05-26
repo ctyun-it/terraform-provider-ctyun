@@ -96,14 +96,14 @@ resource "ctyun_redis_migration_task" "test" {
 
 Required:
 
-- `account_name` (String) 数据库账号
-- `ip_addr` (String) 连接地址
-- `password` (String, Sensitive) 数据库密码
 - `spu_inst_id` (String) 实例ID
 
 Optional:
 
-- `original_cluster` (Boolean) 是否是原生cluster集群 输入实例ID可不填，否则必填。
+- `account_name` (String) 数据库账号
+- `ip_addr` (String) 连接地址，创建时必填，导入时不填
+- `original_cluster` (Boolean) 是否是原生cluster集群
+- `password` (String, Sensitive) 数据库密码，创建时必填，导入时不填
 
 
 <a id="nestedatt--target_db_info"></a>
@@ -111,11 +111,23 @@ Optional:
 
 Required:
 
-- `account_name` (String) 数据库账号
-- `ip_addr` (String) 连接地址
-- `password` (String, Sensitive) 数据库密码
 - `spu_inst_id` (String) 实例ID
 
 Optional:
 
+- `account_name` (String) 数据库账号
+- `ip_addr` (String) 连接地址，创建时必填，导入时不填
 - `original_cluster` (Boolean) 是否是原生cluster集群
+- `password` (String, Sensitive) 数据库密码，创建时必填，导入时不填
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入Redis的迁移任务
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_redis_migration_task.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_redis_migration_task.test 0d3290ecfbfc4fd092c0ae3e4b12a9fb,<region_id>
+```

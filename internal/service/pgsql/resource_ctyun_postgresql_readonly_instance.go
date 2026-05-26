@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -18,15 +22,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -74,6 +74,18 @@ func (c *CtyunPostgresqlReadOnlyInstance) ImportState(ctx context.Context, reque
 	config.ID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionId)
 	err = c.getAndMerge(ctx, &config)
+
+	// 导入时，单独处理cycle_count。因为Openapi获取不到
+	_, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleCount > 0 {
+		config.CycleCount = types.Int32Value(cycleCount)
+	} else {
+		config.CycleCount = types.Int32Null()
+	}
+
 	if err != nil {
 		return
 	}
@@ -106,7 +118,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request re
 		Attributes: map[string]schema.Attribute{
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "mysql数据库实例ID，为该实例管理只读实例",
+				Description: "mysql数据主库实例ID，创建的只读实例为该数据库的只读节点",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(32, 32),
 				},
@@ -144,9 +156,7 @@ func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request re
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -154,12 +164,12 @@ func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request re
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
-				Required:    true,
-				Description: "规格名称，形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。",
+				Optional:    true,
+				Description: "规格名称，创建时必填，导入时不填。形如c7.2xlarge.4，可从data.ctyun_mysql_specs查询支持的规格，支持更新。注：只读规格远小于主实例规格时，可能导致创建只读实例失败、复制延迟等风险。",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -205,8 +215,19 @@ func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request re
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Description: "到期时间，为UTC格式，按需时为空",
+				Computed:    true,
 			},
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -285,7 +306,41 @@ func (c *CtyunPostgresqlReadOnlyInstance) Read(ctx context.Context, request reso
 }
 
 func (c *CtyunPostgresqlReadOnlyInstance) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
-	return
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// 读取tf文件中配置
+
+	var plan CtyunPostgresqlReadOnlyInstanceConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunPostgresqlReadOnlyInstanceConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
+	if !plan.FlavorName.IsUnknown() && !plan.FlavorName.IsNull() && state.FlavorName.IsNull() {
+		state.FlavorName = plan.FlavorName
+		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (c *CtyunPostgresqlReadOnlyInstance) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -323,9 +378,11 @@ func (c *CtyunPostgresqlReadOnlyInstance) Delete(ctx context.Context, request re
 // checkSpec 检查规格
 func (c *CtyunPostgresqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunPostgresqlReadOnlyInstanceConfig) error {
 	// 根据父实例版本，确定prod id
-	plan.prodID = business.PgsqlReadNodeVersionProdIdDict[plan.prodVersion]
+	//plan.prodID = business.PgsqlReadNodeVersionProdIdDict[plan.prodVersion]
+	var err error
+
 	// 先根据spec_name调用云主机规格接口
-	_, err := c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
+	_, err = c.ecsService.GetFlavorByName(ctx, plan.FlavorName.ValueString(), plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -338,8 +395,23 @@ func (c *CtyunPostgresqlReadOnlyInstance) checkSpec(ctx context.Context, plan *C
 		return fmt.Errorf("暂不支持此规格：%s，请联系研发确认！", plan.FlavorName.ValueString())
 	}
 	plan.instanceSeries = instanceSeries
+
+	version, err := c.pgsqlService.GetVersionByParentProdID(ctx, plan.RegionID.ValueString(), plan.parentProdID, plan.instanceSeries)
+	if err != nil {
+		return err
+	}
+	if version == "" {
+		err = fmt.Errorf("查询父节点版本号失败，父节点prod_id=%d", plan.parentProdID)
+		return err
+	}
+	plan.prodVersion = version
+	// 获取只读节点的prod_id
+	plan.prodID, err = c.pgsqlService.GetReadNodeProdIDByVersion(ctx, plan.RegionID.ValueString(), plan.prodVersion, plan.instanceSeries)
+	if err != nil {
+		return err
+	}
 	// 再调用数据库规格接口
-	pgsqlFlavor, err := c.pgsqlService.GetPgsqlFlavorByProdIdAndFlavorName(
+	pgsqlFlavor, _, _, err := c.pgsqlService.GetPgsqlFlavorByProdIdAndFlavorName(
 		ctx,
 		plan.prodID,
 		plan.FlavorName.ValueString(),
@@ -388,15 +460,11 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceDetail(ctx contex
 		return nil, err
 	}
 	returnObj := resp.ReturnObj
-	engine := returnObj.ProdDbEngine
-	parts := strings.Split(engine, "_")
-	if len(parts) > 0 {
-		config.prodVersion = parts[0] // 输出: 12.22
-	} else {
-		err = fmt.Errorf("实例版本有误，版本为：%s", engine)
+	prodId, err := strconv.ParseInt(returnObj.SpuCode, 10, 64)
+	if err != nil {
 		return nil, err
 	}
-	config.prodVersion = parts[0]
+	config.parentProdID = prodId
 	config.vpcID = returnObj.VpcId
 	config.subnetID = returnObj.SubnetId
 	config.securityGroupID = returnObj.SecurityGroupId
@@ -406,13 +474,17 @@ func (c *CtyunPostgresqlReadOnlyInstance) getPostgresqlInstanceDetail(ctx contex
 }
 
 func (c *CtyunPostgresqlReadOnlyInstance) CreatePostgresqlReadOnlyInstance(ctx context.Context, config *CtyunPostgresqlReadOnlyInstanceConfig) error {
+	if config.FlavorName.IsNull() || config.FlavorName.IsUnknown() {
+		err := errors.New("create阶段flavor_name不能为空！")
+		return err
+	}
 	cycleType := config.CycleType.ValueString()
 	params := &pgsql.PgsqlCreateRequest{
 		InstId:          config.InstID.ValueStringPointer(),
 		Name:            config.Name.ValueString(),
 		BillMode:        business.MysqlBillMode[cycleType],
 		ProdVersion:     config.prodVersion,
-		ProdId:          business.PgsqlProdIDDict[config.prodID],
+		ProdId:          config.prodID,
 		RegionId:        config.RegionID.ValueString(),
 		VpcId:           config.vpcID,
 		SubnetId:        config.subnetID,
@@ -573,6 +645,15 @@ func (c *CtyunPostgresqlReadOnlyInstance) getAndMerge(ctx context.Context, confi
 	}
 	config.Name = types.StringValue(resp.ReturnObj.ProdInstName)
 	config.ProjectID = types.StringValue(resp.ReturnObj.ProjectId)
+	config.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(resp.ReturnObj.CreateTime))
+	config.ExpireTime = types.StringValue(utils.FromBJTimeToUTCZ(resp.ReturnObj.ExpireTime))
+	config.CycleType = types.StringValue(map[int32]string{1: "month", 2: "on_demand"}[resp.ReturnObj.BillMode])
+	// 根据id获取主节点id
+	parentDetail, err := c.pgsqlService.GetParentByID(ctx, config.RegionID.ValueString(), config.ID.ValueString())
+	if err != nil {
+		return err
+	}
+	config.InstID = types.StringValue(parentDetail.ProdInstId)
 	return nil
 }
 
@@ -712,16 +793,19 @@ type CtyunPostgresqlReadOnlyInstanceConfig struct {
 	Name                 types.String `tfsdk:"name"`                   // 只读实例名称
 	AvailabilityZoneName types.String `tfsdk:"availability_zone_name"` // 可用区信息
 	ID                   types.String `tfsdk:"id"`
+	CreateTime           types.String `tfsdk:"create_time"`
+	ExpireTime           types.String `tfsdk:"expire_time"`
 	storageType          string       // 存储类型
 	storageSpace         int32        // 存储空间, 磁盘大小100G-2T 步长10G
 	vpcID                string
 	subnetID             string
 	securityGroupID      string
-	prodID               string
-	prodVersion          string
+	prodID               int64
 	osType               string
 	cpuType              string
 	prodPerformanceSpec  string
 	hostType             string
 	instanceSeries       string
+	parentProdID         int64
+	prodVersion          string
 }

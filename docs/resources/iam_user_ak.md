@@ -47,3 +47,15 @@ resource "ctyun_iam_user_ak" "ak_test" {
 - `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID
 - `sk` (String) 用户SK
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入IAM用户AK资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_iam_user_ak.[导入配置名称] [ak],[user_id]
+# 示例
+terraform import ctyun_iam_user_ak.ak_example AK1234567890abcdef,user1234567890
+```

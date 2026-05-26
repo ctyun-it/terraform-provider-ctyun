@@ -18,6 +18,17 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     cluster_version = "1.29.3"
     deploy_type   = "single"
     kube_proxy    = "iptables"
+    enable_api_server_eip = true
+    enable_snat= true
+    nat_gateway_spec = "small"
+    install_als_cube_event = true
+    install_als= true
+    install_ccse_monitor = true
+    install_nginx_ingress = true
+    nginx_ingress_lb_spec = "standardI"
+    nginx_ingress_network = "external"
+    ip_vlan = true
+    network_policy= true
     series_type = "%[8]s"
     node_scale = %[9]d
   }

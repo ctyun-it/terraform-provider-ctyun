@@ -74,10 +74,7 @@ Read-Only:
 <a id="nestedatt--listeners--forward_config"></a>
 ### Nested Schema for `listeners.forward_config`
 
-Required:
+Read-Only:
 
 - `target_group_id` (String) 后端服务组ID
-
-Optional:
-
 - `weight` (Number) 权重，取值范围：1-256。默认为100

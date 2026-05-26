@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -21,8 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type CtyunRequest struct {
@@ -171,7 +170,6 @@ func (c CtyunRequest) buildRequest(endPoint string) (*http.Request, error) {
 	headers.Add("ctyun-eop-request-id", id)
 	headers.Add("Eop-Authorization", sign)
 	headers.Add("Eop-date", eopDate)
-	headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
 	if c.body != nil {
 		headers.Add("Content-Length", strconv.Itoa(len(c.body)))
 	}

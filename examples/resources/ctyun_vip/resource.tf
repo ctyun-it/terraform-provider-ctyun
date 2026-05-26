@@ -22,7 +22,6 @@ resource "ctyun_subnet" "subnet_test" {
 }
 
 resource "ctyun_vip" "example" {
-  vpc_id     = ctyun_subnet.subnet_test.vpc_id
   subnet_id  = ctyun_subnet.subnet_test.id
   ip_address = "192.168.1.100"
   vip_type   = "v4"

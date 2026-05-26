@@ -4,11 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -24,8 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -112,6 +114,18 @@ func (c *CtyunPrivateZone) Schema(ctx context.Context, request resource.SchemaRe
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
 				},
 			},
 			"vpc_id_list": schema.SetAttribute{
@@ -349,6 +363,10 @@ func (c *CtyunPrivateZone) create(ctx context.Context, config *CtyunPrivateZoneC
 	if !config.Description.IsNull() && !config.Description.IsUnknown() {
 		params.Description = config.Description.ValueStringPointer()
 	}
+	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() && config.ProjectID.ValueString() != "" {
+		params.ProjectID = config.ProjectID.ValueStringPointer()
+	}
+
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreatePrivateZoneApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return err
@@ -385,6 +403,9 @@ func (c *CtyunPrivateZone) getAndMerge(ctx context.Context, config *CtyunPrivate
 	config.CreateTime = types.StringValue(*detailResp.CreatedAt)
 	config.UpdateTime = types.StringValue(*detailResp.UpdatedAt)
 	config.ProxyPattern = types.StringValue(*detailResp.ProxyPattern)
+	if detailResp.ProjectID != nil {
+		config.ProjectID = types.StringValue(*detailResp.ProjectID)
+	}
 	var vpcIds []string
 	for _, vpcItem := range detailResp.VpcAssociations {
 		vpcIds = append(vpcIds, *vpcItem.VpcID)
@@ -674,4 +695,5 @@ type CtyunPrivateZoneConfig struct {
 	ID           types.String `tfsdk:"id"`
 	CreateTime   types.String `tfsdk:"create_time"`
 	UpdateTime   types.String `tfsdk:"update_time"`
+	ProjectID    types.String `tfsdk:"project_id"`
 }

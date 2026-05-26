@@ -40,7 +40,7 @@ func (c *CtyunPgsqlAssociationEip) Metadata(ctx context.Context, request resourc
 	response.TypeName = request.ProviderTypeName + "_postgresql_association_eip"
 	c.name = response.TypeName
 }
-func NewCtyunMysqlAssociationEip() resource.Resource {
+func NewCtyunPgsqlAssociationEip() resource.Resource {
 	return &CtyunPgsqlAssociationEip{}
 }
 

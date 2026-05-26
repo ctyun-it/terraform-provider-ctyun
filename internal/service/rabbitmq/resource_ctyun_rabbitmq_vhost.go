@@ -54,9 +54,11 @@ func (c *ctyunRabbitmqVhost) Schema(_ context.Context, _ resource.SchemaRequest,
 		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的虚拟主机", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -188,7 +190,7 @@ func (c *ctyunRabbitmqVhost) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -197,12 +199,12 @@ func (c *ctyunRabbitmqVhost) ImportState(ctx context.Context, request resource.I
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 2 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &instanceID)
+		err = terraform_extend.Split(request.ID, &instanceID, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &instanceID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -290,6 +292,6 @@ func (c *ctyunRabbitmqVhost) getAndMerge(ctx context.Context, plan *CtyunRabbitm
 		err = common.ResourceNotExistError
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", name, instanceID, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", instanceID, name))
 	return
 }

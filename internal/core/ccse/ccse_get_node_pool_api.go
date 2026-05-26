@@ -98,6 +98,8 @@ type CcseGetNodePoolReturnObjResponse struct {
 	VisibilityPostHostScript string                                       `json:"visibilityPostHostScript,omitempty"` /*  部署后执行自定义脚本  */
 	AzInfo                   []*CcseGetNodePoolReturnObjAzInfoResponse    `json:"azInfo"`                             /*  可用区  */
 	SubnetUuid               string                                       `json:"subnetUuid,omitempty"`               /*  子网UUID  */
+	SysDiskType              string                                       `json:"sysDiskType"`
+	SysDiskSize              int32                                        `json:"sysDiskSize"`
 }
 
 type CcseGetNodePoolReturnObjNodesResponse struct {

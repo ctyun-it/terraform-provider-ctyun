@@ -91,3 +91,16 @@ resource "ctyun_mongodb_backup" "example" {
 ### Read-Only
 
 - `id` (String) 资源ID，格式为region_id:inst_id:backup_name
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb备份
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_backup.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+# 使用全部参数
+terraform import ctyun_mongodb_backup.example f9f1b75c219d4b1194011b088486a5f7,backup-name,region-11111111
+```

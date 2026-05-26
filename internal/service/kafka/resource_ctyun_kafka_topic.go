@@ -15,7 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -130,7 +132,7 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "实例ID。",
+				Description: "实例ID",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -159,9 +161,11 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"factor_num": schema.Int32Attribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "副本数，取值范围[1, 3]，单机版默认值1，集群版默认值3。",
 				PlanModifiers: []planmodifier.Int32{
 					int32planmodifier.RequiresReplace(),
+					int32planmodifier.UseStateForUnknown(),
 				},
 				Validators: []validator.Int32{
 					int32validator.AtLeast(1),
@@ -177,6 +181,9 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 						int32validator.Between(1, 100),
 					),
 				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
+				},
 			},
 			"retention_time": schema.Int64Attribute{
 				Optional:    true,
@@ -188,35 +195,55 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 						int64validator.Between(36000, 315360000000),
 					),
 				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
+				},
 			},
 			"min_replicas": schema.Int32Attribute{
 				Optional:    true,
-				Description: "最小同步副本数，需小于等于factorNum，单机版默认值1，集群版默认值min(2, factorNum)。支持更新",
+				Computed:    true,
+				Description: "最小同步副本数，需小于等于factor_num，单机版默认值1，集群版默认值min(2, factor_num)。支持更新",
 				Validators: []validator.Int32{
 					int32validator.AtLeast(1),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"max_message": schema.Int32Attribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "最大消息大小，单位字节，取值范围[1, 10485760]， 默认值1048588。支持更新",
 				Validators: []validator.Int32{
-					int32validator.AtLeast(1),
+					int32validator.Between(1, 10485760),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.UseStateForUnknown(),
 				},
 			},
 			"need_flush": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否同步刷盘。<br><li>true：是<br><li>false：否<br><li>默认值false 支持更新",
+				Computed:    true,
+				Description: "是否同步刷盘，默认值false，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"timestamp_type": schema.StringAttribute{
 				Optional:    true,
-				Description: "消息时间戳类型。<br><li>CreateTime<br><li>LogAppendTime<br><li>默认值CreateTime 支持更新",
+				Computed:    true,
+				Description: "消息时间戳类型。支持CreateTime和LogAppendTime，默认值CreateTime，支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf("CreateTime", "LogAppendTime"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "主题描述，规则如下：<br><li>不能以+,-,@,= 特殊字符开头。 <br><li>长度不能大于200。支持更新",
+				Computed:    true,
+				Description: "描述，规则如下：不能以+,-,@,= 特殊字符开头。长度不能大于200。支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 200),
 					stringvalidator.RegexMatches(
@@ -224,50 +251,71 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 						"不能以+,-,@,=特殊字符开头",
 					),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cleanup_policy": schema.StringAttribute{
 				Optional:    true,
-				Description: "日志保留策略。<br><li>delete<br><li>compact<br><li>默认值：delete。支持更新",
+				Computed:    true,
+				Description: "日志保留策略，支持delete和compact，默认delete，支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf("delete", "compact"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"unclean_leader_election_enable": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否允许不同步的副本参与leader选举。<br><li>false<br><li>true<br><li>默认值：false。支持更新",
+				Computed:    true,
+				Description: "是否允许不同步的副本参与leader选举，默认false，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"segment_ms": schema.Int64Attribute{
 				Optional:    true,
-				Description: "日志滚动时间，单位ms。 取值范围[86400000, 7776000000]，默认值：259200000 支持更新",
+				Computed:    true,
+				Description: "日志滚动时间，单位ms。取值范围[86400000, 7776000000]，默认值：259200000，支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(86400000, 7776000000),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"segment_bytes": schema.Int64Attribute{
 				Optional:    true,
-				Description: "分片大小，单位byte。 取值范围[268435456, 10737418240]，默认值：1073741824 支持更新",
+				Computed:    true,
+				Description: "分片大小，单位byte。取值范围[268435456, 10737418240]，默认值：1073741824，支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(268435456, 10737418240),
+				},
+				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 				},
 			},
 			"remote_storage_enable": schema.BoolAttribute{
 				Optional:    true,
-				Description: "是否开启对象存储。<br><li>true：是<br><li>false：否<br><li>默认值false 支持更新",
+				Computed:    true,
+				Description: "是否开启对象存储，默认false，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"local_retention_ms": schema.Int64Attribute{
 				Optional:    true,
-				Description: "本地保留时长，单位ms。 取值范围[180000, 315360000000] 支持更新",
+				Description: "本地保留时长，单位ms。取值范围[180000, 315360000000]，支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(180000, 315360000000),
 				},
 			},
-
 			"group_subscribed": schema.ListAttribute{
 				ElementType: types.StringType,
 				Computed:    true,
 				Description: "订阅该主题的消费组名称列表",
 			},
-
 			"partition_list": schema.ListNestedAttribute{
 				Description: "分区详情列表",
 				Computed:    true,
@@ -281,10 +329,9 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 							Computed:    true,
 							Description: "分区ID",
 						},
-
 						"offsets": schema.SingleNestedAttribute{
-							Description: "分区偏移量信息",
 							Computed:    true,
+							Description: "分区偏移量信息",
 							Attributes: map[string]schema.Attribute{
 								"total": schema.Int64Attribute{
 									Computed:    true,
@@ -309,8 +356,8 @@ func (c *ctyunKafkaTopic) Schema(_ context.Context, _ resource.SchemaRequest, re
 							},
 						},
 						"replicas": schema.ListNestedAttribute{
-							Description: "副本信息",
 							Computed:    true,
+							Description: "副本信息",
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"broker_id": schema.Int32Attribute{
@@ -548,9 +595,10 @@ func (c *ctyunKafkaTopic) create(ctx context.Context, plan CtyunKafkaTopicConfig
 // update 更新
 func (c *ctyunKafkaTopic) update(ctx context.Context, plan, state CtyunKafkaTopicConfig) (err error) {
 	params := &ctgkafka.CtgkafkaUpdateTopicRequest{
-		RegionId:   state.RegionId.ValueString(),
-		ProdInstId: state.InstanceId.ValueString(),
-		TopicName:  plan.TopicName.ValueString(),
+		RegionId:    state.RegionId.ValueString(),
+		ProdInstId:  state.InstanceId.ValueString(),
+		TopicName:   plan.TopicName.ValueString(),
+		Description: plan.Description.ValueString(),
 	}
 
 	// 只有当字段有值时才设置
@@ -645,8 +693,6 @@ func (c *ctyunKafkaTopic) getAndMerge(ctx context.Context, plan *CtyunKafkaTopic
 	// 设置ID（使用组合键）
 	id := fmt.Sprintf("%s,%s", plan.InstanceId.ValueString(), plan.TopicName.ValueString())
 	plan.Id = types.StringValue(id)
-
-	// 设置主题名称
 	plan.TopicName = utils.SecStringValue(topicData.TopicName)
 	// 设置分区数量
 	plan.PartitionNum = types.Int32Value(int32(len(topicData.PartitionList)))
@@ -753,5 +799,16 @@ func (c *ctyunKafkaTopic) getConfig(ctx context.Context, plan *CtyunKafkaTopicCo
 	topic := resp.ReturnObj.Data[0]
 	plan.RetentionTime = types.Int64Value(utils.StringToInt64Must(topic.Configs.RetentionMs))
 	plan.PartitionCapacity = types.Int32Value(utils.StringToInt32Must(topic.Configs.RetentionBytes))
+	plan.FactorNum = types.Int32Value(topic.Factor)
+	plan.MinReplicas = types.Int32Value(utils.StringToInt32Must(topic.Configs.MinInsyncReplicas))
+	plan.MaxMessage = types.Int32Value(utils.StringToInt32Must(topic.Configs.MaxMessageBytes))
+	plan.NeedFlush = types.BoolValue(topic.Configs.SyncMessageFlush == "true")
+	plan.Description = utils.SecStringValue(topic.Description)
+	plan.TimestampType = types.StringValue(topic.Configs.MessageTimestampType)
+	plan.CleanupPolicy = types.StringValue(topic.Configs.CleanupPolicy)
+	plan.UncleanLeaderElectionEnable = types.BoolValue(topic.Configs.UncleanLeaderElectionEnable == "true")
+	plan.SegmentMs = types.Int64Value(utils.StringToInt64Must(topic.Configs.SegmentMs))
+	plan.SegmentBytes = types.Int64Value(utils.StringToInt64Must(topic.Configs.SegmentBytes))
+	plan.RemoteStorageEnable = types.BoolValue(topic.Configs.RemoteStorageEnable == "true")
 	return
 }

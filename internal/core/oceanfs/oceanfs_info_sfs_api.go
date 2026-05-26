@@ -2,8 +2,9 @@ package oceanfs
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // OceanfsInfoSfsApi
@@ -55,6 +56,7 @@ type OceanfsInfoSfsReturnObjVpceSharePathResponse struct {
 	VpcName            string `json:"vpcName"`
 	SharePath          string `json:"sharePath"`
 	SharePathV6        string `json:"sharePathV6"`
+	EndPointID         string `json:"endPointID"`
 }
 
 type OceanfsInfoSfsReturnObjResponse struct {

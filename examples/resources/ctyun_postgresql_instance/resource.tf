@@ -44,7 +44,7 @@ resource "ctyun_security_group" "sg_test" {
 // 开通样例
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -61,7 +61,7 @@ resource "ctyun_postgresql_instance" "test" {
 // 升配pgsql--对磁盘扩容(在升配主storage时候，确保备用磁盘空间>主磁盘空间)
 resource "ctyun_postgresql_instance" "test1" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 120
@@ -78,7 +78,7 @@ resource "ctyun_postgresql_instance" "test1" {
 // 升配规格 2C4G->2C8G
 resource "ctyun_postgresql_instance" "test2" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -94,7 +94,7 @@ resource "ctyun_postgresql_instance" "test2" {
 // 升配规格 单节点->1主2备
 resource "ctyun_postgresql_instance" "test3" {
   cycle_type          = "on_demand"
-  prod_id             = "MasterSlave1222"
+  prod_id             = 10003012
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120

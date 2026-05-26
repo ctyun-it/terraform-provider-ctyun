@@ -56,7 +56,7 @@ variable "password" {
 
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = "Single1222"
+  prod_id             = 10003011
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -111,3 +111,15 @@ resource "ctyun_postgresql_database" "examples" {
 ### Read-Only
 
 - `id` (String) postgresql实例数据库id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL数据库
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_database.[导入配置名称] [instance_id],[name],<region_id>
+# 示例
+terraform import ctyun_postgresql_database.database_example 20d1e9aa262246bf86b2915c6364715e,database_example,<region_id>
+```

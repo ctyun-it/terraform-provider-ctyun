@@ -106,7 +106,7 @@ func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "终端节点服务ID",
 						},
 						"name": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点服务名称",
 						},
 						"vpc_id": schema.StringAttribute{
@@ -156,11 +156,11 @@ func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "服务后端实例id,当type为interface时，必填",
 						},
 						"create_time": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
 						"update_time": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
 					},

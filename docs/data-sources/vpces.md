@@ -49,7 +49,7 @@ data "ctyun_vpces" "test" {
 <a id="nestedatt--vpces"></a>
 ### Nested Schema for `vpces`
 
-Required:
+Read-Only:
 
 - `create_time` (String) 创建时间，为UTC格式
 - `endpoint_service_id` (String) 终端节点服务ID

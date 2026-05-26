@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -16,10 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -73,9 +71,11 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例的队列", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10220893"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -117,7 +117,6 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"durable": schema.BoolAttribute{
@@ -127,7 +126,6 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Default:     booldefault.StaticBool(false),
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
-					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"vhost": schema.StringAttribute{
@@ -153,7 +151,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "队列过期时间，过期后队列自动删除，单位为ms",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreInt64(),
 				},
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
@@ -163,7 +161,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "死信交换器名称。消息被拒绝或过期时将重新发布到该交换器",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
@@ -173,7 +171,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "死信路由键。死信交换器会发送死信消息到绑定对应路由键的队列上",
 				Optional:    true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
@@ -183,7 +181,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "消息过期时间，发布到队列的消息在被丢弃之前可以存活的时间，单位为ms",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreInt64(),
 				},
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
@@ -193,7 +191,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "队列最大消息长度",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreInt64(),
 				},
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
@@ -203,7 +201,7 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "队列消息的总字节数上限",
 				Optional:    true,
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					planmodifier2.NullIgnoreInt64(),
 				},
 				Validators: []validator.Int64{
 					int64validator.AtLeast(1),
@@ -212,42 +210,32 @@ func (c *ctyunRabbitmqQueue) Schema(_ context.Context, _ resource.SchemaRequest,
 			"x_overflow": schema.StringAttribute{
 				Description: "队列消息处理策略。可选值：drop-head（默认，丢弃最早消息）、reject-publish（拒绝接收新消息）",
 				Optional:    true,
-				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("drop-head", "reject-publish"),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+					planmodifier2.NullIgnoreString(),
 				},
-				Default: stringdefault.StaticString("drop-head"),
 			},
 			"x_max_priority": schema.Int64Attribute{
 				Description: "队列最大优先级，范围为0~255，默认0",
 				Optional:    true,
-				Computed:    true,
 				Validators: []validator.Int64{
 					int64validator.Between(0, 255),
 				},
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
-					int64planmodifier.UseStateForUnknown(),
+					planmodifier2.NullIgnoreInt64(),
 				},
-				Default: int64default.StaticInt64(0),
 			},
-
 			"x_queue_mode": schema.StringAttribute{
 				Description: "队列模式。可选值：default（默认模式）、lazy（惰性模式）",
 				Optional:    true,
-				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("default", "lazy"),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-					stringplanmodifier.UseStateForUnknown(),
+					planmodifier2.NullIgnoreString(),
 				},
-				Default: stringdefault.StaticString("default"),
 			},
 		},
 	}
@@ -308,7 +296,62 @@ func (c *ctyunRabbitmqQueue) Read(ctx context.Context, request resource.ReadRequ
 }
 
 func (c *ctyunRabbitmqQueue) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// 读取tf文件中配置
+	var plan CtyunRabbitmqQueueConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
 
+	// 读取state中的配置
+	var state CtyunRabbitmqQueueConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	if !plan.XExpires.IsUnknown() && !plan.XExpires.IsNull() && state.XExpires.IsNull() {
+		state.XExpires = plan.XExpires
+		response.Diagnostics.AddWarning("x_expires的更新仅写入状态文件", "在import时，状态文件中x_expires为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XDeadLetterExchange.IsUnknown() && !plan.XDeadLetterExchange.IsNull() && state.XDeadLetterExchange.IsNull() {
+		state.XDeadLetterExchange = plan.XDeadLetterExchange
+		response.Diagnostics.AddWarning("x_dead_letter_exchange的更新仅写入状态文件", "在import时，状态文件中x_dead_letter_exchange为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XDeadLetterRoutingKey.IsUnknown() && !plan.XDeadLetterRoutingKey.IsNull() && state.XDeadLetterRoutingKey.IsNull() {
+		state.XDeadLetterRoutingKey = plan.XDeadLetterRoutingKey
+		response.Diagnostics.AddWarning("x_dead_letter_routing_key的更新仅写入状态文件", "在import时，状态文件中x_dead_letter_routing_key为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XMessageTTL.IsUnknown() && !plan.XMessageTTL.IsNull() && state.XMessageTTL.IsNull() {
+		state.XMessageTTL = plan.XMessageTTL
+		response.Diagnostics.AddWarning("x_message_ttl的更新仅写入状态文件", "在import时，状态文件中x_message_ttl为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XMaxLength.IsUnknown() && !plan.XMaxLength.IsNull() && state.XMaxLength.IsNull() {
+		state.XMaxLength = plan.XMaxLength
+		response.Diagnostics.AddWarning("x_max_length的更新仅写入状态文件", "在import时，状态文件中x_max_length为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XMaxLengthBytes.IsUnknown() && !plan.XMaxLengthBytes.IsNull() && state.XMaxLengthBytes.IsNull() {
+		state.XMaxLengthBytes = plan.XMaxLengthBytes
+		response.Diagnostics.AddWarning("x_max_length_bytes的更新仅写入状态文件", "在import时，状态文件中x_max_length_bytes为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XOverflow.IsUnknown() && !plan.XOverflow.IsNull() && state.XOverflow.IsNull() {
+		state.XOverflow = plan.XOverflow
+		response.Diagnostics.AddWarning("x_overflow的更新仅写入状态文件", "在import时，状态文件中x_overflow为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XMaxPriority.IsUnknown() && !plan.XMaxPriority.IsNull() && state.XMaxPriority.IsNull() {
+		state.XMaxPriority = plan.XMaxPriority
+		response.Diagnostics.AddWarning("x_max_priority的更新仅写入状态文件", "在import时，状态文件中x_max_priority为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.XQueueMode.IsUnknown() && !plan.XQueueMode.IsNull() && state.XQueueMode.IsNull() {
+		state.XQueueMode = plan.XQueueMode
+		response.Diagnostics.AddWarning("x_queue_mode的更新仅写入状态文件", "在import时，状态文件中x_queue_mode为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
 func (c *ctyunRabbitmqQueue) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -345,7 +388,7 @@ func (c *ctyunRabbitmqQueue) ImportState(ctx context.Context, request resource.I
 	defer func() {
 		if err != nil {
 			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [name],[vhost],[instance_id],<region_id>", c.name)
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[vhost],[name],<region_id>", c.name)
 			response.Diagnostics.AddError(title, detail)
 		}
 	}()
@@ -354,12 +397,12 @@ func (c *ctyunRabbitmqQueue) ImportState(ctx context.Context, request resource.I
 	// 根据分隔符数量判断是否输入了regionID
 	if strings.Count(request.ID, common.ImportSeparator) < 3 {
 		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
-		err = terraform_extend.Split(request.ID, &name, &vhost, &instanceID)
+		err = terraform_extend.Split(request.ID, &instanceID, &vhost, &name)
 		if err != nil {
 			return
 		}
 	} else {
-		err = terraform_extend.Split(request.ID, &name, &vhost, &instanceID, &regionID)
+		err = terraform_extend.Split(request.ID, &instanceID, &vhost, &name, &regionID)
 		if err != nil {
 			return
 		}
@@ -510,10 +553,10 @@ func (c *ctyunRabbitmqQueue) getAndMerge(ctx context.Context, plan *CtyunRabbitm
 	plan.Durable = types.BoolValue(queue.Durable)
 	plan.Vhost = types.StringValue(queue.Vhost)
 	plan.AutoDelete = types.BoolValue(queue.AutoDelete)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s,%s",
-		plan.Name.ValueString(),
-		plan.Vhost.ValueString(),
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s",
 		plan.InstanceID.ValueString(),
-		plan.RegionID.ValueString()))
+		plan.Vhost.ValueString(),
+		plan.Name.ValueString(),
+	))
 	return
 }

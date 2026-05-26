@@ -2,8 +2,9 @@ package ctvpc
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtvpcShowPrivateZoneApi
@@ -66,6 +67,7 @@ type CtvpcShowPrivateZoneReturnObjResponse struct {
 	VpcAssociations []*CtvpcShowPrivateZoneReturnObjVpcAssociationsVpcAssociationResponse `json:"vpcAssociations"`        /*  vpc关联信息数组  */
 	CreatedAt       *string                                                               `json:"createdAt,omitempty"`    /*  创建时间  */
 	UpdatedAt       *string                                                               `json:"updatedAt,omitempty"`    /*  更新时间  */
+	ProjectID       *string                                                               `json:"ProjectID,omitempty"`
 }
 
 type CtvpcShowPrivateZoneReturnObjVpcAssociationsVpcAssociationResponse struct {

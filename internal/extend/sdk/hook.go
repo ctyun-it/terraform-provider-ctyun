@@ -2,9 +2,12 @@ package sdk
 
 import (
 	"context"
+	"fmt"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"net/http"
 	"net/http/httputil"
+	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -39,10 +42,17 @@ func (d LogHttpHook) AfterResponse(ctx context.Context, response *http.Response)
 
 // MetricHttpHook 使用metric发送埋点日志
 type MetricHttpHook struct {
+	TerraformVersion string
+	ProviderVersion  string
 }
 
-func (m MetricHttpHook) BeforeRequest(_ context.Context, request *http.Request) {
-	request.Header.Set("From-Terraform-Provider", "true")
+func (m MetricHttpHook) BeforeRequest(ctx context.Context, request *http.Request) {
+	typ, name, action := GetResourceInfoFromStack()
+	request.Header.Set("X-Terraform-Source-Type", typ)
+	request.Header.Set("X-Terraform-Source-Name", name)
+	request.Header.Set("X-Terraform-Source-Action", action)
+
+	request.Header.Set("User-Agent", fmt.Sprintf("Terraform/%s terraform-provider-ctyun/%s", m.TerraformVersion, m.ProviderVersion))
 }
 
 func (m MetricHttpHook) AfterResponse(_ context.Context, _ *http.Response) {
@@ -94,6 +104,73 @@ func appendHeaderIfNotExist(request *http.Request, url string) {
 	if !ok {
 		request.Header[HeaderConsoleUrl] = []string{url}
 	}
+}
+
+// GetResourceInfoFromStack 从调用栈中获取 Terraform 资源类型、资源名称和操作类型
+// 返回值: typ (resource/datasource/unknown), name (资源名), action (Create/Update/Delete/Read/ImportState/unknown)
+func GetResourceInfoFromStack() (typ string, name string, action string) {
+	typ = "unknown"
+	action = "unknown"
+	// 从 i=3 开始跳过自身，性能更好
+	for i := 3; i < 30; i++ {
+		pc, file, _, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+
+		// 尝试从函数名中提取操作类型
+		if a := getActionFromPC(pc); a != "unknown" {
+			action = a
+		}
+
+		filename := filepath.Base(file)
+
+		// 匹配 resource_*.go，记录但不立即返回，继续向外遍历寻找 action
+		if typ == "unknown" && strings.HasPrefix(filename, "resource_") && strings.HasSuffix(filename, ".go") {
+			resName := strings.TrimSuffix(strings.TrimPrefix(filename, "resource_"), ".go")
+			typ = "resource"
+			name = resName
+		}
+
+		// 匹配 datasource_*.go
+		if typ == "unknown" && strings.HasPrefix(filename, "datasource_") && strings.HasSuffix(filename, ".go") {
+			dataName := strings.TrimSuffix(strings.TrimPrefix(filename, "datasource_"), ".go")
+			typ = "datasource"
+			name = dataName
+		}
+
+		// typ 和 action 都已找到，提前退出
+		if typ != "unknown" && action != "unknown" {
+			break
+		}
+	}
+
+	// datasource 只有读操作
+	if typ == "datasource" && action == "unknown" {
+		action = "Read"
+	}
+
+	return typ, name, action
+}
+
+// getActionFromPC 从 program counter 中提取 Terraform 操作类型
+func getActionFromPC(pc uintptr) string {
+	fn := runtime.FuncForPC(pc)
+	if fn == nil {
+		return "unknown"
+	}
+	funcName := fn.Name()
+	// 提取函数名（去掉包路径）
+	parts := strings.Split(funcName, ".")
+	if len(parts) == 0 {
+		return "unknown"
+	}
+	methodName := parts[len(parts)-1]
+	switch methodName {
+	case "Create", "Update", "Delete", "Read", "ImportState":
+		return methodName
+	}
+	return "unknown"
 }
 
 func (m AddConsoleUrlHook) AfterResponse(_ context.Context, _ *http.Response) {

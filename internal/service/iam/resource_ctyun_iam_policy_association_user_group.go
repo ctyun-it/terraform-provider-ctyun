@@ -3,11 +3,9 @@ package iam
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -22,7 +20,6 @@ import (
 var (
 	_ resource.Resource                = &ctyunPolicyAssociationUserGroup{}
 	_ resource.ResourceWithConfigure   = &ctyunPolicyAssociationUserGroup{}
-	_ resource.ResourceWithImportState = &ctyunPolicyAssociationUserGroup{}
 )
 
 func NewCtyunPolicyAssociationUserGroup() resource.Resource {
@@ -171,31 +168,6 @@ func (c *ctyunPolicyAssociationUserGroup) Delete(ctx context.Context, request re
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-}
-
-func (c *ctyunPolicyAssociationUserGroup) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
-			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
-			response.Diagnostics.AddError(title, detail)
-		}
-	}()
-	var cfg CtyunPolicyAssociationUserGroupConfig
-	var privilegeId string
-	err = terraform_extend.Split(request.ID, &privilegeId)
-	if err != nil {
-		return
-	}
-
-	cfg.Id = types.StringValue(privilegeId)
-
-	instance, err := c.getAndMergeIamPolicyAssociationUserGroup(ctx, cfg)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
 func (c *ctyunPolicyAssociationUserGroup) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {

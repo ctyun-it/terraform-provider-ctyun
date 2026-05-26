@@ -4,10 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"slices"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	amqp2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cda"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cf"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	crs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/crs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
@@ -35,6 +40,8 @@ import (
 	hpfs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
 	ctgkafka "github.com/ctyun-it/terraform-provider-ctyun/internal/core/kafka"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/oceanfs"
+	opensearchsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/opensearch"
+	rocketmqsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/rocketmq"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sdwan"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/sfs"
@@ -43,6 +50,7 @@ import (
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/acl"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/ccse"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/cloud-assistant"
 	common2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/crs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/dns"
@@ -51,6 +59,7 @@ import (
 	ec2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/ec"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/ecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/elb"
+	faas2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/faas"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/hpfs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/iam"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/image"
@@ -59,10 +68,12 @@ import (
 	mysql2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/mysql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/nat"
 	oceanfs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/oceanfs"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/opensearch"
 	peer_connection2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/peer-connection"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/pgsql"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/rabbitmq"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/redis"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/service/rocketmq"
 	scaling2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/scaling"
 	sdwan2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/sdwan"
 	sfs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/service/sfs"
@@ -82,9 +93,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"net/http"
-	"slices"
-	"strings"
 )
 
 func NewCtyunProvider(version string) func() provider.Provider {
@@ -264,14 +272,20 @@ func (c *CtyunProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	config := &ctyunsdk.CtyunClientConfig{
 		HttpHooks: []ctyunsdk.HttpHook{
 			ctyunsdk.AddUserAgentHttpHook{},
-			sdk_extend.MetricHttpHook{},
+			sdk_extend.MetricHttpHook{
+				TerraformVersion: req.TerraformVersion,
+				ProviderVersion:  c.version,
+			},
 			sdk_extend.LogHttpHook{},
 		},
 	}
 	coreConfig := &core.CtyunClientConfig{
 		HttpHooks: []core.HttpHook{
 			ctyunsdk.AddUserAgentHttpHook{},
-			sdk_extend.MetricHttpHook{},
+			sdk_extend.MetricHttpHook{
+				TerraformVersion: req.TerraformVersion,
+				ProviderVersion:  c.version,
+			},
 			sdk_extend.LogHttpHook{},
 		},
 	}
@@ -328,37 +342,40 @@ func (c *CtyunProvider) Configure(ctx context.Context, req provider.ConfigureReq
 	// 填充对应的内容信息
 	common.InitCtyunMetadata(
 		&common.Apis{
-			SdkCtImageApis:  sdkctimage.NewApis(fmt.Sprintf(endpointUrl, sdkctimage.EndpointName), coreClient),
-			SdkCtNatApis:    ctnat.NewApis(fmt.Sprintf(endpointUrl, ctnat.EndpointName), coreClient),
-			CtEbsApis:       ctebs.NewApis(client),
-			CtEcsApis:       ctecs.NewApis(client),
-			CtIamApis:       ctiam.NewApis(client),
-			CtImageApis:     ctimage.NewApis(client),
-			CtVpcApis:       ctvpc.NewApis(client),
-			CtEbmApis:       ctebm.NewApis(fmt.Sprintf(endpointUrl, ctebm.EndpointName), coreClient),
-			SdkCtIamApis:    ctiam2.NewApis(fmt.Sprintf(endpointUrl, ctiam2.EndpointName), coreClient),
-			SdkCtEbsApis:    ctebs2.NewApis(fmt.Sprintf(endpointUrl, ctebs2.EndpointName), coreClient),
-			SdkCtEcsApis:    ctecs2.NewApis(fmt.Sprintf(endpointUrl, ctecs2.EndpointName), coreClient),
-			SdkCtVpcApis:    ctvpc2.NewApis(fmt.Sprintf(endpointUrl, ctvpc2.EndpointName), coreClient),
-			SdkCtZosApis:    ctzos.NewApis(fmt.Sprintf(endpointUrl, ctzos.EndpointName), coreClient),
-			SdkCcseApis:     ccse2.NewApis(fmt.Sprintf(endpointUrl, ccse2.EndpointName), coreClient),
-			SdkDcs2Apis:     dcs2.NewApis(fmt.Sprintf(endpointUrl, dcs2.EndpointName), coreClient),
-			SdkCtElbApis:    ctelb.NewApis(fmt.Sprintf(endpointUrl, ctelb.EndpointName), coreClient),
-			SdkCtMysqlApis:  mysql.NewApis(client),
-			SdkKafkaApis:    ctgkafka.NewApis(fmt.Sprintf(endpointUrl, ctgkafka.EndpointName), coreClient),
-			AmqpApis:        amqp.NewApis(client),
-			SdkAmqpApis:     amqp2.NewApis(fmt.Sprintf(endpointUrl, amqp2.EndpointName), coreClient),
-			SdkCrsApis:      crs2.NewApis(fmt.Sprintf(endpointUrl, crs2.EndpointName), coreClient),
-			SdkCtPgsqlApis:  pgsql2.NewApis(client),
-			SdkMongodbApis:  mongodb2.NewApis(client),
-			SdkHpfsApis:     hpfs2.NewApis(fmt.Sprintf(endpointUrl, hpfs2.EndpointName), coreClient),
-			CtEbsBackupApis: ctebsbackup.NewApis(fmt.Sprintf(endpointUrl, ctebsbackup.EndpointName), coreClient),
-			SdkScalingApis:  scaling.NewApis(fmt.Sprintf(endpointUrl, scaling.EndpointName), coreClient),
-			SdkSfsApi:       sfs.NewApis(fmt.Sprintf(endpointUrl, sfs.EndpointName), coreClient),
-			SdkCdaApis:      cda.NewApis(fmt.Sprintf(endpointUrl, cda.EndpointName), coreClient),
-			SdkEcApis:       ec.NewApis(fmt.Sprintf(endpointUrl, ec.EndpointName), coreClient),
-			SdkSdwanApis:    sdwan.NewApis(fmt.Sprintf(endpointUrl, sdwan.EndpointName), coreClient),
-			SdkOceanfsApis:  oceanfs.NewApis(fmt.Sprintf(endpointUrl, oceanfs.EndpointName), coreClient),
+			SdkCtImageApis:    sdkctimage.NewApis(fmt.Sprintf(endpointUrl, sdkctimage.EndpointName), coreClient),
+			SdkCtNatApis:      ctnat.NewApis(fmt.Sprintf(endpointUrl, ctnat.EndpointName), coreClient),
+			CtEbsApis:         ctebs.NewApis(client),
+			CtEcsApis:         ctecs.NewApis(client),
+			CtIamApis:         ctiam.NewApis(client),
+			CtImageApis:       ctimage.NewApis(client),
+			CtVpcApis:         ctvpc.NewApis(client),
+			CtEbmApis:         ctebm.NewApis(fmt.Sprintf(endpointUrl, ctebm.EndpointName), coreClient),
+			SdkCtIamApis:      ctiam2.NewApis(fmt.Sprintf(endpointUrl, ctiam2.EndpointName), coreClient),
+			SdkCtEbsApis:      ctebs2.NewApis(fmt.Sprintf(endpointUrl, ctebs2.EndpointName), coreClient),
+			SdkCtEcsApis:      ctecs2.NewApis(fmt.Sprintf(endpointUrl, ctecs2.EndpointName), coreClient),
+			SdkCtVpcApis:      ctvpc2.NewApis(fmt.Sprintf(endpointUrl, ctvpc2.EndpointName), coreClient),
+			SdkCtZosApis:      ctzos.NewApis(fmt.Sprintf(endpointUrl, ctzos.EndpointName), coreClient),
+			SdkCcseApis:       ccse2.NewApis(fmt.Sprintf(endpointUrl, ccse2.EndpointName), coreClient),
+			SdkDcs2Apis:       dcs2.NewApis(fmt.Sprintf(endpointUrl, dcs2.EndpointName), coreClient),
+			SdkCtElbApis:      ctelb.NewApis(fmt.Sprintf(endpointUrl, ctelb.EndpointName), coreClient),
+			SdkCtMysqlApis:    mysql.NewApis(client),
+			SdkKafkaApis:      ctgkafka.NewApis(fmt.Sprintf(endpointUrl, ctgkafka.EndpointName), coreClient),
+			AmqpApis:          amqp.NewApis(client),
+			SdkAmqpApis:       amqp2.NewApis(fmt.Sprintf(endpointUrl, amqp2.EndpointName), coreClient),
+			SdkCrsApis:        crs2.NewApis(fmt.Sprintf(endpointUrl, crs2.EndpointName), coreClient),
+			SdkCtPgsqlApis:    pgsql2.NewApis(client),
+			SdkMongodbApis:    mongodb2.NewApis(client),
+			SdkHpfsApis:       hpfs2.NewApis(fmt.Sprintf(endpointUrl, hpfs2.EndpointName), coreClient),
+			CtEbsBackupApis:   ctebsbackup.NewApis(fmt.Sprintf(endpointUrl, ctebsbackup.EndpointName), coreClient),
+			SdkScalingApis:    scaling.NewApis(fmt.Sprintf(endpointUrl, scaling.EndpointName), coreClient),
+			SdkSfsApi:         sfs.NewApis(fmt.Sprintf(endpointUrl, sfs.EndpointName), coreClient),
+			SdkCdaApis:        cda.NewApis(fmt.Sprintf(endpointUrl, cda.EndpointName), coreClient),
+			SdkEcApis:         ec.NewApis(fmt.Sprintf(endpointUrl, ec.EndpointName), coreClient),
+			SdkSdwanApis:      sdwan.NewApis(fmt.Sprintf(endpointUrl, sdwan.EndpointName), coreClient),
+			SdkOceanfsApis:    oceanfs.NewApis(fmt.Sprintf(endpointUrl, oceanfs.EndpointName), coreClient),
+			RocketmqApis:      rocketmqsdk.NewApis(fmt.Sprintf(endpointUrl, rocketmqsdk.EndpointName), coreClient),
+			SdkOpensearchApis: opensearchsdk.NewApis(fmt.Sprintf(endpointUrl, opensearchsdk.EndpointName), coreClient),
+			SdkCtCfApis:       cf.NewApis(fmt.Sprintf(endpointUrl, cf.EndpointName), coreClient),
 		},
 		*credential,
 		*SdkCredential,
@@ -409,6 +426,7 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		vpc.NewCtyunEips(),
 		vpc.NewCtyunBandwidths(),
 		vpc.NewCtyunNetResourcesByTag(),
+		vpc.NewctyunIPv6Bandwidths(),
 		vpce.NewCtyunVpces(),
 		vpce.NewCtyunVpceServices(),
 		vpce.NewCtyunVpceServiceTransitIPs(),
@@ -506,6 +524,19 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		vpc.NewCtyunVips(),
 		vpc.NewCtyunDhcpOptionSetAssociationVpcs(),
 		vpc.NewCtyunDhcpOptionSets(),
+		rocketmq.NewCtyunRocketmqInstances(),
+		rocketmq.NewCtyunRocketmqTopics(),
+		rocketmq.NewCtyunRocketmqGroups(),
+		rocketmq.NewCtyunRocketmqSpecs(),
+		opensearch.NewCtyunSearchInstances(),
+		faas2.NewCtyunFunctions(),
+		faas2.NewCtyunFunctionTriggers(),
+		faas2.NewCtyunFunctionDomains(),
+		faas2.NewCtyunFunctionAliases(),
+		faas2.NewCtyunFunctionVersions(),
+		vpc.NewCtyunFlowPackages(),
+		cloud_assistant.NewCtyunCloudAssistantCommands(),
+		cloud_assistant.NewCtyunCloudAssistantInvocationResults(),
 	)
 }
 
@@ -557,6 +588,10 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		vpc.NewCtyunVpcRouteTable(),
 		vpc.NewCtyunVpcRouteTableRule(),
 		vpc.NewCtyunNetTagsResource(),
+		vpc.NewCtyunIPv6BandwidthService(),
+		vpc.NewCtyunIPv6BandwidthAssociation(),
+		vpc.NewCtyunIPv6GatewayService(),
+		vpc.NewCtyunFlowPackageService(),
 		vpce.NewCtyunVpce(),
 		vpce.NewCtyunVpceService(),
 		vpce.NewCtyunVpceServiceTransitIP(),
@@ -587,7 +622,7 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		ccse.NewCtyunCcsePlugin(),
 		pgsql.NewCtyunPostgresqlInstance(),
 		rabbitmq.NewCtyunRabbitmqInstance(),
-		pgsql.NewCtyunMysqlAssociationEip(),
+		pgsql.NewCtyunPgsqlAssociationEip(),
 		mongodb.NewCtyunMongodbInstance(),
 		mysql2.NewCtyunMysqlWhiteList(),
 		ecs.NewCtyunEcsSnapshot(),
@@ -668,7 +703,19 @@ func (c *CtyunProvider) Resources(ctx context.Context) []func() resource.Resourc
 		peer_connection2.NewCtyunVpcPeerConnection(),
 		peer_connection2.NewCtyunVpcPeerConnectionAttach(),
 		mysql2.NewCtyunMysqlAudit(),
+		rocketmq.NewCtyunRocketmqInstance(),
+		rocketmq.NewCtyunRocketmqTopic(),
 		zos.NewctyunZosSubscribe(),
+		rocketmq.NewCtyunRocketmqGroup(),
+		opensearch.NewCtyunSearchInstance(),
+		faas2.NewCtyunFunction(),
+		faas2.NewCtyunFunctionTrigger(),
+		faas2.NewCtyunFunctionDomain(),
+		faas2.NewCtyunFunctionAlias(),
+		faas2.NewCtyunFunctionVersion(),
+		cloud_assistant.NewCtyunCloudAssistantCommand(),
+		cloud_assistant.NewCtyunCloudAssistantInvocation(),
+		cloud_assistant.NewCtyunCloudAssistantRunCommand(),
 	)
 }
 

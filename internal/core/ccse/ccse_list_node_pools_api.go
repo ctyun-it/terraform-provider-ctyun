@@ -132,6 +132,7 @@ type CcseListNodePoolsReturnObjRecordsResponse struct {
 	DefinedHostnameEnable    int32                                                 `json:"definedHostnameEnable,omitempty"`    /*  是否自定义节点名称 0-否 1-是  */
 	HostNamePrefix           string                                                `json:"hostNamePrefix,omitempty"`           /*  自定义主机名前缀  */
 	HostNamePostfix          string                                                `json:"hostNamePostfix,omitempty"`          /*  自定义主机名后缀  */
+	ImageType                int32                                                 `json:"imageType"`
 }
 
 type CcseListNodePoolsReturnObjRecordsNodesResponse struct {
