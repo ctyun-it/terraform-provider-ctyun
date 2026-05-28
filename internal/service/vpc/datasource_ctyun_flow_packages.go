@@ -52,7 +52,7 @@ type CtyunFlowPackagesConfig struct {
 
 func (c *ctyunFlowPackages) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询虚拟私有云列表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10028487"),
+		MarkdownDescription: utils.FormatDesc("查询流量包列表", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10032118"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

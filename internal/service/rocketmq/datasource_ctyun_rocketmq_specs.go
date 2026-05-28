@@ -3,6 +3,7 @@ package rocketmq
 import (
 	"context"
 	"fmt"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/rocketmq"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -52,7 +53,7 @@ type CtyunRocketmqSpecsConfig struct {
 
 func (c *ctyunRocketmqSpecs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询 RocketMQ 可用的规格", "分布式消息服务 RocketMQ", ""),
+		MarkdownDescription: utils.FormatDesc("查询 RocketMQ 可用的规格", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000114/10048827"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

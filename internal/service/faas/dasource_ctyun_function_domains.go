@@ -3,6 +3,7 @@ package faas
 import (
 	"context"
 	"fmt"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cf"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -41,7 +42,7 @@ func (c *CtyunFunctionDomains) Metadata(ctx context.Context, request datasource.
 
 func (c *CtyunFunctionDomains) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询自定义域名列表", "函数工作流（FunctionGraph）", "https://www.ctyun.cn/document/10355289"),
+		MarkdownDescription: utils.FormatDesc("查询自定义域名列表", "函数计算（FaaS）", "https://www.ctyun.cn/document/10006234/10532586"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,

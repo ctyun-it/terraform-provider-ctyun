@@ -58,7 +58,7 @@ type CtyunBandwidthsConfig struct {
 
 func (c *ctyunBandwidths) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询共享带宽", "共享流量包（SDP，Shared Data Package）", "https://www.ctyun.cn/document/10026761/10030015"),
+		MarkdownDescription: utils.FormatDesc("查询共享带宽", "共享带宽（Shared Bandwidth）", "https://www.ctyun.cn/document/10026761/10030015"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

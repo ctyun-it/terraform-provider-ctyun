@@ -4,7 +4,7 @@ page_title: "CTYUN: ctyun_rocketmq_instances"
 ---
 
 # ctyun_rocketmq_instances (Data Source)
--> 查询 RocketMQ 实例
+-> 查询 RocketMQ 实例列表
 
 
 

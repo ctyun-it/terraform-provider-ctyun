@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/rocketmq"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -23,8 +26,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
-	"strings"
 )
 
 var (
@@ -63,7 +64,7 @@ type CtyunRocketmqGroupConfig struct {
 
 func (c *ctyunRocketmqGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理 RocketMQ 订阅组", "分布式消息服务 RocketMQ", "https://www.ctyun.cn/document/10000118/10001967"),
+		MarkdownDescription: utils.FormatDesc("管理 RocketMQ 订阅组", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000114/10143635"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

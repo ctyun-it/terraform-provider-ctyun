@@ -54,7 +54,7 @@ type CtyunIPv6BandwidAssociationConfig struct {
 
 func (c *ctyunIPv6BandwidthAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理共享带宽和弹性IP的绑定关系", "共享流量包（SDP，Shared Data Package）", "https://www.ctyun.cn/document/10026761/10030030"),
+		MarkdownDescription: utils.FormatDesc("管理共享带宽和弹性IP的绑定关系", "共享带宽（Shared Bandwidth）", "https://www.ctyun.cn/document/10026761/10030030"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

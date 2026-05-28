@@ -1,5 +1,5 @@
 ---
-subcategory: "IPv6带宽（IPv6 Bandwidth）"
+subcategory: "弹性IP（Elastic IP，EIP）"
 page_title: "CTYUN: ctyun_ipv6_bandwidth"
 ---
 

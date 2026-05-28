@@ -68,7 +68,7 @@ type CtyunIPv6BandwidthConfig struct {
 
 func (c *ctyunIPv6BandwidthService) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理IPv6带宽", "IPv6带宽（IPv6 Bandwidth）", "https://www.ctyun.cn/document/10026753/10037269"),
+		MarkdownDescription: utils.FormatDesc("管理IPv6带宽", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10037269"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "IPv6带宽ID",

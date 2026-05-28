@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cf"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
@@ -20,8 +23,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
-	"strings"
 )
 
 var (
@@ -71,7 +72,7 @@ func (c *CtyunFunctionDomain) Metadata(ctx context.Context, req resource.Metadat
 
 func (c *CtyunFunctionDomain) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理自定义域名", "函数工作流（FunctionGraph）", "https://www.ctyun.cn/document/10355289"),
+		MarkdownDescription: utils.FormatDesc("管理自定义域名", "函数计算（FaaS）", "https://www.ctyun.cn/document/10006234/10532586"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

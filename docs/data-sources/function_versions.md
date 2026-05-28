@@ -1,5 +1,5 @@
 ---
-subcategory: "函数工作流（FunctionGraph）"
+subcategory: "函数计算（FaaS）"
 page_title: "CTYUN: ctyun_function_versions"
 ---
 

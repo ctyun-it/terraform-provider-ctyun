@@ -23,7 +23,7 @@ type ctyunIPv6Bandwidths struct {
 	meta *common.CtyunMetadata
 }
 
-func NewctyunIPv6Bandwidths() datasource.DataSource {
+func NewCtyunIPv6Bandwidths() datasource.DataSource {
 	return &ctyunIPv6Bandwidths{}
 }
 
@@ -59,7 +59,7 @@ type CtyunIPv6BandwidthsConfig struct {
 
 func (c *ctyunIPv6Bandwidths) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理IPv6带宽", "IPv6带宽（IPv6 Bandwidth）", "https://www.ctyun.cn/document/10026753/10037269"),
+		MarkdownDescription: utils.FormatDesc("查询IPv6带宽列表", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10037269"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Description: "IPv6带宽ID",

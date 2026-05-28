@@ -1,10 +1,10 @@
 ---
-subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+subcategory: "弹性IP（Elastic IP，EIP）"
 page_title: "CTYUN: ctyun_flow_packages"
 ---
 
 # ctyun_flow_packages (Data Source)
--> 查询虚拟私有云列表
+-> 查询流量包列表
 
 
 
