@@ -83,7 +83,7 @@ func (c *CtyunFunction) Metadata(ctx context.Context, req resource.MetadataReque
 
 func (c *CtyunFunction) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理函数", "函数工作流（FunctionGraph）", "https://www.ctyun.cn/document/10006234/10522132"),
+		MarkdownDescription: utils.FormatDesc("管理函数", "函数计算（FaaS）", "https://www.ctyun.cn/document/10006234/10522132"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -198,7 +198,7 @@ func (c *CtyunFunction) Schema(ctx context.Context, req resource.SchemaRequest, 
 				Computed:    true,
 				Description: "启动加速，默认为 0，1 表示使用启动加速 ",
 				Default:     int32default.StaticInt32(0),
-				Validators:  []validator.Int32{
+				Validators: []validator.Int32{
 					//	TODO 只有当 runtime_handle_type 是java 类型才支持该字段 ,暂时先不管该字段 默认为0
 				},
 			},
