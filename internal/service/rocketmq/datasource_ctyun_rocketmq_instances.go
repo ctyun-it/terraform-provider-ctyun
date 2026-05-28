@@ -3,13 +3,14 @@ package rocketmq
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/rocketmq"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"time"
 )
 
 var (
@@ -60,7 +61,7 @@ type CtyunRocketmqInstancesConfig struct {
 
 func (c *ctyunRocketmqInstances) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询 RocketMQ 实例", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000118/10001967"),
+		MarkdownDescription: utils.FormatDesc("查询 RocketMQ 实例列表", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000114/10143555"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,

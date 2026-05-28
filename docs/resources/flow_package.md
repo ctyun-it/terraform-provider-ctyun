@@ -1,5 +1,5 @@
 ---
-subcategory: "共享流量包（Flow Package）"
+subcategory: "弹性IP（Elastic IP，EIP）"
 page_title: "CTYUN: ctyun_flow_package"
 ---
 

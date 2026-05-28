@@ -1,0 +1,2 @@
+release-note:new-resource
+ctyun_ipv6_gateway

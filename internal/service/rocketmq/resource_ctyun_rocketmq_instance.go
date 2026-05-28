@@ -82,7 +82,7 @@ type CtyunRocketmqInstanceConfig struct {
 
 func (c *ctyunRocketmqInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理 RocketMQ 实例", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000118/10001967"),
+		MarkdownDescription: utils.FormatDesc("管理 RocketMQ 实例", "分布式消息服务RocketMQ", "https://www.ctyun.cn/document/10000114/10123760"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

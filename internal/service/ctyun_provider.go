@@ -426,7 +426,7 @@ func (c *CtyunProvider) DataSources(ctx context.Context) []func() datasource.Dat
 		vpc.NewCtyunEips(),
 		vpc.NewCtyunBandwidths(),
 		vpc.NewCtyunNetResourcesByTag(),
-		vpc.NewctyunIPv6Bandwidths(),
+		vpc.NewCtyunIPv6Bandwidths(),
 		vpce.NewCtyunVpces(),
 		vpce.NewCtyunVpceServices(),
 		vpce.NewCtyunVpceServiceTransitIPs(),

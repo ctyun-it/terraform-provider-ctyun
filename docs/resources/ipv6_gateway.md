@@ -1,10 +1,10 @@
 ---
-subcategory: "IPv6带宽（IPv6 Bandwidth）"
+subcategory: "弹性IP（Elastic IP，EIP）"
 page_title: "CTYUN: ctyun_ipv6_gateway"
 ---
 
 # ctyun_ipv6_gateway (Resource)
--> 管理IPv6带宽
+-> 管理IPv6网关
 
 
 

@@ -1,5 +1,5 @@
 ---
-subcategory: "共享流量包（SDP，Shared Data Package）"
+subcategory: "共享带宽（Shared Bandwidth）"
 page_title: "CTYUN: ctyun_bandwidth_association_eip"
 ---
 

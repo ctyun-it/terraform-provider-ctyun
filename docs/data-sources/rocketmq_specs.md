@@ -1,5 +1,5 @@
 ---
-subcategory: "分布式消息服务 RocketMQ"
+subcategory: "分布式消息服务RocketMQ"
 page_title: "CTYUN: ctyun_rocketmq_specs"
 ---
 

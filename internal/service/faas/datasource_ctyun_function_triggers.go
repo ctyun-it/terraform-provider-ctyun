@@ -3,6 +3,7 @@ package faas
 import (
 	"context"
 	"fmt"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/cf"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -32,7 +33,7 @@ func (c *CtyunFunctionTriggers) Metadata(ctx context.Context, req datasource.Met
 
 func (c *CtyunFunctionTriggers) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询函数触发器列表", "函数工作流（FunctionGraph）", "https://www.ctyun.cn/document/10355289"),
+		MarkdownDescription: utils.FormatDesc("查询函数触发器列表", "函数计算（FaaS）", "https://www.ctyun.cn/document/10006234/10528260"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,

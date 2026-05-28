@@ -1,10 +1,10 @@
 ---
-subcategory: "IPv6带宽（IPv6 Bandwidth）"
+subcategory: "弹性IP（Elastic IP，EIP）"
 page_title: "CTYUN: ctyun_ipv6_bandwidths"
 ---
 
 # ctyun_ipv6_bandwidths (Data Source)
--> 管理IPv6带宽
+-> 查询IPv6带宽列表
 
 
 

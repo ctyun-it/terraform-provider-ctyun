@@ -16,6 +16,7 @@
 * ctyun_flow_package
 * ctyun_ipv6_bandwidth
 * ctyun_ipv6_bandwidth_association
+* ctyun_ipv6_gateway
 * ctyun_cloud_assistant_command
 * ctyun_cloud_assistant_invocation
 * ctyun_cloud_assistant_run_command

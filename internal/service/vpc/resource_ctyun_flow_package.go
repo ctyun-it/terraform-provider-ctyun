@@ -60,7 +60,7 @@ type CtyunFlowPackageConfig struct {
 
 func (c *ctyunFlowPackageService) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理共享流量包", "共享流量包（Flow Package）", "https://www.ctyun.cn/document/10026753/10032118"),
+		MarkdownDescription: utils.FormatDesc("管理共享流量包", "弹性IP（Elastic IP，EIP）", "https://www.ctyun.cn/document/10026753/10032118"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:      true,

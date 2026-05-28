@@ -47,7 +47,7 @@ func (c *CtyunSearchInstances) Metadata(ctx context.Context, req datasource.Meta
 
 func (c *CtyunSearchInstances) Schema(ctx context.Context, req datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("查询OpenSearch实例列表", "天翼云OpenSearch服务", "https://www.ctyun.cn/document/10026730/10040008"),
+		MarkdownDescription: utils.FormatDesc("查询OpenSearch实例列表", "天翼云OpenSearch服务", "https://www.ctyun.cn/document/10717870/11011730"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
