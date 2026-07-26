@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/oceanfs"
@@ -25,8 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 type CtyunOceanfs struct {
@@ -246,7 +247,7 @@ func (c *CtyunOceanfs) Schema(ctx context.Context, request resource.SchemaReques
 				},
 			},
 			"tags": schema.SetNestedAttribute{
-				Description: "标签列表",
+				Description: "标签列表，不支持更新",
 				Optional:    true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -499,6 +500,7 @@ func (c *CtyunOceanfs) create(ctx context.Context, config *CtyunOceanfsConfig) e
 				Value: tag.Value.ValueString(),
 			})
 		}
+		params.LabelList = tagsParam
 	}
 
 	_, err := c.createReq(ctx, params)

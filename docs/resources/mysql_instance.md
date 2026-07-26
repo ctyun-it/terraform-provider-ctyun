@@ -62,7 +62,7 @@ resource "ctyun_mysql_instance" "mysql_example1" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password
@@ -76,7 +76,7 @@ resource "ctyun_mysql_instance" "mysql_example2" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-2"
-  prod_id           = "MasterSlave80"
+  prod_id           = "10001101" # 8.0一主一备；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password
@@ -90,7 +90,7 @@ resource "ctyun_mysql_instance" "mysql_example3" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password
@@ -105,7 +105,7 @@ resource "ctyun_mysql_instance" "mysql_example4" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password
@@ -119,7 +119,7 @@ resource "ctyun_mysql_instance" "mysql_example5" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Master2Slave57"
+  prod_id           = "10001002" # 5.7一主两备
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password
@@ -134,9 +134,9 @@ resource "ctyun_mysql_instance" "mysql_example5" {
 
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
 - `name` (String) 实例名称，支持更新。要求：长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符
-- `prod_id` (String) 产品id，支持更新。取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。
+- `prod_id` (String) 产品id，推荐取值方式（1）。分为两种方式取值：1）数值型，具体取值可以通过data.ctyun_mysql_specs.specs.prod_id获取。2）字符型，取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。
 - `security_group_id` (String) 安全组Id
-- `storage_space` (Number) 存储空间(单位:G，范围100,32768)，支持更新
+- `storage_space` (Number) 主存储空间（单位GB），范围100-32768。取值为10的整数倍，支持更新
 - `storage_type` (String) 存储类型: SSD=超高IO、SATA=普通IO，SAS=高IO，SSD-genric=通用型SSD，FAST-SSD=极速型SSD，XSSD-0，XSSD-1，XSSD-2
 - `subnet_id` (String) 子网Id
 - `vpc_id` (String) 虚拟私有云Id

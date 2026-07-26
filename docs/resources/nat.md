@@ -55,7 +55,7 @@ resource "ctyun_nat" "nat_cycle_test" {
 
 - `cycle_type` (String) 订购周期类型，取值范围：year：按年，month：按月，on_demand：按需。当此值为month或year时，cycle_count为必填
 - `name` (String) nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
-- `spec` (Number) 规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新
+- `spec` (Number) nat规格，1-表示小型，2-表示中型，3-表示大型，4-表示超大型，支持更新
 - `vpc_id` (String) 需要创建 NAT 网关的 VPC 的 ID
 
 ### Optional

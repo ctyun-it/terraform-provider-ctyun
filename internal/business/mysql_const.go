@@ -117,6 +117,12 @@ const (
 	MysqlBackupRecoveryJobStatusFail    = 3 // 失败
 
 	MysqlNodeTypeReadNode = "readNode"
+	MysqlNodeTypeMaster   = "master"
+
+	MysqlProdSpecNameRead   = "只读实例"
+	MysqlProdSpecNameSingle = "单机版"
+	MysqlProdSpecNameMS     = "一主一备"
+	MysqlProdSpecNameM2S    = "一主两备"
 )
 
 var ProdType = []string{
@@ -299,23 +305,62 @@ var MysqlInstanceSeries = []string{
 	"C", // 计算增强型
 	"M", // 内存增强型
 }
+
+//var MysqlInstanceSeriesDict = map[string]string{
+//	"S":     "1",
+//	"C":     "2",
+//	"M":     "3",
+//	"HS1":   "4",
+//	"HC1":   "5",
+//	"HM1":   "6",
+//	"KS1":   "7",
+//	"KC1":   "8",
+//	"KM1":   "9",
+//	"KS2NE": "10",
+//	"KC2NE": "11",
+//	"KM2NE": "12",
+//	"HS3NE": "13",
+//	"HC3NE": "14",
+//	"HM3NE": "15",
+//}
+
 var MysqlInstanceSeriesDict = map[string]string{
-	"S":     "1",
-	"C":     "2",
-	"M":     "3",
-	"HS1":   "4",
-	"HC1":   "5",
-	"HM1":   "6",
-	"KS1":   "7",
-	"KC1":   "8",
-	"KM1":   "9",
-	"KS2NE": "10",
-	"KC2NE": "11",
-	"KM2NE": "12",
-	"HS3NE": "13",
-	"HC3NE": "14",
-	"HM3NE": "15",
+	"S6":     "1",
+	"S7":     "1",
+	"S8":     "1",
+	"C6":     "2",
+	"C7":     "2",
+	"C8":     "2",
+	"M6":     "3",
+	"M7":     "3",
+	"M8":     "3",
+	"HS1":    "4",
+	"HS3":    "4",
+	"HC1":    "5",
+	"HC3":    "5",
+	"HM1":    "6",
+	"HM3":    "6",
+	"KS1":    "7",
+	"KC1":    "8",
+	"KM1":    "9",
+	"KS2NE":  "10",
+	"KS2XNE": "10",
+	"KC2NE":  "11",
+	"KC2XNE": "11",
+	"KM2NE":  "12",
+	"KM2XNE": "12",
+	"HS3NE":  "13",
+	"HS3XNE": "13",
+	"HC3NE":  "14",
+	"HC3XNE": "14",
+	"HM3NE":  "15",
+	"HM3XNE": "15",
+	"KIR4":   "16",
+	"FS1":    "17",
+	"FC1":    "18",
+	"FM1":    "19",
 }
+
 var MysqlCpuType = []string{
 	"KunPeng",  // 鲲鹏
 	"Hygon",    // 海光
@@ -393,12 +438,20 @@ var MysqlBackupSettingConfigWeek = map[int32]int32{
 	7: 1,
 }
 
-var MysqlBackupSettingConfigWeekRev = map[int32]int32{
-	1: 7,
-	2: 1,
-	3: 2,
-	4: 3,
-	5: 4,
-	6: 5,
-	7: 6,
-}
+var (
+	MysqlBackupSettingConfigWeekRev = map[int32]int32{
+		1: 7,
+		2: 1,
+		3: 2,
+		4: 3,
+		5: 4,
+		6: 5,
+		7: 6,
+	}
+	MysqlProdSpecNodeNumDict = map[string]int32{
+		MysqlProdSpecNameRead:   1,
+		MysqlProdSpecNameSingle: 1,
+		MysqlProdSpecNameMS:     2,
+		MysqlProdSpecNameM2S:    3,
+	}
+)

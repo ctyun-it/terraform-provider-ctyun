@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -17,7 +19,7 @@ func NewMongodbService(meta *common.CtyunMetadata) *MongodbService {
 	return &MongodbService{meta: meta}
 }
 
-func (u MongodbService) GetMongodbFlavorByProdIdAndFlavorName(ctx context.Context, prodID string, flavorName, regionID, series string) (flavor mysql.InstSpecInfo, err error) {
+func (u MongodbService) GetMongodbFlavorByProdIdAndFlavorName(ctx context.Context, prodID string, flavorName, regionID, series string) (flavor mysql.InstSpecInfo, specName string, err error) {
 	params := &mysql.TeledbMysqlSpecsRequest{
 		ProdType:     "2", // RDS
 		ProdCode:     "DDS",
@@ -38,6 +40,7 @@ func (u MongodbService) GetMongodbFlavorByProdIdAndFlavorName(ctx context.Contex
 	pid := MongodbProdIDDict[prodID]
 	for _, data := range resp.ReturnObj.Data {
 		if data.ProdId == pid {
+			specName = data.ProdSpecName
 			for _, spec := range data.InstSpecInfoList {
 				if spec.SpecName == flavorName {
 					flavor = spec
@@ -47,6 +50,39 @@ func (u MongodbService) GetMongodbFlavorByProdIdAndFlavorName(ctx context.Contex
 		}
 	}
 	err = fmt.Errorf("invalid %s for %s", flavorName, prodID)
+	return
+}
+
+func (u MongodbService) GetMongodbFlavorByInstanceTypeAndFlavorName(ctx context.Context, instanceType int64, flavorName, regionID, series string) (flavor mysql.InstSpecInfo, specType string, err error) {
+	params := &mysql.TeledbMysqlSpecsRequest{
+		ProdType:     "2", // RDS
+		ProdCode:     "DDS",
+		RegionID:     regionID,
+		InstanceType: MysqlInstanceSeriesDict[series],
+	}
+	headers := &mysql.TeledbMysqlSpecsRequestHeader{}
+	resp, err := u.meta.Apis.SdkCtMysqlApis.TeledbMysqlSpecsApi.Do(ctx, u.meta.Credential, params, headers)
+	if err != nil {
+		return
+	} else if resp.StatusCode != 200 {
+		err = fmt.Errorf("API return error. Message: %s ", resp.Message)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	}
+	for _, data := range resp.ReturnObj.Data {
+		if data.ProdId == instanceType {
+			specType = data.ProdSpecName
+			for _, spec := range data.InstSpecInfoList {
+				if spec.SpecName == flavorName {
+					flavor = spec
+					return
+				}
+			}
+		}
+	}
+	err = fmt.Errorf("invalid flavor_name: %s for instance_type: %d", flavorName, instanceType)
 	return
 }
 
@@ -126,3 +162,13 @@ func (u MongodbService) GetShardAndMongosNum(ctx context.Context, regionID strin
 	}
 	return shardNum, mongosNum, nil
 }
+
+// IsProdIDNumeric 判断 prodID 是否为数字字符串，是返回 true 和解析后的值，否则返回 false 和 0
+func (u MongodbService) IsProdIDNumeric(prodID string) (bool, int64) {
+	val, err := strconv.ParseInt(prodID, 10, 64)
+	if err != nil {
+		return false, 0
+	}
+	return true, val
+}
+

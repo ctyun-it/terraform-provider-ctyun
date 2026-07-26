@@ -112,7 +112,7 @@ resource "ctyun_ebm" "ebm_test" {
   security_group_ids = [ctyun_security_group.security_group_test.id]
   vpc_id             = ctyun_vpc.vpc_test.id
   system_disk_size   = 100
-  system_disk_type   = "sata"
+  system_disk_type   = "SATA"
   subnet_id          = ctyun_subnet.subnet_test.id
 }
 
@@ -161,8 +161,8 @@ resource "ctyun_ebm" "ebm_test2" {
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `security_group_ids` (Set of String) 主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID
 - `status` (String) 物理机状态，支持running（开机）和stopped（关机），默认running，支持更新
-- `system_disk_size` (Number) 系统盘大小，单位为G，取值范围：[100, 2048]，当前不支持公网
-- `system_disk_type` (String) 系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO
+- `system_disk_size` (Number) 系统盘大小（单位GB），取值范围：[100, 2048]，当前不支持公网
+- `system_disk_type` (String) 系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO
 - `system_volume_raid_uuid` (String) 本地系统盘raid类型，如果有本地盘则必填，可通过ctyun_ebm_device_raids查询
 - `user_data` (String) 用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符
 

@@ -1,5 +1,5 @@
 release-note:bug
-resource/ctyun_bandwidth fix create
+resource\ctyun_bandwidth fix create
 
 release-note:new-resource
 ctyun_vpc_route_table

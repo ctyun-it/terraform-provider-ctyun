@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
@@ -26,7 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
@@ -75,7 +76,7 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
+				Description: "健康检查名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
 					validator2.AclName(),
@@ -196,11 +197,12 @@ func (c *CtyunElbHealthCheck) Schema(_ context.Context, _ resource.SchemaRequest
 			"protocol_port": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "健康检查端口 1 - 65535，支持更新",
+				Description: "健康检查端口 1 - 65535，不支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 65535),
 				},
 				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
 					int32planmodifier.UseStateForUnknown(),
 				},
 			},

@@ -24,3 +24,9 @@ var EbmDiskTypes = []string{
 	EbsDiskTypeSas,
 	EbsDiskTypeSsd,
 }
+
+var EbmDiskTypesUpper = []string{
+	"SATA",
+	"SAS",
+	"SSD",
+}

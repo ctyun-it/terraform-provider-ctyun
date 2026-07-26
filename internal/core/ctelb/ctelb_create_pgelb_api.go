@@ -2,8 +2,9 @@ package ctelb
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtelbCreatePgelbApi
@@ -59,6 +60,7 @@ type CtelbCreatePgelbRequest struct {
 	CycleType        string `json:"cycleType,omitempty"`        /*  订购类型：month（包月） / year（包年） / on_demand （按需)  */
 	CycleCount       int32  `json:"cycleCount,omitempty"`       /*  订购时长, 当 cycleType = month, 支持续订 1 - 11 个月; 当 cycleType = year, 支持续订 1 - 3 年，当 cycleType = on_demand 可以不传  */
 	PayVoucherPrice  string `json:"payVoucherPrice,omitempty"`  /*  代金券金额，支持到小数点后两位  */
+	Description      string `json:"description,omitempty"`
 }
 
 type CtelbCreatePgelbResponse struct {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ec"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"strings"
+	"time"
 )
 
 var (
@@ -154,18 +156,20 @@ func (c *CtyunEcCloudGateway) Create(ctx context.Context, req resource.CreateReq
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	// 创建前检查
 	err = c.checkBeforeCreate(ctx, &plan)
-	if err != nil {
-		return
-	}
-	err = c.createCgwBill(ctx, &plan)
 	if err != nil {
 		return
 	}
 	err = c.create(ctx, &plan)
 	if err != nil {
-		return
+		if !strings.Contains(err.Error(), "tgw order creating") {
+			return
+		}
+		time.Sleep(10 * time.Second)
+		err = c.create(ctx, &plan)
+		if err != nil {
+			return
+		}
 	}
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
@@ -312,19 +316,67 @@ func (c *CtyunEcCloudGateway) create(ctx context.Context, plan *CtyunEcCloudGate
 	resp, err := c.meta.Apis.SdkEcApis.EcEcCreateGatewayApi.Do(ctx, c.meta.SdkCredential, createReq)
 	if err != nil {
 		return
+	} else if utils.SecInt32(resp.StatusCode) != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", utils.SecString(resp.Message))
+	} else if resp.ReturnObj == nil {
+		return common.InvalidReturnObjError
+	}
+	if resp.ReturnObj.CgwID != nil {
+		plan.ID = types.StringValue(*resp.ReturnObj.CgwID)
+		return
+	}
+	return c.queryLoop(ctx, plan)
+}
+
+func (c *CtyunEcCloudGateway) queryLoop(ctx context.Context, plan *CtyunEcCloudGatewayConfig) (err error) {
+	retryer, err := business.NewRetryer(time.Second*10, 30)
+	if err != nil {
+		return
+	}
+	result := retryer.Start(
+		func(currentTime int) bool {
+			err = c.queryGatewayByEcID(ctx, plan)
+			if err != nil {
+				if errors.Is(err, common.ResourceNotExistError) {
+					return true
+				}
+				return false
+			}
+			if plan.ID.ValueString() != "" {
+				return false
+			}
+			return true
+		},
+	)
+	if result.ReturnReason == business.ReachMaxLoopTime {
+		return errors.New("轮询已达最大次数，云网关仍未创建")
+	}
+	return
+}
+
+func (c *CtyunEcCloudGateway) queryGatewayByEcID(ctx context.Context, plan *CtyunEcCloudGatewayConfig) (err error) {
+	listReq := &ec.EcEcListGatewayRequest{
+		EcID: plan.EcID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkEcApis.EcEcListGatewayApi.Do(ctx, c.meta.SdkCredential, listReq)
+	if err != nil {
+		return
 	} else if *resp.StatusCode != common.NormalStatusCode {
 		return fmt.Errorf("API return error. Message: %s", *resp.Message)
 	} else if resp.ReturnObj == nil {
 		return common.InvalidReturnObjError
+	} else if len(resp.ReturnObj.Results) == 0 {
+		return common.ResourceNotExistError
 	}
-	if resp.ReturnObj.CgwID == nil {
-		return fmt.Errorf("API return error. CgwID is nil")
+	for _, cgw := range resp.ReturnObj.Results {
+		if utils.SecString(cgw.DcName) == plan.DcName.ValueString() {
+			plan.ID = utils.SecStringValue(cgw.CgwID)
+			return nil
+		}
 	}
-
-	plan.ID = types.StringValue(*resp.ReturnObj.CgwID)
-
-	return
+	return common.ResourceNotExistError
 }
+
 func (c *CtyunEcCloudGateway) getAndMerge(ctx context.Context, plan *CtyunEcCloudGatewayConfig) (err error) {
 	// 查询云网关实例
 	listReq := &ec.EcEcListGatewayRequest{

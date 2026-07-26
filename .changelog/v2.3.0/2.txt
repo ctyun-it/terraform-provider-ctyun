@@ -1,0 +1,14 @@
+release-note:enhancement
+resource\ctyun_ec_cloud_gateway: remove order api
+
+release-note:enhancement
+resource\ctyun_express_connect: remove order api
+
+release-note:enhancement
+resource\ctyun_ecs: tweak field description
+
+release-note:enhancement
+resource\ctyun_ebs: tweak field description
+
+release-note:enhancement
+resource\ctyun_ebm: system_disk_type support uppercase

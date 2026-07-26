@@ -77,7 +77,7 @@ resource "ctyun_elb_listener" "elb_listener_test" {
 
 - `default_action_type` (String) 默认规则动作类型。取值范围：forward、redirect，支持更新
 - `loadbalancer_id` (String) 负载均衡实例ID
-- `name` (String) 唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `name` (String) 监听器名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `protocol` (String) 监听协议。取值范围：TCP、UDP、HTTP、HTTPS
 - `protocol_port` (Number) 负载均衡实例监听端口。取值：1-65535，protocol_port。不支持更新
 

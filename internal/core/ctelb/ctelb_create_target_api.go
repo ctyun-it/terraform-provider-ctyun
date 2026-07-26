@@ -2,8 +2,9 @@ package ctelb
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtelbCreateTargetApi
@@ -46,14 +47,15 @@ func (a *CtelbCreateTargetApi) Do(ctx context.Context, credential core.Credentia
 }
 
 type CtelbCreateTargetRequest struct {
-	ClientToken   string `json:"clientToken,omitempty"`   /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
-	InstanceIP    string `json:"instanceIP,omitempty"`    /*  后端服务 ip  */
-	RegionID      string `json:"regionID,omitempty"`      /*  区域ID  */
-	TargetGroupID string `json:"targetGroupID,omitempty"` /*  后端服务组ID  */
-	InstanceType  string `json:"instanceType,omitempty"`  /*  实例类型。取值范围：VM、BM、ECI、IP  */
-	InstanceID    string `json:"instanceID,omitempty"`    /*  实例ID  */
-	ProtocolPort  int32  `json:"protocolPort,omitempty"`  /*  协议端口。取值范围：1-65535  */
-	Weight        int32  `json:"weight,omitempty"`        /*  权重。取值范围：1-256，默认为100  */
+	ClientToken   string  `json:"clientToken,omitempty"`   /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	InstanceIP    string  `json:"instanceIP,omitempty"`    /*  后端服务 ip  */
+	RegionID      string  `json:"regionID,omitempty"`      /*  区域ID  */
+	TargetGroupID string  `json:"targetGroupID,omitempty"` /*  后端服务组ID  */
+	InstanceType  string  `json:"instanceType,omitempty"`  /*  实例类型。取值范围：VM、BM、ECI、IP  */
+	InstanceID    string  `json:"instanceID,omitempty"`    /*  实例ID  */
+	ProtocolPort  int32   `json:"protocolPort,omitempty"`  /*  协议端口。取值范围：1-65535  */
+	Weight        int32   `json:"weight,omitempty"`        /*  权重。取值范围：1-256，默认为100  */
+	Description   *string `json:"description,omitempty"`
 }
 
 type CtelbCreateTargetResponse struct {

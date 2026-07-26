@@ -16,7 +16,7 @@ func TestAccEcPacket_basic(t *testing.T) {
 	resourceName := "ctyun_ec_packet." + rnd
 	resourceFile := "resource_ctyun_ec_packet.tf"
 
-	ecID := dependence.expressConnectID
+	ecID := dependence.expressConnectID2
 	packetName := utils.GenerateRandomString()
 	bandwidth := "5"
 	cycleType := "month"

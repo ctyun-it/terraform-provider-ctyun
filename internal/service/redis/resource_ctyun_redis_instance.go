@@ -946,6 +946,9 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 	if plan.ActualCycleType.ValueString() == business.OrderCycleTypeOnDemand {
 		plan.AutoRenew = types.BoolNull()
 		plan.AutoRenewCycleCount = types.Int32Null()
+	} else if !plan.AutoRenew.ValueBool() {
+		plan.AutoRenew = types.BoolValue(false)
+		plan.AutoRenewCycleCount = types.Int32Null()
 	}
 	plan.ConnectionAddress = types.StringValue(instance.ConnectionAddress)
 	plan.Vip = types.StringValue(instance.Vip)

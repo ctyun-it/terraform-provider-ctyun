@@ -57,7 +57,7 @@ resource "ctyun_mysql_instance" "mysql_database" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.sg_mysql_test.id
   name              = "mysql-test-database-1"
-  prod_id           = "Master2Slave80"
+  prod_id           = "10001102" # 8.0一主两备；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password
@@ -88,7 +88,7 @@ resource "ctyun_mysql_readonly_instance" "example" {
 - `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
 - `instance_id` (String) mysql数据库实例ID，为该实例管理只读实例
 - `name` (String) 实例名称，实例名称要求：实例名称 长度4到100，必须以字母或中文开头，只能包含字母(不区分大小写)、中文、数字、-或_
-- `storage_space` (Number) 存储空间(单位:G，范围100,32768)，支持更新
+- `storage_space` (Number) 主存储空间（单位GB），范围100-32768。支持更新
 - `storage_type` (String) 存储类型: SSD=超高IO、SATA=普通IO、SAS=高IO、SSD-genric=通用型SSD、FAST-SSD=极速型SSD
 
 ### Optional

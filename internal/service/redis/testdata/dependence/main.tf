@@ -59,8 +59,6 @@ resource "ctyun_redis_instance" "test_redis_instance" {
   password=var.password
   cycle_type = "month"
   cycle_count = 1
-  auto_renew = true
-  auto_renew_cycle_count = 12
   shard_mem_size = 8
   host_type = "C"
 }
@@ -75,8 +73,7 @@ resource "ctyun_redis_instance" "test_redis_instance2" {
   password=var.password
   cycle_type = "month"
   cycle_count = 1
-  auto_renew = true
-  auto_renew_cycle_count = 12
+  auto_renew = false
   shard_mem_size = 8
   host_type = "C"
 }

@@ -152,7 +152,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_type": schema.StringAttribute{
 				Required:    true,
-				Description: "系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD",
+				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，FAST-SSD：极速型SSD",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -165,7 +165,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_size": schema.Int64Attribute{
 				Required:    true,
-				Description: "系统盘大小，单位为G，取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新",
+				Description: "系统盘大小（单位GB），取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新",
 				Validators: []validator.Int64{
 					int64validator.Between(40, 32768),
 				},

@@ -72,7 +72,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name     = "ecs-demo"
   flavor_id        = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id         = data.ctyun_images.image_test.images[0].id
-  system_disk_type = "sata"
+  system_disk_type = "SATA"
   system_disk_size = 100
   vpc_id           = ctyun_vpc.vpc_test.id
   subnet_id        = ctyun_subnet.subnet_test.id
@@ -84,7 +84,7 @@ resource "ctyun_ebs" "ebs_test" {
   count      = 5
   name       = "ebs-data-test${count.index + 1}"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SATA"
   size       = 60
   cycle_type = "on_demand"
 }

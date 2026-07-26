@@ -39,7 +39,7 @@ resource "ctyun_hpfs" "test" {
 
 - `name` (String) 并行文件名，仅允许英文字母数字及-，开头必须为字母，结尾不允许为-，且长度为2-255字符，支持更新
 - `protocol` (String) 协议类型，可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
-- `size` (Number) 文件大小（GB），范围: 512-32768。支持更新
+- `size` (Number) 文件大小（GB），范围: 512-32768，步长512。支持更新
 
 ### Optional
 

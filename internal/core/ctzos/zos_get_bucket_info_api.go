@@ -58,7 +58,8 @@ type ZosGetBucketInfoResponse struct {
 }
 
 type ZosGetBucketInfoReturnObjResponse struct {
-	ProjectID         string                                              `json:"projectID,omitempty"`         /*  企业项目 ID  */
+	ProjectID         string                                              `json:"projectID,omitempty"` /*  企业项目 ID  */
+	ProjectId         string                                              `json:"projectId"`
 	CmkUUID           *string                                             `json:"cmkUUID,omitempty"`           /*  kms加密ID，若此值为null，则表示未开启加密  */
 	StorageType       string                                              `json:"storageType,omitempty"`       /*  存储类型，可选的值为 STANDARD, STANDARD_IA, GLACIER  */
 	AZPolicy          string                                              `json:"AZPolicy,omitempty"`          /*  AZ策略，single-az 或 multi-az  */

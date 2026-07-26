@@ -57,7 +57,7 @@ resource "ctyun_mysql_instance" "mysql_database" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.sg_mysql_test.id
   name              = "mysql-test-database-1"
-  prod_id           = "Master2Slave80"
+  prod_id           = "10001102" # 8.0一主两备；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password

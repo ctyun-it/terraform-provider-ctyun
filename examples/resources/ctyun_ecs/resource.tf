@@ -33,7 +33,7 @@ resource "ctyun_ecs" "test" {
   display_name     = "tf-test-init-ecs"
   flavor_id        = "9b4b5e39-db25-f2c8-3914-76881ee77d5c"
   image_id         = "fa3f3784-34f9-4f6b-80a1-dd173d486bd6"
-  system_disk_type = "sata"
+  system_disk_type = "SAS"
   system_disk_size = 60
   vpc_id           = ctyun_vpc.vpc_test.id
   subnet_id        = ctyun_subnet.subnet_test.id

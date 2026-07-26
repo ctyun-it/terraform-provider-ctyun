@@ -39,7 +39,7 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
 resource "ctyun_ebs" "data_disk_test" {
   name       = "tf-test-data-disk"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SATA"
   size       = 60
   cycle_type = "on_demand"
 }
@@ -50,7 +50,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name       = "tf-test-for-image"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type   = "sata"
+  system_disk_type   = "SATA"
   system_disk_size   = 60
   vpc_id             = ctyun_vpc.vpc_test.id
   subnet_id          = ctyun_subnet.subnet_test.id

@@ -139,3 +139,11 @@ resource "ctyun_sdwan" "ctyun_sdwan_test" {
 locals {
   random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }
+
+resource "ctyun_express_connect" "another" {
+  name        = "express_connect_dependence_${local.random_string}"
+  description = "云间高速开发测试专用"
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
