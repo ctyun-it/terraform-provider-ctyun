@@ -49,7 +49,7 @@ resource "ctyun_mysql_instance" "mysql_example1" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password
@@ -63,7 +63,7 @@ resource "ctyun_mysql_instance" "mysql_example2" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-2"
-  prod_id           = "MasterSlave80"
+  prod_id           = "10001101" # 8.0一主一备；可通过data.ctyun_mysql_specs查询
   storage_type      = "SATA"
   storage_space     = 100
   password          = var.password
@@ -77,7 +77,7 @@ resource "ctyun_mysql_instance" "mysql_example3" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password
@@ -92,7 +92,7 @@ resource "ctyun_mysql_instance" "mysql_example4" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Single57"
+  prod_id           = "10001003" # 5.7单机版
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password
@@ -106,7 +106,7 @@ resource "ctyun_mysql_instance" "mysql_example5" {
   subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
   name              = "mysql-test-single-1"
-  prod_id           = "Master2Slave57"
+  prod_id           = "10001002" # 5.7一主两备
   storage_type      = "SATA"
   storage_space     = 120
   password          = var.password

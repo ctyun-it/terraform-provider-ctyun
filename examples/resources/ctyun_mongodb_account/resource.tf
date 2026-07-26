@@ -43,7 +43,7 @@ resource "ctyun_mongodb_instance" "test" {
   subnet_id           = ctyun_subnet.subnet_test.id
   security_group_id   = ctyun_security_group.security_group_test.id
   name                = "mongodb-12ab"
-  prod_id             = "Single34"
+  prod_id             = "10013001" # 3.4单机版；可通过data.ctyun_mongodb_specs查询
   storage_type        = "SATA"
   storage_space       = 100
   backup_storage_type = "OS"

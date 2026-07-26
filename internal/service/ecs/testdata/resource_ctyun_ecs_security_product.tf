@@ -3,7 +3,7 @@ resource "ctyun_ecs" "%[1]s" {
   display_name       = "%[3]s"
   flavor_id          = "%[4]s"
   image_id           = "%[5]s"
-  system_disk_type   = "sata"
+  system_disk_type   = "SATA"
   system_disk_size   = %[6]d
   vpc_id             = "%[7]s"
   subnet_id          = "%[8]s"

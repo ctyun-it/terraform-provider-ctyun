@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
@@ -22,9 +26,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
-	"strings"
-	"time"
 )
 
 var (
@@ -210,7 +211,7 @@ func (c *CtyunMysqlReadOnlyInstance) Schema(ctx context.Context, request resourc
 			},
 			"storage_space": schema.Int32Attribute{
 				Required:    true,
-				Description: "存储空间(单位:G，范围100,32768)，支持更新",
+				Description: "主存储空间（单位GB），范围100-32768。支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(100, 32768),
 				},
@@ -396,7 +397,7 @@ func (c *CtyunMysqlReadOnlyInstance) Delete(ctx context.Context, request resourc
 // checkSpec 检查规格
 func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunMysqlReadOnlyInstanceConfig) error {
 	// 根据父实例版本，确定prod id
-	plan.prodID = business.MysqlReadNodeVersionProdIdDict[plan.prodVersion]
+	//plan.prodID = business.MysqlReadNodeVersionProdIdDict[plan.prodVersion]
 	// 先根据spec_name调用云主机规格接口
 	if plan.FlavorName.ValueString() == "" {
 		return fmt.Errorf("创建时规格必须填写")
@@ -413,8 +414,25 @@ func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunM
 		return fmt.Errorf("暂不支持此规格：%s，请联系研发确认！", plan.FlavorName.ValueString())
 	}
 	plan.instanceSeries = instanceSeries
+
+	// 通过父节点 prod_id 获取 version
+	version, err := c.mysqlService.GetVersionByParentProdID(ctx, plan.RegionID.ValueString(), plan.parentProdID, plan.instanceSeries)
+	if err != nil {
+		return err
+	}
+	if version == "" {
+		return fmt.Errorf("查询父节点版本号失败，父节点 prod_id=%d", plan.parentProdID)
+	}
+	plan.prodVersion = version
+
+	// 通过 version 获取相应版本的只读节点的 prod_id
+	plan.prodID, err = c.mysqlService.GetReadNodeProdIDByVersion(ctx, plan.RegionID.ValueString(), plan.prodVersion, plan.instanceSeries)
+	if err != nil {
+		return err
+	}
+
 	// 再调用数据库规格接口
-	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
+	mysqlFlavor, _, specName, _, err := c.mysqlService.GetFlavorByInstanceTypeAndFlavorName(
 		ctx,
 		plan.prodID,
 		plan.FlavorName.ValueString(),
@@ -426,6 +444,7 @@ func (c *CtyunMysqlReadOnlyInstance) checkSpec(ctx context.Context, plan *CtyunM
 	}
 	plan.prodPerformanceSpec = mysqlFlavor.ProdPerformanceSpec
 	plan.hostType = mysqlFlavor.Generation
+	plan.prodSpecName = specName
 
 	// 映射关系
 	if strings.HasPrefix(plan.hostType, "K") { // 鲲鹏
@@ -468,6 +487,7 @@ func (c *CtyunMysqlReadOnlyInstance) getMysqlInstanceDetail(ctx context.Context,
 	config.vpcID = returnObj.VpcId
 	config.subnetID = returnObj.SubnetId
 	config.securityGroupID = returnObj.SecurityGroupId
+	config.parentProdID = returnObj.ProdId
 	return resp, nil
 }
 
@@ -479,7 +499,7 @@ func (c *CtyunMysqlReadOnlyInstance) createMysqlReadOnlyInstance(ctx context.Con
 		BillMode:        business.MysqlBillMode[cycleType],
 		Period:          config.CycleCount.ValueInt32(),
 		ProdVersion:     config.prodVersion,
-		ProdId:          business.MysqlProdIdDict[config.prodID],
+		ProdId:          config.prodID,
 		RegionId:        config.RegionID.ValueString(),
 		VpcId:           config.vpcID,
 		SubnetId:        config.subnetID,
@@ -791,11 +811,13 @@ type CtyunMysqlReadOnlyInstanceConfig struct {
 	vpcID                string
 	subnetID             string
 	securityGroupID      string
-	prodID               string
+	prodID               int64
 	prodVersion          string
 	osType               string
 	cpuType              string
 	prodPerformanceSpec  string
 	hostType             string
 	instanceSeries       string
+	prodSpecName         string
+	parentProdID         int64
 }

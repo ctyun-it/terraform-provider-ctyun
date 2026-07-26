@@ -93,10 +93,7 @@ data "ctyun_mysql_param_templates" "template"{
   engine = "5.7"
   name = "parameterSet57"
 }
-
-locals {
-  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
-}
+#
 
 resource "ctyun_mysql_database" "db1" {
   instance_id      = ctyun_mysql_instance.mysql_test.id
@@ -114,4 +111,8 @@ resource "ctyun_mysql_database" "db3" {
   name         = "test_db3"
   charset_name = "utf8mb4"
   depends_on = [ctyun_mysql_database.db2]
+}
+
+locals {
+  random_string = substr(replace(lower(sha256(timestamp())), "/[^a-z0-9]/", ""), 0, 5)
 }

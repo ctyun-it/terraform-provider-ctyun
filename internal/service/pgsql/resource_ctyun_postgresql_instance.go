@@ -173,7 +173,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"storage_type": schema.StringAttribute{
 				Required:    true,
-				Description: "主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2",
+				Description: "主存储类型, SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.StorageTypeSSD, business.StorageTypeSSDGenric, business.StorageTypeFASTSSD, business.StorageTypeXSSD0, business.StorageTypeXSSD1, business.StorageTypeXSSD2),
 				},
@@ -183,7 +183,7 @@ func (c *CtyunPostgresqlInstance) Schema(ctx context.Context, request resource.S
 			},
 			"storage_space": schema.Int32Attribute{
 				Required:    true,
-				Description: "主存储空间(单位:G，范围100-32768)。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行",
+				Description: "主存储空间（单位GB），范围100-32768。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行",
 				Validators: []validator.Int32{
 					int32validator.Between(100, 32768),
 				},

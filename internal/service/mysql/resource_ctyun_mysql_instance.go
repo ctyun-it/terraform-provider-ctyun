@@ -256,9 +256,10 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"prod_id": schema.StringAttribute{
 				Required:    true,
-				Description: "产品id，支持更新。取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。",
+				Description: "产品id，推荐取值方式（1）。分为两种方式取值：1）数值型，具体取值可以通过data.ctyun_mysql_specs.specs.prod_id获取。2）字符型，取值范围：Single57（单实例5.7版本）, Single80（单实例8.0版本）, MasterSlave57（一主一备5.7版本）, MasterSlave80（一主一备8.0版本）, Master2Slave57（一主两备5.7版本）, Master2Slave80（一主两备8.0版本）。在更新时，不支持prod_id（节点）和prod_performance_spec（规格）同时更新。",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.MysqlProdIds...),
+					// stringvalidator.OneOf(business.MysqlProdIds...),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"storage_type": schema.StringAttribute{
@@ -273,7 +274,7 @@ func (c *CtyunMysqlInstance) Schema(ctx context.Context, request resource.Schema
 			},
 			"storage_space": schema.Int32Attribute{
 				Required:    true,
-				Description: "存储空间(单位:G，范围100,32768)，支持更新",
+				Description: "主存储空间（单位GB），范围100-32768。取值为10的整数倍，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(100, 32768),
 				},
@@ -539,6 +540,12 @@ func (c *CtyunMysqlInstance) Update(ctx context.Context, request resource.Update
 		state.FlavorName = plan.FlavorName
 		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中flavor_name为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+
+	// 用于避免是Import，如果正常的update操作都需要查到state的prod_id和flavor
+	if !state.ProdID.IsNull() && !state.ProdID.IsUnknown() && !state.FlavorName.IsNull() && !state.FlavorName.IsUnknown() {
+		err = c.checkSpec(ctx, &state)
+	}
+
 	// 校验规格
 	err = c.checkSpec(ctx, &plan)
 	if err != nil {
@@ -609,19 +616,55 @@ func (c *CtyunMysqlInstance) checkSpec(ctx context.Context, plan *CtyunMysqlInst
 		return fmt.Errorf("暂不支持的此规格：%s", plan.FlavorName.ValueString())
 	}
 	plan.instanceSeries = instanceSeries // S、M 或 C
+
 	// 再调用数据库规格接口
-	mysqlFlavor, err := c.mysqlService.GetFlavorByProdIdAndFlavorName(
-		ctx,
-		plan.ProdID.ValueString(),
-		plan.FlavorName.ValueString(),
-		plan.RegionID.ValueString(),
-		plan.instanceSeries,
-	)
+	var mysqlFlavor mysql.InstSpecInfo
+	var specName, version string
+	var prodId int64
+	// 用户可以输入prod_id，如果输入的int型，也可以兼容原来string类型
+	isNum, number := c.mysqlService.IsProdIDNumeric(plan.ProdID.ValueString())
+	if isNum {
+		mysqlFlavor, prodId, specName, version, err = c.mysqlService.GetFlavorByInstanceTypeAndFlavorName(
+			ctx,
+			number,
+			plan.FlavorName.ValueString(),
+			plan.RegionID.ValueString(),
+			plan.instanceSeries,
+		)
+	} else {
+		mysqlFlavor, prodId, specName, version, err = c.mysqlService.GetFlavorByProdIdAndFlavorName(
+			ctx,
+			plan.ProdID.ValueString(),
+			plan.FlavorName.ValueString(),
+			plan.RegionID.ValueString(),
+			plan.instanceSeries,
+		)
+	}
+
 	if err != nil {
 		return err
 	}
+	if prodId == 0 {
+		return fmt.Errorf("prod_id 信息为空！")
+	}
+	if mysqlFlavor.ProdPerformanceSpec == "" || mysqlFlavor.Generation == "" {
+		return fmt.Errorf("未获取到 flavor 信息，返回数据：%+v", mysqlFlavor)
+	}
+	plan.prodId = prodId
 	plan.prodPerformanceSpec = mysqlFlavor.ProdPerformanceSpec
 	plan.hostType = mysqlFlavor.Generation
+	if specName != "" {
+		plan.prodSpecName = specName
+	} else {
+		err = fmt.Errorf("未获取到 spec_name！当前 prod_id =%s", plan.ProdID.ValueString())
+		return err
+	}
+	if version != "" {
+		plan.prodVersion = version
+	} else {
+		err = fmt.Errorf("未获取到 version！当前 prod_id =%s", plan.ProdID.ValueString())
+		return err
+	}
 
 	// 映射关系
 	if strings.HasPrefix(plan.hostType, "K") { // 鲲鹏
@@ -643,16 +686,16 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 	params := &mysql.TeledbCreateRequest{
 		BillMode:    business.MysqlBillMode[cycleType],
 		RegionId:    config.RegionID.ValueString(),
-		ProdVersion: business.MysqlProdVersionDict[config.ProdID.ValueString()],
+		ProdVersion: config.prodVersion,
 		VpcId:       config.VpcID.ValueString(),
 		HostType:    config.hostType,
 		SubnetId:    config.SubnetID.ValueString(),
 		Name:        config.Name.ValueString(),
 		Period:      config.CycleCount.ValueInt32(),
 		Count:       1,
-		ProdId:      business.MysqlProdIdDict[config.ProdID.ValueString()],
 		CpuType:     business.MysqlCpuTypeDict[config.cpuType],
 		OsType:      business.MysqlOSTypeDict[config.osType],
+		ProdId:      config.prodId,
 	}
 	params.SecurityGroupId = config.SecurityGroupID.ValueString()
 	if !config.Password.IsNull() && !config.Password.IsUnknown() {
@@ -671,7 +714,7 @@ func (c *CtyunMysqlInstance) createMysqlInstance(ctx context.Context, config *Ct
 	}
 	var MysqlNodeInfos []mysql.MysqlNodeInfoListRequest
 	mysqlNodeInfo := mysql.MysqlNodeInfoListRequest{}
-	mysqlNodeInfo.NodeType = business.NodeTypeDict[config.ProdID.ValueString()]
+	mysqlNodeInfo.NodeType = business.MysqlNodeTypeMaster
 	mysqlNodeInfo.InstSpec = business.MysqlInstanceSeriesDict[config.instanceSeries]
 	mysqlNodeInfo.StorageType = config.StorageType.ValueString()
 	mysqlNodeInfo.StorageSpace = config.StorageSpace.ValueInt32()
@@ -778,8 +821,18 @@ func (c *CtyunMysqlInstance) getAndMergeMysqlInstance(ctx context.Context, confi
 		return
 	}
 	config.WritePort = types.Int32Value(int32(writePort))
-	// 更新disk， 主机配置相关信息
-	config.ProdID = types.StringValue(business.MysqlProdIdRevDict[returnOjb.ProdId])
+	// 如果prod_id输入的string，还解析成string,没填则补充int64
+	if !config.ProdID.IsNull() && !config.ProdID.IsUnknown() {
+		isNum, _ := c.mysqlService.IsProdIDNumeric(config.ProdID.ValueString())
+		if isNum {
+			config.ProdID = types.StringValue(fmt.Sprintf("%d", returnOjb.ProdId))
+		} else {
+			config.ProdID = types.StringValue(business.MysqlProdIdRevDict[returnOjb.ProdId])
+		}
+	} else {
+		config.ProdID = types.StringValue(fmt.Sprintf("%d", returnOjb.ProdId))
+
+	}
 	config.StorageSpace = types.Int32Value(returnOjb.DiskSize)
 	config.StorageType = types.StringValue(returnOjb.DiskType)
 	config.BackupStorageSpace = types.Int32Value(returnOjb.BackupDiskSize)
@@ -997,7 +1050,7 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 	if err != nil {
 		return
 	}
-	nodeType := business.NodeTypeDict[plan.ProdID.ValueString()]
+	nodeType := business.MysqlNodeTypeMaster
 	upgradeParams := &mysql.TeledbUpgradeRequest{
 		InstId:   state.InstID.ValueString(),
 		NodeType: &nodeType,
@@ -1037,15 +1090,19 @@ func (c *CtyunMysqlInstance) updateMysqlInstance(ctx context.Context, state *Cty
 	// 若plan.ProdPerformanceSpec不为空,且state和plan的ProdPerformanceSpec不一致，触发规格扩容
 	if !plan.FlavorName.Equal(state.FlavorName) {
 		if !plan.ProdID.Equal(state.ProdID) {
-			err = errors.New("实例节点和规格(prod_id, flavor_name)不可同时变更")
+			err = errors.New("实例节点和规格 (prod_id, flavor_name) 不可同时变更")
 			return
 		}
 		upgradeParams.ProdPerformanceSpec = &plan.prodPerformanceSpec
 	}
-	// 若plan.prodId不为空,且state和plan的prodId不一致，触发实例类型扩容
-	if !plan.ProdID.IsNull() && state.ProdID.ValueString() != plan.ProdID.ValueString() {
-		prodId := business.MysqlProdIdDict[plan.ProdID.ValueString()]
-		upgradeParams.ProdId = &prodId
+	// 若 plan.prodId 不为空，且 state 和 plan 的 prodId 不一致，触发实例类型扩容
+	if !plan.ProdID.IsNull() && !state.ProdID.Equal(plan.ProdID) {
+		//prodID, err := strconv.ParseInt(plan.ProdID.ValueString(), 10, 64)
+		//if err != nil {
+		//	return fmt.Errorf("prod_id 格式错误：%s", plan.ProdID.ValueString())
+		//}
+		prodID := plan.prodId
+		upgradeParams.ProdId = &prodID
 	}
 
 	// 若实例扩容或更新ProdID---从单节点升级至，一主一备、一主两备。需要补充AZ信息
@@ -1239,7 +1296,7 @@ func (c *CtyunMysqlInstance) generateAzInfos(ctx context.Context, config *CtyunM
 		// 1主1备		AZ1				AZ1,AZ2			AZ1,2个AZ2
 		// 1主2备		AZ1  			AZ1,2个AZ2      AZ1, AZ2, AZ3
 		// 1. 判断实例类型，确认需要几个节点
-		nodeNum := business.MysqlNodeNumDict[config.ProdID.ValueString()]
+		nodeNum := business.MysqlProdSpecNodeNumDict[config.prodSpecName]
 		// 2. 获取az信息
 		var regionAzList []mysql.TeledbGetAvailabilityZoneResponseReturnObjData
 		regionAzList, err = c.getAzInfoByRegion(ctx, config)
@@ -1345,8 +1402,8 @@ func (c *CtyunMysqlInstance) getUpgradeAzInfo(ctx context.Context, state *CtyunM
 		return
 	} else if upgradeParams.ProdId != nil {
 		// 4.节点扩容需要获取az信息，确定需要增加的节点数。
-		stateNodeNum := business.MysqlNodeNumDict[state.ProdID.ValueString()]
-		planNodeNum := business.MysqlNodeNumDict[plan.ProdID.ValueString()]
+		stateNodeNum := business.MysqlProdSpecNodeNumDict[state.prodSpecName]
+		planNodeNum := business.MysqlProdSpecNodeNumDict[plan.prodSpecName]
 		addNodeNum := planNodeNum - stateNodeNum
 		if addNodeNum <= 0 {
 			// 如果需要增加的节点数小于等于0，无需操作
@@ -1564,10 +1621,13 @@ type CtyunMysqlInstanceConfig struct {
 	ID                          types.String `tfsdk:"id"` // 实例id
 
 	osType              string
+	prodId              int64
 	cpuType             string
 	prodPerformanceSpec string
 	hostType            string
 	instanceSeries      string
+	prodVersion         string
+	prodSpecName        string
 }
 
 type AvailabilityZoneModel struct {

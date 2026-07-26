@@ -45,7 +45,7 @@ resource "ctyun_security_group" "sg_test" {
 // 开通样例
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = 10003011
+  prod_id             = 10003011 # 12.2单机版；可通过data.ctyun_postgresql_specs查询
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100

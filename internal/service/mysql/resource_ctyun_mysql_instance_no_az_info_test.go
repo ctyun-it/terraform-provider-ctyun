@@ -54,6 +54,7 @@ func TestAccCtyunMysqlNoAzInfoInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "MasterSlave57"),
 				),
 			},
+			// Step 2：不传AZ，将一主一备扩容为一主两备，同时扩容主备磁盘。
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name1, password, "", "", flavorName, updateProdID, "", storageType, updatedStorageSpace, "", "", backupStorageSpace),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -67,6 +68,7 @@ func TestAccCtyunMysqlNoAzInfoInstance(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},
+			// Step 3：销毁完成无AZ节点扩容和磁盘扩容验证的实例。
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name1, password, "", "", flavorName, updateProdID, "", storageType, updatedStorageSpace, "", "", backupStorageSpace),
 				Destroy: true,
@@ -121,6 +123,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single57"),
 				),
 			},
+			// Step 2：不传AZ，将单节点直接扩容为一主两备。
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", flavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -134,6 +137,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},
+			// Step 3：保持一主两备拓扑不变，仅升级计算规格。
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", updatedFlavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
@@ -147,6 +151,7 @@ func TestAccCtyunMysqlNoAzInfoInstance1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},
+			// Step 4：销毁完成无AZ节点与规格升级验证的实例。
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name, password, "", "", updatedFlavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Destroy: true,
@@ -214,6 +219,7 @@ func TestAccCtyunMysqlNoAzInfoInstance2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave57"),
 				),
 			},
+			// Step 3：销毁直接创建并完成规格升级的一主两备实例。
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, subnetID, securityGroupID, name2, password, "", "", updatedFlavorName, updateProdID, "", storageType, storageSpace, "", "", ""),
 				Destroy: true,

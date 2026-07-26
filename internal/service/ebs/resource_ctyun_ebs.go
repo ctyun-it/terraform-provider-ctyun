@@ -75,7 +75,7 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"type": schema.StringAttribute{
 				Required:    true,
-				Description: "磁盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD，不支持ISCSI模式；xssd-0、xssd-1、xssd-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式",
+				Description: "磁盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，FAST-SSD：极速型SSD，不支持ISCSI模式；XSSD-0、XSSD-1、XSSD-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -88,7 +88,7 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"size": schema.Int64Attribute{
 				Required:    true,
-				Description: "磁盘大小，单位GB，超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；xssd-0：10GB-65536GB；xssd-1：20GB-65536GB；xssd-2：512GB-65536GB 支持更新（不支持缩容）",
+				Description: "磁盘大小（单位GB），超高IO/高IO/极速型SSD/普通IO：取值范围[10, 32768]；XSSD-0：10GB-65536GB；XSSD-1：20GB-65536GB；XSSD-2：512GB-65536GB 支持更新（不支持缩容）",
 				Validators: []validator.Int64{
 					int64validator.Between(10, 65536),
 				},

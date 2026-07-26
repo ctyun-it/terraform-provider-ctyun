@@ -276,9 +276,12 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_type": schema.StringAttribute{
 				Optional:    true,
-				Description: "系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO",
+				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbmDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbmDiskTypes...),
+						stringvalidator.OneOf(business.EbmDiskTypesUpper...),
+					),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_volume_raid_uuid")),
 					stringvalidator.AlsoRequires(path.MatchRoot("system_disk_size")),
 				},
@@ -288,7 +291,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_size": schema.Int32Attribute{
 				Optional:    true,
-				Description: "系统盘大小，单位为G，取值范围：[100, 2048]，当前不支持公网",
+				Description: "系统盘大小（单位GB），取值范围：[100, 2048]，当前不支持公网",
 				Validators: []validator.Int32{
 					int32validator.Between(100, 2048),
 					int32validator.ConflictsWith(path.MatchRoot("system_volume_raid_uuid")),
@@ -1135,7 +1138,16 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 			return err
 		}
 		if diskInfo.IsSystemVolume {
-			cfg.SystemDiskType = types.StringValue(strings.ToLower(diskInfo.DiskType))
+			// 配置值不等于返回值
+			if cfg.SystemDiskType.ValueString() != diskInfo.DiskType {
+				// 没有配置，说明是导入，用大写
+				if cfg.SystemDiskType.ValueString() == "" {
+					cfg.SystemDiskType = types.StringValue(diskInfo.DiskType)
+				} else {
+					// 有配置，说明是创建，用小写
+					cfg.SystemDiskType = types.StringValue(strings.ToLower(diskInfo.DiskType))
+				}
+			}
 			cfg.SystemDiskSize = types.Int32Value(int32(diskInfo.DiskSize))
 			cfg.SystemDiskID = types.StringValue(diskInfo.DiskID)
 		}

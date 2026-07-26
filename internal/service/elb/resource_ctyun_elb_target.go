@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
@@ -21,8 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -362,6 +363,9 @@ func (c *ctyunElbTarget) CrateElbTarget(ctx context.Context, plan *CtyunElbTarge
 	if !plan.Weight.IsNull() {
 		params.Weight = plan.Weight.ValueInt32()
 	}
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
+	}
 
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbCreateTargetApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -435,6 +439,9 @@ func (c *ctyunElbTarget) updateElbTarget(ctx context.Context, state *CtyunElbTar
 	}
 	if !plan.Weight.IsNull() {
 		params.Weight = plan.Weight.ValueInt32()
+	}
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbUpdateTargetApi.Do(ctx, c.meta.SdkCredential, params)

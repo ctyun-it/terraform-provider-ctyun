@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
@@ -22,8 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -95,7 +96,7 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
+				Description: "负载均衡器名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
 					validator2.AclName(),
@@ -104,10 +105,10 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新",
+				Description: "支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，支持更新",
 				Validators: []validator.String{
 					validator2.Desc(),
-					stringvalidator.LengthBetween(0, 128),
+					stringvalidator.LengthBetween(1, 128),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -410,6 +411,7 @@ func (c *CtyunElbLoadBalancerResource) Delete(ctx context.Context, request resou
 	if err != nil {
 		return
 	}
+	time.Sleep(10 * time.Second)
 }
 func (c *CtyunElbLoadBalancerResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
@@ -500,6 +502,10 @@ func (c *CtyunElbLoadBalancerResource) createPgElb(ctx context.Context, plan *Ct
 
 	if !plan.PayVoucherPrice.IsNull() {
 		params.PayVoucherPrice = plan.PayVoucherPrice.ValueString()
+	}
+
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueString()
 	}
 
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbCreatePgelbApi.Do(ctx, c.meta.SdkCredential, params)

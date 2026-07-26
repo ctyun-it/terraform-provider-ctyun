@@ -325,7 +325,11 @@ func (c *CtyunPgsqlParamTemplate) CreatePostgresqlParameterTemplate(ctx context.
 	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf(" API return error. Message: %s Error: %s", resp.Message, *resp.Error)
 		return err
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return err
 	}
+	config.ID = types.Int64Value(resp.ReturnObj.TemplateId)
 	return nil
 }
 

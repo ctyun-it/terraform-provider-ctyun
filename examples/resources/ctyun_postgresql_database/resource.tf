@@ -43,7 +43,7 @@ variable "password" {
 
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = 10003011
+  prod_id             = 10003011 # 12.2单机版；可通过data.ctyun_postgresql_specs查询
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120

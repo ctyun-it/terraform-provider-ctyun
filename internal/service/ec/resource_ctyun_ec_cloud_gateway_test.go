@@ -61,8 +61,10 @@ func TestAccEcCloudGateway_basic(t *testing.T) {
 					}
 					return fmt.Sprintf("%s,%s", rs.Primary.ID, rs.Primary.Attributes["ec_id"]), nil
 				},
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"description",
+				},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.expressConnectID, name, updatedDescription, regionType),

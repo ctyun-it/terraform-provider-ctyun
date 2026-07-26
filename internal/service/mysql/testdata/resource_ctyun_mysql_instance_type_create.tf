@@ -9,5 +9,5 @@ resource "ctyun_mysql_instance" "%[1]s" {
   prod_id           = "%[9]s"
   storage_type      = "%[10]s"
   storage_space     = %[11]d
+  availability_zone_info = %[12]s
 }
-

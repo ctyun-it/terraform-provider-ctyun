@@ -3,10 +3,12 @@ package business
 import (
 	"context"
 	"fmt"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 )
 
 type EcsService struct {
@@ -181,11 +183,40 @@ func (u EcsService) CheckEcsStatus(ctx context.Context, id, regionId string) err
 // HS3.LARGE.2:
 // HS3X.XLARGE.4:
 // HS3.MEDIUM.4:
+
+// 预排序：按key长度从长到短，保证长前缀优先匹配
+var sortedSeriesKeys []string
+
+func init() {
+	// 提取所有key
+	keys := make([]string, 0, len(MysqlInstanceSeriesDict))
+	for k := range MysqlInstanceSeriesDict {
+		keys = append(keys, k)
+	}
+	// 降序排序：长度大的在前；长度相同按字母序
+	sort.Slice(keys, func(i, j int) bool {
+		if len(keys[i]) != len(keys[j]) {
+			return len(keys[i]) > len(keys[j])
+		}
+		return keys[i] > keys[j]
+	})
+	sortedSeriesKeys = keys
+}
+
 func (u EcsService) GetInstanceSeries(_ context.Context, hostType string) string {
-	for key, _ := range MysqlInstanceSeriesDict {
+	for _, key := range sortedSeriesKeys {
 		if len(hostType) >= len(key) && strings.HasPrefix(hostType, key) {
 			return key
 		}
 	}
 	return ""
 }
+
+//func (u EcsService) GetInstanceSeries(_ context.Context, hostType string) string {
+//	for key, _ := range MysqlInstanceSeriesDict {
+//		if len(hostType) >= len(key) && strings.HasPrefix(hostType, key) {
+//			return key
+//		}
+//	}
+//	return ""
+//}

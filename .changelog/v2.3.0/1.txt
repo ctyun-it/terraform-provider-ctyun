@@ -1,0 +1,12 @@
+release-note:enhancement
+resource\ctyun_mysql_instance: fix mysql prod_id
+
+release-note:enhancement
+resource\ctyun_mongodb_instance: fix mongodb prod_id
+
+release-note:enhancement
+resource\ctyun_elb_loadbalancer: fix elb description
+
+release-note:enhancement
+resource\ctyun_elb_target: fix elb_target description
+

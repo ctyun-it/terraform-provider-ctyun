@@ -52,8 +52,8 @@ resource "ctyun_elb_target_group" "target_group_test" {
 
 ### Required
 
-- `algorithm` (String) 调度算法。取值范围：rr（轮询）、wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新
-- `name` (String) 名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `algorithm` (String) 调度算法。取值范围：wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新
+- `name` (String) 后端主机组名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `vpc_id` (String) 需要创建后端主机组的 VPC 的 ID
 
 ### Optional

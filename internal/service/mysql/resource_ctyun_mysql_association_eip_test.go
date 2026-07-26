@@ -2,11 +2,12 @@ package mysql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunMysqlAssociationEip(t *testing.T) {
@@ -19,7 +20,7 @@ func TestAccCtyunMysqlAssociationEip(t *testing.T) {
 	eipAddress := dependence.eipAddress
 	instId := dependence.mysqlID
 
-	instance_series := "S"
+	instance_series := "S8"
 
 	specDatasourceName := "data.ctyun_mysql_specs." + dnd
 	specDatasourceFile := "datasource_ctyun_mysql_specs.tf"

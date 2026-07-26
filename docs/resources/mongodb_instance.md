@@ -58,7 +58,7 @@ resource "ctyun_mongodb_instance" "test" {
   subnet_id           = ctyun_subnet.subnet_test.id
   security_group_id   = ctyun_security_group.security_group_test.id
   name                = "mongodb-12ab"
-  prod_id             = "Single34"
+  prod_id             = "10013001" # 3.4单机版；可通过data.ctyun_mongodb_specs查询
   storage_type        = "SATA"
   storage_space       = 100
   backup_storage_type = "OS"
@@ -91,13 +91,13 @@ variable "password" {
 - `flavor_name` (String) 规格名称，形如c7.2xlarge.4，可从data.ctyun_mongodb_specs查询支持的规格。支持更新
 - `mongos_num` (Number) mongos节点数量，mongodb为集群版需填写，支持更新。默认为2，取值范围：2~32
 - `password` (String, Sensitive) 实例密码，创建时必填，导入时不填。长度为8~26个字符，必须包含大写字母、小写字母、数字和特殊字符~!@#%^*_=+ 支持更新
-- `prod_id` (String) 产品id，开通时用于确定开通单机/集群版/副本集和版本，创建时必填，导入时不填。支持更新。取值范围包括：Single34（3.4单机版）,Single40（4.0单机版）,Replica3R34（3.4副本集三副本）,Replica3R40（4.0副本集三副本）,Replica5R34（3.4副本集五副本）,Replica5R40（4.0副本集五副本）,Replica7R34（3.4副本集七副本）,Replica7R40（4.0副本集七副本）,Cluster34（3.4集群版）,Cluster40（4.0集群版）,Single42（4.2单机版）,Replica3R42（4.2副本集三副本）,Replica5R42（4.2副本集五副本）,Replica7R42（4.2副本集七副本）,Cluster42（4.2集群版）,Single50（5.0单机版）,Replica3R50（5.0副本集三副本）,Replica5R50（5.0副本集五副本）,Replica7R50（5.0副本集七副本）,Cluster50（5.0集群版）,Cluster60（6.0集群版）,Replica3R60（6.0副本集三副本）,Replica5R60（6.0副本集五副本）,Replica7R60（6.0副本集七副本）,Single60（6.0单机版）
+- `prod_id` (String) 产品id，开通时用于确定开通单机/集群版/副本集和版本，创建时必填，导入时不填。支持更新，推荐取值方式（1）。分为两种方式取值：1）数值型，具体取值可以通过data.ctyun_mysql_specs.specs.prod_id获取。2）字符型，取值范围包括：Single34（3.4单机版）,Single40（4.0单机版）,Replica3R34（3.4副本集三副本）,Replica3R40（4.0副本集三副本）,Replica5R34（3.4副本集五副本）,Replica5R40（4.0副本集五副本）,Replica7R34（3.4副本集七副本）,Replica7R40（4.0副本集七副本）,Cluster34（3.4集群版）,Cluster40（4.0集群版）,Single42（4.2单机版）,Replica3R42（4.2副本集三副本）,Replica5R42（4.2副本集五副本）,Replica7R42（4.2副本集七副本）,Cluster42（4.2集群版）,Single50（5.0单机版）,Replica3R50（5.0副本集三副本）,Replica5R50（5.0副本集五副本）,Replica7R50（5.0副本集七副本）,Cluster50（5.0集群版）,Cluster60（6.0集群版）,Replica3R60（6.0副本集三副本）,Replica5R60（6.0副本集五副本）,Replica7R60（6.0副本集七副本）,Single60（6.0单机版）
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `read_only_count` (Number) 从节点数量 支持更新
 - `read_port` (Number) 读端口,支持更新。若需要更新读取端口时可填，取值范围：1~65535
 - `region_id` (String) 区域id,如果不填这默认使用provider ctyun总region_id 或者环境变量
 - `shard_num` (Number) shard节点数量，mongodb为集群版需填写，支持更新。默认为2，取值范围：2~32
-- `storage_space` (Number) 存储空间(单位:G)，默认为100GB，支持更新。取值范围：10-6144，backup节点为单个shard的容量乘以shard的个数
+- `storage_space` (Number) 主存储空间（单位GB），默认为100，支持更新。取值范围：10-6144，backup节点为单个shard的容量乘以shard的个数
 - `storage_type` (String) 存储类型，默认为SSD。取值范围：SSD=超高IO, SAS=高IO, SATA=普通IO，SSD-genric=通用型SSD，XSSD-0，XSSD-1，XSSD-2
 - `upgrade_node_type` (String) 当实例为集群版，若升配mongos、shard节点个数时可填写，支持更新。取值范围：shard, mongos
 

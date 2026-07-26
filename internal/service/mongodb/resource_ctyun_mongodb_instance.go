@@ -14,6 +14,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
@@ -242,9 +243,10 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 			// todo 该字段merge阶段有问题，待产线修复后再从optional -> required
 			"prod_id": schema.StringAttribute{
 				Optional:    true,
-				Description: "产品id，开通时用于确定开通单机/集群版/副本集和版本，创建时必填，导入时不填。支持更新。取值范围包括：Single34（3.4单机版）,Single40（4.0单机版）,Replica3R34（3.4副本集三副本）,Replica3R40（4.0副本集三副本）,Replica5R34（3.4副本集五副本）,Replica5R40（4.0副本集五副本）,Replica7R34（3.4副本集七副本）,Replica7R40（4.0副本集七副本）,Cluster34（3.4集群版）,Cluster40（4.0集群版）,Single42（4.2单机版）,Replica3R42（4.2副本集三副本）,Replica5R42（4.2副本集五副本）,Replica7R42（4.2副本集七副本）,Cluster42（4.2集群版）,Single50（5.0单机版）,Replica3R50（5.0副本集三副本）,Replica5R50（5.0副本集五副本）,Replica7R50（5.0副本集七副本）,Cluster50（5.0集群版）,Cluster60（6.0集群版）,Replica3R60（6.0副本集三副本）,Replica5R60（6.0副本集五副本）,Replica7R60（6.0副本集七副本）,Single60（6.0单机版）",
+				Description: "产品id，开通时用于确定开通单机/集群版/副本集和版本，创建时必填，导入时不填。支持更新，推荐取值方式（1）。分为两种方式取值：1）数值型，具体取值可以通过data.ctyun_mysql_specs.specs.prod_id获取。2）字符型，取值范围包括：Single34（3.4单机版）,Single40（4.0单机版）,Replica3R34（3.4副本集三副本）,Replica3R40（4.0副本集三副本）,Replica5R34（3.4副本集五副本）,Replica5R40（4.0副本集五副本）,Replica7R34（3.4副本集七副本）,Replica7R40（4.0副本集七副本）,Cluster34（3.4集群版）,Cluster40（4.0集群版）,Single42（4.2单机版）,Replica3R42（4.2副本集三副本）,Replica5R42（4.2副本集五副本）,Replica7R42（4.2副本集七副本）,Cluster42（4.2集群版）,Single50（5.0单机版）,Replica3R50（5.0副本集三副本）,Replica5R50（5.0副本集五副本）,Replica7R50（5.0副本集七副本）,Cluster50（5.0集群版）,Cluster60（6.0集群版）,Replica3R60（6.0副本集三副本）,Replica5R60（6.0副本集五副本）,Replica7R60（6.0副本集七副本）,Single60（6.0单机版）",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.MongodbProdIDs...),
+					//stringvalidator.OneOf(business.MongodbProdIDs...),
+					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
 			"project_id": schema.StringAttribute{
@@ -310,7 +312,7 @@ func (c *CtyunMongodbInstance) Schema(ctx context.Context, request resource.Sche
 				Optional:    true,
 				Computed:    true,
 				Default:     int32default.StaticInt32(100),
-				Description: "存储空间(单位:G)，默认为100GB，支持更新。取值范围：10-6144，backup节点为单个shard的容量乘以shard的个数",
+				Description: "主存储空间（单位GB），默认为100，支持更新。取值范围：10-6144，backup节点为单个shard的容量乘以shard的个数",
 				Validators: []validator.Int32{
 					int32validator.Between(10, 6144),
 				},
@@ -543,8 +545,11 @@ func (c *CtyunMongodbInstance) Update(ctx context.Context, request resource.Upda
 		response.Diagnostics.AddWarning("prod_id的更新仅写入状态文件", "在import时，状态文件中prod_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 
+	if !state.FlavorName.IsNull() && !state.FlavorName.IsUnknown() && !state.ProdID.IsNull() && !state.ProdID.IsUnknown() {
+		err = c.checkSpec(ctx, &state)
+	}
 	// 通过flavor_name获取cpu，memory等规格信息，当 flavor_name不为空时check。
-	if !plan.FlavorName.IsNull() && !plan.FlavorName.IsUnknown() {
+	if !plan.FlavorName.IsNull() && !plan.FlavorName.IsUnknown() && !plan.ProdID.IsNull() && !plan.ProdID.IsUnknown() {
 		err = c.checkSpec(ctx, &plan)
 	}
 	if err != nil {
@@ -645,7 +650,7 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 		Name:              config.Name.ValueString(),
 		Period:            config.CycleCount.ValueInt32(),
 		Count:             1,
-		ProdId:            business.MongodbProdIDDict[config.ProdID.ValueString()],
+		ProdId:            c.getProdIDIntValue(config.ProdID.ValueString()),
 		MysqlNodeInfoList: nil,
 		CpuType:           business.MongodbCpuTypeDict[config.cpuType],
 	}
@@ -666,22 +671,23 @@ func (c *CtyunMongodbInstance) CreateMongodbInstance(ctx context.Context, config
 	}
 
 	var mongodbNodeInfoListRequest []mongodb.MongodbNodeInfoListRequest
-	// 获取az信息
-	if strings.Contains(config.ProdID.ValueString(), "Single") {
+
+	mongodbType := c.getMongodbType(config.specType)
+	if mongodbType == business.MongodbProdTypeSingle {
 		// 处理单节点nodeInfoList
 		err2 := c.getSingleNodeInfo(ctx, config, &mongodbNodeInfoListRequest)
 		if err2 != nil {
 			err = err2
 			return
 		}
-	} else if strings.Contains(config.ProdID.ValueString(), "Replica") {
+	} else if mongodbType == business.MongodbProdTypeReplica {
 		// 处理副本级nodeInfoList
 		err2 := c.getReplicaNodeInfo(ctx, config, &mongodbNodeInfoListRequest)
 		if err2 != nil {
 			err = err2
 			return
 		}
-	} else if strings.Contains(config.ProdID.ValueString(), "Cluster") {
+	} else if mongodbType == business.MongodbProdTypeCluster {
 		// 处理集群版本nodeInfoList
 		err2 := c.getClusterNodeInfo(ctx, config, &mongodbNodeInfoListRequest)
 		if err2 != nil {
@@ -816,12 +822,16 @@ func (c *CtyunMongodbInstance) getAndMergeMongodbInstance(ctx context.Context, c
 		config.MongosNum = types.Int32Null()
 	}
 
-	// todo prod id 需要作为整改项进行处理
-	//prodID64, err := strconv.ParseInt(listDetail.ProdId, 10, 64)
-	//if err != nil {
-	//	return err
-	//}
-	//config.ProdID = types.StringValue(business.MongodbProdIDRevDict[prodID64])
+	// prod_id 回写：根据用户原始输入判断是数字还是字符串
+	if !config.ProdID.IsNull() && !config.ProdID.IsUnknown() {
+		isNum, prodID64 := c.mongodbService.IsProdIDNumeric(config.ProdID.ValueString())
+		if isNum {
+			config.ProdID = types.StringValue(fmt.Sprintf("%d", prodID64))
+		} else {
+			// 保持用户输入的字符串格式
+			config.ProdID = types.StringValue(config.ProdID.ValueString())
+		}
+	}
 	readOnlyCount, err := c.getCurrentReadOnlyNodeCount(ctx, config)
 	if err != nil {
 		return err
@@ -1248,7 +1258,7 @@ func (c *CtyunMongodbInstance) generateAzInfo(ctx context.Context, config *Ctyun
 		AzInfoList = append(AzInfoList, azInfo)
 		return
 	} else if prodType == "replica" {
-		config.replicaNum = business.MongodbReplicaNodeNum[config.ProdID.ValueString()]
+		config.replicaNum = c.getReplicaNodeNum(config.specType)
 
 		if azNum >= 3 {
 			distNodeNum := [3]int32{
@@ -1742,18 +1752,33 @@ func (c *CtyunMongodbInstance) checkSpec(ctx context.Context, plan *CtyunMongodb
 	}
 	plan.instanceSeries = instanceSeries // S、M 或 C
 	// 再调用数据库规格接口
-	mysqlFlavor, err := c.mongodbService.GetMongodbFlavorByProdIdAndFlavorName(
-		ctx,
-		plan.ProdID.ValueString(),
-		plan.FlavorName.ValueString(),
-		plan.RegionID.ValueString(),
-		plan.instanceSeries,
-	)
+	var mysqlFlavor mysql.InstSpecInfo
+	var specType string // example : 集群版、副本集三副本、副本集五副本、副本集七副本、单机版
+	isNum, number := c.mongodbService.IsProdIDNumeric(plan.ProdID.ValueString())
+	if isNum {
+		mysqlFlavor, specType, err = c.mongodbService.GetMongodbFlavorByInstanceTypeAndFlavorName(
+			ctx,
+			number,
+			plan.FlavorName.ValueString(),
+			plan.RegionID.ValueString(),
+			plan.instanceSeries,
+		)
+	} else {
+		mysqlFlavor, specType, err = c.mongodbService.GetMongodbFlavorByProdIdAndFlavorName(
+			ctx,
+			plan.ProdID.ValueString(),
+			plan.FlavorName.ValueString(),
+			plan.RegionID.ValueString(),
+			plan.instanceSeries,
+		)
+	}
+
 	if err != nil {
 		return err
 	}
 	plan.prodPerformanceSpec = mysqlFlavor.ProdPerformanceSpec
 	plan.hostType = mysqlFlavor.Generation
+	plan.specType = specType
 
 	// 映射关系
 	if strings.HasPrefix(plan.hostType, "K") { // 鲲鹏
@@ -1779,9 +1804,9 @@ func (c *CtyunMongodbInstance) upgradeSpec(ctx context.Context, state *CtyunMong
 	}
 
 	// 获取mongodb类型
-	mongodbType := c.getMongodbType(state)
+	mongodbType := c.getMongodbType(plan.specType)
 	if mongodbType == "" {
-		return errors.New("prod_id 有误，请确认后再进行升配规格操作")
+		return fmt.Errorf("prod_id 有误，请确认后再进行升配规格操作，当前specType=%s", plan.specType)
 	}
 
 	updateParams := &mongodb.MongodbUpgradeRequest{
@@ -1855,16 +1880,23 @@ func (c *CtyunMongodbInstance) upgradeSpec(ctx context.Context, state *CtyunMong
 	return nil
 }
 
-func (c *CtyunMongodbInstance) getMongodbType(state *CtyunMongodbInstanceConfig) string {
-	prodId := state.ProdID.ValueString()
-	if strings.Contains(prodId, "Single") {
-		return business.MongodbProdTypeSingle
-	} else if strings.Contains(prodId, "Replica") {
-		return business.MongodbProdTypeReplica
-	} else if strings.Contains(prodId, "Cluster") {
-		return business.MongodbProdTypeCluster
+func (c *CtyunMongodbInstance) getMongodbType(specType string) string {
+	return business.MongodbSpecTypeDict[specType]
+}
+
+// getProdIDIntValue 将 prodID 字符串转换为 int64，支持字符串名称和数字两种格式
+func (c *CtyunMongodbInstance) getProdIDIntValue(prodID string) int64 {
+	isNum, numVal := c.mongodbService.IsProdIDNumeric(prodID)
+	if isNum {
+		return numVal
 	}
-	return ""
+	return business.MongodbProdIDDict[prodID]
+}
+
+// getReplicaNodeNum 根据 specType 获取副本节点数量
+// specType 可能的值："副本集三副本"、"副本集五副本"、"副本集七副本"
+func (c *CtyunMongodbInstance) getReplicaNodeNum(specType string) int32 {
+	return business.MongodbSpecTypeToNodeNum[specType]
 }
 
 // 通过mongo类型，获取mongo各个节点的信息
@@ -2003,8 +2035,10 @@ func (c *CtyunMongodbInstance) upgradeNode(ctx context.Context, state *CtyunMong
 	var err error
 	// 如果plan和state阶段的prod id一致，无需变化
 
-	mongodbType := c.getMongodbType(state)
-
+	mongodbType := c.getMongodbType(plan.specType)
+	if mongodbType == "" {
+		err = fmt.Errorf("specType有误，当前值为：%s", plan.specType)
+	}
 	var azInfo []mongodb.AvailabilityZoneInfo
 	nodeType := plan.UpgradeNodeType.ValueString()
 	if mongodbType == business.MongodbProdTypeReplica {
@@ -2046,7 +2080,7 @@ func (c *CtyunMongodbInstance) upgradeNode(ctx context.Context, state *CtyunMong
 		if err != nil {
 			return err
 		}
-		prodId := business.MongodbProdIDDict[plan.ProdID.ValueString()]
+		prodId := c.getProdIDIntValue(plan.ProdID.ValueString())
 		upgradeParams.ProdId = &prodId
 	} else if mongodbType == business.MongodbProdTypeCluster {
 		// 根据shard_num 和 mongos_num 判断
@@ -2114,8 +2148,8 @@ func (c *CtyunMongodbInstance) getUpgradeReplicaAzList(ctx context.Context, stat
 		// 定义一个map，用于存放新增的节点，和az分布
 		addNodeMap := make(map[string]int32)
 		// 计算需要升配的节点数量
-		stateNodeNum := business.MongodbReplicaNodeNum[state.ProdID.ValueString()]
-		planNodeNum := business.MongodbReplicaNodeNum[plan.ProdID.ValueString()]
+		stateNodeNum := c.getReplicaNodeNum(state.specType)
+		planNodeNum := c.getReplicaNodeNum(plan.specType)
 		addNum := planNodeNum - stateNodeNum
 		if addNum <= 0 {
 			return errors.New("plan阶段 prodID有误")
@@ -2648,6 +2682,7 @@ type CtyunMongodbInstanceConfig struct {
 	osType               string
 	cpuType              string
 	replicaNum           int32
+	specType             string
 }
 
 type NodeInfoListModel struct {

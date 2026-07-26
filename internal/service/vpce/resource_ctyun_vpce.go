@@ -412,7 +412,12 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		msg := utils.SecString(resp.Message)
+		if strings.Contains(msg, common.OpenapiVpceEndpointNotFound) {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", msg, utils.SecString(resp.Description))
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -498,7 +503,12 @@ func (c *ctyunVpce) delete(ctx context.Context, clientToken string, plan CtyunVp
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		msg := utils.SecString(resp.Message)
+		if strings.Contains(msg, common.OpenapiVpceEndpointNotFound) {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", msg, utils.SecString(resp.Description))
+		}
 		return
 	}
 	status = utils.SecString(resp.ReturnObj.MasterResourceStatus)
@@ -515,6 +525,11 @@ func (c *ctyunVpce) loopDelete(ctx context.Context, plan CtyunVpceConfig) (err e
 		func(currentTime int) bool {
 			status, err = c.delete(ctx, clientToken, plan)
 			if err != nil {
+				if errors.Is(err, common.ResourceNotExistError) {
+					err = nil
+					executeSuccessFlag = true
+					return false
+				}
 				return false
 			}
 			if status == "refunded" {

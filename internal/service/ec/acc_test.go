@@ -14,6 +14,7 @@ type Dependence struct {
 	subnetID         string
 	subnetID2        string
 	expressConnectID string
+	expressConnectID2 string
 	cloudGatewayId   string
 	vpcInstanceVpcID string
 	rtbID            string
@@ -41,6 +42,7 @@ func TestMain(m *testing.M) {
 
 	dependence = Dependence{
 		expressConnectID: outputs["ctyun_express_connect_id"].Value,
+		expressConnectID2:outputs["ctyun_express_connect_id2"].Value,
 		cloudGatewayId:   outputs["ctyun_ec_cloud_gateway_id"].Value,
 		vpcID:            outputs["vpc_id"].Value,
 		subnetID:         outputs["subnet_id"].Value,

@@ -42,7 +42,7 @@ resource "ctyun_elb_health_check" "health_check_test" {
 
 ### Required
 
-- `name` (String) 唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `name` (String) 健康检查名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `protocol` (String) 健康检查协议。取值范围：TCP、UDP、HTTP
 
 ### Optional
@@ -54,7 +54,7 @@ resource "ctyun_elb_health_check" "health_check_test" {
 - `interval` (Number) 负载均衡进行健康检查的时间间隔，取值范围：1-20940秒，默认为5秒，支持更新
 - `max_retry` (Number) 最大重试次数，取值范围：1-10次，默认为2次，支持更新
 - `project_id` (String, Deprecated) 企业项目ID
-- `protocol_port` (Number) 健康检查端口 1 - 65535，支持更新
+- `protocol_port` (Number) 健康检查端口 1 - 65535，不支持更新
 - `region_id` (String) 资源池ID
 - `timeout` (Number) 健康检查响应的最大超时时间，取值范围：2-60秒，默认为2秒，支持更新
 

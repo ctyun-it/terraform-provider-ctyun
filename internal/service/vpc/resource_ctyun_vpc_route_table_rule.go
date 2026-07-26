@@ -412,9 +412,10 @@ func (c *ctyunVpcRouteTableRule) update(ctx context.Context, plan, state CtyunVp
 	}
 	ruleID, regionID, description := state.RuleID.ValueString(), state.RegionID.ValueString(), plan.Description.ValueString()
 	params := &ctvpc.CtvpcModifyRouteRuleRequest{
-		RegionID:    regionID,
-		RouteRuleID: ruleID,
-		Description: &description,
+		RegionID:     regionID,
+		RouteRuleID:  ruleID,
+		Description:  &description,
+		RouteTableID: plan.RouteTableID.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcModifyRouteRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

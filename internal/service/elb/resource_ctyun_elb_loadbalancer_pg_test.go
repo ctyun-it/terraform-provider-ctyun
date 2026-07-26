@@ -2,11 +2,12 @@ package elb_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 // 测试经典型ELB创建、升级为保障型ELB、保障型负载均衡的信息修改和退订
@@ -52,7 +53,7 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 
 			// 创建保障型elb
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
 					func(s *terraform.State) error {
@@ -90,7 +91,7 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 			},
 			// 保障型elb变配测试
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", update2SlaName),
 				),

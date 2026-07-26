@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
@@ -24,7 +26,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
@@ -83,7 +84,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
+				Description: "后端主机组名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
 				},
@@ -123,7 +124,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			},
 			"algorithm": schema.StringAttribute{
 				Required:    true,
-				Description: "调度算法。取值范围：rr（轮询）、wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新",
+				Description: "调度算法。取值范围：wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.TargetGroupAlgorithms...),
 				},

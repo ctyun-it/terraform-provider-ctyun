@@ -95,7 +95,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 			},
 			"spec": schema.Int32Attribute{
 				Required:    true,
-				Description: "规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新",
+				Description: "nat规格，1-表示小型，2-表示中型，3-表示大型，4-表示超大型，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 4),
 				},

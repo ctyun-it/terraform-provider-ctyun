@@ -46,7 +46,7 @@ resource "ctyun_ecs" "test" {
   display_name     = "tf-test-init-ecs"
   flavor_id        = "9b4b5e39-db25-f2c8-3914-76881ee77d5c"
   image_id         = "fa3f3784-34f9-4f6b-80a1-dd173d486bd6"
-  system_disk_type = "sata"
+  system_disk_type = "SAS"
   system_disk_size = 60
   vpc_id           = ctyun_vpc.vpc_test.id
   subnet_id        = ctyun_subnet.subnet_test.id
@@ -65,8 +65,8 @@ resource "ctyun_ecs" "test" {
 - `image_id` (String) 镜像id
 - `instance_name` (String) 主机名称（hostname），不可以使用已存在的云主机名称。不同操作系统下，云主机名称规则有差异。Windows：长度为2-15个字符，允许使用大小写字母、数字或连字符（-）。不能以连字符（-）开头或结尾，不能连续使用连字符（-），也不能仅使用数字；其他操作系统：长度为2-64字符，允许使用点（.）分隔字符成多段，每段允许使用大小写字母、数字或连字符（-），但不能连续使用点号（.）或连字符（-），不能以点号（.）或连字符（-）开头或结尾，也不能仅使用数字
 - `subnet_id` (String) 主网卡的子网id
-- `system_disk_size` (Number) 系统盘大小，单位为G，取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新
-- `system_disk_type` (String) 系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO，ssd-genric：通用型SSD，fast-ssd：极速型SSD
+- `system_disk_size` (Number) 系统盘大小（单位GB），取值范围：[40, 32768]，只支持扩容，需要先关机 支持更新
+- `system_disk_type` (String) 系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，FAST-SSD：极速型SSD
 - `vpc_id` (String) 虚拟私有云id，在多可用区类型资源池下，vpcID通常为“vpc-”开头，非多可用区类型资源池vpcID为uuid格式
 
 ### Optional

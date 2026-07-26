@@ -3,8 +3,9 @@ package pgsql
 import (
 	"context"
 	"fmt"
-	ctyunsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
+
+	ctyunsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 )
 
 type PgsqlCreateParameterTemplateApi struct {
@@ -58,8 +59,13 @@ type PgsqlCreateParameterTemplateRequestHeader struct {
 	ProjectID *string `json:"Project-Id,omitempty"`
 	RegionID  string  `json:"regionId"` // 资源池ID，必填
 }
+type PgsqlCreateParameterTemplateResponseReturnObj struct {
+	TemplateId int64 `json:"templateId"`
+}
+
 type PgsqlCreateParameterTemplateResponse struct {
-	StatusCode int32   `json:"statusCode"`      // 接口状态码
-	Error      *string `json:"error,omitempty"` // 错误码，失败时返回，成功时为空
-	Message    string  `json:"message"`         // 描述信息
+	StatusCode int32                                          `json:"statusCode"`      // 接口状态码
+	Error      *string                                        `json:"error,omitempty"` // 错误码，失败时返回，成功时为空
+	Message    string                                         `json:"message"`         // 描述信息
+	ReturnObj  *PgsqlCreateParameterTemplateResponseReturnObj `json:"returnObj"`
 }

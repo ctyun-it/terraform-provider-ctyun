@@ -2,9 +2,10 @@ package mysql_test
 
 import (
 	"fmt"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 )
 
 const dependenceDir = "testdata/dependence"
@@ -32,6 +33,8 @@ func TestMain(m *testing.M) {
 		return
 	}
 	fmt.Println("开始初始化依赖资源")
+	os.Setenv("CTYUN_REGION_ID", "200000002530")
+	os.Setenv("CTYUN_AZ_NAME", "cn-huanan2-1A-public-ctcloud")
 	outputs, err := terraform.ApplyResource(dependenceDir)
 	if err != nil {
 		fmt.Println(err)

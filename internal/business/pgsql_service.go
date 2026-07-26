@@ -48,7 +48,7 @@ func (u PgsqlService) GetPgsqlFlavorByProdIdAndFlavorName(ctx context.Context, p
 			}
 		}
 	}
-	err = fmt.Errorf("invalid %s for %s", flavorName, prodID)
+	err = fmt.Errorf("invalid %s for %d", flavorName, prodID)
 	return
 }
 

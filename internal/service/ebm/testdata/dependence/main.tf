@@ -143,7 +143,7 @@ resource "ctyun_ebs" "ebs_test" {
   az_name = local.first_cloud_boot_true_az
   name       = "tf-ebs-for-ebm"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SATA"
   size       = 60
   cycle_type = "on_demand"
 }
@@ -160,7 +160,7 @@ resource "ctyun_ebm" "ebm_test" {
   security_group_ids = [ctyun_security_group.security_group_test.id]
   vpc_id = ctyun_vpc.vpc_test.id
   system_disk_size = 100
-  system_disk_type = "sata"
+  system_disk_type = "SATA"
   subnet_id = ctyun_subnet.subnet_test.id
 }
 

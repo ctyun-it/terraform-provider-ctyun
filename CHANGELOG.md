@@ -1,5 +1,32 @@
 # Changelog
 
+## v2.3.0 - July 16, 2026
+
+### New Resources
+
+
+### New Data Sources
+
+
+### Enhancements
+
+* resource\ctyun_mysql_instance: fix mysql prod_id
+* resource\ctyun_mongodb_instance: fix mongodb prod_id
+* resource\ctyun_elb_loadbalancer: fix elb description
+* resource\ctyun_elb_target: fix elb_target description
+* resource\ctyun_ec_cloud_gateway: remove order api
+* resource\ctyun_express_connect: remove order api
+* resource\ctyun_ecs: tweak field description
+* resource\ctyun_ebs: tweak field description
+* resource\ctyun_ebm: system_disk_type support uppercase
+
+### Bug Fixes
+
+
+### Deprecations
+
+
+
 ## v2.2.0 - May 21, 2026
 
 ### New Resources

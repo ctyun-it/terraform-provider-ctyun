@@ -43,4 +43,6 @@ output "region_peer_id" {
 output "sdwan_id" {
   value = ctyun_sdwan.ctyun_sdwan_test.id
 }
-
+output "ctyun_express_connect_id2" {
+  value = ctyun_express_connect.another.id
+}

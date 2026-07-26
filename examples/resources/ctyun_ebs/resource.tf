@@ -14,7 +14,7 @@ provider "ctyun" {
 resource "ctyun_ebs" "ebs_test" {
   name       = "ebs-test"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SSD"
   size       = 60
   cycle_type = "on_demand"
 }

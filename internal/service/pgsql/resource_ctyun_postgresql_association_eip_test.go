@@ -2,11 +2,12 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunPgsqlAssociationEip(t *testing.T) {
@@ -24,7 +25,7 @@ func TestAccCtyunPgsqlAssociationEip(t *testing.T) {
 
 	//prodType := "1"
 	//prodCode := "POSTGRESQL"
-	instanceType := "S"
+	instanceType := "S8"
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {

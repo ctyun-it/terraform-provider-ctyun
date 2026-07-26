@@ -57,7 +57,7 @@ resource "ctyun_security_group" "sg_test" {
 // 开通样例
 resource "ctyun_postgresql_instance" "test" {
   cycle_type          = "on_demand"
-  prod_id             = 10003011
+  prod_id             = 10003011 # 12.2单机版；可通过data.ctyun_postgresql_specs查询
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 100
@@ -74,7 +74,7 @@ resource "ctyun_postgresql_instance" "test" {
 // 升配pgsql--对磁盘扩容(在升配主storage时候，确保备用磁盘空间>主磁盘空间)
 resource "ctyun_postgresql_instance" "test1" {
   cycle_type          = "on_demand"
-  prod_id             = 10003011
+  prod_id             = 10003011 # 12.2单机版
   flavor_name         = "c7.xlarge.2"
   storage_type        = "SSD"
   storage_space       = 120
@@ -91,7 +91,7 @@ resource "ctyun_postgresql_instance" "test1" {
 // 升配规格 2C4G->2C8G
 resource "ctyun_postgresql_instance" "test2" {
   cycle_type          = "on_demand"
-  prod_id             = 10003011
+  prod_id             = 10003011 # 12.2单机版
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -104,10 +104,11 @@ resource "ctyun_postgresql_instance" "test2" {
   backup_storage_type = "OS"
 }
 
-// 升配规格 单节点->1主2备
+// 升配节点：12.2单节点->12.2一主两备。
+// prod_id和flavor_name不要在同一次更新中同时修改。
 resource "ctyun_postgresql_instance" "test3" {
   cycle_type          = "on_demand"
-  prod_id             = 10003012
+  prod_id             = 10003024 # 12.2一主两备
   flavor_name         = "c7.xlarge.4"
   storage_type        = "SSD"
   storage_space       = 120
@@ -130,8 +131,8 @@ resource "ctyun_postgresql_instance" "test3" {
 - `name` (String) 实例名称（长度在 4 到 64个字符，必须以字母开头，不区分大小写，可以包含字母、数字、中划线或下划线，不能包含其他特殊字符）。支持更新，但不支持更新为重名实例名称
 - `prod_id` (Number) 产品ID，支持更新。取值可以根据data.ctyun_postgresql_specs查询
 - `security_group_id` (String) 安全组Id，支持多个安全组，用英文逗号分割(,)。支持更新，最少得有一个安全组
-- `storage_space` (Number) 主存储空间(单位:G，范围100-32768)。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行
-- `storage_type` (String) 主存储类型: SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2
+- `storage_space` (Number) 主存储空间（单位GB），范围100-32768。支持更新，扩容过程中不支持磁盘(storage_space, backup_storage_space)、规格(flavor_name)和实例(pord_id)扩容同时进行
+- `storage_type` (String) 主存储类型, SSD=超高IO, SSD-genric=通用型SSD, FAST-SSD=极速型SSD（极速型SSD云硬盘仅支持挂载至vCPU数量至少为16且为6代以上的计算增强型和内存优化型云主机）,XSSD-0, XSSD-1, XSSD-2
 - `subnet_id` (String) 子网Id
 - `vpc_id` (String) 虚拟私有云Id
 

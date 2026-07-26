@@ -38,7 +38,7 @@ resource "ctyun_elb_certificate" "certificate_test" {
 ### Required
 
 - `certificate` (String) type为Server 该字段表示服务器证书公钥Pem内容;type为Ca 该字段表示Ca证书Pem内容
-- `name` (String) 唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `name` (String) 证书名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `type` (String) 证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
 
 ### Optional

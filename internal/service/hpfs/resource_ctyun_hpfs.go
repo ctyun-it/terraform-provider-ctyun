@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
@@ -25,8 +28,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -174,7 +175,7 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			},
 			"size": schema.Int32Attribute{
 				Required:    true,
-				Description: "文件大小（GB），范围: 512-32768。支持更新",
+				Description: "文件大小（GB），范围: 512-32768，步长512。支持更新",
 				Validators: []validator.Int32{
 					// 范围验证
 					int32validator.Between(512, 32768),
