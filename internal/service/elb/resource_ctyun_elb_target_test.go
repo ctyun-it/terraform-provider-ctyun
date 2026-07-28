@@ -2,12 +2,13 @@ package elb_test
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"strconv"
-	"testing"
 )
 
 func TestAccCtyunElbTarget(t *testing.T) {
@@ -30,6 +31,9 @@ func TestAccCtyunElbTarget(t *testing.T) {
 	tfWeight := fmt.Sprintf(`weight=%d`, weight)
 	updatedTfWeight := fmt.Sprintf(`weight=%d`, updatedWeight)
 
+	description := "target description test!"
+	updatedDescription := "update target description test!"
+
 	// 代码合并后整合
 	instanceType := "VM"
 	instanceId := dependence.instanceID
@@ -46,17 +50,51 @@ func TestAccCtyunElbTarget(t *testing.T) {
 			// 1. 基础功能测试
 			// 1.1 Create验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, "", description),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
 					resource.TestCheckResourceAttr(resourceName, "target_group_id", targetGroupID),
 					resource.TestCheckResourceAttr(resourceName, "protocol_port", strconv.Itoa(protocolPort)),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+
+					return fmt.Sprintf("%s,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			// 1.2 update验证，更新protocolPort和weight
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight),
+				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight, updatedDescription),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
@@ -67,27 +105,27 @@ func TestAccCtyunElbTarget(t *testing.T) {
 			},
 			// 1.3 datasource验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight) +
+				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight, updatedDescription) +
 					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`ids=%s.id`, resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "elb_targets.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "elb_targets.0.instance_type", instanceType),
-					resource.TestCheckResourceAttr(datasourceName, "elb_targets.0.target_group_id", targetGroupID),
-					resource.TestCheckResourceAttr(datasourceName, "elb_targets.0.protocol_port", strconv.Itoa(updatedProtocolPort)),
-					resource.TestCheckResourceAttr(datasourceName, "elb_targets.0.weight", strconv.Itoa(updatedWeight)),
+					resource.TestCheckResourceAttr(datasourceName, "targets.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "targets.0.instance_type", instanceType),
+					resource.TestCheckResourceAttr(datasourceName, "targets.0.target_group_id", targetGroupID),
+					resource.TestCheckResourceAttr(datasourceName, "targets.0.protocol_port", strconv.Itoa(updatedProtocolPort)),
+					resource.TestCheckResourceAttr(datasourceName, "targets.0.weight", strconv.Itoa(updatedWeight)),
 				),
 			},
 
 			// 1.4 销毁,delete验证
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight),
+				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight, updatedDescription),
 				Destroy: true,
 			},
 
 			// 2. 带weight创建
 			// 2.1 Create
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, tfWeight),
+				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, tfWeight, description),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
@@ -98,7 +136,7 @@ func TestAccCtyunElbTarget(t *testing.T) {
 			},
 			// 2.2 update
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, updatedTfWeight),
+				Config: utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, protocolPort, updatedTfWeight, updatedDescription),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "instance_type", instanceType),
@@ -109,7 +147,7 @@ func TestAccCtyunElbTarget(t *testing.T) {
 			},
 			// destroy
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight),
+				Config:  utils.LoadTestCase(resourceFile, rnd, targetGroupID, instanceType, instanceId, updatedProtocolPort, updatedTfWeight, updatedDescription),
 				Destroy: true,
 			},
 		},

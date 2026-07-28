@@ -44,8 +44,8 @@ const (
 	ScalingUseFloatingsDisable = 1 // 1. 不使用
 	ScalingUseFloatingsAuto    = 2 // 2. 自动分配
 
-	ScalingUseFloatingsDisableStr = "diable" //  不使用
-	ScalingUseFloatingsAutoStr    = "auto"   //  自动分配
+	ScalingUseFloatingsDisableStr = "disable" //  不使用
+	ScalingUseFloatingsAutoStr    = "auto"    //  自动分配
 
 	ScalingVolumeFlagOS      = 1      // 系统盘
 	ScalingVolumeFlagData    = 2      // 数据盘

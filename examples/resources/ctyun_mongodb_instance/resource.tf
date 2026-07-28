@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_vpc" "vpc_test" {
-  name        = "tf-vpc-for-mon"
+  name        = "tf-vpc-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
@@ -20,7 +20,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
-  name        = "tf-subnet-for-mon"
+  name        = "tf-subnet-for-mongodb"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   dns = [
@@ -39,17 +39,17 @@ resource "ctyun_security_group" "security_group_test" {
 }
 
 resource "ctyun_mongodb_instance" "test" {
-  cycle_type             = "on_demand"
-  vpc_id                 = ctyun_vpc.vpc_test.id
-  flavor_name            = "s7.large.2"
-  subnet_id              = ctyun_subnet.subnet_test.id
-  security_group_id      =  ctyun_security_group.security_group_test.id
-  name                   = "mongodb-12ab"
-  prod_id                = "Single34"
-  storage_type           = "SATA"
-  storage_space          = 100
-  backup_storage_type    = "OS"
-  password = var.password
+  cycle_type          = "on_demand"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  flavor_name         = "s7.large.2"
+  subnet_id           = ctyun_subnet.subnet_test.id
+  security_group_id   = ctyun_security_group.security_group_test.id
+  name                = "mongodb-12ab"
+  prod_id             = "10013001" # 3.4单机版；可通过data.ctyun_mongodb_specs查询
+  storage_type        = "SATA"
+  storage_space       = 100
+  backup_storage_type = "OS"
+  password            = var.password
 }
 
 variable "password" {

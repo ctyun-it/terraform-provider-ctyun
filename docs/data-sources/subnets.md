@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_subnets"
+---
+
 # ctyun_subnets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10197656
+-> 查询子网列表
 
 
 
@@ -28,14 +33,13 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "subnet-test"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
   region_id   = "200000001852"
@@ -43,7 +47,7 @@ resource "ctyun_subnet" "subnet_test" {
 
 data "ctyun_subnets" "test" {
   region_id = "200000001852"
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id    = ctyun_vpc.vpc_test.id
   # page_no = 1
   # page_size = 1
 }
@@ -96,5 +100,4 @@ Read-Only:
 - `start` (String) 子网网段起始IP
 - `subnet_id` (String) subnetID
 - `type` (Number) 子网类型:当前仅支持：0（普通子网）,1（裸金属子网）
-- `updated_at` (String) 更新时间
 - `vpc_id` (String) VpcID

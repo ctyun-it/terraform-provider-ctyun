@@ -1,8 +1,9 @@
 package business
 
 const (
-	ProdIDSI57   = 10001003 // 单实例 single5.7版本
-	ProdIDSI80   = 10001103 // 单实例 single8.0版本
+	ProdIDSI57 = 10001003 // 单实例 single5.7版本
+	ProdIDSI80 = 10001103 // 单实例 single8.0版本
+
 	ProdIDSIRO57 = 10001005 // 单实例 single 只读5.7版本
 	ProdIDSIRO80 = 10001105 // 单实例 single 只读8.0版本
 
@@ -92,7 +93,36 @@ const (
 	StorageTypeSAS       = "SAS"        //高IO
 	StorageTypeSSDGenric = "SSD-genric" //通用型SSD
 	StorageTypeFASTSSD   = "FAST-SSD"   //极速型SSD
+	StorageTypeXSSD0     = "XSSD-0"
+	StorageTypeXSSD1     = "XSSD-1"
+	StorageTypeXSSD2     = "XSSD-2"
 	BackupStorageTypeOS  = "OS"
+
+	MysqlSchemaPrivilegeRw       = "rw"
+	MysqlSchemaPrivilegeDML      = "dml"
+	MysqlSchemaPrivilegeDDL      = "ddl"
+	MysqlSchemaPrivilegeReadOnly = "read_only"
+
+	MysqlBackupTaskStatusSuccess   = 1
+	MysqlBackupTaskStatusWaitStart = 100
+	MysqlBackupTaskStatusSubmit    = 101
+	MysqlBackupTaskStatusCancel    = 102
+	MysqlBackupTaskStatusFailed    = -1
+
+	MysqlBackupRecoveryJobStatusTODO     = 10 // 待处理中
+	MysqlBackupRecoveryJobStatusPreCheck = 0  // 预检查中
+	MysqlBackupRecoveryJobStatusING      = 1  // 运行中
+
+	MysqlBackupRecoveryJobStatusSuccess = 2 // 成功
+	MysqlBackupRecoveryJobStatusFail    = 3 // 失败
+
+	MysqlNodeTypeReadNode = "readNode"
+	MysqlNodeTypeMaster   = "master"
+
+	MysqlProdSpecNameRead   = "只读实例"
+	MysqlProdSpecNameSingle = "单机版"
+	MysqlProdSpecNameMS     = "一主一备"
+	MysqlProdSpecNameM2S    = "一主两备"
 )
 
 var ProdType = []string{
@@ -193,6 +223,12 @@ var MysqlBillMode = map[string]string{
 	OnDemandCycleType: MysqlBillModeOnDemand,
 }
 
+var MysqlBillModeRev = map[int32]string{
+	0: MonthCycleType,
+	//2: YearCycleType,
+	4: OnDemandCycleType,
+}
+
 var MysqlProdIdDict = map[string]int64{
 	"Single57":       ProdIDSI57,   // 单实例 single5.7版本
 	"Single80":       ProdIDSI80,   // 单实例 single8.0版本
@@ -202,6 +238,11 @@ var MysqlProdIdDict = map[string]int64{
 	"MasterSlave80":  ProdIDMS80,   // 一主一备 master-slave 8.0版本
 	"Master2Slave57": ProdIDM2S57,  // 一主两备 master-2-slave 5.7版本
 	"Master2Slave80": ProdIDM2S80,  // 一主两备 master-2-slave 8.0版本
+}
+
+var MysqlReadNodeVersionProdIdDict = map[string]string{
+	"5.7": "ReadOnly57",
+	"8.0": "ReadOnly80",
 }
 
 var MysqlNodeNumDict = map[string]int32{
@@ -264,23 +305,62 @@ var MysqlInstanceSeries = []string{
 	"C", // 计算增强型
 	"M", // 内存增强型
 }
+
+//var MysqlInstanceSeriesDict = map[string]string{
+//	"S":     "1",
+//	"C":     "2",
+//	"M":     "3",
+//	"HS1":   "4",
+//	"HC1":   "5",
+//	"HM1":   "6",
+//	"KS1":   "7",
+//	"KC1":   "8",
+//	"KM1":   "9",
+//	"KS2NE": "10",
+//	"KC2NE": "11",
+//	"KM2NE": "12",
+//	"HS3NE": "13",
+//	"HC3NE": "14",
+//	"HM3NE": "15",
+//}
+
 var MysqlInstanceSeriesDict = map[string]string{
-	"S":     "1",
-	"C":     "2",
-	"M":     "3",
-	"HS1":   "4",
-	"HC1":   "5",
-	"HM1":   "6",
-	"KS1":   "7",
-	"KC1":   "8",
-	"KM1":   "9",
-	"KS2NE": "10",
-	"KC2NE": "11",
-	"KM2NE": "12",
-	"HS3NE": "13",
-	"HC3NE": "14",
-	"HM3NE": "15",
+	"S6":     "1",
+	"S7":     "1",
+	"S8":     "1",
+	"C6":     "2",
+	"C7":     "2",
+	"C8":     "2",
+	"M6":     "3",
+	"M7":     "3",
+	"M8":     "3",
+	"HS1":    "4",
+	"HS3":    "4",
+	"HC1":    "5",
+	"HC3":    "5",
+	"HM1":    "6",
+	"HM3":    "6",
+	"KS1":    "7",
+	"KC1":    "8",
+	"KM1":    "9",
+	"KS2NE":  "10",
+	"KS2XNE": "10",
+	"KC2NE":  "11",
+	"KC2XNE": "11",
+	"KM2NE":  "12",
+	"KM2XNE": "12",
+	"HS3NE":  "13",
+	"HS3XNE": "13",
+	"HC3NE":  "14",
+	"HC3XNE": "14",
+	"HM3NE":  "15",
+	"HM3XNE": "15",
+	"KIR4":   "16",
+	"FS1":    "17",
+	"FC1":    "18",
+	"FM1":    "19",
 }
+
 var MysqlCpuType = []string{
 	"KunPeng",  // 鲲鹏
 	"Hygon",    // 海光
@@ -334,4 +414,44 @@ var StorageType = []string{
 	StorageTypeSAS,
 	StorageTypeSSDGenric,
 	StorageTypeFASTSSD,
+	StorageTypeXSSD0,
+	StorageTypeXSSD1,
+	StorageTypeXSSD2,
 }
+
+var MysqlSchemaPrivileges = []string{
+	MysqlSchemaPrivilegeRw,
+	MysqlSchemaPrivilegeDDL,
+	MysqlSchemaPrivilegeDML,
+	MysqlSchemaPrivilegeReadOnly,
+}
+
+var PrivilegeMap = map[string]bool{"Y": true, "N": false}
+
+var MysqlBackupSettingConfigWeek = map[int32]int32{
+	1: 2,
+	2: 3,
+	3: 4,
+	4: 5,
+	5: 6,
+	6: 7,
+	7: 1,
+}
+
+var (
+	MysqlBackupSettingConfigWeekRev = map[int32]int32{
+		1: 7,
+		2: 1,
+		3: 2,
+		4: 3,
+		5: 4,
+		6: 5,
+		7: 6,
+	}
+	MysqlProdSpecNodeNumDict = map[string]int32{
+		MysqlProdSpecNameRead:   1,
+		MysqlProdSpecNameSingle: 1,
+		MysqlProdSpecNameMS:     2,
+		MysqlProdSpecNameM2S:    3,
+	}
+)

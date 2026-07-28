@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SecurityGroupError = "不满足SecurityGroup格式"
+	SecurityGroupError = "安全组ID格式不正确"
 )
 
 type validatorSecurityGroup struct {
@@ -20,6 +20,10 @@ func (v validatorSecurityGroup) ValidateString(ctx context.Context, request vali
 	}
 	value := request.ConfigValue.ValueString()
 	if value == "" {
+		return
+	}
+	// 匹配uuid，说明是3.0资源池
+	if uuidRegex.MatchString(request.ConfigValue.ValueString()) {
 		return
 	}
 	pattern := `^sg-[a-z0-9]{10}$`

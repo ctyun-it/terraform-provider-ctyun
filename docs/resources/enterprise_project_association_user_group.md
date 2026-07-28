@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_enterprise_project_association_user_group"
+---
+
 # ctyun_enterprise_project_association_user_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10356399
+-> 管理企业项目和用户组的绑定关系
 
 
 
@@ -39,4 +44,16 @@ resource "ctyun_enterprise_project_association_user_group" "enterprise_project_a
 
 ### Optional
 
-- `policy_ids` (Set of String) 策略id列表
+- `policy_ids` (Set of String) 策略id列表，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入企业项目关联用户组资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_enterprise_project_association_user_group.[导入配置名称] [enterprise_project_id],[user_group_id]
+# 示例
+terraform import ctyun_enterprise_project_association_user_group.enterprise_project_user_group_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,group1234567890
+```

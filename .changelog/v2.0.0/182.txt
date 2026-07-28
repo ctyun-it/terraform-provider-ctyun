@@ -1,0 +1,2 @@
+release-note:enhancement
+resource\ctyun_redis_instance support instance set ssl config\backup policy\param template id and billing method modification

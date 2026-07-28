@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,6 +36,7 @@ var (
 
 type ctyunNat struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunNatResource() resource.Resource {
@@ -42,21 +45,24 @@ func NewCtyunNatResource() resource.Resource {
 
 func (c *ctyunNat) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_nat"
+	c.name = response.TypeName
 }
 
 func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166493`,
+		MarkdownDescription: utils.FormatDesc("管理公网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10166493"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，值与nat_gateway_id相同",
+				Computed:    true,
+				Description: "ID，值与nat_gateway_id相同",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -70,7 +76,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -78,8 +84,7 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				},
 			},
 			"vpc_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "需要创建 NAT 网关的 VPC 的 ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -89,25 +94,32 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				},
 			},
 			"spec": schema.Int32Attribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "规格 1~4, 1-表示小型, 2-表示中型, 3-表示大型, 4-表示超大型，支持更新",
+				Required:    true,
+				Description: "nat规格，1-表示小型，2-表示中型，3-表示大型，4-表示超大型，支持更新",
 				Validators: []validator.Int32{
 					int32validator.Between(1, 4),
 				},
 			},
 			"name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
+				Required:    true,
 				Description: "nat名称，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "nat描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}，支持更新",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtMost(512),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
@@ -141,9 +153,8 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 			"az_name": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "可用区名称",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, true),
+				Description: "可用区名称，az_name为必填字段，用户如果未填写，可以从环境变量中读取，需要保证provider声明或环境变量中包含该字段的定义",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraAzName, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -164,26 +175,45 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "订单id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"nat_gateway_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "网关id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
+			// 依赖资源的非固定属性不要在schema中出现
 			"vpc_name": schema.StringAttribute{
-				Computed:    true,
-				Description: "NAT所属的vpc专有网络名字",
+				Computed:           true,
+				DeprecationMessage: "废弃字段",
+				Description:        "废弃字段",
+				Default:            stringdefault.StaticString(""),
 			},
 			"vpc_cidr": schema.StringAttribute{
 				Computed:    true,
 				Description: "当前网关所属的vpc cidr",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"creation_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "NAT网关的创建时间",
+				Description: "创建时间，为UTC格式",
+				//OpenAPI服务端BUG，第一次更新规格后创建时间会后移3-4s
+				//PlanModifiers: []planmodifier.String{
+				//	stringplanmodifier.UseStateForUnknown(),
+				//},
 			},
-			"expired_time": schema.StringAttribute{
+			"expire_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "NAT网关实例的过期时间",
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -244,7 +274,12 @@ func (c *ctyunNat) Create(ctx context.Context, request resource.CreateRequest, r
 
 	plan.ProjectID = utils.SecStringValue(createParams.ProjectID)
 
-	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
+	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -253,7 +288,7 @@ func (c *ctyunNat) Create(ctx context.Context, request resource.CreateRequest, r
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
+	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
 	}
@@ -280,7 +315,7 @@ func (c *ctyunNat) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -321,6 +356,9 @@ func (c *ctyunNat) Update(ctx context.Context, request resource.UpdateRequest, r
 		return
 	}
 
+	if err != nil {
+		return
+	}
 	// 更新远端后，查询远端并同步一下本地信息
 	err = c.getAndMergeNat(ctx, &state)
 	if err != nil {
@@ -388,21 +426,39 @@ func (c *ctyunNat) ImportState(ctx context.Context, request resource.ImportState
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
 	var config CtyunNatConfig
-	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
-		return
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
 	}
+	config.ID = types.StringValue(ID)
+	config.NatGatewayID = types.StringValue(ID)
 	config.RegionID = types.StringValue(regionID)
-	config.NatGatewayID = types.StringValue(id)
 	err = c.getAndMergeNat(ctx, &config)
 	if err != nil {
 		return
+	}
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreationTime.ValueString(), config.ExpiredTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
@@ -461,6 +517,7 @@ func (c *ctyunNat) createNat(ctx context.Context, plan *CtyunNatConfig) (returnO
 	}
 	returnObj = *resp.ReturnObj
 	createParams = params
+
 	return
 }
 
@@ -475,6 +532,10 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if strings.Contains(*resp.ErrorCode, "Openapi.Nat.NotFound") || strings.Contains(*resp.Message, "resource not found") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -495,10 +556,12 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	cfg.Name = utils.SecStringValue(natObj.Name)
 	cfg.NatGatewayID = utils.SecStringValue(natObj.NatGatewayID)
 	cfg.Description = utils.SecStringValue(natObj.Description)
-	cfg.VpcName = utils.SecStringValue(natObj.VpcName)
+	cfg.VpcName = types.StringValue("")
 	cfg.VpcCidr = utils.SecStringValue(natObj.VpcCidr)
 	cfg.CreationTime = utils.SecStringValue(natObj.CreationTime)
 	cfg.ExpiredTime = utils.SecStringValue(natObj.ExpiredTime)
+	cfg.AzName = utils.SecStringValue(natObj.ZoneID)
+	cfg.ProjectID = utils.SecStringValue(natObj.ProjectID)
 
 	return nil
 }
@@ -562,6 +625,7 @@ func (c *ctyunNat) modifyNatSpec(ctx context.Context, state CtyunNatConfig, plan
 }
 
 func (c *ctyunNat) updateNatInfo(ctx context.Context, state CtyunNatConfig, plan CtyunNatConfig) (err error) {
+
 	if plan.Name.Equal(state.Name) && plan.Description.Equal(state.Description) {
 		return
 	}
@@ -721,8 +785,8 @@ type CtyunNatConfig struct {
 	NatGatewayID    types.String `tfsdk:"nat_gateway_id"`    //网关 ID
 	VpcName         types.String `tfsdk:"vpc_name"`          //NAT所属的专有网络名字
 	VpcCidr         types.String `tfsdk:"vpc_cidr"`          //当前网关所属的vpc cidr
-	CreationTime    types.String `tfsdk:"creation_time"`     //NAT网关的创建时间
-	ExpiredTime     types.String `tfsdk:"expired_time"`      //NAT网关实例的过期时间
+	CreationTime    types.String `tfsdk:"create_time"`       //NAT网关的创建时间
+	ExpiredTime     types.String `tfsdk:"expire_time"`       //NAT网关实例的过期时间
 }
 type LoopOrderResponse struct {
 	NatGatewayId         types.String

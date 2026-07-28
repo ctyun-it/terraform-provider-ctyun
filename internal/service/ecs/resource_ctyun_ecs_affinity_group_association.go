@@ -2,6 +2,7 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -28,6 +30,7 @@ var (
 
 type ctyunEcsAffinityGroupAssociation struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEcsAffinityGroupAssociation() resource.Resource {
@@ -47,12 +50,14 @@ type CtyunEcsAffinityGroupAssociationConfig struct {
 
 func (c *ctyunEcsAffinityGroupAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597685**`,
+		MarkdownDescription: utils.FormatDesc("管理云主机和主机组的绑定关系", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10028712"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -139,9 +144,9 @@ func (c *ctyunEcsAffinityGroupAssociation) Read(ctx context.Context, request res
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -186,18 +191,40 @@ func (c *ctyunEcsAffinityGroupAssociation) Configure(_ context.Context, request 
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[groupID],[regionID]
 func (c *ctyunEcsAffinityGroupAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [instance_id],[group_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsAffinityGroupAssociationConfig
 	var instanceID, groupID, regionID string
-	err = terraform_extend.Split(request.ID, &instanceID, &groupID, &regionID)
-	if err != nil {
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &groupID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &groupID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if groupID == "" {
+		err = fmt.Errorf("group_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -349,8 +376,7 @@ func (c *ctyunEcsAffinityGroupAssociation) getAndMerge(ctx context.Context, plan
 		return
 	}
 	if bindID != groupID {
-		err = fmt.Errorf("云主机 %s 和云主机组 %s 未关联", instanceID, groupID)
-		return
+		return common.ResourceNotExistError
 	}
 	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", instanceID, groupID, regionID))
 	return

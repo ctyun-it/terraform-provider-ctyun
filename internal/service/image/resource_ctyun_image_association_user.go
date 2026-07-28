@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,28 +18,38 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource              = &ctyunImageAssociationUser{}
+	_ resource.ResourceWithConfigure = &ctyunImageAssociationUser{}
+)
+
 func NewCtyunImageAssociationUser() resource.Resource {
 	return &ctyunImageAssociationUser{}
 }
 
 type ctyunImageAssociationUser struct {
 	meta         *common.CtyunMetadata
+	name         string
 	imageService *business.ImageService
 }
 
 func (c *ctyunImageAssociationUser) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_image_association_user"
+	c.name = response.TypeName
 }
 
 func (c *ctyunImageAssociationUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
+		MarkdownDescription: utils.FormatDesc("管理私有镜像共享", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"image_id": schema.StringAttribute{
 				Required:    true,
 				Description: "要共享的私有镜像id",
 				Validators: []validator.String{
 					validator2.UUID(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"type": schema.StringAttribute{

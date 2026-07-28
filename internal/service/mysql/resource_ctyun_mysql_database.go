@@ -1,0 +1,515 @@
+package mysql
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &CtyunMysqlDatabase{}
+	_ resource.ResourceWithConfigure   = &CtyunMysqlDatabase{}
+	_ resource.ResourceWithImportState = &CtyunMysqlDatabase{}
+)
+
+type CtyunMysqlDatabase struct {
+	meta         *common.CtyunMetadata
+	name         string
+	mysqlService *business.MysqlService
+}
+
+func (c *CtyunMysqlDatabase) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
+	response.TypeName = request.ProviderTypeName + "_mysql_database"
+	c.name = response.TypeName
+}
+func NewCtyunMysqlDatabase() resource.Resource {
+	return &CtyunMysqlDatabase{}
+}
+
+func (c *CtyunMysqlDatabase) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
+	if request.ProviderData == nil {
+		return
+	}
+	meta := request.ProviderData.(*common.CtyunMetadata)
+	c.meta = meta
+	c.mysqlService = business.NewMysqlService(meta)
+}
+
+func (c *CtyunMysqlDatabase) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunMysqlDatabaseConfig
+	var name, regionID, instID string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instID, &name)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instID, &name, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if name == "" {
+		err = fmt.Errorf("name不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if instID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	config.Name = types.StringValue(name)
+	config.InstID = types.StringValue(instID)
+	config.RegionID = types.StringValue(regionID)
+	err = c.getAndMergeMysqlDatabase(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
+}
+
+func (c *CtyunMysqlDatabase) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
+	response.Schema = schema.Schema{
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的数据库", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10140487"),
+		Attributes: map[string]schema.Attribute{
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "mysql实例id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.LengthBetween(32, 32),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "数据库名称，mysql库名限制建议:以小写字母开头，且以小写字母或数字结尾，可包含数字或下划线，不含其他特殊字符",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+					validator2.MysqlDatabaseName(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "备注，支持更新",
+				Validators: []validator.String{
+					validator2.Desc(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"charset_name": schema.StringAttribute{
+				Required:    true,
+				Description: "字符集",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"user_grant_privilege": schema.ListNestedAttribute{
+				Computed: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"account_name": schema.StringAttribute{
+							Computed:    true,
+							Description: "数据库用户名",
+						},
+						"read_only": schema.BoolAttribute{
+							Computed:    true,
+							Description: "用户读写权限",
+						},
+						"select_priv": schema.BoolAttribute{
+							Computed:    true,
+							Description: "查询权限",
+						},
+						"insert_priv": schema.BoolAttribute{
+							Computed:    true,
+							Description: "写入权限",
+						},
+					},
+				},
+			},
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "数据库id",
+			},
+		},
+	}
+}
+
+func (c *CtyunMysqlDatabase) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var plan CtyunMysqlDatabaseConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	err = c.mysqlService.WaitInstanceStatus(
+		ctx,
+		plan.InstID.ValueString(),
+		plan.ProjectID.ValueString(),
+		plan.RegionID.ValueString(),
+		business.MysqlRunningStatusStarted,
+		business.MysqlOrderStatusStarted,
+	)
+	if err != nil {
+		return
+	}
+	// 开始创建数据库
+	err = c.createMysqlDatabase(ctx, &plan)
+	if err != nil {
+		return
+	}
+
+	// 创建后，获取mysql详情
+	err = c.getAndMergeMysqlDatabase(ctx, &plan)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (c *CtyunMysqlDatabase) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var state CtyunMysqlDatabaseConfig
+	// 读取state状态
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// 查询远端
+	err = c.getAndMergeMysqlDatabase(ctx, &state)
+	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
+		err = nil
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (c *CtyunMysqlDatabase) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	// 读取tf文件中配置
+
+	var plan CtyunMysqlDatabaseConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMysqlDatabaseConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	err = c.updateMysqlDatabase(ctx, &state, &plan)
+	if err != nil {
+		return
+	}
+
+	// 更新远端后，查询远端并同步一下本地信息
+	err = c.getAndMergeMysqlDatabase(ctx, &state)
+	if err != nil {
+		return
+	}
+	state.ProjectID = plan.ProjectID
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+}
+
+func (c *CtyunMysqlDatabase) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+
+	// 获取state
+	var config CtyunMysqlDatabaseConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &config)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+
+	err = c.deleteMysqlDatabase(ctx, config)
+	if err != nil {
+		return
+	}
+}
+
+// createMysqlDatabase 创建数据库
+func (c *CtyunMysqlDatabase) createMysqlDatabase(ctx context.Context, config *CtyunMysqlDatabaseConfig) error {
+	// 创建前，确认db name是否可用
+	//err := c.checkDBName(ctx, config)
+	//if err != nil {
+	//	return err
+	//}
+	params := &mysql.TeledbCreateDatabaseRequest{
+		OuterProdInstId: config.InstID.ValueString(),
+		DBName:          config.Name.ValueString(),
+		CharSetName:     config.CharSetName.ValueString(),
+	}
+	header := &mysql.TeledbCreateDatabaseRequestHeader{
+		InstID:   config.InstID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateDatabaseApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("mysql实例(id=%s)创建数据库失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString())
+		return err
+	} else if resp.StatusCode != 0 {
+		err = fmt.Errorf("create mysql database error, API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return err
+	}
+
+	// 如果description不为空，调用接口更新description
+	if !config.Description.IsNull() {
+		err = c.updateDescription(ctx, config)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *CtyunMysqlDatabase) updateDescription(ctx context.Context, config *CtyunMysqlDatabaseConfig) error {
+	params := &mysql.TeledbUpdateDatabaseRemarkRequest{
+		OuterProdInstId: config.InstID.ValueString(),
+		DatabaseName:    config.Name.ValueString(),
+		Remark:          config.Description.ValueStringPointer(),
+	}
+	header := &mysql.TeledbUpdateDatabaseRemarkRequestHeader{
+		InstID:   config.InstID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateDatabaseRemarkApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("mysql实例(id=%s)更新database(name=%s)的备注失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
+		return err
+	} else if resp.StatusCode != 0 {
+		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return err
+	}
+	return nil
+}
+
+func (c *CtyunMysqlDatabase) getAndMergeMysqlDatabase(ctx context.Context, config *CtyunMysqlDatabaseConfig) error {
+	resp, err := c.getMysqlDatabaseInfo(ctx, config)
+	if err != nil {
+		return err
+	}
+	config.ID = types.StringValue(config.InstID.ValueString() + "," + config.Name.ValueString())
+	config.Description = types.StringValue(resp.Remark)
+	config.CharSetName = types.StringValue(resp.CharsetName)
+	var userGrantPrivilegeList []CtyunMysqlDatabaseGrantPrivilegeModel
+	for _, privilegeItem := range resp.UserVOList {
+		var privilege CtyunMysqlDatabaseGrantPrivilegeModel
+		privilege.AccountName = types.StringValue(privilegeItem.AccountName)
+		privilege.InsertPriv = types.BoolValue(business.PrivilegeMap[privilegeItem.InsertPriv])
+		privilege.SelectPriv = types.BoolValue(business.PrivilegeMap[privilegeItem.SelectPriv])
+		privilege.ReadOnly = types.BoolValue(privilegeItem.ReadOnly)
+		userGrantPrivilegeList = append(userGrantPrivilegeList, privilege)
+	}
+	userGrantPrivilegeListTmp, diag := types.ListValueFrom(ctx, utils.StructToTFObjectTypes(CtyunMysqlDatabaseGrantPrivilegeModel{}), &userGrantPrivilegeList)
+	if diag.HasError() {
+		err = errors.New(diag[0].Detail())
+		return err
+	}
+	config.UserGrantPrivilege = userGrantPrivilegeListTmp
+	return nil
+}
+
+func (c *CtyunMysqlDatabase) getMysqlDatabaseInfo(ctx context.Context, config *CtyunMysqlDatabaseConfig) (*mysql.TeledbGetDatabaseSchemaResponseReturnObj, error) {
+	params := &mysql.TeledbGetDatabaseSchemaRequest{
+		OuterProdInstId: config.InstID.ValueString(),
+	}
+	header := &mysql.TeledbGetDatabaseSchemaRequestHeader{
+		InstID:   config.InstID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetDatabaseSchemaApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return nil, err
+	} else if resp == nil {
+		err = fmt.Errorf("查询mysql实例(id=%s)的database schema(name=%s)失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
+		return nil, err
+	} else if resp.StatusCode != 0 {
+		if strings.Contains(*resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			return nil, common.ResourceNotExistError
+		}
+		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return nil, err
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return nil, err
+	}
+	for _, schemaItem := range resp.ReturnObj {
+		schemaName := schemaItem.GrantSchema
+		if schemaName == config.Name.ValueString() {
+			return &schemaItem, nil
+		}
+	}
+	// 如果for循环遍历后，仍未找到schema，则返回Not EXIST 错误
+	return nil, common.ResourceNotExistError
+}
+
+func (c *CtyunMysqlDatabase) checkDBName(ctx context.Context, config *CtyunMysqlDatabaseConfig) error {
+	params := &mysql.TeledbCheckDatabaseNameAvailableRequest{
+		OuterProdInstId: config.InstID.ValueString(),
+		DBName:          config.Name.ValueString(),
+	}
+	header := &mysql.TeledbCheckDatabaseNameAvailableRequestHeader{
+		InstID:   config.InstID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCheckDatabaseNameAvailableApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("mysql实例(id=%s)验证database(name=%s)有效性失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
+		return err
+	} else if resp.StatusCode == 0 {
+		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return err
+	}
+	if !resp.ReturnObj.Available {
+		err = fmt.Errorf("database(name=%s)不可用", config.Name.ValueString())
+		return err
+	}
+	return nil
+}
+
+func (c *CtyunMysqlDatabase) updateMysqlDatabase(ctx context.Context, state *CtyunMysqlDatabaseConfig, plan *CtyunMysqlDatabaseConfig) error {
+	if !plan.Description.IsNull() && !plan.Description.Equal(state.Description) {
+		err := c.updateDescription(ctx, plan)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *CtyunMysqlDatabase) deleteMysqlDatabase(ctx context.Context, config CtyunMysqlDatabaseConfig) error {
+	params := &mysql.TeledbDeleteDatabaseRequest{
+		OuterProdInstId: config.InstID.ValueString(),
+		DBName:          config.Name.ValueString(),
+	}
+	header := &mysql.TeledbDeleteDatabaseRequestHeader{
+		InstID:   config.InstID.ValueString(),
+		RegionID: config.RegionID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteDatabaseApi.Do(ctx, c.meta.Credential, params, header)
+	if err != nil {
+		return err
+	} else if resp == nil {
+		err = fmt.Errorf("删除mysql实例(id=%s)的database(name=%s)失败，接口返回nil。请联系研发确认问题原因！", config.InstID.ValueString(), config.Name.ValueString())
+		return err
+	} else if resp.StatusCode != 0 {
+		err = fmt.Errorf("API return error. Message: %s Error: %s", resp.Message, *resp.Error)
+		return err
+	}
+	return nil
+}
+
+type CtyunMysqlDatabaseConfig struct {
+	InstID             types.String `tfsdk:"instance_id"`
+	ProjectID          types.String `tfsdk:"project_id"`
+	RegionID           types.String `tfsdk:"region_id"`
+	Name               types.String `tfsdk:"name"`
+	CharSetName        types.String `tfsdk:"charset_name"`
+	Description        types.String `tfsdk:"description"`
+	UserGrantPrivilege types.List   `tfsdk:"user_grant_privilege"`
+	ID                 types.String `tfsdk:"id"`
+}
+
+type CtyunMysqlDatabaseGrantPrivilegeModel struct {
+	AccountName types.String `tfsdk:"account_name"`
+	ReadOnly    types.Bool   `tfsdk:"read_only"`
+	SelectPriv  types.Bool   `tfsdk:"select_priv"`
+	InsertPriv  types.Bool   `tfsdk:"insert_priv"`
+}

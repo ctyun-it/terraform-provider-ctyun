@@ -22,6 +22,8 @@ func TestAccCtyunRabbitmqInstanceCluster(t *testing.T) {
 	resourceFile := "resource_ctyun_rabbitmq_instance.tf"
 	datasourceFile := "datasource_ctyun_rabbitmq_instances.tf"
 
+	cycleResourceFile := "resource_ctyun_rabbitmq_instance_on_demand.tf"
+
 	zone := os.Getenv("CTYUN_AZ_NAME")
 	nodeNum := 3
 	diskSize := 100
@@ -69,12 +71,20 @@ func TestAccCtyunRabbitmqInstanceCluster(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, expireTime := ds.Attributes["create_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新属性
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqClusterSpecName2,
 					updatedNum,
@@ -102,7 +112,7 @@ func TestAccCtyunRabbitmqInstanceCluster(t *testing.T) {
 
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqClusterSpecName2,
 					updatedNum,
@@ -121,18 +131,14 @@ func TestAccCtyunRabbitmqInstanceCluster(t *testing.T) {
 					resource.TestCheckResourceAttr(datasourceName, "instances.0.instance_name", updatedName),
 				),
 			},
-
 			{
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					if id == "" || regionId == "" {
-						return "", fmt.Errorf("id or region_id is required")
-					}
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					id := ds.Attributes["id"]
+
+					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -147,11 +153,12 @@ func TestAccCtyunRabbitmqInstanceCluster(t *testing.T) {
 					"subnet_id",
 					"vpc_id",
 					"zone_list",
+					"expire_time",
 				},
 			},
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqClusterSpecName2,
 					updatedNum,
@@ -180,6 +187,8 @@ func TestAccCtyunRabbitmqInstanceClusterOnDemand(t *testing.T) {
 	datasourceName := "data.ctyun_rabbitmq_instances." + dnd
 	resourceFile := "resource_ctyun_rabbitmq_instance_on_demand.tf"
 	datasourceFile := "datasource_ctyun_rabbitmq_instances.tf"
+
+	cycleResourceFile := "resource_ctyun_rabbitmq_instance.tf"
 
 	zone := os.Getenv("CTYUN_AZ_NAME")
 	nodeNum := 1
@@ -226,12 +235,15 @@ func TestAccCtyunRabbitmqInstanceClusterOnDemand(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", dependence.securityGroupID),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					resource.TestCheckResourceAttrSet(resourceName, "actual_cycle_type"),
+					resource.TestCheckResourceAttrSet(resourceName, "endpoint"),
+					resource.TestCheckResourceAttrSet(resourceName, "ssl_endpoint"),
 				),
 			},
 			// 更新属性
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqSingleSpecName2,
 					nodeNum,
@@ -259,7 +271,7 @@ func TestAccCtyunRabbitmqInstanceClusterOnDemand(t *testing.T) {
 
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqSingleSpecName2,
 					nodeNum,
@@ -284,7 +296,7 @@ func TestAccCtyunRabbitmqInstanceClusterOnDemand(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
+					id := ds.Attributes["id"]
 					regionId := ds.Attributes["region_id"]
 					if id == "" || regionId == "" {
 						return "", fmt.Errorf("id or region_id is required")
@@ -304,11 +316,12 @@ func TestAccCtyunRabbitmqInstanceClusterOnDemand(t *testing.T) {
 					"subnet_id",
 					"vpc_id",
 					"zone_list",
+					"expire_time",
 				},
 			},
 			{
 				Config: utils.LoadTestCase(
-					resourceFile, rnd,
+					cycleResourceFile, rnd,
 					updatedName,
 					dependence.rabbitmqSingleSpecName2,
 					nodeNum,

@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_vpc_route_table_rules"
+---
+
 # ctyun_vpc_route_table_rules (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000
+-> 查询虚拟私有云路由表规则
 
 
 
@@ -28,7 +33,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_vpc_route_table" "route" {
   vpc_id = ctyun_vpc.vpc_test.id
-  name = "route-t1f"
+  name   = "route-t1f"
 }
 
 data "ctyun_vpc_route_table_rules" "rtest" {

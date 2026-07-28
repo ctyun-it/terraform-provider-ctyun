@@ -53,28 +53,81 @@ const (
 
 	PgsqlProdIDS1222    = 10003011
 	PgsqlProdIDMS1222   = 10003012
-	PgsqlProdIDS1417    = 10003013
-	PgsqlProdIDMS1417   = 10003014
-	PgsqlProdIDS1320    = 10003015
-	PgsqlProdIDMS1320   = 10003016
+	PgsqlProdIDS1419    = 10003013
+	PgsqlProdIDMS1419   = 10003014
+	PgsqlProdIDS1322    = 10003015
+	PgsqlProdIDMS1322   = 10003016
 	PgsqlProdIDRead1222 = 10003017
-	PgsqlProdIDRead1320 = 10003018
-	PgsqlProdIDRead1417 = 10003019
-	PgsqlProdIDS1512    = 10003021
-	PgsqlProdIDMS1512   = 10003022
-	PgsqlProdIDRead1512 = 10003023
+	PgsqlProdIDRead1322 = 10003018
+	PgsqlProdIDRead1419 = 10003019
+	PgsqlProdIDS1514    = 10003021
+	PgsqlProdIDMS1514   = 10003022
+	PgsqlProdIDRead1514 = 10003023
 	PgsqlProdIDM2S1222  = 10003024
-	PgsqlProdIDM2S1417  = 10003025
-	PgsqlProdIDM2S1320  = 10003026
-	PgsqlProdIDM2S1512  = 10003027
-	PgsqlProdIDS168     = 10003028
-	PgsqlProdIDMS168    = 10003029
-	PgsqlProdIDM2S168   = 10003031
-	PgsqlProdIDRead168  = 10003030
+	PgsqlProdIDM2S1419  = 10003025
+	PgsqlProdIDM2S1322  = 10003026
+	PgsqlProdIDM2S1514  = 10003027
+	PgsqlProdIDS1610    = 10003028
+	PgsqlProdIDMS1610   = 10003029
+	PgsqlProdIDM2S1610  = 10003031
+	PgsqlProdIDRead1610 = 10003030
 
 	PgsqlStorageTypeBackUp = "backup"
 	PgsqlStorageTypeMaster = "master"
+
+	PgsqlNodeTypeMaster = "master"
+
+	PgsqlAccountTypeNormal   = "normal"
+	PgsqlAccountTypeAdvanced = "advanced"
+
+	PgsqlBackupTypeAuto     = 1
+	PgsqlBackupTypeManual   = 2
+	PgsqlBackupTypeRecovery = 3
+
+	PgsqlBackupTypeAutoStr     = "auto"
+	PgsqlBackupTypeManualStr   = "manual"
+	PgsqlBackupTypeRecoveryStr = "recovery"
+
+	PgsqlBackupResultING     = 0
+	PgsqlBackupResultING1    = 2
+	PgsqlBackupResultSuccess = 3
+	PgsqlBackupResultFail    = 5
+
+	PgsqlBackupResultINGStr     = "ing"
+	PgsqlBackupResultSuccessStr = "success"
+	PgsqlBackupResultFailStr    = "fail"
+
+	PgsqlNodeTypeReadNode = "readNode"
+
+	PgsqlProdSpecNameRead   = "只读实例"
+	PgsqlProdSpecNameSingle = "单机版"
+	PgsqlProdSpecNameMS     = "一主一备"
+	PgsqlProdSpecNameM2S    = "一主两备"
 )
+
+var PgsqlBackupTypeMap = map[string]int32{
+	PgsqlBackupTypeAutoStr:     PgsqlBackupTypeAuto,
+	PgsqlBackupTypeManualStr:   PgsqlBackupTypeManual,
+	PgsqlBackupTypeRecoveryStr: PgsqlBackupTypeRecovery,
+}
+
+var PgsqlBackupTypeMapConv = map[int32]string{
+	PgsqlBackupTypeAuto:     PgsqlBackupTypeAutoStr,
+	PgsqlBackupTypeManual:   PgsqlBackupTypeManualStr,
+	PgsqlBackupTypeRecovery: PgsqlBackupTypeRecoveryStr,
+}
+
+var PgsqlBackupResultMap = map[string]int32{
+	PgsqlBackupResultINGStr:     PgsqlBackupResultING,
+	PgsqlBackupResultSuccessStr: PgsqlBackupResultSuccess,
+	PgsqlBackupResultFailStr:    PgsqlBackupResultFail,
+}
+var PgsqlBackupResultMapConv = map[int32]string{
+	PgsqlBackupResultING:     PgsqlBackupResultINGStr,
+	PgsqlBackupResultING1:    PgsqlBackupResultINGStr,
+	PgsqlBackupResultFail:    PgsqlBackupResultFailStr,
+	PgsqlBackupResultSuccess: PgsqlBackupResultSuccessStr,
+}
 
 var PgsqlBillModes = []string{
 	BillModeCycle,
@@ -143,165 +196,185 @@ var PgsqlBindEipStatus = []string{
 var PgsqlProdID = []int64{
 	PgsqlProdIDS1222,
 	PgsqlProdIDMS1222,
-	PgsqlProdIDS1417,
-	PgsqlProdIDMS1417,
-	PgsqlProdIDS1320,
-	PgsqlProdIDMS1320,
+	PgsqlProdIDS1419,
+	PgsqlProdIDMS1419,
+	PgsqlProdIDS1322,
+	PgsqlProdIDMS1322,
 	PgsqlProdIDRead1222,
-	PgsqlProdIDRead1320,
-	PgsqlProdIDRead1417,
-	PgsqlProdIDS1512,
-	PgsqlProdIDMS1512,
-	PgsqlProdIDRead1512,
+	PgsqlProdIDRead1322,
+	PgsqlProdIDRead1419,
+	PgsqlProdIDS1514,
+	PgsqlProdIDMS1514,
+	PgsqlProdIDRead1514,
 	PgsqlProdIDM2S1222,
-	PgsqlProdIDM2S1417,
-	PgsqlProdIDM2S1320,
-	PgsqlProdIDM2S1512,
-	PgsqlProdIDS168,
-	PgsqlProdIDMS168,
-	PgsqlProdIDM2S168,
-	PgsqlProdIDRead168,
+	PgsqlProdIDM2S1419,
+	PgsqlProdIDM2S1322,
+	PgsqlProdIDM2S1514,
+	PgsqlProdIDS1610,
+	PgsqlProdIDMS1610,
+	PgsqlProdIDM2S1610,
+	PgsqlProdIDRead1610,
 }
 
 var PgsqlProdIDDict = map[string]int64{
 	"Single1222":       PgsqlProdIDS1222,
 	"MasterSlave1222":  PgsqlProdIDMS1222,
-	"Single1417":       PgsqlProdIDS1417,
-	"MasterSlave1417":  PgsqlProdIDMS1417,
-	"Single1320":       PgsqlProdIDS1320,
-	"MasterSlave1320":  PgsqlProdIDMS1320,
+	"Single1419":       PgsqlProdIDS1419,
+	"MasterSlave1419":  PgsqlProdIDMS1419,
+	"Single1322":       PgsqlProdIDS1322,
+	"MasterSlave1322":  PgsqlProdIDMS1322,
 	"ReadOnly1222":     PgsqlProdIDRead1222,
-	"ReadOnly1320":     PgsqlProdIDRead1320,
-	"ReadOnly1417":     PgsqlProdIDRead1417,
-	"Single1512":       PgsqlProdIDS1512,
-	"MasterSlave1512":  PgsqlProdIDMS1512,
-	"ReadOnly1512":     PgsqlProdIDRead1512,
+	"ReadOnly1322":     PgsqlProdIDRead1322,
+	"ReadOnly1419":     PgsqlProdIDRead1419,
+	"Single1514":       PgsqlProdIDS1514,
+	"MasterSlave1514":  PgsqlProdIDMS1514,
+	"ReadOnly1514":     PgsqlProdIDRead1514,
 	"Master2Slave1222": PgsqlProdIDM2S1222,
-	"Master2Slave1417": PgsqlProdIDM2S1417,
-	"Master2Slave1320": PgsqlProdIDM2S1320,
-	"Master2Slave1512": PgsqlProdIDM2S1512,
-	"Single168":        PgsqlProdIDS168,
-	"MasterSlave168":   PgsqlProdIDMS168,
-	"Master2Slave168":  PgsqlProdIDM2S168,
-	"ReadOnly168":      PgsqlProdIDRead168,
+	"Master2Slave1419": PgsqlProdIDM2S1419,
+	"Master2Slave1322": PgsqlProdIDM2S1322,
+	"Master2Slave1514": PgsqlProdIDM2S1514,
+	"Single1610":       PgsqlProdIDS1610,
+	"MasterSlave1610":  PgsqlProdIDMS1610,
+	"Master2Slave1610": PgsqlProdIDM2S1610,
+	"ReadOnly1610":     PgsqlProdIDRead1610,
+}
+
+var PgsqlReadNodeVersionProdIdDict = map[string]string{
+	"12.22": "ReadOnly1222",
+	"14.19": "ReadOnly1419",
+	"15.14": "ReadOnly1514",
+	"13.22": "ReadOnly1322",
+	"16.10": "ReadOnly1610",
 }
 
 var PgsqlProdIDRevDict = map[int64]string{
 	PgsqlProdIDS1222:    "Single1222",
 	PgsqlProdIDMS1222:   "MasterSlave1222",
-	PgsqlProdIDS1417:    "Single1417",
-	PgsqlProdIDMS1417:   "MasterSlave1417",
-	PgsqlProdIDS1320:    "Single1320",
-	PgsqlProdIDMS1320:   "MasterSlave1320",
+	PgsqlProdIDS1419:    "Single1419",
+	PgsqlProdIDMS1419:   "MasterSlave1419",
+	PgsqlProdIDS1322:    "Single1322",
+	PgsqlProdIDMS1322:   "MasterSlave1322",
 	PgsqlProdIDRead1222: "ReadOnly1222",
-	PgsqlProdIDRead1320: "ReadOnly1320",
-	PgsqlProdIDRead1417: "ReadOnly1417",
-	PgsqlProdIDS1512:    "Single1512",
-	PgsqlProdIDMS1512:   "MasterSlave1512",
-	PgsqlProdIDRead1512: "ReadOnly1512",
+	PgsqlProdIDRead1322: "ReadOnly1322",
+	PgsqlProdIDRead1419: "ReadOnly1419",
+	PgsqlProdIDS1514:    "Single1514",
+	PgsqlProdIDMS1514:   "MasterSlave1514",
+	PgsqlProdIDRead1514: "ReadOnly1514",
 	PgsqlProdIDM2S1222:  "Master2Slave1222",
-	PgsqlProdIDM2S1417:  "Master2Slave1417",
-	PgsqlProdIDM2S1320:  "Master2Slave1320",
-	PgsqlProdIDM2S1512:  "Master2Slave1512",
-	PgsqlProdIDS168:     "Single168",
-	PgsqlProdIDMS168:    "MasterSlave168",
-	PgsqlProdIDM2S168:   "Master2Slave168",
-	PgsqlProdIDRead168:  "ReadOnly168",
+	PgsqlProdIDM2S1419:  "Master2Slave1419",
+	PgsqlProdIDM2S1322:  "Master2Slave1322",
+	PgsqlProdIDM2S1514:  "Master2Slave1514",
+	PgsqlProdIDS1610:    "Single1610",
+	PgsqlProdIDMS1610:   "MasterSlave1610",
+	PgsqlProdIDM2S1610:  "Master2Slave1610",
+	PgsqlProdIDRead1610: "ReadOnly1610",
 }
 
 var PgsqlProdIds = []string{
 	"Single1222",
 	"MasterSlave1222",
-	"Single1417",
-	"MasterSlave1417",
-	"Single1320",
-	"MasterSlave1320",
+	"Single1419",
+	"MasterSlave1419",
+	"Single1322",
+	"MasterSlave1322",
 	"ReadOnly1222",
-	"ReadOnly1320",
-	"ReadOnly1417",
-	"Single1512",
-	"MasterSlave1512",
-	"ReadOnly1512",
+	"ReadOnly1322",
+	"ReadOnly1419",
+	"Single1514",
+	"MasterSlave1514",
+	"ReadOnly1514",
 	"Master2Slave1222",
-	"Master2Slave1417",
-	"Master2Slave1320",
-	"Master2Slave1512",
-	"Single168",
-	"MasterSlave168",
-	"Master2Slave168",
-	"ReadOnly168",
+	"Master2Slave1419",
+	"Master2Slave1322",
+	"Master2Slave1514",
+	"Single1610",
+	"MasterSlave1610",
+	"Master2Slave1610",
+	"ReadOnly1610",
 }
 
 var PgsqlNodeTypeDict = map[string]string{
 	"Single1222":       "master",
 	"MasterSlave1222":  "master",
-	"Single1417":       "master",
-	"MasterSlave1417":  "master",
-	"Single1320":       "master",
-	"MasterSlave1320":  "master",
+	"Single1419":       "master",
+	"MasterSlave1419":  "master",
+	"Single1322":       "master",
+	"MasterSlave1322":  "master",
 	"ReadOnly1222":     "readNode",
-	"ReadOnly1320":     "readNode",
-	"ReadOnly1417":     "readNode",
-	"Single1512":       "master",
-	"MasterSlave1512":  "master",
-	"ReadOnly1512":     "readNode",
+	"ReadOnly1322":     "readNode",
+	"ReadOnly1419":     "readNode",
+	"Single1514":       "master",
+	"MasterSlave1514":  "master",
+	"ReadOnly1514":     "readNode",
 	"Master2Slave1222": "master",
-	"Master2Slave1417": "master",
-	"Master2Slave1320": "master",
-	"Master2Slave1512": "master",
-	"Single168":        "readNode",
-	"MasterSlave168":   "master",
-	"Master2Slave168":  "master",
-	"ReadOnly168":      "readNode",
+	"Master2Slave1419": "master",
+	"Master2Slave1322": "master",
+	"Master2Slave1514": "master",
+	"Single1610":       "readNode",
+	"MasterSlave1610":  "master",
+	"Master2Slave1610": "master",
+	"ReadOnly1610":     "readNode",
 }
 
 var PgsqlNodeNumDict = map[string]int32{
 	"Single1222":       1,
 	"MasterSlave1222":  2,
-	"Single1417":       1,
-	"MasterSlave1417":  2,
-	"Single1320":       1,
-	"MasterSlave1320":  2,
+	"Single1419":       1,
+	"MasterSlave1419":  2,
+	"Single1322":       1,
+	"MasterSlave1322":  2,
 	"ReadOnly1222":     -1,
-	"ReadOnly1320":     -1,
-	"ReadOnly1417":     -1,
-	"Single1512":       1,
-	"MasterSlave1512":  2,
-	"ReadOnly1512":     -1,
+	"ReadOnly1322":     -1,
+	"ReadOnly1419":     -1,
+	"Single1514":       1,
+	"MasterSlave1514":  2,
+	"ReadOnly1514":     -1,
 	"Master2Slave1222": 3,
-	"Master2Slave1417": 3,
-	"Master2Slave1320": 3,
-	"Master2Slave1512": 3,
-	"Single168":        1,
-	"MasterSlave168":   2,
-	"Master2Slave168":  3,
-	"ReadOnly168":      -1,
+	"Master2Slave1419": 3,
+	"Master2Slave1322": 3,
+	"Master2Slave1514": 3,
+	"Single1610":       1,
+	"MasterSlave1610":  2,
+	"Master2Slave1610": 3,
+	"ReadOnly1610":     -1,
 }
 
 var PgsqlProdVersionDict = map[string]string{
 	"Single1222":       "12.22",
 	"MasterSlave1222":  "12.22",
-	"Single1417":       "14.17",
-	"MasterSlave1417":  "14.17",
-	"Single1320":       "13.20",
-	"MasterSlave1320":  "13.20",
+	"Single1419":       "14.19",
+	"MasterSlave1419":  "14.19",
+	"Single1322":       "13.22",
+	"MasterSlave1322":  "13.22",
 	"ReadOnly1222":     "12.22",
-	"ReadOnly1320":     "13.20",
-	"ReadOnly1417":     "14.17",
-	"Single1512":       "15.12",
-	"MasterSlave1512":  "15.12",
-	"ReadOnly1512":     "15.12",
+	"ReadOnly1322":     "13.22",
+	"ReadOnly1419":     "14.19",
+	"Single1514":       "15.14",
+	"MasterSlave1514":  "15.14",
+	"ReadOnly1514":     "15.14",
 	"Master2Slave1222": "12.22",
-	"Master2Slave1417": "14.17",
-	"Master2Slave1320": "13.20",
-	"Master2Slave1512": "15.12",
-	"Single168":        "16.8",
-	"MasterSlave168":   "16.8",
-	"Master2Slave168":  "16.8",
-	"ReadOnly168":      "16.8",
+	"Master2Slave1419": "14.19",
+	"Master2Slave1322": "13.22",
+	"Master2Slave1514": "15.14",
+	"Single1610":       "16.10",
+	"MasterSlave1610":  "16.10",
+	"Master2Slave1610": "16.10",
+	"ReadOnly1610":     "16.10",
 }
 var PgsqlInstanceSeriesDict = map[string]string{
 	"S": "1",
 	"C": "2",
 	"M": "3",
+}
+
+var PgsqlAccountTypes = []string{
+	PgsqlAccountTypeAdvanced,
+	PgsqlAccountTypeNormal,
+}
+
+var PgsqlProdSpecNodeNumDict = map[string]int32{
+	PgsqlProdSpecNameRead:   1,
+	PgsqlProdSpecNameSingle: 1,
+	PgsqlProdSpecNameMS:     2,
+	PgsqlProdSpecNameM2S:    3,
 }

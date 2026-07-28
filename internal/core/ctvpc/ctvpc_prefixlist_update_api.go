@@ -49,6 +49,7 @@ type CtvpcPrefixlistUpdateRequest struct {
 	RegionID     string  `json:"regionID,omitempty"`     /*  资源池ID  */
 	PrefixListID string  `json:"prefixListID,omitempty"` /*  prefixlistID  */
 	Name         *string `json:"name,omitempty"`         /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	Description  *string `json:"description,omitempty"`  /*  描述信息，长度不超过1024个字符  */
 }
 
 type CtvpcPrefixlistUpdateResponse struct {

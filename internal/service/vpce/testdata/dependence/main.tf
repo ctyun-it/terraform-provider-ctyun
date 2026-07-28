@@ -12,8 +12,7 @@ resource "ctyun_subnet" "subnet_test" {
   description = "terraform测试使用"
   dns         = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
@@ -29,8 +28,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test" {
@@ -38,7 +35,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name        = "tf-ecs-for-vpce"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id = ctyun_vpc.vpc_test.id
   password            = var.password
@@ -52,7 +49,7 @@ resource "ctyun_ecs" "ecs_test2" {
   display_name        = "tf-ecs-for-vpce2"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id = ctyun_vpc.vpc_test.id
   password            = var.password

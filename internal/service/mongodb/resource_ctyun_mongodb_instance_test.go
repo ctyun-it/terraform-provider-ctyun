@@ -2,14 +2,114 @@ package mongodb_test
 
 import (
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"strconv"
-	"testing"
-	"time"
 )
+
+// 集群版，传azList，更新mongos 和shard spec
+func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpecReadOnly(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_mongodb_instance." + rnd
+	resourceFile := "resource_ctyun_mongodb_instance_single_read_only.tf"
+	// 创建参数
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	flavorName := dependence.flavorName
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mongodb-single-" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
+	prodId := "Cluster34"
+	readPort := 12345
+	storageType := "XSSD-0"
+	storageSpace := 100
+	backupStorageType := "OS"
+	//azName := dependence.azName
+	//azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"mongos"},
+	//			{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"},
+	//			{"availability_zone_name":"%s","availability_zone_count":3,"node_type":"config"}]`, azName, azName, azName)
+
+	//更新参数
+
+	readOnlyCount := 2
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, readOnlyCount),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					//resource.TestCheckResourceAttr(resourceName, "password", password),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(readPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(storageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+				),
+			},
+			// import state验证1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionId := ds.Attributes["region_id"]
+					if id == "" || regionId == "" {
+						return "", fmt.Errorf("id or region_id is required")
+					}
+					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control",
+					"master_order_id", "shard_num", "cycle_count",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count", "prod_id"},
+			},
+			// import state验证2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{"flavor_name", "password", "auto_renew",
+					"backup_storage_type", "availability_zone_info", "running_control",
+					"master_order_id", "shard_num", "cycle_count",
+					"mongos_num", "backup_storage_space", "upgrade_node_type", "read_only_count", "prod_id"},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, readOnlyCount),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
+				Destroy: true,
+			},
+		},
+	})
+}
 
 // 单机、按需、有az、备份盘
 func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
@@ -26,25 +126,26 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
+	passwordUpdate := "Kyk125=" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SAS"
-	storageSpace := 120
+	storageSpace := 1024
 	backupStorageType := "SATA"
 	azName := dependence.azName
 	azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"master"}, {"availability_zone_name":"%s","availability_zone_count":1,"node_type":"backup"}]`, azName, azName)
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
-	updatedStorageSpace := 130
+	updatedStorageSpace := 1500
 	//backupStorageType := "SATA"
 	updatedAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"s"}]`, azName)
 
@@ -94,18 +195,106 @@ func TestAccCtyunMongodbInstanceSingleOnDemand(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
+			// 更新mongodb root 账号的密码
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, passwordUpdate, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "password", passwordUpdate),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+				),
+			},
 			// datasource验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, passwordUpdate, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo) +
 					utils.LoadTestCase(datasourceFile, dnd, ""),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(datasourceName, "mongodb_instances.#"),
+					resource.TestCheckResourceAttrSet(datasourceName, "instances.#"),
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, passwordUpdate, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
+				Destroy: true,
+			},
+		},
+	})
+}
+func TestAccCtyunMongodbInstanceSingleOnDemand_Updatepassword(t *testing.T) {
+	t.Skip("password update is covered by TestAccCtyunMongodbInstanceSingleOnDemand")
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_mongodb_instance." + rnd
+	//datasourceName := "data.ctyun_mongodb_instances." + dnd
+
+	resourceFile := "resource_ctyun_mongodb_instance_single_on_demand.tf"
+	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
+	// 创建参数
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	flavorName := dependence.flavorName
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mongodb-single-" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
+	passwordUpdate := "Kyk125=1" + utils.GenerateRandomString()
+	prodId := "Single34"
+	readPort := 12345
+	storageType := "SAS"
+	storageSpace := 120
+	backupStorageType := "SATA"
+	azName := dependence.azName
+	azInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"master"}, {"availability_zone_name":"%s","availability_zone_count":1,"node_type":"backup"}]`, azName, azName)
+
+	//更新参数
+
+	//backupStorageType := "SATA"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "password", password),
+				),
+			},
+			// 更新mongodb root 账号的密码
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, passwordUpdate, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "password", passwordUpdate),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, passwordUpdate, prodId, readPort, storageType, storageSpace,
+					backupStorageType, azInfo),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -126,11 +315,11 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 	cycleType := "month"
 	cycleCount := 1
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Single34"
 	readPort := 12345
 	storageType := "SATA"
@@ -141,7 +330,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -197,6 +386,7 @@ func TestAccCtyunMongodbInstanceSingleCycleNoAz(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, cycleCount, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -216,14 +406,14 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Replica3R34"
 	readPort := 12345
-	storageType := "SAS"
+	storageType := "SSD"
 	storageSpace := 100
 	backupStorageType := "OS"
 	azName := dependence.azName
@@ -231,7 +421,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	updatedProdId := "Replica5R34"
 
@@ -311,6 +501,7 @@ func TestAccCtyunMongodbInstanceReplicaOs(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, updatedProdId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType, updatedAzInfo),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -330,11 +521,11 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Replica3R34"
 	readPort := 12345
 	storageType := "SAS"
@@ -347,7 +538,7 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 	updatedReadPort := 12348
 	//updatedStorageType := ""
 	updatedStorageSpace := 110
@@ -405,14 +596,15 @@ func TestAccCtyunMongodbInstanceReplicaSATANoAzList(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
 					storageType, updatedStorageSpace, backupStorageType),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
 	})
 }
 
-// 集群版，传azList，更新端口、名称和主存储空间
-func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
+// 集群版，传azList，覆盖基础更新和shard规格升配
+func TestAccCtyunMongodbInstanceClusterOsShardSpec(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -420,16 +612,16 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 	//datasourceName := "data.ctyun_mongodb_instances." + dnd
 
 	resourceFile := "resource_ctyun_mongodb_instance_cluster_on_demand_os.tf"
-	//resourceFile1 := "resource_ctyun_mongodb_instance_cluster_on_demand_os_update.tf"
+	resourceFile1 := "resource_ctyun_mongodb_instance_cluster_on_demand_os_update.tf"
 	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -445,14 +637,10 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
 	updatedReadPort := 12348
-
-	//updatedStorageType := ""
 	updatedStorageSpace := 110
-	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
-
-	//backupStorageType := "SATA"
-	//updatedBackupStorageSpace := 160
-	//updatedAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":1,"node_type":"s"}]`
+	updatedFlavorName := dependence.flavorName2
+	updatedShardSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"}]`, azName)
+	upgradeNodeTypeShard := "shard"
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -502,17 +690,32 @@ func TestAccCtyunMongodbInstanceClusterOs(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
+			// 在同一实例上继续验证shard规格升配。
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
-					storageType, updatedStorageSpace, backupStorageType, azInfo, shardNum, mongosNum),
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, updatedShardSpecAzInfo, shardNum, mongosNum, upgradeNodeTypeShard),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(shardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(mongosNum)),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, updatedShardSpecAzInfo, shardNum, mongosNum, upgradeNodeTypeShard),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
 	})
 }
 
-// 集群版，传azList，更新mongos 和shard spec
-func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
+// 集群版，传azList，覆盖mongos规格升配以及mongos、shard节点扩容
+func TestAccCtyunMongodbInstanceClusterOsMongosSpecAndNodeExpansion(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -525,11 +728,11 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -543,13 +746,16 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 	mongosNum := 2
 
 	//更新参数
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 
 	updatedMongosSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":2,"node_type":"mongos"}]`, azName)
-	updatedShardSpecAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":6,"node_type":"shard"}]`, azName)
+	updatedMongosNodeAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":1,"node_type":"mongos"}]`, azName)
+	updatedShardNodeAzInfo := fmt.Sprintf(`[{"availability_zone_name":"%s","availability_zone_count":3,"node_type":"shard"}]`, azName)
 
 	upgradeNodeTypeMongos := "mongos"
 	upgradeNodeTypeShard := "shard"
+	updatedShardNum := 3
+	updatedMongosNum := 3
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -599,15 +805,13 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
-			// 扩容
-			// 更新mongodb实例，shard的spec
+			// 扩容mongos节点数量
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
-					storageType, storageSpace, backupStorageType, updatedShardSpecAzInfo, shardNum, mongosNum, upgradeNodeTypeShard),
+					storageType, storageSpace, backupStorageType, updatedMongosNodeAzInfo, shardNum, updatedMongosNum, upgradeNodeTypeMongos),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
-					//resource.TestCheckResourceAttr(resourceName, "password", password),
 					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(readPort)),
 					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
 					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(storageSpace)),
@@ -616,6 +820,8 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
 					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(shardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(updatedMongosNum)),
 					resource.ComposeAggregateTestCheckFunc(
 						func(s *terraform.State) error {
 							time.Sleep(30 * time.Second)
@@ -624,9 +830,25 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 					),
 				),
 			},
+			// 在同一实例上继续扩容shard节点数量
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
-					storageType, storageSpace, backupStorageType, updatedShardSpecAzInfo, shardNum, mongosNum, upgradeNodeTypeShard),
+					storageType, storageSpace, backupStorageType, updatedShardNodeAzInfo, updatedShardNum, updatedMongosNum, upgradeNodeTypeShard),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(updatedShardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(updatedMongosNum)),
+					func(s *terraform.State) error {
+						time.Sleep(30 * time.Second)
+						return nil
+					},
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
+					storageType, storageSpace, backupStorageType, updatedShardNodeAzInfo, updatedShardNum, updatedMongosNum, upgradeNodeTypeShard),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -635,6 +857,7 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateMongosSpec(t *testing.T) {
 
 // 集群版，传azList，更新mongos shard 节点数
 func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
+	t.Skip("node expansion is covered by TestAccCtyunMongodbInstanceClusterOsMongosSpecAndNodeExpansion")
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -647,11 +870,11 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster34"
 	readPort := 12345
 	storageType := "SAS"
@@ -744,14 +967,15 @@ func TestAccCtyunMongodbInstanceClusterOsUpdateNodeNum(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort,
 					storageType, storageSpace, backupStorageType, updatedShardNodeAzInfo, updatedShardNum, updatedMongosNum, upgradeNodeTypeShard),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
 	})
 }
 
-// 集群版，不传azList,修改存储，备份空间，端口
-func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
+// 集群版，不传azList，覆盖基础更新和shard规格升配
+func TestAccCtyunMongodbInstanceClusterNoAzShardSpec(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -759,16 +983,16 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 	//datasourceName := "data.ctyun_mongodb_instances." + dnd
 
 	resourceFile := "resource_ctyun_mongodb_instance_cluster_on_demand_no_az.tf"
-	//resourceFile1 := "resource_ctyun_mongodb_instance_cluster_on_demand_no_az_update.tf"
+	resourceFile1 := "resource_ctyun_mongodb_instance_cluster_on_demand_no_az_update.tf"
 	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -781,15 +1005,9 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 	//更新参数
 	updatedName := "tf-mongodb-single-new-" + utils.GenerateRandomString()
 	updatedReadPort := 12348
-
-	//updatedStorageType := ""
 	updatedStorageSpace := 110
-	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
-	//updatedProdIDAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
-	//
-	//backupStorageType := "SATA"
-	//updatedBackupStorageSpace := 150
-	//updatedAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":1,"node_type":"s"}]`
+	updatedFlavorName := dependence.flavorName2
+	upgradeNodeTypeShard := "shard"
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -839,17 +1057,32 @@ func TestAccCtyunMongodbInstanceClusterNoAz(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
+			// 不传AZ信息时，由provider读取当前节点分布并完成shard规格升配。
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
-					storageType, updatedStorageSpace, backupStorageType, shardNum, mongosNum),
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, shardNum, mongosNum, upgradeNodeTypeShard),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(shardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(mongosNum)),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodId, updatedReadPort,
+					storageType, updatedStorageSpace, backupStorageType, shardNum, mongosNum, upgradeNodeTypeShard),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
 	})
 }
 
-// mongodb升配mongos spec
-func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
+// 不传azList，覆盖mongos规格升配以及shard、mongos节点扩容
+func TestAccCtyunMongodbInstanceClusterNoAzMongosSpecAndNodeExpansion(t *testing.T) {
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -862,11 +1095,11 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -876,13 +1109,16 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
 	//updatedProdIDAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
 	//
 	upgradeNodeTypeMongos := "mongos"
+	upgradeNodeTypeShard := "shard"
+	updatedShardNum := 3
+	updatedMongosNum := 3
 
 	//backupStorageType := "SATA"
 	//updatedAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":1,"node_type":"s"}]`
@@ -935,10 +1171,40 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
 				),
 			},
-			// 扩容
+			// 在同一实例上继续扩容shard节点数量。
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
-					storageType, storageSpace, backupStorageType, shardNum, mongosNum, upgradeNodeTypeMongos),
+					storageType, storageSpace, backupStorageType, updatedShardNum, mongosNum, upgradeNodeTypeShard),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(updatedShardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(mongosNum)),
+					func(s *terraform.State) error {
+						time.Sleep(30 * time.Second)
+						return nil
+					},
+				),
+			},
+			// 扩容mongos节点数量。
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
+					storageType, storageSpace, backupStorageType, updatedShardNum, updatedMongosNum, upgradeNodeTypeMongos),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(updatedShardNum)),
+					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(updatedMongosNum)),
+					func(s *terraform.State) error {
+						time.Sleep(30 * time.Second)
+						return nil
+					},
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
+					storageType, storageSpace, backupStorageType, updatedShardNum, updatedMongosNum, upgradeNodeTypeMongos),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -947,6 +1213,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateMongosSpec(t *testing.T) {
 
 // mongodb升配 shard spec
 func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
+	t.Skip("shard spec update is covered by TestAccCtyunMongodbInstanceClusterNoAzShardSpec")
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -959,11 +1226,11 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -973,7 +1240,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 	shardNum := 2
 	mongosNum := 2
 
-	updatedFlavorName := "s7.large.4"
+	updatedFlavorName := dependence.flavorName2
 
 	//updatedStorageType := ""
 	//updatedSpecAzInfo := `[{"availability_zone_name":"cn-huadong1-jsnj1A-public-ctcloud","availability_zone_count":2,"node_type":"ms"}]`
@@ -1048,6 +1315,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, name, password, prodId, readPort,
 					storageType, storageSpace, backupStorageType, shardNum, mongosNum, upgradeNodeTypeShard),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},
@@ -1056,6 +1324,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateShardSpec(t *testing.T) {
 
 // 集群版，不传azList,升配shard和mongos节点数量
 func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
+	t.Skip("node expansion is covered by TestAccCtyunMongodbInstanceClusterNoAzMongosSpecAndNodeExpansion")
 	t.Parallel()
 	rnd := utils.GenerateRandomString()
 	//dnd := utils.GenerateRandomString()
@@ -1068,11 +1337,11 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 	// 创建参数
 	cycleType := "on_demand"
 	vpcID := dependence.vpcID
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
 	name := "tf-mongodb-single-" + utils.GenerateRandomString()
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	prodId := "Cluster40"
 	readPort := 12345
 	storageType := "SAS"
@@ -1124,6 +1393,7 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "shard_num", strconv.Itoa(shardNum)),
 					resource.TestCheckResourceAttr(resourceName, "mongos_num", strconv.Itoa(mongosNum)),
 					resource.ComposeAggregateTestCheckFunc(
+
 						func(s *terraform.State) error {
 							time.Sleep(30 * time.Second)
 							return nil
@@ -1187,6 +1457,109 @@ func TestAccCtyunMongodbInstanceClusterNoAzUpdateNode(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile1, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodId, readPort,
 					storageType, storageSpace, backupStorageType, updatedShardNum, updatedMongosNum, upgradeNodeTypeMongos),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
+				Destroy: true,
+			},
+		},
+	})
+}
+
+// 使用数字格式的 prod_id 测试，覆盖三副本开通、更新、扩容到五副本和退订资源
+func TestAccCtyunMongodbInstanceByInstanceType(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_mongodb_instance." + rnd
+	createFile := "resource_ctyun_mongodb_instance_type_create.tf"
+	updateFile := "resource_ctyun_mongodb_instance_type_update.tf"
+
+	// 创建参数
+	cycleType := "on_demand"
+	vpcID := dependence.vpcID
+	flavorName := dependence.flavorName
+	subnetID := dependence.subnetID
+	securityGroupID := dependence.securityGroupID
+	name := "tf-mongodb-type-" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
+	prodID := "10013003" // Replica3R34 的数字格式
+	readPort := 12345
+	storageType := "SAS"
+	storageSpace := 100
+	backupStorageType := "OS"
+
+	// 更新参数
+	updatedName := "tf-mongodb-type-new-" + utils.GenerateRandomString()
+	updatedFlavorName := dependence.flavorName2
+	updatedReadPort := 12348
+	updatedStorageSpace := 200
+
+	// 扩容 prod_id：三副本 -> 五副本
+	updatedProdID := "10013005" // Replica5R34 的数字格式
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1. 使用数字 prod_id 创建三副本实例，不指定AZ
+			{
+				Config: utils.LoadTestCase(createFile, rnd, cycleType, vpcID, flavorName, subnetID, securityGroupID, name, password, prodID, readPort, storageType, storageSpace, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", name),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(readPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(storageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", flavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", prodID),
+				),
+			},
+			// 2. 更新实例名称、端口、存储空间和规格
+			{
+				Config: utils.LoadTestCase(updateFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, prodID, updatedReadPort, storageType, updatedStorageSpace, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", prodID),
+				),
+			},
+			// 3. 扩容 prod_id：三副本 -> 五副本
+			{
+				Config: utils.LoadTestCase(updateFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, updatedProdID, updatedReadPort, storageType, updatedStorageSpace, backupStorageType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+					resource.TestCheckResourceAttr(resourceName, "read_port", strconv.Itoa(updatedReadPort)),
+					resource.TestCheckResourceAttr(resourceName, "storage_type", storageType),
+					resource.TestCheckResourceAttr(resourceName, "storage_space", strconv.Itoa(updatedStorageSpace)),
+					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", backupStorageType),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", updatedFlavorName),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", subnetID),
+					resource.TestCheckResourceAttr(resourceName, "security_group_id", securityGroupID),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", updatedProdID),
+				),
+			},
+			// 4. 退订资源
+			{
+				Config: utils.LoadTestCase(updateFile, rnd, cycleType, vpcID, updatedFlavorName, subnetID, securityGroupID, updatedName, password, updatedProdID, updatedReadPort, storageType, updatedStorageSpace, backupStorageType),
+				// 本Step：销毁当前测试生命周期复用的MongoDB实例。
 				Destroy: true,
 			},
 		},

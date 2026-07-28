@@ -5,19 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/mapvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -42,6 +43,7 @@ var (
 
 type ctyunEbm struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbm() resource.Resource {
@@ -50,6 +52,7 @@ func NewCtyunEbm() resource.Resource {
 
 func (c *ctyunEbm) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm"
+	c.name = response.TypeName
 }
 
 type CtyunEbmConfig struct {
@@ -71,7 +74,7 @@ type CtyunEbmConfig struct {
 	SystemVolumeRaidUUID types.String `tfsdk:"system_volume_raid_uuid"`
 	DataVolumeRaidUUID   types.String `tfsdk:"data_volume_raid_uuid"`
 	VpcID                types.String `tfsdk:"vpc_id"`
-	EipID                types.String `tfsdk:"eip_id"`
+	BandWidth            types.Int32  `tfsdk:"bandwidth"`
 	EipAddress           types.String `tfsdk:"eip_address"`
 	SecurityGroupIDs     types.Set    `tfsdk:"security_group_ids"`
 	UserData             types.String `tfsdk:"user_data"`
@@ -85,11 +88,15 @@ type CtyunEbmConfig struct {
 	SubnetID             types.String `tfsdk:"subnet_id"`
 	PortID               types.String `tfsdk:"port_id"`
 	InterfaceID          types.String `tfsdk:"interface_id"`
+	Metadata             types.Map    `tfsdk:"metadata"`
+	CreateTime           types.String `tfsdk:"create_time"`
+	UpdateTime           types.String `tfsdk:"update_time"`
+	ExpireTime           types.String `tfsdk:"expire_time"`
 }
 
 func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724`,
+		MarkdownDescription: utils.FormatDesc("管理物理机", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				Computed:    true,
@@ -101,6 +108,9 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("instance_name")),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Computed:    true,
@@ -180,14 +190,10 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"actual_image_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "实际镜像id，重装、集群纳管等操作会导致actual_image_id与image_id不同",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-				},
 			},
 			"password": schema.StringAttribute{
 				Sensitive:   true,
 				Optional:    true,
-				Computed:    true,
 				Description: "密码(必须包含大小写字母和（一个数字或者特殊字符）长度8到30位)，未传入有效的keyName时必须传入password，支持更新",
 				Validators: []validator.String{
 					validator2.EbmPassword(),
@@ -201,7 +207,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -215,6 +221,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
+					stringvalidator.LengthAtLeast(1),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_disk_type")),
 				},
 			},
@@ -238,16 +245,14 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					validator2.VpcValidate(),
 				},
 			},
-			"eip_id": schema.StringAttribute{
+			"bandwidth": schema.Int32Attribute{
 				Optional:    true,
-				Computed:    true,
-				Description: "弹性公网IP的ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+				Description: "带宽大小，传递时会自动创建弹性IP并绑定，单位为Mbit/s，取值范围：[1, 2000]",
+				Validators: []validator.Int32{
+					int32validator.Between(1, 2000),
 				},
-				Validators: []validator.String{
-					validator2.EipValidate(),
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"eip_address": schema.StringAttribute{
@@ -259,11 +264,10 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"security_group_ids": schema.SetAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID",
 				ElementType: types.StringType,
 				PlanModifiers: []planmodifier.Set{
-					setplanmodifier.RequiresReplace(),
+					setplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
@@ -272,9 +276,12 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_type": schema.StringAttribute{
 				Optional:    true,
-				Description: "系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO",
+				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO",
 				Validators: []validator.String{
-					stringvalidator.OneOf(business.EbmDiskTypes...),
+					stringvalidator.Any(
+						stringvalidator.OneOf(business.EbmDiskTypes...),
+						stringvalidator.OneOf(business.EbmDiskTypesUpper...),
+					),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_volume_raid_uuid")),
 					stringvalidator.AlsoRequires(path.MatchRoot("system_disk_size")),
 				},
@@ -284,7 +291,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"system_disk_size": schema.Int32Attribute{
 				Optional:    true,
-				Description: "系统盘大小，单位为G，取值范围：[100, 2048]，当前不支持公网",
+				Description: "系统盘大小（单位GB），取值范围：[100, 2048]，当前不支持公网",
 				Validators: []validator.Int32{
 					int32validator.Between(100, 2048),
 					int32validator.ConflictsWith(path.MatchRoot("system_volume_raid_uuid")),
@@ -312,10 +319,15 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 			},
 			"fixed_ip": schema.StringAttribute{
+				Optional:    true,
 				Computed:    true,
 				Description: "加入子网后的ip地址",
+				Validators: []validator.String{
+					validator2.Ip(),
+				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"port_id": schema.StringAttribute{
@@ -334,15 +346,12 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"user_data": schema.StringAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符",
-				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 16384),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"key_pair_name": schema.StringAttribute{
@@ -359,9 +368,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写。",
-				Default:     booldefault.StaticBool(false),
 				Validators: []validator.Bool{
 					validator2.ConflictsWithEqualBool(
 						path.MatchRoot("cycle_type"),
@@ -369,7 +376,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 				},
 				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"cycle_type": schema.StringAttribute{
@@ -412,6 +419,32 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					),
 				},
 				Default: stringdefault.StaticString(business.EbmStatusRunning),
+			},
+			"metadata": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "物理机元数据信息，键值对形式，支持更新",
+				Validators: []validator.Map{
+					mapvalidator.SizeAtMost(65535),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "更新时间，为UTC格式",
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -460,6 +493,11 @@ func (c *ctyunEbm) Create(ctx context.Context, request resource.CreateRequest, r
 	if response.Diagnostics.HasError() {
 		return
 	}
+
+	err = c.createMetadata(ctx, plan)
+	if err != nil {
+		return
+	}
 	// 创建机器后状态默认为启动状态，可根据用户要求的状态，去执行对应的操作，比如关机
 	err = c.handleInstance(ctx, plan, business.EbmStatusRunning, plan.Status.ValueString())
 	if err != nil {
@@ -493,7 +531,7 @@ func (c *ctyunEbm) Read(ctx context.Context, request resource.ReadRequest, respo
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "instance is not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			// 查下主网卡是否存在
 			var exist bool
 			portID := state.PortID.ValueString()
@@ -546,14 +584,26 @@ func (c *ctyunEbm) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
+	err = c.updateMetadata(ctx, state, plan)
+	if err != nil {
+		return
+	}
 	// 修改密码或主机名
 	err = c.updatePasswordOrHostname(ctx, state, plan)
 	if err != nil {
 		return
 	}
 	state.Password = plan.Password
-	if err != nil {
-		return
+	if !plan.UserData.IsUnknown() && !plan.UserData.IsNull() && state.UserData.IsNull() {
+		state.UserData = plan.UserData
+		response.Diagnostics.AddWarning("user_data的更新仅写入状态文件", "在import时，状态文件中user_data为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if state.UserData.ValueString() == "" && plan.UserData.ValueString() == "" {
+		state.UserData = plan.UserData
+	}
+	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
+		state.AutoRenew = plan.AutoRenew
+		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
@@ -602,29 +652,69 @@ func (c *ctyunEbm) Configure(_ context.Context, request resource.ConfigureReques
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[regionID],[azName]
 func (c *ctyunEbm) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<az_name>,<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var plan CtyunEbmConfig
-	var instanceUUID, regionID, azName string
-	err = terraform_extend.Split(request.ID, &instanceUUID, &regionID, &azName)
-	if err != nil {
-		return
-	}
+	var config CtyunEbmConfig
 
-	plan.InstanceID = types.StringValue(instanceUUID)
-	plan.AzName = types.StringValue(azName)
-	plan.RegionID = types.StringValue(regionID)
-	err = c.getAndMerge(ctx, &plan)
+	var instanceID, azName, regionID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		instanceID = request.ID
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &azName)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &instanceID, &azName, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if azName == "" {
+		err = fmt.Errorf("az_name不能为空")
+		return
+	}
+	config.InstanceID = types.StringValue(instanceID)
+	config.RegionID = types.StringValue(regionID)
+	config.AzName = types.StringValue(azName)
+	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
+	// 确保创建时间和到期时间是RFC3339的
+	cycleType, cycleCount, err := utils.CalculateMonthOnlyDiff(config.CreateTime.ValueString(), config.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	config.CycleType = types.StringValue(cycleType)
+	if cycleCount > 0 {
+		config.CycleCount = types.Int64Value(int64(cycleCount))
+	} else {
+		config.CycleCount = types.Int64Null()
+	}
+	config.ImageUUID = config.ActualImageID
+	config.MasterOrderID = types.StringValue("")
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // createInstance 创建物理机
@@ -637,6 +727,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 	dataVolumeRaidUUID := plan.DataVolumeRaidUUID.ValueString()
 	userData := plan.UserData.ValueString()
 	keyName := plan.KeyPairName.ValueString()
+	fixedIP := plan.FixedIP.ValueString()
 	securityGroupIDs, _ := c.buildSecGroupList(ctx, plan)
 	securityGroupStr := strings.Join(securityGroupIDs, ",")
 	params := &ctebm.EbmCreateInstanceV4plusRequest{
@@ -651,13 +742,18 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 		AutoRenewStatus: map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()],
 		ClientToken:     uuid.NewString(),
 		OrderCount:      1,
-		SecurityGroupID: &securityGroupStr,
 		NetworkCardList: []*ctebm.EbmCreateInstanceV4plusNetworkCardListRequest{{Master: true, SubnetID: plan.SubnetID.ValueString()}},
 	}
+	if len(securityGroupStr) > 0 {
+		params.SecurityGroupID = &securityGroupStr
+	}
+	if fixedIP != "" {
+		params.NetworkCardList[0].FixedIP = &fixedIP
+	}
 
-	if plan.EipID.ValueString() != "" {
-		params.PublicIP = plan.EipID.ValueStringPointer()
-		params.ExtIP = business.EbmExtIpUseExist
+	if plan.BandWidth.ValueInt32() > 0 {
+		params.ExtIP = business.EbmAuto
+		params.BandWidth = plan.BandWidth.ValueInt32()
 	} else {
 		params.ExtIP = business.EbmExtIpNotUse
 	}
@@ -715,7 +811,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 func (c *ctyunEbm) checkBeforeCreateInstance(ctx context.Context, plan CtyunEbmConfig) error {
 	// 确保当前虚拟私有云存在，且子网与虚拟私有云存在对应关系
 	vpc := plan.VpcID.ValueString()
-	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString(), plan.ProjectID.ValueString())
+	subnets, err := business.NewVpcService(c.meta).GetVpcSubnet(ctx, vpc, plan.RegionID.ValueString())
 	if err != nil {
 		return err
 	}
@@ -747,14 +843,6 @@ func (c *ctyunEbm) checkBeforeCreateInstance(ctx context.Context, plan CtyunEbmC
 	// 安全组必须存在
 	for _, g := range secGroup {
 		err = business.NewSecurityGroupService(c.meta).MustExist(ctx, g, plan.RegionID.ValueString())
-		if err != nil {
-			return err
-		}
-	}
-
-	// 校验eip
-	if plan.EipID.ValueString() != "" {
-		err = business.NewEipService(c.meta).MustExist(ctx, plan.EipID.ValueString(), plan.RegionID.ValueString())
 		if err != nil {
 			return err
 		}
@@ -979,13 +1067,14 @@ func (c *ctyunEbm) stopInstance(ctx context.Context, plan CtyunEbmConfig) (err e
 	return
 }
 
-// getAndMerge 查询并何必
+// getAndMerge 查询并合并
 func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err error) {
 	instance, err := c.getEbm(ctx, *cfg)
 	if err != nil {
 		return
 	}
 	cfg.InstanceID = utils.SecStringValue(instance.InstanceUUID)
+	cfg.ProjectID = utils.SecStringValue(instance.ProjectID)
 	cfg.RegionID = utils.SecStringValue(instance.RegionID)
 	cfg.AzName = utils.SecStringValue(instance.AzName)
 	cfg.DeviceType = utils.SecStringValue(instance.DeviceType)
@@ -995,19 +1084,36 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 	cfg.ActualImageID = utils.SecStringValue(instance.ImageID)
 	cfg.VpcID = utils.SecStringValue(instance.VpcID)
 	cfg.Status = utils.SecLowerStringValue(instance.EbmState)
-
-	eipAddress := utils.SecString(instance.PublicIP)
-	cfg.EipAddress = types.StringValue(eipAddress)
-	if eipAddress != "" {
-		eip, err := business.NewEipService(c.meta).GetEipByAddress(ctx, eipAddress, cfg.RegionID.ValueString())
-		if err != nil {
-			return err
-		}
-		cfg.EipID = utils.SecStringValue(eip.ID)
+	cfg.CreateTime = types.StringPointerValue(instance.CreateTime)
+	cfg.UpdateTime = types.StringPointerValue(instance.UpdatedTime)
+	if instance.ExpiredTime == nil {
+		cfg.ExpireTime = types.StringValue("")
 	} else {
-		cfg.EipID = types.StringValue("")
+		cfg.ExpireTime = types.StringPointerValue(instance.ExpiredTime)
 	}
-
+	eipAddress := utils.SecString(instance.PublicIP)
+	if len(eipAddress) > 0 {
+		cfg.EipAddress = types.StringValue(eipAddress)
+		var eip *ctvpc.CtvpcNewEipListReturnObjEipsResponse
+		eip, err = business.NewEipService(c.meta).GetEipByAddress(ctx, eipAddress, cfg.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+		cfg.BandWidth = types.Int32Value(eip.Bandwidth)
+	} else {
+		cfg.EipAddress = types.StringValue("")
+	}
+	if utils.SecString(instance.SystemVolumeRaidID) != "" {
+		cfg.SystemVolumeRaidUUID = utils.SecStringValue(instance.SystemVolumeRaidID)
+	} else {
+		cfg.SystemVolumeRaidUUID = types.StringNull()
+	}
+	if utils.SecString(instance.DataVolumeRaidID) != "" {
+		cfg.DataVolumeRaidUUID = utils.SecStringValue(instance.DataVolumeRaidID)
+	} else {
+		cfg.DataVolumeRaidUUID = types.StringNull()
+	}
+	cfg.SecurityGroupIDs = types.SetNull(types.StringType)
 	for _, card := range instance.Interfaces {
 		master := utils.SecBoolValue(card.Master)
 		if master.ValueBool() && len(card.SecurityGroups) > 0 {
@@ -1032,10 +1138,35 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 			return err
 		}
 		if diskInfo.IsSystemVolume {
-			cfg.SystemDiskType = types.StringValue(strings.ToLower(diskInfo.DiskType))
+			// 配置值不等于返回值
+			if cfg.SystemDiskType.ValueString() != diskInfo.DiskType {
+				// 没有配置，说明是导入，用大写
+				if cfg.SystemDiskType.ValueString() == "" {
+					cfg.SystemDiskType = types.StringValue(diskInfo.DiskType)
+				} else {
+					// 有配置，说明是创建，用小写
+					cfg.SystemDiskType = types.StringValue(strings.ToLower(diskInfo.DiskType))
+				}
+			}
 			cfg.SystemDiskSize = types.Int32Value(int32(diskInfo.DiskSize))
 			cfg.SystemDiskID = types.StringValue(diskInfo.DiskID)
 		}
+	}
+	metadata, err := c.getMetadata(ctx, *cfg)
+	if err != nil {
+		return err
+	}
+
+	if len(metadata) > 0 {
+		metadataMap := make(map[string]types.String)
+		for k, v := range metadata {
+			metadataMap[k] = types.StringValue(v)
+		}
+		m, _ := types.MapValueFrom(ctx, types.StringType, metadataMap)
+		cfg.Metadata = m
+	} else {
+		// 如果没有元数据，则设置为null
+		cfg.Metadata = types.MapNull(types.StringType)
 	}
 
 	cfg.ID = cfg.InstanceID
@@ -1052,7 +1183,10 @@ func (c *ctyunEbm) getEbm(ctx context.Context, cfg CtyunEbmConfig) (instance *ct
 	})
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiEbmNotFound {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -1350,4 +1484,70 @@ func (c *ctyunEbm) checkAfterDelete(ctx context.Context, state CtyunEbmConfig) (
 		err = fmt.Errorf("裸金属 %s 的主网卡 %s 残留", state.InstanceID.ValueString(), portID)
 	}
 	return
+}
+
+// createMetadata 为物理机创建元数据
+func (c *ctyunEbm) createMetadata(ctx context.Context, plan CtyunEbmConfig) error {
+	if plan.Metadata.IsNull() || len(plan.Metadata.Elements()) == 0 {
+		return nil
+	}
+
+	var metadataMap map[string]string
+	plan.Metadata.ElementsAs(ctx, &metadataMap, false)
+	resp, err := c.meta.Apis.CtEbmApis.EbmMetadataBatchCreateApi.Do(ctx, c.meta.SdkCredential, &ctebm.EbmMetadataBatchCreateRequest{
+		RegionID:     plan.RegionID.ValueString(),
+		AzName:       plan.AzName.ValueString(),
+		InstanceUUID: plan.InstanceID.ValueString(),
+		Metadata:     metadataMap,
+	})
+	if err != nil {
+		return err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		return fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+	}
+	return nil
+}
+
+// updateMetadata 更新物理机元数据
+func (c *ctyunEbm) updateMetadata(ctx context.Context, state, plan CtyunEbmConfig) error {
+	// 如果metadata没有变化，则无需更新
+	if state.Metadata.Equal(plan.Metadata) {
+		return nil
+	}
+
+	err := c.deleteMetadata(ctx, state)
+	if err != nil {
+		return err
+	}
+	return c.createMetadata(ctx, plan)
+}
+
+// deleteMetadata 删除物理机元数据
+func (c *ctyunEbm) deleteMetadata(ctx context.Context, state CtyunEbmConfig) error {
+	resp, err := c.meta.Apis.CtEbmApis.EbmMetadataDeleteAllApi.Do(ctx, c.meta.SdkCredential, &ctebm.EbmMetadataDeleteAllRequest{
+		RegionID:     state.RegionID.ValueString(),
+		AzName:       state.AzName.ValueString(),
+		InstanceUUID: state.InstanceID.ValueString(),
+	})
+	if err != nil {
+		return err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		return fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+	}
+	return nil
+}
+
+// getMetadata 查询物理机元数据
+func (c *ctyunEbm) getMetadata(ctx context.Context, state CtyunEbmConfig) (map[string]string, error) {
+	resp, err := c.meta.Apis.CtEbmApis.EbmMetadataListApi.Do(ctx, c.meta.SdkCredential, &ctebm.EbmMetadataListRequest{
+		RegionID:     state.RegionID.ValueString(),
+		AzName:       state.AzName.ValueString(),
+		InstanceUUID: state.InstanceID.ValueString(),
+	})
+	if err != nil {
+		return nil, err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		return nil, fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+	}
+	return resp.ReturnObj.Metadata, nil
 }

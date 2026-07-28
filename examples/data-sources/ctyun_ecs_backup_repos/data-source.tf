@@ -15,8 +15,7 @@ data "ctyun_ecs_backup_repos" "test" {
 
 }
 
-
-output "ctyun_ecs_backup_repos_test" {
+output "ctyun_ecs_backups_test" {
   value = data.ctyun_ecs_backup_repos.test
 }
 

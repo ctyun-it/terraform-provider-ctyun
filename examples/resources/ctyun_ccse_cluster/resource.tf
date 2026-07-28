@@ -23,7 +23,7 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test-ccse1"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "100.95.0.1"
   ]
   enable_ipv6 = true
@@ -40,37 +40,37 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
 
 resource "ctyun_ccse_cluster" "example" {
   base_info = {
-    vpc_id     = ctyun_vpc.vpc_test.id
-    subnet_id  = ctyun_subnet.subnet_test.id
-    cluster_name = "tf-custer-n213nds9124n3"
-    cluster_domain = "www.ccc.com"
-    network_plugin = "cubecni"
-    start_port = 30000
-    end_port   = 65535
-    elb_prod_code = "standardI"
-    pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
-    cycle_type  = "on_demand"
-    container_runtime = "containerd"
-    timezone    = "Asia/Shanghai"
-    cluster_version = "1.29.3"
-    deploy_type   = "single"
-    kube_proxy    = "iptables"
-    cluster_series = "cce.standard"
-    enable_api_server_eip = true
-    enable_snat= true          
-    nat_gateway_spec = "small"
+    vpc_id                 = ctyun_vpc.vpc_test.id
+    subnet_id              = ctyun_subnet.subnet_test.id
+    cluster_name           = "tf-custer-n213nds9124n3"
+    cluster_domain         = "www.ccc.com"
+    network_plugin         = "cubecni"
+    start_port             = 30000
+    end_port               = 32767
+    elb_prod_code          = "standardI"
+    pod_subnet_id_list     = [ctyun_subnet.subnet_test.id]
+    cycle_type             = "on_demand"
+    container_runtime      = "containerd"
+    timezone               = "Asia/Shanghai"
+    cluster_version        = "1.29.3"
+    deploy_type            = "single"
+    kube_proxy             = "iptables"
+    cluster_series         = "cce.standard"
+    enable_api_server_eip  = true
+    enable_snat            = true
+    nat_gateway_spec       = "small"
     install_als_cube_event = true
-    install_als= true          
-    install_ccse_monitor = true
-    install_nginx_ingress = true
-    nginx_ingress_lb_spec = "standardI"
-    nginx_ingress_network = "external"
-    ip_vlan = true
-    network_policy= true
+    install_als            = true
+    install_ccse_monitor   = true
+    install_nginx_ingress  = true
+    nginx_ingress_lb_spec  = "standardI"
+    nginx_ingress_network  = "external"
+    ip_vlan                = true
+    network_policy         = true
   }
 
   master_host = {
-    item_def_name =  data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+    item_def_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 
     sys_disk = {
       type = "SSD"
@@ -127,7 +127,7 @@ resource "ctyun_ccse_cluster" "example" {
 #     cluster_domain = "www.ccc.s"
 #     network_plugin = "cubecni"
 #     start_port = 30000
-#     end_port   = 65535
+#     end_port   = 32767
 #     elb_prod_code = "standardI"
 #     pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
 #     cycle_type  = "on_demand"
@@ -178,10 +178,9 @@ resource "ctyun_ccse_cluster" "example" {
 #     cluster_domain = "www.ccc.s"
 #     network_plugin = "calico"
 #     start_port = 30000
-#     end_port   = 65535
+#     end_port   = 32767
 #     elb_prod_code = "standardI"
 #     pod_cidr = "172.26.0.0/16"
-#     pod_subnet_id_list = [ctyun_subnet.subnet_test.id]
 #     cycle_type  = "on_demand"
 #     container_runtime = "containerd"
 #     timezone    = "Asia/Shanghai"

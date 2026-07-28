@@ -30,12 +30,33 @@ func TestAccCtyunEipAssociation(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, dependence.ecsID, dependence.eipID),
 			},
 			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
+				ResourceName:            resourceName,
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					regionId := ds.Attributes["region_id"]
+					eipId := ds.Attributes["eip_id"]
+					return fmt.Sprintf("%s,%s", eipId, regionId), nil // eipId is not used
 				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					eipId := ds.Attributes["eip_id"]
+					return fmt.Sprintf("%s", eipId), nil // eipId is not used
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, dependence.ecsID, dependence.eipID),

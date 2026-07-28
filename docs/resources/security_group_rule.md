@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_security_group_rule"
+---
+
 # ctyun_security_group_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225510
+-> 管理安全组规则
 
 
 
@@ -64,7 +69,7 @@ resource "ctyun_security_group_rule" "security_group_rule_egress_any" {
 - `action` (String) 拒绝策略，accept：允许，drop：拒绝
 - `direction` (String) 规则方向，egress：出方向，ingress：入方向
 - `ether_type` (String) IP类型：ipv4、ipv6
-- `protocol` (String) 协议类型: tcp、udp、icmp、any，当此值填写any时，range的值不能设置
+- `protocol` (String) 协议类型: tcp、udp、icmp、any，当此值填写any或icmp时，range的值不能设置
 - `security_group_id` (String) 安全组id
 
 ### Optional
@@ -78,3 +83,15 @@ resource "ctyun_security_group_rule" "security_group_rule_egress_any" {
 ### Read-Only
 
 - `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入安全组规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_security_group_rule.[导入配置名称] [id],[security_group_id],<region_id>
+# 示例
+terraform import ctyun_security_group_rule.security_group_rule_example sgr-12345,sg-67890,region-11111
+```

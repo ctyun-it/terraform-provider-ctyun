@@ -60,9 +60,29 @@ type OceanfsListPermissionGroupRequest struct {
 }
 
 type OceanfsListPermissionGroupResponse struct {
-	StatusCode  int32  `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
-	Message     string `json:"message"`     /*  响应描述，一般为英文描述  */
-	Description string `json:"description"` /*  响应描述，一般为中文描述  */
-	ErrorCode   string `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码.参考[结果码]  */
-	Error       string `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	StatusCode  int32                                        `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
+	Message     string                                       `json:"message"`     /*  响应描述，一般为英文描述  */
+	Description string                                       `json:"description"` /*  响应描述，一般为中文描述  */
+	ErrorCode   string                                       `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码.参考[结果码]  */
+	Error       string                                       `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	ReturnObj   *OceanfsListPermissionGroupReturnObjResponse `json:"returnObj"`
+}
+type OceanfsListPermissionGroupReturnObjListItemResponse struct {
+	PermissionGroupFuid        string `json:"permissionGroupFuid"`
+	CreateTime                 string `json:"createTime"`
+	UpdateTime                 string `json:"updateTime"`
+	RegionID                   string `json:"regionID"`
+	SfsCount                   int32  `json:"sfsCount"`
+	PermissionRuleCount        int32  `json:"permissionRuleCount"`
+	PermissionGroupIsDefault   bool   `json:"permissionGroupIsDefault"`
+	PermissionGroupName        string `json:"permissionGroupName"`
+	PermissionGroupDescription string `json:"permissionGroupDescription"`
+}
+
+type OceanfsListPermissionGroupReturnObjResponse struct {
+	TotalCount   int32                                                  `json:"totalCount"`
+	CurrentCount int32                                                  `json:"currentCount"`
+	List         []*OceanfsListPermissionGroupReturnObjListItemResponse `json:"list"`
+	PageSize     int32                                                  `json:"pageSize"`
+	PageNo       int32                                                  `json:"pageNo"`
 }

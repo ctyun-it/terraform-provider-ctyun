@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_snapshot"
+---
+
 # ctyun_ecs_snapshot (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345**
+-> 管理云主机快照
 
 
 
@@ -20,20 +25,20 @@ provider "ctyun" {
 }
 
 resource "ctyun_ecs" "jdxutuzpfr" {
-  instance_name      = "tf-test-ecs"
-  display_name       = "tf-test-init-ecs"
-  flavor_id          = "9b4b5e39-db25-f2c8-3914-76881ee77d5c"
-  image_id           = "fa3f3784-34f9-4f6b-80a1-dd173d486bd6"
-  system_disk_type   = "sata"
-  system_disk_size   = 60
-  vpc_id             = "vpc-0ein2p8bs8"
-  subnet_id          = "subnet-0oiyrpu8nk"
-  key_pair_name      = "tf-keypair-for-ecs"
-  cycle_type         = "on_demand"
+  instance_name    = "tf-test-ecs"
+  display_name     = "tf-test-init-ecs"
+  flavor_id        = "9b4b5e39-db25-f2c8-3914-76881ee77d5c"
+  image_id         = "fa3f3784-34f9-4f6b-80a1-dd173d486bd6"
+  system_disk_type = "SATA"
+  system_disk_size = 60
+  vpc_id           = "vpc-0ein2p8bs8"
+  subnet_id        = "subnet-0oiyrpu8nk"
+  key_pair_name    = "tf-keypair-for-ecs"
+  cycle_type       = "on_demand"
 }
 
 resource "ctyun_ecs_snapshot" "test" {
-  name = "tf-test-group"
+  name        = "tf-test-group"
   instance_id = ctyun_ecs.jdxutuzpfr.id
 }
 ```
@@ -48,10 +53,21 @@ resource "ctyun_ecs_snapshot" "test" {
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `id` (String) 云主机快照id
 - `snapshot_status` (String) 云主机快照状态： pending：创建中, available：可用， restoring：恢复中， error：错误
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云主机快照
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_snapshot.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ecs_snapshot.snapshot_example snap-12345678,<region_id>
+```

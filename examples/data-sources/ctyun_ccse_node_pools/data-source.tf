@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 data "ctyun_ccse_node_pools" "test" {
-  cluster_id               = "19b4be67777e40e690b97c3a8664a1f9"
+  cluster_id = "19b4be67777e40e690b97c3a8664a1f9"
 }
 
 output "t" {

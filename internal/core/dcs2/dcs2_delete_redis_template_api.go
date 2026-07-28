@@ -30,7 +30,12 @@ func (a *Dcs2DeleteRedisTemplateApi) Do(ctx context.Context, credential core.Cre
 	builder.WithCredential(credential)
 	ctReq := builder.Build()
 	ctReq.AddHeader("regionId", req.RegionId)
-	_, err := ctReq.WriteJson(req, a.template.ContentType)
+	_, err := ctReq.WriteJson(struct {
+		*Dcs2DeleteRedisTemplateRequest
+		RegionId interface{} `json:"regionId,omitempty"`
+	}{
+		req, nil,
+	}, a.template.ContentType)
 	if err != nil {
 		return nil, err
 	}
@@ -47,17 +52,17 @@ func (a *Dcs2DeleteRedisTemplateApi) Do(ctx context.Context, credential core.Cre
 }
 
 type Dcs2DeleteRedisTemplateRequest struct {
-	RegionId   string /*  资源池ID，您可以查看<a href="https://www.ctyun.cn/document/10026730/10028695">地域和可用区</a>来了解资源池<br><span style="background-color: rgb(73, 204, 144);color: rgb(255,255,255);padding: 2px; margin:2px">查</span> <a href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a>  */
-	TemplateId string `json:"templateId,omitempty"` /*  模板ID  */
+	RegionId   string `json:"regionId,omitempty"`   /*  资源池ID。获取方法如下：<br>方法一：通过查看附录文档<a  target="_blank" rel="noopener noreferrer" href="https://www.ctyun.cn/document/10029420/11067697">分布式缓存服务Redis资源池</a>获取资源池ID。<br>方法二：可调用  <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a> 接口获取resPoolCode字段。  */
+	TemplateId string `json:"templateId,omitempty"` /*  模板ID。可调用 <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=15104&data=81&isNormal=1&vid=270">查询参数模板列表</a> 接口，使用Template表id字段。  */
 }
 
 type Dcs2DeleteRedisTemplateResponse struct {
-	StatusCode int32                                     `json:"statusCode,omitempty"` /*  响应状态码<li>800：成功<li>900：失败  */
-	Message    string                                    `json:"message,omitempty"`    /*  响应信息  */
-	ReturnObj  *Dcs2DeleteRedisTemplateReturnObjResponse `json:"returnObj"`            /*  返回数据对象，数据见returnObj  */
-	RequestId  string                                    `json:"requestId,omitempty"`  /*  请求 ID  */
-	Code       string                                    `json:"code,omitempty"`       /*  响应码描述  */
-	Error      string                                    `json:"error,omitempty"`      /*  错误码，参见错误码说明  */
+	StatusCode int32                                     `json:"statusCode"` /*  响应状态码。<li>800：成功。<li>900：失败。  */
+	Message    string                                    `json:"message"`    /*  响应信息。  */
+	ReturnObj  *Dcs2DeleteRedisTemplateReturnObjResponse `json:"returnObj"`  /*  无返回数据，空对象。  */
+	RequestId  string                                    `json:"requestId"`  /*  请求 ID。  */
+	Code       string                                    `json:"code"`       /*  响应码，仅表示请求是否执行。  */
+	Error      string                                    `json:"error"`      /*  错误码，参见错误码说明。  */
 }
 
 type Dcs2DeleteRedisTemplateReturnObjResponse struct{}

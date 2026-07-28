@@ -13,6 +13,6 @@ provider "ctyun" {
 
 
 data "ctyun_mysql_white_lists" "test" {
-  prod_inst_id = "xxxxxxxxxxxxxx"   # 数据库实例ID
+  prod_inst_id = "xxxxxxxxxxxxxx" # 数据库实例ID
 }
 

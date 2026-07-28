@@ -1,0 +1,382 @@
+package mongodb
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mongodb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
+)
+
+// Ensure provider defined types fully satisfy framework interfaces.
+var (
+	_ resource.Resource                = &CtyunMongodbBackupResource{}
+	_ resource.ResourceWithConfigure   = &CtyunMongodbBackupResource{}
+	_ resource.ResourceWithImportState = &CtyunMongodbBackupResource{}
+)
+
+func NewCtyunMongodbBackupResource() resource.Resource {
+	return &CtyunMongodbBackupResource{}
+}
+
+// CtyunMongodbBackupResource defines the resource implementation.
+type CtyunMongodbBackupResource struct {
+	meta *common.CtyunMetadata
+	name string
+}
+
+// CtyunMongodbBackupConfig describes the resource data model.
+type CtyunMongodbBackupConfig struct {
+	ID          types.String `tfsdk:"id"`
+	RegionID    types.String `tfsdk:"region_id"`
+	ProjectID   types.String `tfsdk:"project_id"`
+	InstanceID  types.String `tfsdk:"instance_id"`
+	Name        types.String `tfsdk:"name"`
+	Description types.String `tfsdk:"description"`
+}
+
+func (r *CtyunMongodbBackupResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_mongodb_backup"
+	r.name = resp.TypeName
+}
+
+func (r *CtyunMongodbBackupResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	resp.Schema = schema.Schema{
+		// This description is used by the documentation generator and the language server.
+		MarkdownDescription: utils.FormatDesc("管理MongoDB实例的备份", "文档数据库服务（MongoDB）", "https://www.ctyun.cn/document/10034467/10089535"),
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				Computed:    true,
+				Description: "资源ID，格式为region_id:inst_id:backup_name",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"region_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
+			"instance_id": schema.StringAttribute{
+				Required:    true,
+				Description: "实例ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"name": schema.StringAttribute{
+				Required:    true,
+				Description: "备份名称",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Description: "备份描述",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.NullIgnoreString(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+					validator2.Desc(),
+				},
+			},
+		},
+	}
+}
+
+func (r *CtyunMongodbBackupResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	if req.ProviderData == nil {
+		return
+	}
+	meta := req.ProviderData.(*common.CtyunMetadata)
+	r.meta = meta
+}
+
+func (r *CtyunMongodbBackupResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var plan CtyunMongodbBackupConfig
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	// 创建前检查
+	err = r.checkBeforeCreate(ctx, &plan)
+	if err != nil {
+		return
+	}
+	err = r.create(ctx, &plan)
+	if err != nil {
+		return
+	}
+	err = r.getAndMerge(ctx, &plan)
+	if err != nil {
+		return
+	}
+
+	// 保存数据到Terraform状态
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
+}
+
+func (r *CtyunMongodbBackupResource) Read(ctx context.Context, req resource.ReadRequest, response *resource.ReadResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var state CtyunMongodbBackupConfig
+	response.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	err = r.getAndMerge(ctx, &state)
+	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
+}
+
+func (r *CtyunMongodbBackupResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan CtyunMongodbBackupConfig
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// 读取state中的配置
+	var state CtyunMongodbBackupConfig
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !plan.Description.IsUnknown() && !plan.Description.IsNull() && state.Description.IsNull() {
+		state.Description = plan.Description
+		resp.Diagnostics.AddWarning("description的更新仅写入状态文件", "在import时，状态文件中description为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+
+	state.ProjectID = plan.ProjectID
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
+}
+
+func (r *CtyunMongodbBackupResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+
+	var err error
+	defer func() {
+		if err != nil {
+			resp.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
+	var plan CtyunMongodbBackupConfig
+
+	// Read Terraform prior state plan into the model
+	resp.Diagnostics.Append(req.State.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err = r.delete(ctx, plan)
+	if err != nil {
+		return
+	}
+}
+
+func (r *CtyunMongodbBackupResource) delete(ctx context.Context, plan CtyunMongodbBackupConfig) (err error) {
+	// 删除备份
+	deleteReq := &mongodb.MongodbDeleteBackupRequest{
+		ProdInstId: plan.InstanceID.ValueString(),
+		BackupId:   plan.ID.ValueString(),
+	}
+
+	header := &mongodb.MongodbDeleteBackupRequestHeaders{
+		RegionID: plan.RegionID.ValueString(),
+	}
+
+	resp, err := r.meta.Apis.SdkMongodbApis.MongodbDeleteBackupApi.Do(ctx, r.meta.Credential, deleteReq, header)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		return fmt.Errorf("API return error. Message: %s", *resp.Message)
+	}
+	return
+}
+
+func (c *CtyunMongodbBackupResource) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var cfg CtyunMongodbBackupConfig
+	var name, regionId, instId string
+
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instId, &name)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instId, &name, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if name == "" {
+		err = fmt.Errorf("name不能为空")
+		return
+	}
+	if instId == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	cfg.RegionID = types.StringValue(regionId)
+	cfg.Name = types.StringValue(name)
+	cfg.InstanceID = types.StringValue(instId)
+	err = c.getAndMerge(ctx, &cfg)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+
+}
+
+func (r *CtyunMongodbBackupResource) checkBeforeCreate(ctx context.Context, c *CtyunMongodbBackupConfig) (err error) {
+	return
+
+}
+func (r *CtyunMongodbBackupResource) create(ctx context.Context, plan *CtyunMongodbBackupConfig) (err error) {
+	// Create backup
+	createReq := &mongodb.MongodbCreateBackupRequest{
+		ProdInstId: plan.InstanceID.ValueString(),
+	}
+
+	createReq.BackupName = plan.Name.ValueStringPointer()
+
+	if !plan.Description.IsNull() {
+		createReq.Description = plan.Description.ValueStringPointer()
+	}
+
+	header := &mongodb.MongodbCreateBackupRequestHeaders{
+		RegionID: plan.RegionID.ValueString(),
+	}
+
+	tflog.Info(ctx, "开始创建MongoDB备份", map[string]interface{}{
+		"instance_id": plan.InstanceID.ValueString(),
+	})
+
+	resp, err := r.meta.Apis.SdkMongodbApis.MongodbCreateBackupApi.Do(ctx, r.meta.Credential, createReq, header)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		return
+	}
+	//plan.ID = types.StringValue(plan.InstanceID.ValueString() + "," + plan.BackupName.ValueString())
+
+	return
+}
+func (r *CtyunMongodbBackupResource) getAndMerge(ctx context.Context, plan *CtyunMongodbBackupConfig) (err error) {
+	// 获取备份信息
+	describeReq := &mongodb.MongodbDescribeBackupsRequest{
+		ProdInstId: plan.InstanceID.ValueString(),
+		BackupName: plan.Name.ValueStringPointer(),
+		PageNow:    1,
+		PageSize:   1000,
+	}
+
+	header := &mongodb.MongodbDescribeBackupsRequestHeaders{
+		RegionID: plan.RegionID.ValueString(),
+	}
+
+	resp, err := r.meta.Apis.SdkMongodbApis.MongodbDescribeBackupsApi.Do(ctx, r.meta.Credential, describeReq, header)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "DDS_84000") || strings.Contains(resp.Error, "DDS_83000") {
+			err = common.ResourceNotExistError
+			return
+		}
+		err = fmt.Errorf("API return error. Message: %s", *resp.Message)
+		return
+	} else if resp.ReturnObj == nil {
+		return common.InvalidReturnObjError
+	} else if resp.ReturnObj.List == nil || len(resp.ReturnObj.List) == 0 {
+		err = common.ResourceNotExistError
+		return
+	}
+
+	// 查找备份信息
+	var backupInfo *mongodb.MongodbBackupInfo
+	for _, item := range resp.ReturnObj.List {
+		if item.BackupName == plan.Name.ValueString() {
+			backupInfo = &item
+			break
+		}
+	}
+	if backupInfo == nil {
+		return
+	}
+	plan.ID = types.StringValue(fmt.Sprintf("%d", backupInfo.BackupId))
+	if backupInfo.BackupName != "" {
+		plan.Name = types.StringValue(backupInfo.BackupName)
+	}
+	// 添加 Description 字段的空指针检查
+	//if backupInfo.Description != nil {
+	//	plan.Description = types.StringValue(*backupInfo.Description)
+	//} else {
+	//	plan.Description = types.StringNull()
+	//}
+	return
+}

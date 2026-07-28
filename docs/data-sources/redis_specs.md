@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_specs"
+---
+
 # ctyun_redis_specs (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280
+-> 查询Redis实例可用规格
 
 
 
@@ -19,7 +24,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_redis_specs" "test"{
+data "ctyun_redis_specs" "test" {
 
 }
 ```
@@ -56,7 +61,7 @@ Read-Only:
 - `res_items` (Attributes List) 资源类型信息 (see [below for nested schema](#nestedatt--series_infos--res_items))
 - `series_code` (String) 产品系列编码
 - `series_id` (Number) 版本类型<li>BASIC：基础版<li>PLUS：增强版<li>Classic：经典版<li>Capacity：容量型
-- `series_name` (String) 状series_name
+- `series_name` (String) 产品系列名称
 - `shard_mem_size_items` (List of String) 单分片内存可选值(GB)。<br>说明：version为BASIC和PLUS有值
 - `version` (String) 版本类型<li>BASIC：基础版<li>PLUS：增强版<li>Classic：经典版<li>Capacity：容量型
 

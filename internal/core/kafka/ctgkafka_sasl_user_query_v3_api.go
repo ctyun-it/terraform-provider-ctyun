@@ -61,20 +61,20 @@ type CtgkafkaSaslUserQueryV3Request struct {
 }
 
 type CtgkafkaSaslUserQueryV3Response struct {
-	StatusCode string                                    `json:"statusCode,omitempty"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
-	Message    string                                    `json:"message,omitempty"`    /*  提示信息。  */
-	ReturnObj  *CtgkafkaSaslUserQueryV3ReturnObjResponse `json:"returnObj"`            /*  返回对象。  */
-	Error      string                                    `json:"error,omitempty"`      /*  错误码，描述错误信息。  */
+	StatusCode string                                    `json:"statusCode"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
+	Message    string                                    `json:"message"`    /*  提示信息。  */
+	ReturnObj  *CtgkafkaSaslUserQueryV3ReturnObjResponse `json:"returnObj"`  /*  返回对象。  */
+	Error      string                                    `json:"error"`      /*  错误码，描述错误信息。  */
 }
 
 type CtgkafkaSaslUserQueryV3ReturnObjResponse struct {
-	Data  []*CtgkafkaSaslUserQueryV3ReturnObjDataResponse `json:"data"`            /*  用户列表记录。  */
-	Total int32                                           `json:"total,omitempty"` /*  总记录数。  */
+	Data  []*CtgkafkaSaslUserQueryV3ReturnObjDataResponse `json:"data"`  /*  用户列表记录。  */
+	Total int32                                           `json:"total"` /*  总记录数。  */
 }
 
 type CtgkafkaSaslUserQueryV3ReturnObjDataResponse struct {
-	Id          int32  `json:"id,omitempty"`          /*  用户ID。  */
-	Username    string `json:"username,omitempty"`    /*  用户名。  */
-	Description string `json:"description,omitempty"` /*  用户描述。  */
-	Ctime       string `json:"ctime,omitempty"`       /*  创建时间。  */
+	Id          int32  `json:"id"`          /*  用户ID。  */
+	Username    string `json:"username"`    /*  用户名。  */
+	Description string `json:"description"` /*  用户描述。  */
+	Ctime       string `json:"ctime"`       /*  创建时间。  */
 }

@@ -43,10 +43,9 @@ func TestAccCtyunEcs(t *testing.T) {
 		`status = "stopped"
    cycle_type         = "month"
    cycle_count         = 1
-  security_group_ids     = ["%s"]
-  is_destroy_instance  = true`, dependence.securityGroupID)
+  security_group_ids     = ["%s"]`, dependence.securityGroupID)
 
-	affinityGroupAssociationResourceName := "ctyun_ecs_affinity_group_association." + and
+	//affinityGroupAssociationResourceName := "ctyun_ecs_affinity_group_association." + and
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -85,6 +84,40 @@ func TestAccCtyunEcs(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
 				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"default_security_group_id",
+					"flavor_id",
+					"master_order_id",
+					"security_group_ids",
+					"is_destroy_instance",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"default_security_group_id",
+					"flavor_id",
+					"master_order_id",
+					"security_group_ids",
+					"is_destroy_instance",
+				},
 			},
 			// 2.节省关机
 			{
@@ -199,15 +232,18 @@ func TestAccCtyunEcs(t *testing.T) {
 				) + utils.LoadTestCase(associationFile, and, resourceName+".id", dependence.affinityGroupID) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "instances.0.affinity_group.affinity_group_id", dependence.affinityGroupID),
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.affinity_group.id", dependence.affinityGroupID),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
-			{
-				ResourceName:            affinityGroupAssociationResourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{},
-			},
+
 			// 7.解绑主机组
 			{
 				Config: utils.LoadTestCase(
@@ -259,4 +295,260 @@ func TestAccCtyunEcs(t *testing.T) {
 		},
 	},
 	)
+}
+func TestAccCtyunEcsWithAdditionalAttributes(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+	dnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_ecs." + rnd
+	datasourceName := "data.ctyun_ecs_instances." + dnd
+	resourceFile := "resource_ctyun_ecs2.tf"
+	datasourceFile := "datasource_ctyun_ecs_instances.tf"
+
+	instanceName := "tf-test-ecs-additional"
+
+	initDisplayName := "tf-test-init-ecs-additional"
+	initSysDiskSize := 60
+
+	initExtra := fmt.Sprintf(
+		`status             = "running"
+  cycle_type         = "on_demand"
+  deletion_protection = false
+  flavor_name        = "%s"
+  affinity_group_id  = "%s"
+  metadata = {
+    environment = "test"
+    team        = "devops"
+  }
+  labels = [
+    {
+      key   = "environment"
+      value = "test"
+    },
+    {
+      key   = "project"
+      value = "terraform"
+    }
+  ]`, dependence.flavorName, dependence.affinityGroupID)
+
+	updatedExtra := fmt.Sprintf(
+		`status              = "stopped"
+  cycle_type         = "on_demand"
+  deletion_protection = true
+  flavor_name        = "%s"
+  metadata = {
+    environment = "production"
+  }
+  labels = [
+    {
+      key   = "environment"
+      value = "production"
+    }
+  ]`, dependence.flavorName)
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			// 验证资源已被销毁
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 1.创建基本资源
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					initExtra,
+				),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", instanceName),
+					resource.TestCheckResourceAttr(resourceName, "display_name", initDisplayName),
+					resource.TestCheckResourceAttr(resourceName, "image_id", dependence.imageID),
+					resource.TestCheckResourceAttr(resourceName, "deletion_protection", "false"),
+					resource.TestCheckResourceAttr(resourceName, "system_disk_size", strconv.Itoa(initSysDiskSize)),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", dependence.vpcID),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
+					resource.TestCheckResourceAttr(resourceName, "key_pair_name", dependence.keyPairName),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "2"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.environment", "test"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.team", "devops"),
+					resource.TestCheckResourceAttr(resourceName, "status", "running"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					resource.TestCheckResourceAttr(resourceName, "labels.#", "2"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "labels.*", map[string]string{
+						"key":   "environment",
+						"value": "test",
+					}),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "labels.*", map[string]string{
+						"key":   "project",
+						"value": "terraform",
+					}),
+				),
+			},
+			// 2.更新资源，添加额外属性
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					updatedExtra,
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "instance_name", instanceName),
+					resource.TestCheckResourceAttr(resourceName, "display_name", initDisplayName),
+					resource.TestCheckResourceAttr(resourceName, "image_id", dependence.imageID),
+					resource.TestCheckResourceAttr(resourceName, "system_disk_size", strconv.Itoa(initSysDiskSize)),
+					resource.TestCheckResourceAttr(resourceName, "vpc_id", dependence.vpcID),
+					resource.TestCheckResourceAttr(resourceName, "subnet_id", dependence.subnetID),
+					resource.TestCheckResourceAttr(resourceName, "key_pair_name", dependence.keyPairName),
+					resource.TestCheckResourceAttr(resourceName, "status", "stopped"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_protection", "true"),
+					resource.TestCheckResourceAttr(resourceName, "flavor_name", dependence.flavorName),
+					resource.TestCheckNoResourceAttr(resourceName, "affinity_group_id"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.environment", "production"),
+					resource.TestCheckResourceAttr(resourceName, "labels.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "labels.*", map[string]string{
+						"key":   "environment",
+						"value": "production",
+					}),
+					// 数据源检查
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.deletion_protection", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+				),
+			},
+			// 3.再次更新，修改部分属性并关机
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					updatedExtra,
+				) + utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "status", "stopped"),
+					resource.TestCheckResourceAttr(resourceName, "deletion_protection", "true"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.%", "1"),
+					resource.TestCheckResourceAttr(resourceName, "metadata.environment", "production"),
+					resource.TestCheckResourceAttr(resourceName, "labels.#", "1"),
+					resource.TestCheckTypeSetElemNestedAttrs(resourceName, "labels.*", map[string]string{
+						"key":   "environment",
+						"value": "production",
+					}),
+					// 数据源检查
+					resource.TestCheckResourceAttr(datasourceName, "instances.0.deletion_protection", "true"),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					initExtra,
+				),
+			},
+			// 4.销毁测试
+			{
+				Config: utils.LoadTestCase(
+					resourceFile, rnd,
+					instanceName,
+					initDisplayName,
+					dependence.imageID,
+					initSysDiskSize,
+					dependence.vpcID,
+					dependence.subnetID,
+					dependence.keyPairName,
+					initExtra,
+				),
+				Destroy: true,
+			},
+		},
+	})
+}
+
+// 测试：1-安全产品； 2-创建时候使用flavor id， 更新时候使用flavor name
+func TestAccCtyunEcsSecurityProduct(t *testing.T) {
+	t.Parallel()
+	rnd := utils.GenerateRandomString()
+	resourceName := "ctyun_ecs." + rnd
+	resourceFile := "resource_ctyun_ecs_security_product.tf"
+	resourceFile2 := "resource_ctyun_ecs_security_product2.tf"
+	//datasourceFile := "datasource_ctyun_mongodb_instances.tf"
+	// 创建参数
+	instanceName := "ecs-sp-" + rnd
+	displayName := "ecs-sp-" + rnd
+	flavorID := dependence.flavorID
+	imageID := dependence.imageID
+	diskSize := 60
+	vpcID := dependence.vpcID
+	subnetID := dependence.subnetID
+	keyPairName := dependence.keyPairName
+	securityProduct := "BasicEdition"
+	cycleType := "on_demand"
+	//更新参数
+	flavorName := dependence.flavorName2
+
+	//backupStorageType := "SATA"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			// 创建一个单节点的mongodb实例
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, instanceName, displayName, flavorID, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			// 升配规格
+			{
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile2, rnd, instanceName, displayName, flavorName, imageID, diskSize,
+					vpcID, subnetID, keyPairName, securityProduct, cycleType, "stopped"),
+				Destroy: true,
+			},
+		},
+	})
 }

@@ -12,6 +12,6 @@ provider "ctyun" {
 }
 
 resource "ctyun_ebs_backup_policy_bind_repo" "test" {
-  id = "a4b793881bbd42edaa6a0002900e5819"
+  policy_id     = "a4b793881bbd42edaa6a0002900e5819"
   repository_id = "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
 }

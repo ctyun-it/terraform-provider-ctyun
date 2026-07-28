@@ -46,9 +46,10 @@ func (a *CtvpcModifyRouteRuleApi) Do(ctx context.Context, credential core.Creden
 }
 
 type CtvpcModifyRouteRuleRequest struct {
-	RegionID    string  `json:"regionID,omitempty"`    /*  区域id  */
-	RouteRuleID string  `json:"routeRuleID,omitempty"` /*  路由表 id  */
-	Description *string `json:"description,omitempty"` /*  路由表规则描述,支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
+	RegionID     string  `json:"regionID,omitempty"`    /*  区域id  */
+	RouteRuleID  string  `json:"routeRuleID,omitempty"` /*  路由表 id  */
+	Description  *string `json:"description,omitempty"` /*  路由表规则描述,支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
+	RouteTableID string  `json:"routeTableID,omitempty"`
 }
 
 type CtvpcModifyRouteRuleResponse struct {

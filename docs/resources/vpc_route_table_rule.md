@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_vpc_route_table_rule"
+---
+
 # ctyun_vpc_route_table_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000
+-> 管理虚拟私有云路由表规则
 
 
 
@@ -20,34 +25,39 @@ provider "ctyun" {
 }
 
 resource "ctyun_vpc" "vpc_test" {
-  name        = "vpc-test-mc1"
+  name        = "tf-vpc-for-peer_connect"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
 }
 
-resource "ctyun_vpc_route_table" "route" {
+resource "ctyun_vpc" "vpc_test1" {
+  name        = "tf-vpc-for-peer_connect1"
+  cidr        = "172.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
+}
+
+# 不跨帐号
+resource "ctyun_vpc_peer_connection" "example" {
+  project_id     = "0"
+  name           = "vpc-peer-conn-example"
+  description    = "对等连接样例"
+  request_vpc_id = ctyun_vpc.vpc_test.id
+  accept_vpc_id  = ctyun_vpc.vpc_test1.id
+}
+
+data "ctyun_vpc_route_tables" "route_table_test" {
   vpc_id = ctyun_vpc.vpc_test.id
-  name = "route-t1f"
 }
 
-data "ctyun_vpc_route_table_rules" "rtest" {
-  route_table_id = ctyun_vpc_route_table.route.route_table_id
-}
-
-locals {
-  igw_rules = [for rule in data.ctyun_vpc_route_table_rules.rtest.rules : rule if rule.next_hop_type == "igw"]
-
-  igw_id = length(local.igw_rules) > 0 ? local.igw_rules[0].next_hop_id : ""
-}
-
-resource "ctyun_vpc_route_table_rule" "rule_test"{
-  description = "test"
-  destination = "188.168.0.0/16"
-  next_hop_id = local.igw_id
-  next_hop_type = "igw"
-  route_table_id = ctyun_vpc_route_table.route.route_table_id
-  ip_version = 4
+resource "ctyun_vpc_route_table_rule" "example" {
+  ip_version     = 4
+  next_hop_id    = ctyun_vpc_peer_connection.example.id
+  destination    = "172.13.1.1/32"
+  next_hop_type  = "vpcpeering"
+  route_table_id = data.ctyun_vpc_route_tables.route_table_test.route_tables[0].route_table_id
+  description    = "对等连接路由规则样例"
 }
 ```
 
@@ -71,3 +81,15 @@ resource "ctyun_vpc_route_table_rule" "rule_test"{
 
 - `id` (String) ID
 - `rule_id` (String) 规则id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPC路由表规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpc_route_table_rule.[导入配置名称] [id],[route_table_id],<region_id>
+# 示例
+terraform import ctyun_vpc_route_table_rule.route_table_rule_example rtr-12345,rtb-67890,region-11111
+```

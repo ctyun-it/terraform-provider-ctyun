@@ -7,9 +7,8 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     cluster_domain = "www.ctyun.com"
     network_plugin = "calico"
     pod_cidr = "172.26.0.0/16"
-    pod_subnet_id_list = ["%[5]s"]
-    start_port = 30000
-    end_port   = 65535
+    start_port = %[7]d
+    end_port   = %[8]d
     elb_prod_code = "standardI"
     cycle_type  = "on_demand"
     container_runtime = "containerd"
@@ -28,26 +27,27 @@ resource "ctyun_ccse_cluster" "%[1]s" {
     nginx_ingress_network = "external"
     ip_vlan = true
     network_policy= true
+    %[9]s
   }
 
   master_host = {
     item_def_name =  "%[6]s"
 
     sys_disk = {
-      type = "SSD"
+      type = "XSSD-1"
       size = 100
     }
 
     data_disks = [
       {
-        type = "SSD"
+        type = "XSSD-1"
         size = 200
       }
     ]
 
     az_infos = [
       {
-        az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+        az_name = "%[10]s"
         size    = 1
       }
     ]
@@ -55,25 +55,25 @@ resource "ctyun_ccse_cluster" "%[1]s" {
 
   slave_host = {
     instance_type = "ecs"
-    mirror_id     = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+    mirror_id     = "%[11]s"
     mirror_type   = 1
     item_def_name = "%[6]s"
 
     az_infos = [
       {
-        az_name = "cn-huadong1-jsnj2A-public-ctcloud"
+        az_name = "%[10]s"
         size    = 1
       }
     ]
 
     sys_disk = {
-      type = "SATA"
+      type = "XSSD-1"
       size = 80
     }
 
     data_disks = [
       {
-        type = "SATA"
+        type = "XSSD-1"
         size = 150
       }
     ]

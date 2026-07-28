@@ -1,5 +1,10 @@
+---
+subcategory: "并行文件服务HPFS（CT-HPFS，High Performance File Storage）"
+page_title: "CTYUN: ctyun_hpfs"
+---
+
 # ctyun_hpfs (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437
+-> 管理并行文件服务实例
 
 
 
@@ -20,10 +25,10 @@ provider "ctyun" {
 }
 
 resource "ctyun_hpfs" "test" {
-  sfs_protocol = "hpfs"
+  protocol   = "hpfs"
   cycle_type = "on_demand"
-  sfs_name = "hpfs-test"
-  sfs_size = 512
+  name       = "hpfs-test"
+  size       = 512
 }
 ```
 
@@ -33,25 +38,41 @@ resource "ctyun_hpfs" "test" {
 ### Required
 
 - `name` (String) 并行文件名，仅允许英文字母数字及-，开头必须为字母，结尾不允许为-，且长度为2-255字符，支持更新
-- `sfs_protocol` (String) 协议类型，可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
-- `sfs_size` (Number) 文件大小（GB），范围: 500-32768。支持更新
+- `protocol` (String) 协议类型，可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
+- `size` (Number) 文件大小（GB），范围: 512-32768，步长512。支持更新
 
 ### Optional
 
 - `az_name` (String) 可用区名称
 - `baseline` (String) 性能基线（MB/s/TB），仅资源池支持性能基线时可传入该参数。可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
 - `cluster_name` (String) 集群名称，仅资源池支持指定集群时可传入该参数。可以根据data.ctyun_hpfs_clusters接口查询，也可访问网页查询：https://www.ctyun.cn/document/10088932/10510589
-- `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36
+- `cycle_count` (Number) 订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持
 - `cycle_type` (String) 订购周期类型，只支持on_demand
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池ID
-- `subnet_id` (String) 子网 ID
-- `vpc_id` (String) 虚拟网 ID
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String, Deprecated) 废弃字段
+- `vpc_id` (String, Deprecated) 废弃字段
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
 - `dataflow_list` (Set of String) HPFS文件系统下的数据流动策略ID列表
 - `id` (String) 资源 ID
 - `master_order_id` (String) 订单ID
-- `sfs_status` (String) 并行文件状态
+- `secret_key` (String) 挂载密钥
+- `share_path` (String) 挂载路径
+- `status` (String) 并行文件状态
+- `update_time` (String) 更新时间，为UTC格式
 - `used_size` (Number) 已用大小（MB）
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入HPFS资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_hpfs.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_hpfs.hpfs_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

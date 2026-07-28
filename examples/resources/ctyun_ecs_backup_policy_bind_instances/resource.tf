@@ -12,6 +12,6 @@ provider "ctyun" {
 }
 
 resource "ctyun_ecs_backup_policy_bind_instances" "test" {
-  id = "a4b793881bbd42edaa6a0002900e5819"
+  policy_id        = "a4b793881bbd42edaa6a0002900e5819"
   instance_id_list = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
 }

@@ -109,6 +109,8 @@ type DetailRespReturnObj struct {
 	ProdInstId        string                         `json:"prodInstId"`  // 产品实例ID
 	DiskType          string                         `json:"diskType"`    // 磁盘类型
 	MachineSpec       string                         `json:"machineSpec"` // 机器规格
+	SecurityGroupId   string                         `json:"securityGroupId"`
+	VpcID             string                         `json:"vpcId"`
 }
 
 type AzInfo struct {

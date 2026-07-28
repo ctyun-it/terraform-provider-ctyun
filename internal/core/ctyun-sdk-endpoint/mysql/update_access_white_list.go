@@ -67,9 +67,6 @@ func (this *TeledbUpdateAccessWhiteList) Do(ctx context.Context, credential ctyu
 		err = errors.New("更新Mysql白名单，group_white_list 必填")
 		return
 	}
-	//builder.AddParam("outerProdInstId", req.OuterProdInstID)
-	//builder.AddParam("groupName", req.GroupName)
-	//builder.AddParam("groupWhiteList", req.GroupWhiteList)
 	builder.AddHeader("regionId", header.RegionID)
 	resp, err := this.client.RequestToEndpoint(ctx, EndpointNameCtdas, builder)
 	if err != nil {

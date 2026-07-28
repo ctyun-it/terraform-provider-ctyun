@@ -38,24 +38,24 @@ type CtyunVpceServiceReverseRulesModel struct {
 	TargetIP    types.String `tfsdk:"target_ip"`
 	TargetPort  types.Int32  `tfsdk:"target_port"`
 	Protocol    types.String `tfsdk:"protocol"`
-	CreatedAt   types.String `tfsdk:"created_at"`
+	CreateTime  types.String `tfsdk:"create_time"`
+	UpdateTime  types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpceServiceReverseRulesConfig struct {
-	EndpointServiceID types.String `tfsdk:"endpoint_service_id"`
-	RegionID          types.String `tfsdk:"region_id"`
-	PageNo            types.Int32  `tfsdk:"page_no"`
-	PageSize          types.Int32  `tfsdk:"page_size"`
-
-	CurrentCount types.Int32                         `tfsdk:"current_count"`
-	TotalCount   types.Int32                         `tfsdk:"total_count"`
-	TotalPage    types.Int32                         `tfsdk:"total_page"`
-	Rules        []CtyunVpceServiceReverseRulesModel `tfsdk:"rules"`
+	EndpointServiceID types.String                        `tfsdk:"endpoint_service_id"`
+	RegionID          types.String                        `tfsdk:"region_id"`
+	PageNo            types.Int32                         `tfsdk:"page_no"`
+	PageSize          types.Int32                         `tfsdk:"page_size"`
+	CurrentCount      types.Int32                         `tfsdk:"current_count"`
+	TotalCount        types.Int32                         `tfsdk:"total_count"`
+	TotalPage         types.Int32                         `tfsdk:"total_page"`
+	Rules             []CtyunVpceServiceReverseRulesModel `tfsdk:"rules"`
 }
 
 func (c *ctyunVpceServiceReverseRules) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048506`,
+		MarkdownDescription: utils.FormatDesc("查询终端节点服务反向规则", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048506"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -121,9 +121,13 @@ func (c *ctyunVpceServiceReverseRules) Schema(_ context.Context, _ datasource.Sc
 							Computed:    true,
 							Description: "协议，TCP:TCP协议,UDP:UDP协议",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
+							Description: "创建时间，为UTC格式",
 							Computed:    true,
-							Description: "创建时间",
+						},
+						"update_time": schema.StringAttribute{
+							Description: "更新时间，为UTC格式",
+							Computed:    true,
 						},
 					},
 				},
@@ -146,7 +150,7 @@ func (c *ctyunVpceServiceReverseRules) Read(ctx context.Context, request datasou
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
@@ -189,7 +193,8 @@ func (c *ctyunVpceServiceReverseRules) Read(ctx context.Context, request datasou
 			TargetPort:  types.Int32Value(rule.TargetPort),
 			TransitPort: types.Int32Value(rule.TransitPort),
 			Protocol:    utils.SecStringValue(rule.Protocol),
-			CreatedAt:   utils.SecStringValue(rule.CreatedAt),
+			CreateTime:  utils.SecStringValue(rule.CreatedAt),
+			UpdateTime:  utils.SecStringValue(rule.UpdatedAt),
 		}
 		config.Rules = append(config.Rules, item)
 	}

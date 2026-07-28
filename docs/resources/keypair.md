@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_keypair"
+---
+
 # ctyun_keypair (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10230554**
+-> 管理密钥对
 
 
 
@@ -31,14 +36,27 @@ resource "ctyun_keypair" "keypair_test" {
 ### Required
 
 - `name` (String) 密钥对名称。只能由数字、字母、-组成，不能以数字和-开头、以-结尾，且长度为2-63字符
-- `public_key` (String) 公钥
 
 ### Optional
 
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `public_key` (String) 公钥，填写时会导入密钥对，不填写时会创建密钥对
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `finger_print` (String) 密钥对的指纹，采用MD5信息摘要算法
 - `id` (String) 密钥对的id
+- `private_key` (String) 私钥，创建密钥对场景下才有值
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入密钥对
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_keypair.[导入配置名称] [name],<region_id>
+# 示例
+terraform import ctyun_keypair.keypair_example my-keypair,<region_id>
+```

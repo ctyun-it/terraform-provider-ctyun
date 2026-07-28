@@ -1,0 +1,17 @@
+release-note:new-resource
+ctyun_ccse_namespace
+
+release-note:new-data-source
+ctyun_ccse_images
+
+release-note:new-data-source
+ctyun_ccse_namespaces
+
+release-note:enhancement
+resource\ctyun_ccse_cluster support cluster update\destroy
+
+release-note:enhancement
+resource\ctyun_keypair support keypair create
+
+release-note:enhancement
+resource\ctyun_kafka_instance support instance restart and billing method modification

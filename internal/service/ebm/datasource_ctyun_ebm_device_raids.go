@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &ctyunEbmDeviceTypes{}
-	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceTypes{}
+	_ datasource.DataSource              = &ctyunEbmDeviceRaids{}
+	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceRaids{}
 )
 
 type ctyunEbmDeviceRaids struct {
@@ -51,7 +51,7 @@ type CtyunEbmDeviceRaidsConfig struct {
 
 func (c *ctyunEbmDeviceRaids) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10166084`,
+		MarkdownDescription: utils.FormatDesc("查询物理机本地盘RAID", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10166084"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -131,7 +131,7 @@ func (c *ctyunEbmDeviceRaids) Read(ctx context.Context, request datasource.ReadR
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)

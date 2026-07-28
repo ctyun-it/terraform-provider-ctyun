@@ -7,6 +7,7 @@ import (
 const EndpointName = "dcs2"
 
 type Apis struct {
+	Dcs2ApplyTemplateToInstanceApi              *Dcs2ApplyTemplateToInstanceApi
 	Dcs2DescribeClusterMemberInfoApi            *Dcs2DescribeClusterMemberInfoApi
 	Dcs2DescribeLogicInstanceTopologyApi        *Dcs2DescribeLogicInstanceTopologyApi
 	Dcs2DescribeInstanceMaintainTimeApi         *Dcs2DescribeInstanceMaintainTimeApi
@@ -184,6 +185,7 @@ func NewApis(endpointUrl string, client *core.CtyunClient) *Apis {
 		Url:  endpointUrl,
 	})
 	return &Apis{
+		Dcs2ApplyTemplateToInstanceApi:              NewDcs2ApplyTemplateToInstanceApi(client),
 		Dcs2DescribeClusterMemberInfoApi:            NewDcs2DescribeClusterMemberInfoApi(client),
 		Dcs2DescribeLogicInstanceTopologyApi:        NewDcs2DescribeLogicInstanceTopologyApi(client),
 		Dcs2DescribeInstanceMaintainTimeApi:         NewDcs2DescribeInstanceMaintainTimeApi(client),

@@ -45,6 +45,14 @@ func TestAccCtyunVpce(t *testing.T) {
 					resource.TestCheckTypeSetElemAttr(resourceName, "whitelist_cidr.*", "192.168.1.0/24"),
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttrSet(resourceName, "master_order_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -77,6 +85,19 @@ func TestAccCtyunVpce(t *testing.T) {
 						return "", fmt.Errorf("id or region_id is required")
 					}
 					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					return fmt.Sprintf("%s", id), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{

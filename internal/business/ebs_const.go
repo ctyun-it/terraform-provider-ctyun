@@ -14,6 +14,11 @@ const (
 	EbsDiskTypeSsd       = "ssd"
 	EbsDiskTypeSsdGenric = "ssd-genric"
 	EbsDiskTypeFastSsd   = "fast-ssd"
+	EbsDiskTypeXssd0     = "xssd-0"
+	EbsDiskTypeXssd1     = "xssd-1"
+	EbsDiskTypeXssd2     = "xssd-2"
+	EbsDiskTypeXssd3     = "xssd-3"
+	EbsDiskTypeXEntry    = "x-entry"
 
 	EbsSnapshotStatusAvailable = "available"
 )
@@ -38,6 +43,24 @@ var EbsDiskTypes = []string{
 	EbsDiskTypeSsd,
 	EbsDiskTypeSsdGenric,
 	EbsDiskTypeFastSsd,
+	EbsDiskTypeXssd0,
+	EbsDiskTypeXssd1,
+	EbsDiskTypeXssd2,
+	EbsDiskTypeXssd3,
+	EbsDiskTypeXEntry,
+}
+
+var EbsDiskTypesUpper = []string{
+	"SATA",
+	"SAS",
+	"SSD",
+	"SSD-genric",
+	"FAST-SSD",
+	"XSSD-0",
+	"XSSD-1",
+	"XSSD-2",
+	"XSSD-3",
+	"X-Entry",
 }
 
 var EbsDiskModeMap = utils.Must(
@@ -62,6 +85,11 @@ var EbsDiskTypeMap = utils.Must(
 		EbsDiskTypeSsd,
 		EbsDiskTypeSsdGenric,
 		EbsDiskTypeFastSsd,
+		EbsDiskTypeXssd0,
+		EbsDiskTypeXssd1,
+		EbsDiskTypeXssd2,
+		EbsDiskTypeXssd3,
+		EbsDiskTypeXEntry,
 	},
 	map[utils.Scene][]any{
 		EbsDiskTypeMapScene1: {
@@ -70,6 +98,11 @@ var EbsDiskTypeMap = utils.Must(
 			"SSD",
 			"SSD-genric",
 			"FAST-SSD",
+			"XSSD-0",
+			"XSSD-1",
+			"XSSD-2",
+			"XSSD-3",
+			"X-Entry",
 		},
 	},
 )

@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce_services"
+---
+
 # ctyun_vpce_services (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013
+-> 查询终端节点服务
 
 
 
@@ -44,21 +49,18 @@ data "ctyun_vpce_services" "test" {
 <a id="nestedatt--vpce_services"></a>
 ### Nested Schema for `vpce_services`
 
-Required:
-
-- `created_at` (String) 创建时间
-- `name` (String) 终端节点服务名称
-- `updated_at` (String) 更新时间
-
 Read-Only:
 
 - `auto_connection` (Boolean) 是否自动连接
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `id` (String) 终端节点服务ID
 - `instance_id` (String) 服务后端实例id,当type为interface时，必填
 - `instance_type` (String) 服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,当type为interface时，必填
+- `name` (String) 终端节点服务名称
 - `rules` (Attributes List) 接口规则数据 (see [below for nested schema](#nestedatt--vpce_services--rules))
 - `type` (String) 接口还是反向，interface:接口，reverse:反向
+- `update_time` (String) 更新时间，为UTC格式
 - `vpc_id` (String) 所属的专有网络id
 
 <a id="nestedatt--vpce_services--rules"></a>

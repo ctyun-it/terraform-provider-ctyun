@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_plugin"
+---
+
 # ctyun_ccse_plugin (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631
+-> 管理云容器引擎插件
 
 
 
@@ -20,16 +25,16 @@ provider "ctyun" {
 }
 
 data "ctyun_ccse_plugin_market" "ccse_monitor" {
-  chart_name = "ccse-monitor"
+  chart_name    = "ccse-monitor"
   chart_version = "0.1.9"
-  values_type = "YAML"
+  values_type   = "YAML"
 }
 
 resource "ctyun_ccse_plugin" "example1" {
-  cluster_id = "6bb243ec40ce4628a0e8ccf1028a10fd"
-  chart_name = "ccse-monitor"
+  cluster_id    = "6bb243ec40ce4628a0e8ccf1028a10fd"
+  chart_name    = "ccse-monitor"
   chart_version = "0.1.9"
-  values_yaml = data.ctyun_ccse_plugin_market.ccse_monitor.values
+  values_yaml   = data.ctyun_ccse_plugin_market.ccse_monitor.values
 }
 ```
 

@@ -2,8 +2,9 @@ package ctelb
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtelbUpdateTargetApi
@@ -46,11 +47,12 @@ func (a *CtelbUpdateTargetApi) Do(ctx context.Context, credential core.Credentia
 }
 
 type CtelbUpdateTargetRequest struct {
-	RegionID     string `json:"regionID,omitempty"`     /*  区域ID  */
-	ID           string `json:"ID,omitempty"`           /*  后端服务ID, 该字段后续废弃  */
-	TargetID     string `json:"targetID,omitempty"`     /*  后端服务ID, 推荐使用该字段, 当同时使用 ID 和 targetID 时，优先使用 targetID  */
-	ProtocolPort int32  `json:"protocolPort,omitempty"` /*  协议端口。取值范围：1-65535  */
-	Weight       int32  `json:"weight,omitempty"`       /*  权重。取值范围：1-256，默认为100  */
+	RegionID     string  `json:"regionID,omitempty"`     /*  区域ID  */
+	ID           string  `json:"ID,omitempty"`           /*  后端服务ID, 该字段后续废弃  */
+	TargetID     string  `json:"targetID,omitempty"`     /*  后端服务ID, 推荐使用该字段, 当同时使用 ID 和 targetID 时，优先使用 targetID  */
+	ProtocolPort int32   `json:"protocolPort,omitempty"` /*  协议端口。取值范围：1-65535  */
+	Weight       int32   `json:"weight,omitempty"`       /*  权重。取值范围：1-256，默认为100  */
+	Description  *string `json:"description,omitempty"`
 }
 
 type CtelbUpdateTargetResponse struct {

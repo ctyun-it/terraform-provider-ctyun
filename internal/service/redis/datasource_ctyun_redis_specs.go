@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/dcs2"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -58,7 +59,7 @@ type CtyunRedisSpecsConfig struct {
 
 func (c *ctyunRedisSpecs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280`,
+		MarkdownDescription: utils.FormatDesc("查询Redis实例可用规格", "分布式缓存服务Redis版", "https://www.ctyun.cn/document/10029420/11030280"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -101,7 +102,7 @@ func (c *ctyunRedisSpecs) Schema(_ context.Context, _ datasource.SchemaRequest, 
 						},
 						"series_name": schema.StringAttribute{
 							Computed:    true,
-							Description: "状series_name",
+							Description: "产品系列名称",
 						},
 						"series_id": schema.Int64Attribute{
 							Computed:    true,
@@ -163,7 +164,7 @@ func (c *ctyunRedisSpecs) Read(ctx context.Context, request datasource.ReadReque
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

@@ -57,4 +57,16 @@ type CtvpcShowVpcPeerConnectionResponse struct {
 	Error       *string                                      `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
-type CtvpcShowVpcPeerConnectionReturnObjResponse struct{}
+type CtvpcShowVpcPeerConnectionReturnObjResponse struct {
+	RequestVpcID   string `json:"requestVpcID"` /*  请求端 VPC ID  */
+	RequestVpcName string `json:"requestVpcName"`
+	RequestVpcCidr string `json:"requestVpcCidr"`
+	AcceptVpcID    string `json:"acceptVpcID"` /*  接受端 VPC ID  */
+	AcceptVpcName  string `json:"acceptVpcName"`
+	AcceptVpcCidr  string `json:"acceptVpcCidr"`
+	AcceptEmail    string `json:"acceptEmail"`
+	UserType       string `json:"userType"`
+	Name           string `json:"name"`
+	InstanceID     string `json:"instanceID"` /*  对等连接 ID  */
+	Status         string `json:"status"`
+}

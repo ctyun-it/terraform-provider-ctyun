@@ -1,5 +1,10 @@
+---
+subcategory: "通用功能（COMMON）"
+page_title: "CTYUN: ctyun_zones"
+---
+
 # ctyun_zones (Data Source)
-**资源池可用区
+-> 查询资源池可用区
 
 
 

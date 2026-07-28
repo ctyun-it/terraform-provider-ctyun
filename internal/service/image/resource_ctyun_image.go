@@ -3,17 +3,19 @@ package image
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64default"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -21,7 +23,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunImage{}
+	_ resource.ResourceWithConfigure   = &ctyunImage{}
+	_ resource.ResourceWithImportState = &ctyunImage{}
 )
 
 func NewCtyunImage() resource.Resource {
@@ -30,38 +39,42 @@ func NewCtyunImage() resource.Resource {
 
 type ctyunImage struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunImage) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_image"
+	c.name = response.TypeName
 }
 
 func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027726`,
+		MarkdownDescription: utils.FormatDesc("管理私有镜像（从镜像文件创建）", "镜像服务（CT-IMS，Image Management Service）", "https://www.ctyun.cn/document/10027726"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"file_source": schema.StringAttribute{
-				Required:    true,
+				Optional:    true,
 				Description: "镜像文件地址，格式应为{internetEndpoint}/{bucket}/{key}。可使用访问控制endpoint查询接口来查询外网访问endpoint，可使用获取桶列表接口来查询您拥有的桶的列表，可使用查看对象列表接口来查询存储桶内所有对象",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
-					stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]+/[^/]+/.+$`), "格式应为{internetEndpoint}/{bucket}/{key}"),
+					stringvalidator.RegexMatches(regexp.MustCompile(`^[^/]+//[^/]+/.+$`), "格式应为{internetEndpoint}/{bucket}/{key}"),
 				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾",
+				Description: "镜像名称，长度为2-32个字符，只能由数字、字母、-组成，不能以数字、-开头，且不能以-结尾，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
-					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9-]*[a-zA-Z0-9]$"), "不满足镜像名称要求"),
+					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z][a-zA-Z0-9.-]*[a-zA-Z0-9]$"), "不满足镜像名称要求"),
 				},
 			},
 			"os_distro": schema.StringAttribute{
@@ -89,7 +102,8 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像系统架构，aarch64：AArch64架构，仅支持UEFI启动方式、x86_64：x86_64架构，支持BIOS和UEFI启动方式，注意：所指定的镜像系统架构应受所指定的资源池支持",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageArchitectures...),
@@ -98,36 +112,43 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 			"boot_mode": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS）",
+				Description: "启动方式，bios：BIOS启动方式、uefi：UEFI启动方式，注意：若镜像系统架构为aarch64，则对启动方式的指定不生效。此参数无默认值，不指定则表示使用镜像系统架构的默认启动方式（x86_64架构的默认启动方式为BIOS），支持更新",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ImageBootModes...),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "镜像描述信息。注意：长度为1~128个字符。",
+				Description: "镜像描述信息。注意：长度为1~128个字符。支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"disk_size": schema.Int64Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "磁盘容量，单位为GB，取值范围：最小5（默认值），最大1024。注意：磁盘容量不能小于镜像文件的大小；若小于镜像文件的大小，则实际的磁盘容量将使用镜像文件的大小",
+				Description: "磁盘容量，单位为GB，取值范围：最小5，最大1024。注意：若填写，则不能小于镜像文件的大小",
 				PlanModifiers: []planmodifier.Int64{
+					int64planmodifier.UseStateForUnknown(),
 					int64planmodifier.RequiresReplace(),
 				},
 				Validators: []validator.Int64{
 					int64validator.Between(5, 1024),
 				},
-				Default: int64default.StaticInt64(5),
 			},
 			"type": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "镜像种类，system：系统盘镜像，data：数据盘镜像，默认为系统盘镜像system",
 				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
@@ -140,7 +161,7 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -163,24 +184,6 @@ func (c *ctyunImage) Schema(_ context.Context, _ resource.SchemaRequest, respons
 				Computed:    true,
 				Description: "镜像状态，accepted：已接受共享镜像，active：正常，deactivated：已弃用，deactivating：弃用中，deleted：已删除，deleting：删除中，error：错误，importing：导入中，killed：上传出错，镜像不可读，pending_delete：等待删除中，queued：排队中，reactivating：取消弃用中，rejected：已拒绝共享镜像，saving：保存中，syncing：同步中，uploading：上传中，waiting：等待接受/拒绝共享镜像",
 			},
-			// "maximum_ram": schema.Int64Attribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "最大内存，单位为GB，取值范围：0（默认值，即不限制）/1/2/4/8/16/32/64/128/256/512。注意：若取值不为0且所指定的最小内存也不为不限制时，则取值应大于或等于所指定的最小内存",
-			// 	Validators: []validator.Int64{
-			// 		int64validator.OneOf(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512),
-			// 	},
-			// 	Default: int64default.StaticInt64(0),
-			// },
-			// "minimum_ram": schema.Int64Attribute{
-			// 	Optional:    true,
-			// 	Computed:    true,
-			// 	Description: "最小内存，单位为GB，取值范围：0（默认值，即不限制）/1/2/4/8/16/32/64/128/256/512。注意：若取值不为0且所指定的最小内存也不为不限制时，则取值应大于或等于所指定的最小内存",
-			// 	Validators: []validator.Int64{
-			// 		int64validator.OneOf(0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512),
-			// 	},
-			// 	Default: int64default.StaticInt64(0),
-			// },
 		},
 	}
 }
@@ -191,6 +194,17 @@ func (c *ctyunImage) Create(ctx context.Context, request resource.CreateRequest,
 	if response.Diagnostics.HasError() {
 		return
 	}
+
+	//size, err := utils.GetFileSize(plan.FileSource.ValueString())
+	//if err != nil {
+	//	response.Diagnostics.AddError(err.Error(), err.Error())
+	//	return
+	//}
+	//if size > plan.DiskSize.ValueInt64() {
+	//	err = fmt.Errorf("镜像文件大小为%dGB，disk_size必须大于等于该值", size)
+	//	response.Diagnostics.AddError(err.Error(), err.Error())
+	//	return
+	//}
 
 	// 创建实例
 	regionId := plan.RegionId.ValueString()
@@ -255,11 +269,10 @@ func (c *ctyunImage) Read(ctx context.Context, request resource.ReadRequest, res
 
 	instance, err := c.getAndMergeImage(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -292,6 +305,10 @@ func (c *ctyunImage) Update(ctx context.Context, request resource.UpdateRequest,
 		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
 	}
+	if !plan.FileSource.IsUnknown() && !plan.FileSource.IsNull() && state.FileSource.IsNull() {
+		state.FileSource = plan.FileSource
+		response.Diagnostics.AddWarning("file_source的更新仅写入状态文件", "在import时，状态文件中file_source为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
@@ -319,13 +336,37 @@ func (c *ctyunImage) Delete(ctx context.Context, request resource.DeleteRequest,
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [imageId],[regionId]
 func (c *ctyunImage) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunImageConfig
 	var imageId, regionId string
-	err := terraform_extend.Split(request.ID, &imageId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	// 根据分隔符数量判断是否输入了regionId
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &imageId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &imageId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if imageId == "" {
+		err = fmt.Errorf("image_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -334,7 +375,6 @@ func (c *ctyunImage) ImportState(ctx context.Context, request resource.ImportSta
 
 	instance, err := c.getAndMergeImage(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -351,7 +391,7 @@ func (c *ctyunImage) Configure(_ context.Context, request resource.ConfigureRequ
 // waitForImageDeleted 等待镜像删除成功
 func (c *ctyunImage) waitForImageDeleted(ctx context.Context, cfg CtyunImageConfig) error {
 	executeSuccessFlag := false
-	retryer, _ := business.NewRetryer(time.Second*5, 60)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			response, err := c.meta.Apis.CtImageApis.ImageDetailApi.Do(ctx, c.meta.Credential, &ctimage.ImageDetailRequest{
@@ -392,7 +432,7 @@ func (c *ctyunImage) waitForImageDeleted(ctx context.Context, cfg CtyunImageConf
 // waitForUploadImageActive 等待镜像上传完成
 func (c *ctyunImage) waitForUploadImageActive(ctx context.Context, cfg CtyunImageConfig) error {
 	executeSuccessFlag := false
-	retryer, _ := business.NewRetryer(time.Second*5, 60)
+	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
 			response, err := c.meta.Apis.CtImageApis.ImageDetailApi.Do(ctx, c.meta.Credential, &ctimage.ImageDetailRequest{
@@ -407,6 +447,8 @@ func (c *ctyunImage) waitForUploadImageActive(ctx context.Context, cfg CtyunImag
 			}
 			switch response.Images[0].Status {
 			case business.ImageStatusQueued:
+				return true
+			case business.ImageStatusImporting:
 				return true
 			case business.ImageStatusActive:
 				executeSuccessFlag = true
@@ -432,7 +474,7 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	})
 	if err != nil {
 		if err.ErrorCode() == common.ImageImageCheckNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}
@@ -457,6 +499,9 @@ func (c *ctyunImage) getAndMergeImage(ctx context.Context, cfg CtyunImageConfig)
 	cfg.Status = types.StringValue(resp.Status)
 	// cfg.MaximumRam = types.Int64Value(int64(resp.MaximumRam))
 	// cfg.MinimumRam = types.Int64Value(int64(resp.MinimumRam))
+	cfg.ProjectId = types.StringValue(resp.ProjectId)
+	cfg.Description = types.StringValue(resp.Description)
+
 	return &cfg, nil
 }
 

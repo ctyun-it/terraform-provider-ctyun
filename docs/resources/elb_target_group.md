@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_target_group"
+---
+
 # ctyun_elb_target_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289
+-> 管理弹性负载均衡后端服务组
 
 
 
@@ -31,14 +36,14 @@ resource "ctyun_elb_health_check" "test" {
 }
 
 resource "ctyun_elb_target_group" "target_group_test" {
-  name      = "tf_target_group"
-  vpc_id    = ctyun_vpc.vpc_test.id
-  algorithm = "wrr"
-  health_check_id = ctyun_elb_health_check.test.id
+  name                = "tf_target_group"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  algorithm           = "wrr"
+  health_check_id     = ctyun_elb_health_check.test.id
   session_sticky_mode = "SOURCE_IP"
-  source_ip_timeout = 30
-  proxy_protocol = 1
-  protocol = "TCP"
+  source_ip_timeout   = 30
+  proxy_protocol      = 1
+  protocol            = "TCP"
 }
 ```
 
@@ -47,26 +52,38 @@ resource "ctyun_elb_target_group" "target_group_test" {
 
 ### Required
 
-- `algorithm` (String) 调度算法。取值范围：rr（轮询）、wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新
-- `name` (String) 名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `algorithm` (String) 调度算法。取值范围：wrr（带权重轮询）、lc（最少连接）、sh（源IP哈希），支持更新
+- `name` (String) 后端主机组名称，唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `vpc_id` (String) 需要创建后端主机组的 VPC 的 ID
 
 ### Optional
 
-- `cookie_expire` (Number) cookie过期时间。session_sticky_mode = INSERT模式必填，支持更新
+- `cookie_expire` (Number) cookie过期时间。INSERT模式必填，支持更新
 - `description` (String) 描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·！@#￥%……&*（） —— -+={},，支持更新
 - `health_check_id` (String) 需要关联的健康检查Id，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `protocol` (String) 支持 TCP / UDP / HTTP / HTTPS, 该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE
-- `proxy_protocol` (Number) 1 开启，0 关闭，只有protocol=tcp的时候,可填写（关闭/开启proxy_protocol），其他协议默认关闭。不支持更改
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `project_id` (String, Deprecated) 企业项目ID
+- `protocol` (String) 创建时建议填写，否则后续某些功能无法开启。支持TCP/UDP/HTTP/HTTPS，该字段不支持更新。当protocol=HTTP/HTTPS时，target_group.session_sticky_mode仅支持INSERT/REWRITE
+- `proxy_protocol` (Number) 1 开启，0 关闭，只有protocol=tcp的时候，可填写（关闭/开启proxy_protocol），其他协议默认关闭。
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `rewrite_cookie_name` (String) cookie重写名称，REWRITE模式必填，支持更新
-- `session_sticky_mode` (String) 会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新
+- `session_sticky_mode` (String) 会话保持模式，支持取值：CLOSE（关闭）、INSERT（插入）、REWRITE（重写）、SOURCE_IP（源IP）。当 algorithm 为 lc / sh 时，sessionStickyMode无需填写，默认为 CLOSE，支持更新
 - `source_ip_timeout` (Number) 源IP会话保持超时时间。SOURCE_IP模式必填，支持更新
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 后端服务组ID
 - `status` (String) 状态: ACTIVE / DOWN
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡后端主机组
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_target_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_target_group.elb_target_group_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_user_group"
+---
+
 # ctyun_iam_user_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805
+-> 管理用户组
 
 
 
@@ -30,9 +35,21 @@ resource "ctyun_iam_user_group" "user_group_test" {
 
 ### Required
 
-- `description` (String) 用户组描述，长度最大为64
-- `name` (String) 用户组名称，长度1-32位
+- `description` (String) 用户组描述，长度最大为64，支持更新
+- `name` (String) 用户组名称，长度1-32位，支持更新
 
 ### Read-Only
 
 - `id` (String) 用户组id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入IAM用户组资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_iam_user_group.[导入配置名称] [id]
+# 示例
+terraform import ctyun_iam_user_group.group_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
+```

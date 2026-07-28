@@ -30,7 +30,12 @@ func (a *Dcs2CreateRedisTemplateApi) Do(ctx context.Context, credential core.Cre
 	builder.WithCredential(credential)
 	ctReq := builder.Build()
 	ctReq.AddHeader("regionId", req.RegionId)
-	_, err := ctReq.WriteJson(req, a.template.ContentType)
+	_, err := ctReq.WriteJson(struct {
+		*Dcs2CreateRedisTemplateRequest
+		RegionId interface{} `json:"regionId,omitempty"`
+	}{
+		req, nil,
+	}, a.template.ContentType)
 	if err != nil {
 		return nil, err
 	}
@@ -47,24 +52,30 @@ func (a *Dcs2CreateRedisTemplateApi) Do(ctx context.Context, credential core.Cre
 }
 
 type Dcs2CreateRedisTemplateRequest struct {
-	RegionId   string                                  /*  资源池ID，您可以查看<a href="https://www.ctyun.cn/document/10026730/10028695">地域和可用区</a>来了解资源池<br><span style="background-color: rgb(73, 204, 144);color: rgb(255,255,255);padding: 2px; margin:2px">查</span> <a href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a>  */
-	ProdInstId string                                  `json:"prodInstId,omitempty"` /*  实例ID  */
-	Params     []*Dcs2CreateRedisTemplateParamsRequest `json:"params"`               /*  参数列表  */
+	RegionId string                                  `json:"regionId,omitempty"` /*  资源池ID。获取方法如下：<br>方法一：通过查看附录文档<a  target="_blank" rel="noopener noreferrer" href="https://www.ctyun.cn/document/10029420/11067697">分布式缓存服务Redis资源池</a>获取资源池ID。<br>方法二：可调用  <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a> 接口获取resPoolCode字段。  */
+	Template *Dcs2CreateRedisTemplateTemplateRequest `json:"template"`           /*  模板。  */
+	Params   []*Dcs2CreateRedisTemplateParamsRequest `json:"params"`             /*  参数列表。  */
+}
+
+type Dcs2CreateRedisTemplateTemplateRequest struct {
+	Name        string `json:"name,omitempty"`        /*  参数名称。  */
+	Description string `json:"description,omitempty"` /*  参数描述。  */
+	CacheMode   string `json:"cacheMode,omitempty"`   /*  适合的实例架构版本，可调用  <a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=15104&isNormal=1&vid=270">查询参数模板列表</a> 接口，使用Template表cacheMode字段。  */
+	SysTemplate *bool  `json:"sysTemplate"`           /*  是否为系统模板。<li>true：系统模板。<li>false：自定义模板。  */
 }
 
 type Dcs2CreateRedisTemplateParamsRequest struct {
-	ParamName     string `json:"paramName,omitempty"`     /*  参数名称  */
-	OriginalValue string `json:"originalValue,omitempty"` /*  当前值  */
-	CurrentValue  string `json:"currentValue,omitempty"`  /*  修改的目标值  */
+	ParamName    string `json:"paramName,omitempty"`    /*  参数名称。  */
+	CurrentValue string `json:"currentValue,omitempty"` /*  目标值。参数的取值范围可参考<a  target="_blank" rel="noopener noreferrer" href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=15097&isNormal=1&vid=270">查询实例配置参数</a> 返回的param表valueRange字段。  */
 }
 
 type Dcs2CreateRedisTemplateResponse struct {
-	StatusCode int32                                     `json:"statusCode,omitempty"` /*  响应状态码<li>800：成功<li>900：失败  */
-	Message    string                                    `json:"message,omitempty"`    /*  响应信息  */
-	ReturnObj  *Dcs2CreateRedisTemplateReturnObjResponse `json:"returnObj"`            /*  返回数据对象，数据见returnObj  */
-	RequestId  string                                    `json:"requestId,omitempty"`  /*  请求 ID  */
-	Code       string                                    `json:"code,omitempty"`       /*  响应码描述  */
-	Error      string                                    `json:"error,omitempty"`      /*  错误码，参见错误码说明  */
+	StatusCode int32                                     `json:"statusCode"` /*  响应状态码。<li>800：成功。<li>900：失败。  */
+	Message    string                                    `json:"message"`    /*  响应信息。  */
+	ReturnObj  *Dcs2CreateRedisTemplateReturnObjResponse `json:"returnObj"`  /*  无返回数据，空对象。  */
+	RequestId  string                                    `json:"requestId"`  /*  请求 ID。  */
+	Code       string                                    `json:"code"`       /*  响应码，仅表示请求是否执行。  */
+	Error      string                                    `json:"error"`      /*  错误码，参见错误码说明。  */
 }
 
 type Dcs2CreateRedisTemplateReturnObjResponse struct{}

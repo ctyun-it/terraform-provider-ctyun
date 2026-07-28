@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebs"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -73,7 +74,7 @@ type ctyunEbsSnapshotsConfig struct {
 
 func (c *ctyunEbsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345`,
+		MarkdownDescription: utils.FormatDesc("查询云硬盘快照", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026730/10335345"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -152,7 +153,7 @@ func (c *ctyunEbsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"az_name": schema.StringAttribute{
 							Computed:    true,
@@ -168,7 +169,7 @@ func (c *ctyunEbsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "过期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 						"freezing": schema.BoolAttribute{
 							Computed:    true,
@@ -204,7 +205,7 @@ func (c *ctyunEbsSnapshots) Schema(_ context.Context, _ datasource.SchemaRequest
 						},
 						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"volume_attr": schema.StringAttribute{
 							Computed:    true,
@@ -246,7 +247,7 @@ func (c *ctyunEbsSnapshots) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

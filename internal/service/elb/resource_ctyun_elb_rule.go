@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -32,6 +33,7 @@ var (
 
 type CtyunElbRule struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbRule() resource.Resource {
@@ -39,8 +41,32 @@ func NewCtyunElbRule() resource.Resource {
 }
 
 func (c *CtyunElbRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunElbRuleConfig
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+	err = c.getAndMergeRule(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunElbRule) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -53,16 +79,17 @@ func (c *CtyunElbRule) Configure(ctx context.Context, request resource.Configure
 
 func (c *CtyunElbRule) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_rule"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110**`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡转发规则", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032110"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -81,6 +108,12 @@ func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaReques
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
+			},
+
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Description: "支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={}，支持更新",
@@ -197,31 +230,7 @@ func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaReques
 				Computed:      true,
 				Description:   "转发规则 ID",
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
-			},
+
 			"load_balancer_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡Id",
@@ -230,11 +239,11 @@ func (c *CtyunElbRule) Schema(ctx context.Context, request resource.SchemaReques
 				Computed:    true,
 				Description: "状态: ACTIVE / DOWN",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
@@ -291,11 +300,10 @@ func (c *CtyunElbRule) Read(ctx context.Context, request resource.ReadRequest, r
 	}
 	//查询远端并同步state
 	err = c.getAndMergeRule(ctx, &state)
-
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -332,7 +340,7 @@ func (c *CtyunElbRule) Update(ctx context.Context, request resource.UpdateReques
 	if err != nil {
 		return
 	}
-
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -374,7 +382,7 @@ func (c *CtyunElbRule) Delete(ctx context.Context, request resource.DeleteReques
 func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConfig) (err error) {
 	//配置创建接口所需请求参数
 	if plan.ListenerID.IsNull() {
-		err = errors.New("创建转发规则时，ListenerID不能为空")
+		err = errors.New("创建转发规则时，listener_id不能为空")
 		return
 	}
 
@@ -439,7 +447,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("创建转发规则时，若action type = redirect, redirectListenerID不能为空")
+			err = errors.New("创建转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -458,7 +466,7 @@ func (c *CtyunElbRule) createElbRule(ctx context.Context, plan *CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			targetGroup := &ctelb.CtelbCreateRuleActionForwardConfigTargetGroupsRequest{}
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("创建转发规则时，targetGroupID不能为空")
+				err = errors.New("创建转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()
@@ -501,6 +509,9 @@ func (c *CtyunElbRule) getAndMergeRule(ctx context.Context, plan *CtyunElbRuleCo
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiElbPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -512,6 +523,7 @@ func (c *CtyunElbRule) getAndMergeRule(ctx context.Context, plan *CtyunElbRuleCo
 	plan.Status = types.StringValue(returnObj.Status)
 	plan.CreatedTime = types.StringValue(returnObj.CreatedTime)
 	plan.UpdatedTime = types.StringValue(returnObj.UpdatedTime)
+	plan.ListenerID = types.StringValue(returnObj.ListenerID)
 
 	// 合并conditions
 	conditionList := returnObj.Conditions
@@ -602,7 +614,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 	action.RawType = plan.ActionType.ValueString()
 	if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect {
 		if plan.ActionType.ValueString() == business.ElbRuleActionTypeRedirect && plan.ActionRedirectListenerID.IsNull() {
-			err = errors.New("修改转发规则时，若action type = redirect, redirectListenerID不能为空")
+			err = errors.New("修改转发规则时，若action type = redirect, redirect_listener_id不能为空")
 			return
 		}
 		if !plan.ActionRedirectListenerID.IsNull() {
@@ -620,7 +632,7 @@ func (c *CtyunElbRule) updateElbRule(ctx context.Context, state CtyunElbRuleConf
 		for _, targetGroupItem := range targetGroupList {
 			var targetGroup ctelb.CtelbUpdateRuleActionForwardConfigTargetGroupsRequest
 			if targetGroupItem.TargetGroupID.IsNull() {
-				err = errors.New("修改转发规则时，targetGroupID不能为空")
+				err = errors.New("修改转发规则时，target_group_id不能为空")
 				return
 			}
 			targetGroup.TargetGroupID = targetGroupItem.TargetGroupID.ValueString()
@@ -664,12 +676,11 @@ type CtyunElbRuleConfig struct {
 	ActionTargetGroups       types.List   `tfsdk:"action_target_groups"`        //后端服务组
 	ActionRedirectListenerID types.String `tfsdk:"action_redirect_listener_id"` //重定向监听器ID，当type为redirect时，此字段必填
 	ID                       types.String `tfsdk:"id"`                          //转发规则 ID
-	AzName                   types.String `tfsdk:"az_name"`                     //可用区名称
-	ProjectID                types.String `tfsdk:"project_id"`                  //	项目ID
 	LoadBalancerID           types.String `tfsdk:"load_balancer_id"`            //负载均衡ID
 	Status                   types.String `tfsdk:"status"`                      //状态: ACTIVE / DOWN
-	CreatedTime              types.String `tfsdk:"created_time"`                //创建时间，为UTC格式
-	UpdatedTime              types.String `tfsdk:"updated_time"`                //更新时间，为UTC格式
+	CreatedTime              types.String `tfsdk:"create_time"`                 //创建时间，为UTC格式
+	UpdatedTime              types.String `tfsdk:"update_time"`                 //更新时间，为UTC格式
+	ProjectId                types.String `tfsdk:"project_id"`                  //企业项目ID
 }
 
 type ConditionsModel struct {

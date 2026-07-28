@@ -88,6 +88,17 @@ type CtvpcListPrivateZoneReturnObjResponse struct {
 }
 
 type CtvpcListPrivateZoneReturnObjZonesResponse struct {
-	ZoneID *string `json:"zoneID,omitempty"` /*  dns 记录 ID  */
-	Name   *string `json:"name,omitempty"`   /*  dns 记录名称  */
+	ZoneID          *string                                                      `json:"zoneID,omitempty"`       /*  dns 记录 ID  */
+	Name            *string                                                      `json:"name,omitempty"`         /*  dns 记录名称  */
+	Description     *string                                                      `json:"description,omitempty"`  /*  dns 记录描述  */
+	ProxyPattern    *string                                                      `json:"proxyPattern,omitempty"` /*  dns 记录代理模式  */
+	TTL             int32                                                        `json:"TTL"`                    /*  dns 记录 TTL  */
+	VpcAssociations []*CtvpcListPrivateZoneReturnObjZonesVpcAssociationsResponse `json:"vpcAssociations"`        /*  vpc关联信息  */
+	CreatedAt       *string                                                      `json:"createdAt,omitempty"`    /*  创建时间  */
+	UpdatedAt       *string                                                      `json:"updatedAt,omitempty"`    /*  更新时间  */
+}
+
+type CtvpcListPrivateZoneReturnObjZonesVpcAssociationsResponse struct {
+	VpcID   *string `json:"vpcID,omitempty"`   /*  vpc id  */
+	VpcName *string `json:"vpcName,omitempty"` /*  vpc name  */
 }

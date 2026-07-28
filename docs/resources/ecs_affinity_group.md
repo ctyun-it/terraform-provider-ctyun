@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_affinity_group"
+---
+
 # ctyun_ecs_affinity_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10597693
+-> 管理云主机组
 
 
 
@@ -20,8 +25,8 @@ provider "ctyun" {
 }
 
 resource "ctyun_ecs_affinity_group" "test" {
-  affinity_group_name = "tf-test-group"
-  affinity_group_policy = "anti-affinity"
+  name   = "tf-test-group"
+  policy = "anti-affinity"
 }
 ```
 
@@ -30,14 +35,27 @@ resource "ctyun_ecs_affinity_group" "test" {
 
 ### Required
 
-- `affinity_group_name` (String) 云主机组名称，满足以下规则：长度在1-64个字符，只能由中文、英文字母、数字、下划线_、中划线-、点.组成 支持更新
-- `affinity_group_policy` (String) 云主机组策略类型，取值范围：<br />anti-affinity（强制反亲和性），<br />affinity（强制亲和性），<br />soft-anti-affinity（反亲和性），<br />soft-affinity（亲和性)，<br />power-anti-affinity（电力反亲和性)
+- `name` (String) 云主机组名称，满足以下规则：长度在1-64个字符，只能由中文、英文字母、数字、下划线_、中划线-、点.组成 支持更新
+- `policy` (String) 云主机组策略类型，取值范围：<br />anti-affinity（强制反亲和性），<br />affinity（强制亲和性），<br />soft-anti-affinity（反亲和性），<br />soft-affinity（亲和性)，<br />power-anti-affinity（电力反亲和性)
 
 ### Optional
 
-- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `region_id` (String) 资源池ID，如果不填则默认使用provider中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
-- `affinity_group_id` (String) 云主机组ID
-- `id` (String) ID
+- `create_time` (String) 创建时间，为UTC格式
+- `id` (String) 云主机组ID
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云主机组
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_affinity_group.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ecs_affinity_group.example 12345678-1234-1234-1234-123456789012,bb9fdb42056f11eda1610242ac110002
+```

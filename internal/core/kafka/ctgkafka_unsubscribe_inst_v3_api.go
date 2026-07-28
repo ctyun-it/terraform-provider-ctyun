@@ -64,8 +64,10 @@ type CtgkafkaUnsubscribeInstV3Response struct {
 }
 
 type CtgkafkaUnsubscribeInstV3ReturnObjResponse struct {
-	ErrorMessage               string                                                                  `json:"errorMessage,omitempty"`     /*  错误信息。  */
-	BatchOrderPlacementResults []*CtgkafkaUnsubscribeInstV3ReturnObjBatchOrderPlacementResultsResponse `json:"batchOrderPlacementResults"` /*  退订返回信息  */
+	Data struct {
+		ErrorMessage               string                                                                  `json:"errorMessage,omitempty"`     /*  错误信息。  */
+		BatchOrderPlacementResults []*CtgkafkaUnsubscribeInstV3ReturnObjBatchOrderPlacementResultsResponse `json:"batchOrderPlacementResults"` /*  退订返回信息  */
+	} `json:"data"`
 }
 
 type CtgkafkaUnsubscribeInstV3ReturnObjBatchOrderPlacementResultsResponse struct {
@@ -80,4 +82,11 @@ type CtgkafkaUnsubscribeInstV3ReturnObjBatchOrderPlacementResultsOrderPlacedEven
 	NewOrderId   string  `json:"newOrderId,omitempty"`   /*  订单ID。  */
 	NewOrderNo   string  `json:"newOrderNo,omitempty"`   /*  订单编号。  */
 	TotalPrice   float64 `json:"totalPrice"`             /*  价格。  */
+}
+
+type T struct {
+	ReturnObj struct {
+	} `json:"returnObj"`
+	Message    string `json:"message"`
+	StatusCode string `json:"statusCode"`
 }

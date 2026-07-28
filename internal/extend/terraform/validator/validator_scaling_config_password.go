@@ -11,7 +11,7 @@ import (
 const (
 	ScalingConfigNamePwError        = "不满足scaling config password格式"
 	ScalingConfigNamePwLengthError  = "密码长度必须为8～30个字符"
-	ScalingConfigNamePwStartError   = "不能以斜线号(/)开头"
+	ScalingConfigNamePwStartError   = "密码不能以斜线号(/)开头"
 	ScalingConfigNamePwWindowsError = "Windows密码不能包含管理员用户名"
 	ScalingConfigNamePwTypeError    = "密码必须包含大写字母、小写字母、数字和特殊符号中的至少3类"
 	ScalingConfigNamePwSeqCharError = "密码不能包含3个及以上连续字符"

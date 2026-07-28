@@ -11,12 +11,11 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_ebs_backup_repos" "test" {
+data "ctyun_ecs_backup_repos" "test" {
 
 }
 
-
-output "ctyun_ebs_backup_repos_test" {
-  value = data.ctyun_ebs_backup_repos.test
+output "ctyun_ebs_backups_test" {
+  value = data.ctyun_ecs_backup_repos.test
 }
 

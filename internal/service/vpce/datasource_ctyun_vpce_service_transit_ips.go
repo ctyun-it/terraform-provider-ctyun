@@ -31,27 +31,27 @@ func (c *ctyunVpceServiceTransitIPs) Metadata(_ context.Context, request datasou
 }
 
 type CtyunVpceServiceTransitIPsModel struct {
-	ID        types.String `tfsdk:"id"`
-	SubnetID  types.String `tfsdk:"subnet_id"`
-	TransitIP types.String `tfsdk:"transit_ip"`
-	CreatedAt types.String `tfsdk:"created_at"`
+	ID         types.String `tfsdk:"id"`
+	SubnetID   types.String `tfsdk:"subnet_id"`
+	TransitIP  types.String `tfsdk:"transit_ip"`
+	CreateTime types.String `tfsdk:"create_time"`
+	UpdateTime types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpceServiceTransitIPsConfig struct {
-	EndpointServiceID types.String `tfsdk:"endpoint_service_id"`
-	RegionID          types.String `tfsdk:"region_id"`
-	PageNo            types.Int32  `tfsdk:"page_no"`
-	PageSize          types.Int32  `tfsdk:"page_size"`
-
-	CurrentCount types.Int32                       `tfsdk:"current_count"`
-	TotalCount   types.Int32                       `tfsdk:"total_count"`
-	TotalPage    types.Int32                       `tfsdk:"total_page"`
-	IPs          []CtyunVpceServiceTransitIPsModel `tfsdk:"ips"`
+	EndpointServiceID types.String                      `tfsdk:"endpoint_service_id"`
+	RegionID          types.String                      `tfsdk:"region_id"`
+	PageNo            types.Int32                       `tfsdk:"page_no"`
+	PageSize          types.Int32                       `tfsdk:"page_size"`
+	CurrentCount      types.Int32                       `tfsdk:"current_count"`
+	TotalCount        types.Int32                       `tfsdk:"total_count"`
+	TotalPage         types.Int32                       `tfsdk:"total_page"`
+	IPs               []CtyunVpceServiceTransitIPsModel `tfsdk:"ips"`
 }
 
 func (c *ctyunVpceServiceTransitIPs) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507`,
+		MarkdownDescription: utils.FormatDesc("查询终端节点服务中转IP", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10048507"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -101,9 +101,13 @@ func (c *ctyunVpceServiceTransitIPs) Schema(_ context.Context, _ datasource.Sche
 							Computed:    true,
 							Description: "中转地址",
 						},
-						"created_at": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
+						},
+						"update_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -126,7 +130,7 @@ func (c *ctyunVpceServiceTransitIPs) Read(ctx context.Context, request datasourc
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
@@ -162,10 +166,11 @@ func (c *ctyunVpceServiceTransitIPs) Read(ctx context.Context, request datasourc
 	config.CurrentCount = types.Int32Value(resp.ReturnObj.CurrentCount)
 	for _, e := range resp.ReturnObj.TransitIPs {
 		item := CtyunVpceServiceTransitIPsModel{
-			ID:        utils.SecStringValue(e.TransitIP),
-			SubnetID:  utils.SecStringValue(e.SubnetID),
-			TransitIP: utils.SecStringValue(e.TransitIP),
-			CreatedAt: utils.SecStringValue(e.CreatedAt),
+			ID:         utils.SecStringValue(e.TransitIP),
+			SubnetID:   utils.SecStringValue(e.SubnetID),
+			TransitIP:  utils.SecStringValue(e.TransitIP),
+			CreateTime: utils.SecStringValue(e.CreatedAt),
+			UpdateTime: utils.SecStringValue(e.UpdatedAt),
 		}
 		config.IPs = append(config.IPs, item)
 	}

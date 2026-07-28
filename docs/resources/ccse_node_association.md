@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_node_association"
+---
+
 # ctyun_ccse_node_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452
+-> 纳管云容器引擎节点
 
 
 
@@ -20,13 +25,13 @@ provider "ctyun" {
 }
 
 resource "ctyun_ccse_node_association" "ykyedkmadc" {
-  cluster_id = "c7fdfadd092643c8aa11d2a330f27873"
-  instance_type = "ecs"
-  instance_id = "02d8a872-7d1a-45ab-9bd8-9b158376ba3a"
-  mirror_id = "3d2c356a-685a-4e8c-b904-bb0725bfc220"
+  cluster_id                  = "c7fdfadd092643c8aa11d2a330f27873"
+  instance_type               = "ecs"
+  instance_id                 = "02d8a872-7d1a-45ab-9bd8-9b158376ba3a"
+  mirror_id                   = "3d2c356a-685a-4e8c-b904-bb0725bfc220"
   visibility_post_host_script = "YWJj"
-  visibility_host_script = "MTIz"
-  password = var.password
+  visibility_host_script      = "MTIz"
+  password                    = var.password
 }
 
 variable "password" {
@@ -44,11 +49,11 @@ variable "password" {
 - `instance_id` (String) 主机ID
 - `instance_type` (String) 实例类型，支持ecs（云主机）、ebm（裸金属）
 - `mirror_id` (String) 镜像id，可查看<a href="https://www.ctyun.cn/document/10083472/11004475">节点规格和节点镜像</a>
-- `password` (String, Sensitive) 用户密码，需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\且不能以斜线号/开头
 
 ### Optional
 
 - `az_name` (String) 可用区名称
+- `password` (String, Sensitive) 用户密码，纳管时必填，导入时不填。需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\且不能以斜线号/开头
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `visibility_host_script` (String) 部署前执行自定义脚本，base64编码
 - `visibility_post_host_script` (String) 部署后执行自定义脚本，base64编码

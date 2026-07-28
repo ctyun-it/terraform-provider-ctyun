@@ -24,9 +24,9 @@ func TestAccCtyunCcseNodePool(t *testing.T) {
 	initNodeNum := 0
 	initVisibilityPostHostScript := "YWJj"
 	initVisibilityHostScript := "MTIz"
-	initSysDiskType := "SATA"
+	initSysDiskType := "XSSD-1"
 	initSysDiskSize := 100
-	initDataDiskType := "SATA"
+	initDataDiskType := "XSSD-1"
 	initDataDiskSize := 200
 	initCycleType := "on_demand"
 	initExtra := ""
@@ -35,9 +35,9 @@ func TestAccCtyunCcseNodePool(t *testing.T) {
 	updateNodeNum := 2
 	updatedVisibilityPostHostScript := "MTIz"
 	updatedVisibilityHostScript := "YWJj"
-	updatedSysDiskType := "SAS"
+	updatedSysDiskType := "XSSD-0"
 	updatedSysDiskSize := 200
-	updatedDataDiskType := "SAS"
+	updatedDataDiskType := "XSSD-0"
 	updatedDataDiskSize := 400
 	updatedCycleType := "month"
 	updatedExtra := `cycle_count             = 1
@@ -70,6 +70,8 @@ auto_renew = true
 					dependence.clusterID,
 					initNodeNum,
 					password,
+					dependence.ecsAz,
+					dependence.ecsMirrorID,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
@@ -100,6 +102,8 @@ auto_renew = true
 					dependence.clusterID,
 					updateNodeNum,
 					password,
+					dependence.ecsAz,
+					dependence.ecsMirrorID,
 				),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
@@ -131,6 +135,8 @@ auto_renew = true
 					dependence.clusterID,
 					updateNodeNum,
 					password,
+					dependence.ecsAz,
+					dependence.ecsMirrorID,
 				) + utils.LoadTestCase(datasourceFile, dnd, dependence.clusterID, resourceName+".name"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "records.#", "1"),
@@ -152,9 +158,26 @@ auto_renew = true
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id = ds.ID
-					regionId := ds.Attributes["region_id"]
 					clusterId := ds.Attributes["cluster_id"]
+					regionId := ds.Attributes["region_id"]
 					return fmt.Sprintf("%s,%s,%s", id, clusterId, regionId), nil
+				},
+				ImportStateVerify: true,
+				ImportStateVerifyIgnore: []string{
+					"password",
+					"az_infos",
+					"use_affinity_group",
+					"sys_disk",
+				},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					clusterId := ds.Attributes["cluster_id"]
+					return fmt.Sprintf("%s,%s", id, clusterId), nil
 				},
 				ImportStateVerify: true,
 				ImportStateVerifyIgnore: []string{
@@ -179,6 +202,8 @@ auto_renew = true
 					dependence.clusterID,
 					updateNodeNum,
 					password,
+					dependence.ecsAz,
+					dependence.ecsMirrorID,
 				) + utils.LoadTestCase(datasourceFile, dnd, dependence.clusterID, resourceName+".name"),
 				Destroy: true,
 			},

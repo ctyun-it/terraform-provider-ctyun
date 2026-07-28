@@ -1,0 +1,8 @@
+release-note:new-resource
+ctyun_crs_vpc_attach
+
+release-note:new-data-source
+ctyun_crs_opensource_images
+
+release-note:enhancement
+resource\ctyun_ebm support metadata

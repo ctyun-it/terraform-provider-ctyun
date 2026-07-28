@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_rule"
+---
+
 # ctyun_elb_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032110**
+-> 管理弹性负载均衡转发规则
 
 
 
@@ -35,11 +40,10 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
-resource "ctyun_elb_loadbalancer" "listener_test" {
+resource "ctyun_elb_loadbalancer" "test" {
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-for-listener"
   sla_name      = "elb.s2.small"
@@ -49,19 +53,37 @@ resource "ctyun_elb_loadbalancer" "listener_test" {
   cycle_count   = 1
 }
 
+resource "ctyun_elb_target_group" "test1" {
+  name      = "tf-tg-for-target1_12"
+  vpc_id    = ctyun_vpc.vpc_test.id
+  algorithm = "wrr"
+}
+
 resource "ctyun_elb_target_group" "test2" {
   name      = "tf-tg-for-target2_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
 }
 
+resource "ctyun_elb_listener" "test" {
+  loadbalancer_id     = ctyun_elb_loadbalancer.test.id
+  name                = "tf-listener-for-rule"
+  protocol            = "HTTP"
+  protocol_port       = 12345
+  default_action_type = "forward"
+  target_groups = [{ target_group_id : ctyun_elb_target_group.test2.id }]
+}
+
 resource "ctyun_elb_rule" "rule_test" {
-  listener_id = ctyun_elb_loadbalancer.listener_test.id
+  listener_id = ctyun_elb_listener.test.id
   conditions = [
-    { "type" : "server_name", "condition_server_name" : "terraform-test.com" }
+    {
+      "condition_type" : "server_name",
+      "condition_server_name" : "terraform-test.com"
+    }
   ]
   action_type          = "forward"
-  action_target_groups = [{target_group_id=ctyun_elb_target_group.test2.id}]
+  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test1.id }]
 }
 ```
 
@@ -78,18 +100,17 @@ resource "ctyun_elb_rule" "rule_test" {
 
 - `action_redirect_listener_id` (String) 重定向监听器ID，当action_type = redirect时，必填，支持更新
 - `action_target_groups` (Attributes List) 后端服务组，支持更新 (see [below for nested schema](#nestedatt--action_target_groups))
-- `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={}，支持更新
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池Id，默认使用provider ctyun总region_id 或者环境变量
+- `project_id` (String, Deprecated) 企业项目ID
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 转发规则 ID
 - `load_balancer_id` (String) 负载均衡Id
 - `status` (String) 状态: ACTIVE / DOWN
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--conditions"></a>
 ### Nested Schema for `conditions`
@@ -115,3 +136,15 @@ Required:
 Optional:
 
 - `weight` (Number) 权重，取值范围：1-256。默认为100，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡转发规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_rule.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_rule.elb_rule_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

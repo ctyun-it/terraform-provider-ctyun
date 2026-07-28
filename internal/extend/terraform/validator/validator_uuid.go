@@ -32,6 +32,6 @@ func (v validatorUUID) ValidateString(_ context.Context, request validator.Strin
 		return
 	}
 	if !uuidRegex.MatchString(request.ConfigValue.ValueString()) {
-		response.Diagnostics.AddError(UUIDError, UUIDError)
+		response.Diagnostics.AddError(request.Path.String()+UUIDError, request.Path.String()+UUIDError)
 	}
 }

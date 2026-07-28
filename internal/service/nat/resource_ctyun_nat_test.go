@@ -50,6 +50,14 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
 					resource.TestCheckResourceAttrSet(resourceName, "nat_gateway_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 1.2 resource update验证，更新nat name和description
@@ -92,10 +100,20 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
 				ImportStateVerifyIgnore: []string{
-					"az_name",
-					"cycle_type",
 					"master_order_id",
-					"project_id",
+				},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"master_order_id",
 				},
 			},
 			// 1.5  销毁
@@ -113,6 +131,14 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "nat_gateway_id"),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", "month"),
 					resource.TestCheckResourceAttr(resourceName, "cycle_count", "1"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 2.2 续费验证

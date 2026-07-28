@@ -83,4 +83,19 @@ type CtvpcListPrivateZoneRecordResponse struct {
 	Error        *string                                      `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
-type CtvpcListPrivateZoneRecordReturnObjResponse struct{}
+type CtvpcListPrivateZoneRecordReturnObjResponse struct {
+	ZoneRecords []*CtvpcListPrivateZoneRecordReturnObjZoneRecordsResponse `json:"zoneRecords"`
+}
+
+type CtvpcListPrivateZoneRecordReturnObjZoneRecordsResponse struct {
+	ZoneRecordID string   `json:"zoneRecordID"`
+	Name         string   `json:"name"`
+	ZoneID       string   `json:"zoneID"`
+	Description  string   `json:"description"`
+	ZoneName     string   `json:"zoneName"`
+	TTL          int32    `json:"TTL"`
+	Type         string   `json:"type"`
+	Value        []string `json:"value"`
+	CreatedAt    string   `json:"createdAt"`
+	UpdatedAt    string   `json:"updatedAt"`
+}

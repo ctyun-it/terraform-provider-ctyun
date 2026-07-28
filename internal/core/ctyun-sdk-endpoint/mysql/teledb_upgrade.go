@@ -68,5 +68,7 @@ type TeledbUpgradeResponse struct {
 }
 
 type TeledbUpgradeResponseReturnObj struct {
-	NewOrderId string `json:"newOrderId"` // 订单ID
+	Data struct {
+		NewOrderId string `json:"newOrderId"`
+	} `json:"data"`
 }

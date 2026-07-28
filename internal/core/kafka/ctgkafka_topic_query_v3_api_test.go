@@ -19,6 +19,7 @@ func TestCtgkafkaTopicQueryV3Api_Do(t *testing.T) {
 		RegionId:   "bb9fdb42056f11eda1610242ac110002",
 		ProdInstId: "68eef42fd8d042bb960d3c3244d9243e",
 		TopicName:  "test-toipc",
+		Labels:     "key1=value1,key2=value2",
 		PageNum:    1,
 		PageSize:   10,
 	}

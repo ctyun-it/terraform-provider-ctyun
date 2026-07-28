@@ -2,7 +2,9 @@ package mysql
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	ctyunsdk "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"net/http"
 )
@@ -44,10 +46,33 @@ type TeledbGetAccessWhiteListResponseReturnObj struct {
 }
 
 type TeledbGetAccessWhiteListResponse struct {
-	StatusCode int32                                       `json:"statusCode"` // 接口状态码
-	Error      string                                      `json:"error"`      // 错误码，失败时返回，成功时为空
-	Message    string                                      `json:"message"`    // 描述信息
-	ReturnObj  []TeledbGetAccessWhiteListResponseReturnObj `json:"returnObj"`
+	StatusCode int32               `json:"statusCode"` // 接口状态码
+	Error      string              `json:"error"`      // 错误码，失败时返回，成功时为空
+	Message    string              `json:"message"`    // 描述信息
+	ReturnObj  CompatibleReturnObj `json:"returnObj"`
+}
+
+// 自定义兼容类型：支持 [] 或 {}
+type CompatibleReturnObj []*TeledbGetAccessWhiteListResponseReturnObj
+
+// 重写 UnmarshalJSON 实现自动兼容
+func (c *CompatibleReturnObj) UnmarshalJSON(data []byte) error {
+	// 1. 先尝试解析成数组
+	var arr []*TeledbGetAccessWhiteListResponseReturnObj
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*c = arr
+		return nil
+	}
+
+	// 2. 如果失败，尝试解析成空对象（忽略内容）
+	var obj map[string]interface{}
+	if err := json.Unmarshal(data, &obj); err == nil {
+		*c = CompatibleReturnObj{} // 赋值为空切片
+		return nil
+	}
+
+	// 3. 都不是才返回错误
+	return fmt.Errorf("不支持的returnObj格式: %s", string(data))
 }
 
 func (this *TeledbGetAccessWhiteList) Do(ctx context.Context, credential ctyunsdk.Credential, req *TeledbGetAccessWhiteListRequest, header *TeledbGetAccessWhiteListRequestHeader) (bindResponse *TeledbGetAccessWhiteListResponse, err error) {

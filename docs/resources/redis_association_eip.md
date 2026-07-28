@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_association_eip"
+---
+
 # ctyun_redis_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/10132173
+-> 管理Redis实例和弹性IP的绑定关系
 
 
 
@@ -19,15 +24,15 @@ provider "ctyun" {
   env = "prod"
 }
 
-resource "ctyun_eip" "eip_test2" {
- name                = "eip-test2"
- bandwidth           = 10
- cycle_type          = "on_demand"
- demand_billing_type = "bandwidth"
+resource "ctyun_eip" "eip_test" {
+  name                = "eip-test"
+  bandwidth           = 10
+  cycle_type          = "on_demand"
+  demand_billing_type = "bandwidth"
 }
 
 resource "ctyun_redis_association_eip" "test" {
-  eip_address = ctyun_eip.eip_test2.address
+  eip_id      = ctyun_eip.eip_test.id
   instance_id = "d59e17a10dda4105936b7e3ede290ba5"
 }
 ```
@@ -37,7 +42,7 @@ resource "ctyun_redis_association_eip" "test" {
 
 ### Required
 
-- `eip_address` (String) 弹性IP地址
+- `eip_id` (String) 弹性IP的ID
 - `instance_id` (String) Redis实例ID
 
 ### Optional
@@ -47,3 +52,15 @@ resource "ctyun_redis_association_eip" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入Redis实例和弹性IP的绑定关系
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_redis_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_redis_association_eip.test b9cc9df4e96144acb7c051262112bab4,eip-xxxxxxxx,<region_id>
+```

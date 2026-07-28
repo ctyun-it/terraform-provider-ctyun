@@ -16,8 +16,9 @@ func TestDcs2DescribeBackupsApi_Do(t *testing.T) {
 
 	// 构造请求
 	request := &Dcs2DescribeBackupsRequest{
-		RegionId:   "bb9fdb42056f11eda1610242ac110002",
-		ProdInstId: "a0784f6c27cf0139e79e055f89f03f1d",
+		RegionId:    "bb9fdb42056f11eda1610242ac110002",
+		ProdInstId:  "a0784f6c27cf0139e79e055f89f03f1d",
+		RestoreName: "20220820115351",
 	}
 
 	// 发起调用

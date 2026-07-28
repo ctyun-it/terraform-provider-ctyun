@@ -74,7 +74,7 @@ func ClientConfigProd() *CtyunClientConfig {
 // ClientProd 生产环境客户端
 func ClientProd() *http.Client {
 	retryClient := retryablehttp.NewClient()
-	retryClient.RetryMax = 1                          // 最大重试次数
+	retryClient.RetryMax = 0                          // 最大重试次数
 	retryClient.RetryWaitMin = 1 * time.Second        // 最小重试间隔
 	retryClient.RetryWaitMax = 30 * time.Second       // 最大重试间隔
 	retryClient.HTTPClient.Timeout = 60 * time.Second // 整体超时时间
@@ -218,10 +218,7 @@ type AddUserAgentHttpHook struct {
 }
 
 func (h AddUserAgentHttpHook) BeforeRequest(_ context.Context, request *http.Request) {
-	// 不添加请求头会出现被风控的现象
-	if request.Header.Get("User-Agent") == "" {
-		request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36")
-	}
+
 }
 
 func (h AddUserAgentHttpHook) AfterResponse(_ context.Context, _ *http.Response) {

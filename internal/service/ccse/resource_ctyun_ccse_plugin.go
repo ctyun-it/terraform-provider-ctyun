@@ -9,7 +9,9 @@ import (
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 	"time"
 )
 
@@ -29,6 +32,7 @@ var (
 
 type ctyunCcsePlugin struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunCcsePlugin() resource.Resource {
@@ -37,6 +41,7 @@ func NewCtyunCcsePlugin() resource.Resource {
 
 func (c *ctyunCcsePlugin) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ccse_plugin"
+	c.name = response.TypeName
 }
 
 type CtyunCcsePluginConfig struct {
@@ -52,12 +57,14 @@ type CtyunCcsePluginConfig struct {
 
 func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10102631`,
+		MarkdownDescription: utils.FormatDesc("管理云容器引擎插件", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10102631"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -106,7 +113,7 @@ func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validator2.Yaml(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"values_json": schema.StringAttribute{
@@ -117,12 +124,15 @@ func (c *ctyunCcsePlugin) Schema(_ context.Context, _ resource.SchemaRequest, re
 					validator2.Json(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"namespace": schema.StringAttribute{
 				Computed:    true,
 				Description: "命名空间",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -179,9 +189,12 @@ func (c *ctyunCcsePlugin) Read(ctx context.Context, request resource.ReadRequest
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
-
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -251,20 +264,44 @@ func (c *ctyunCcsePlugin) Configure(_ context.Context, request resource.Configur
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [pluginName],[clusterID],[regionID]
 func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [cluster_id],[chart_name],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunCcsePluginConfig
 	var chartName, clusterID, regionID string
-	err = terraform_extend.Split(request.ID, &chartName, &clusterID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &clusterID, &chartName)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &clusterID, &chartName, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if chartName == "" {
+		err = fmt.Errorf("chart_name不能为空")
 		return
 	}
+	if clusterID == "" {
+		err = fmt.Errorf("cluster_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+
 	cfg.ChartName = types.StringValue(chartName)
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ClusterID = types.StringValue(clusterID)
@@ -280,7 +317,7 @@ func (c *ctyunCcsePlugin) ImportState(ctx context.Context, request resource.Impo
 func (c *ctyunCcsePlugin) checkBeforeCreate(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	p, err := c.getByChartName(ctx, plan)
 	if err != nil {
-		if errors.Is(err, common.InvalidReturnObjResultsError) {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 		}
 		return
@@ -297,13 +334,13 @@ func (c *ctyunCcsePlugin) checkBeforeCreate(ctx context.Context, plan CtyunCcseP
 func (c *ctyunCcsePlugin) checkAfterCreate(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
 	var failedCnt int
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
 			plugin, err = c.getByChartName(ctx, plan)
 			if err != nil {
-				if errors.Is(err, common.InvalidReturnObjResultsError) {
+				if errors.Is(err, common.ResourceNotExistError) {
 					return true
 				}
 				return false
@@ -365,7 +402,7 @@ func (c *ctyunCcsePlugin) getAndMerge(ctx context.Context, plan *CtyunCcsePlugin
 	plan.ChartName = types.StringValue(plugin.ChartName)
 	plan.ChartVersion = types.StringValue(plugin.ChartVersion)
 	plan.ClusterID = types.StringValue(plugin.ClusterId)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plugin.ChartName, plugin.ClusterId, plan.RegionID.ValueString()))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plugin.ClusterId, plugin.ChartName))
 
 	return
 }
@@ -376,6 +413,8 @@ func (c *ctyunCcsePlugin) update(ctx context.Context, plan, state *CtyunCcsePlug
 	if err != nil {
 		return
 	}
+	state.ValuesYaml = plan.ValuesYaml
+	state.ValuesJson = plan.ValuesJson
 	return
 }
 
@@ -411,7 +450,7 @@ func (c *ctyunCcsePlugin) updateChartVersion(ctx context.Context, plan, state Ct
 func (c *ctyunCcsePlugin) checkAfterChartVersion(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
 	var failedCnt int
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
@@ -464,13 +503,13 @@ func (c *ctyunCcsePlugin) delete(ctx context.Context, plan CtyunCcsePluginConfig
 // checkAfterDelete 删除后检查
 func (c *ctyunCcsePlugin) checkAfterDelete(ctx context.Context, plan CtyunCcsePluginConfig) (err error) {
 	var executeSuccessFlag bool
-	retryer, _ := business.NewRetryer(time.Second*10, 30)
+	retryer, _ := business.NewRetryer(time.Second*10, 60)
 	retryer.Start(
 		func(currentTime int) bool {
 			var plugin *ccse2.CcseListPluginInstancesReturnObjRecordsResponse
 			plugin, err = c.getByChartName(ctx, plan)
 			if err != nil {
-				if errors.Is(err, common.InvalidReturnObjResultsError) {
+				if errors.Is(err, common.ResourceNotExistError) {
 					err = nil
 					executeSuccessFlag = true
 				}
@@ -502,10 +541,14 @@ func (c *ctyunCcsePlugin) getByChartName(ctx context.Context, plan CtyunCcsePlug
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		if resp.Error == common.OpenapiCCSENotExist {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
 	} else if len(resp.ReturnObj.Records) == 0 {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 	plugin = resp.ReturnObj.Records[0]

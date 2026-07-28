@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -17,7 +18,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEcsSnapshot{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsSnapshot{}
+	_ resource.ResourceWithImportState = &ctyunEcsSnapshot{}
 )
 
 func NewCtyunEcsSnapshot() resource.Resource {
@@ -26,21 +34,25 @@ func NewCtyunEcsSnapshot() resource.Resource {
 
 type ctyunEcsSnapshot struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ecsService *business.EcsService
 }
 
 func (c *ctyunEcsSnapshot) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_snapshot"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEcsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345**`,
+		MarkdownDescription: utils.FormatDesc("管理云主机快照", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10335345"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "云主机快照id",
+				Computed:    true,
+				Description: "云主机快照id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
@@ -62,18 +74,6 @@ func (c *ctyunEcsSnapshot) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"snapshot_status": schema.StringAttribute{
 				Computed:    true,
 				Description: "云主机快照状态： pending：创建中, available：可用， restoring：恢复中， error：错误",
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -184,8 +184,7 @@ func (c *ctyunEcsSnapshot) getAndMerge(ctx context.Context, cfg *CtyunEcsSnapsho
 		err = common.InvalidReturnObjError
 		return
 	} else if len(resp.ReturnObj.Results) == 0 {
-		err = fmt.Errorf("no snapshot details found for snapshot ID: %s", cfg.Id.ValueString())
-		return
+		return common.ResourceNotExistError
 	}
 
 	//快照名称更新
@@ -210,6 +209,10 @@ func (c *ctyunEcsSnapshot) Read(ctx context.Context, request resource.ReadReques
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -405,15 +408,32 @@ func (c *ctyunEcsSnapshot) ImportState(ctx context.Context, request resource.Imp
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsSnapshotConfig
 	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		id = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &id, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if id == "" {
+		err = fmt.Errorf("id不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+
 	cfg.RegionId = types.StringValue(regionID)
 	cfg.Id = types.StringValue(id)
 	// 查询远端
@@ -430,6 +450,5 @@ type CtyunEcsSnapshotConfig struct {
 	InstanceId     types.String `tfsdk:"instance_id"`
 	SnapshotName   types.String `tfsdk:"name"`
 	SnapshotStatus types.String `tfsdk:"snapshot_status"`
-	ProjectId      types.String `tfsdk:"project_id"`
 	RegionId       types.String `tfsdk:"region_id"`
 }

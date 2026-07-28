@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -25,7 +26,7 @@ func (c *ctyunIamUserGroups) Metadata(_ context.Context, req datasource.Metadata
 
 func (c *ctyunIamUserGroups) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355805`,
+		MarkdownDescription: utils.FormatDesc("查询用户组列表", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10355805"),
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Optional:    true,
@@ -45,7 +46,7 @@ func (c *ctyunIamUserGroups) Schema(_ context.Context, _ datasource.SchemaReques
 					int64validator.AtLeast(1),
 				},
 			},
-			"groups": schema.SetNestedAttribute{
+			"groups": schema.ListNestedAttribute{
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{

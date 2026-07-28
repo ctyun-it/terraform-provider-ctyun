@@ -10,16 +10,24 @@ import (
 const dependenceDir = "testdata/dependence"
 
 type Dependence struct {
-	vpcID           string
-	subnetID        string
-	imageID         string
-	flavorID        string
-	flavorID2       string
-	affinityGroupID string
-	keyPairName     string
-	keyPairName2    string
-	securityGroupID string
-	ecsID           string
+	vpcID                   string
+	subnetID                string
+	imageID                 string
+	flavorID                string
+	flavorID2               string
+	affinityGroupID         string
+	keyPairName             string
+	keyPairName2            string
+	securityGroupID         string
+	ecsID                   string
+	ebsID                   string
+	ebsID2                  string
+	ebsID3                  string
+	instanceID              string
+	ecsPortForAssociationId string
+	flavorName              string
+	flavorName2             string
+	backupRepoId            string
 }
 
 var dependence Dependence
@@ -27,6 +35,9 @@ var dependence Dependence
 func TestMain(m *testing.M) {
 	// 初始化依赖资源
 	fmt.Println("开始初始化依赖资源")
+	os.Setenv("CTYUN_REGION_ID", "200000002368")
+	os.Setenv("CTYUN_PROJECT_ID", "0")
+	os.Setenv("CTYUN_AZ_NAME", "cn-xinan1-xn1A-public-ctcloud")
 	outputs, err := terraform.ApplyResource(dependenceDir)
 	if err != nil {
 		fmt.Println(err)
@@ -34,16 +45,24 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	dependence = Dependence{
-		vpcID:           outputs["vpc_id"].Value,
-		subnetID:        outputs["subnet_id"].Value,
-		imageID:         outputs["image_id"].Value,
-		flavorID:        outputs["flavor_id"].Value,
-		flavorID2:       outputs["flavor_id2"].Value,
-		affinityGroupID: outputs["affinity_group_id"].Value,
-		keyPairName:     outputs["key_pair_name"].Value,
-		keyPairName2:    outputs["key_pair_name2"].Value,
-		securityGroupID: outputs["security_group_id"].Value,
-		ecsID:           outputs["ecs_id"].Value,
+		vpcID:                   outputs["vpc_id"].Value,
+		subnetID:                outputs["subnet_id"].Value,
+		imageID:                 outputs["image_id"].Value,
+		flavorID:                outputs["flavor_id"].Value,
+		flavorID2:               outputs["flavor_id2"].Value,
+		affinityGroupID:         outputs["affinity_group_id"].Value,
+		keyPairName:             outputs["key_pair_name"].Value,
+		keyPairName2:            outputs["key_pair_name2"].Value,
+		securityGroupID:         outputs["security_group_id"].Value,
+		ecsID:                   outputs["ecs_id"].Value,
+		ebsID:                   outputs["ebs_id"].Value,
+		ebsID2:                  outputs["ebs_id2"].Value,
+		ebsID3:                  outputs["ebs_id3"].Value,
+		instanceID:              outputs["instance_id"].Value,
+		ecsPortForAssociationId: outputs["ecs_port_for_association_id"].Value,
+		flavorName:              outputs["flavor_name"].Value,
+		flavorName2:             outputs["flavor_name2"].Value,
+		backupRepoId:            outputs["backup_repo_id"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 

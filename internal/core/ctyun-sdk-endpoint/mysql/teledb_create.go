@@ -63,6 +63,8 @@ type TeledbCreateRequest struct {
 	MysqlNodeInfoList     []MysqlNodeInfoListRequest `json:"mysqlNodeInfoList,omitempty"`
 	CpuType               string                     `json:"cpuType"`
 	OsType                string                     `json:"osType"`
+	InstId                *string                    `json:"instId"`
+	ProjectID             *string                    `json:"projectId"`
 }
 type TeledbCreateRequestHeader struct {
 	ProjectID *string `json:"project_id"`

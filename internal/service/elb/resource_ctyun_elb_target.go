@@ -4,11 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -19,8 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strconv"
-	"strings"
 )
 
 var (
@@ -31,6 +34,7 @@ var (
 
 type ctyunElbTarget struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbTarget() resource.Resource {
@@ -39,6 +43,7 @@ func NewCtyunElbTarget() resource.Resource {
 
 func (c *ctyunElbTarget) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_target"
+	c.name = response.TypeName
 }
 func (c *ctyunElbTarget) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
@@ -49,18 +54,52 @@ func (c *ctyunElbTarget) Configure(ctx context.Context, request resource.Configu
 }
 
 func (c *ctyunElbTarget) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunElbTargetConfig
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+
+	err = c.getAndMergeElbTarget(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10196689`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡后端主机", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10196689"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池Id，默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -84,7 +123,11 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				Computed:    true,
 				Description: "描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:'{},./;'[,]·~！@#￥%……&*（） —— -+={},，支持更新",
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1)},
+					stringvalidator.LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"instance_type": schema.StringAttribute{
 				Required:    true,
@@ -133,9 +176,11 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "后端主机服务(elb_target)ID",
+				Computed:    true,
+				Description: "后端主机服务(elb_target)ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"health_check_status": schema.StringAttribute{
 				Computed:    true,
@@ -149,38 +194,21 @@ func (c *ctyunElbTarget) Schema(ctx context.Context, request resource.SchemaRequ
 				Computed:    true,
 				Description: "状态: DOWN / ACTIVE",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -275,6 +303,7 @@ func (c *ctyunElbTarget) Update(ctx context.Context, request resource.UpdateRequ
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -316,7 +345,7 @@ func (c *ctyunElbTarget) Delete(ctx context.Context, request resource.DeleteRequ
 
 func (c *ctyunElbTarget) CrateElbTarget(ctx context.Context, plan *CtyunElbTargetConfig) (err error) {
 	if plan.RegionID.IsNull() {
-		err = errors.New("创建ELB后端主机时，regionID不能为空")
+		err = errors.New("创建ELB后端主机时，region_id不能为空")
 		return
 	}
 
@@ -333,6 +362,9 @@ func (c *ctyunElbTarget) CrateElbTarget(ctx context.Context, plan *CtyunElbTarge
 	}
 	if !plan.Weight.IsNull() {
 		params.Weight = plan.Weight.ValueInt32()
+	}
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbCreateTargetApi.Do(ctx, c.meta.SdkCredential, params)
@@ -364,6 +396,9 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiTargetNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -380,7 +415,9 @@ func (c *ctyunElbTarget) getAndMergeElbTarget(ctx context.Context, plan *CtyunEl
 	plan.CreatedTime = types.StringValue(returnObj.CreatedTime)
 	plan.UpdatedTime = types.StringValue(returnObj.UpdatedTime)
 	plan.Weight = types.Int32Value(returnObj.Weight)
-
+	plan.InstanceID = types.StringValue(returnObj.InstanceID)
+	plan.InstanceType = types.StringValue(returnObj.InstanceType)
+	plan.TargetGroupID = types.StringValue(returnObj.TargetGroupID)
 	return
 }
 
@@ -402,6 +439,9 @@ func (c *ctyunElbTarget) updateElbTarget(ctx context.Context, state *CtyunElbTar
 	}
 	if !plan.Weight.IsNull() {
 		params.Weight = plan.Weight.ValueInt32()
+	}
+	if !plan.Description.IsNull() && !plan.Description.IsUnknown() {
+		params.Description = plan.Description.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbUpdateTargetApi.Do(ctx, c.meta.SdkCredential, params)
@@ -435,11 +475,10 @@ type CtyunElbTargetConfig struct {
 	ProtocolPort          types.Int32  `tfsdk:"protocol_port"`   //协议端口。取值范围：1-65535
 	Weight                types.Int32  `tfsdk:"weight"`          //权重。取值范围：1-256，默认为100
 	ID                    types.String `tfsdk:"id"`              //后端服务组ID
-	AzName                types.String `tfsdk:"az_name"`
-	ProjectID             types.String `tfsdk:"project_id"`
 	HealthCheckStatus     types.String `tfsdk:"health_check_status"`
 	HealthCheckStatusIpv6 types.String `tfsdk:"health_check_status_ipv6"`
 	Status                types.String `tfsdk:"status"`
-	CreatedTime           types.String `tfsdk:"created_time"` //创建时间，为UTC格式
-	UpdatedTime           types.String `tfsdk:"updated_time"` //更新时间，为UTC格式
+	CreatedTime           types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	UpdatedTime           types.String `tfsdk:"update_time"` //更新时间，为UTC格式
+	ProjectId             types.String `tfsdk:"project_id"`  //企业项目ID
 }

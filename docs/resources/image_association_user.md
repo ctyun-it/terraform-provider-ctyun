@@ -1,5 +1,10 @@
+---
+subcategory: "镜像服务（CT-IMS，Image Management Service）"
+page_title: "CTYUN: ctyun_image_association_user"
+---
+
 # ctyun_image_association_user (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027726
+-> 管理私有镜像共享
 
 
 

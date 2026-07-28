@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	SubnetError = "不满足Subnet格式"
+	SubnetError = "子网ID格式不正确"
 )
 
 type validatorSubnet struct {
@@ -20,6 +20,10 @@ func (v validatorSubnet) ValidateString(ctx context.Context, request validator.S
 	}
 	value := request.ConfigValue.ValueString()
 	if value == "" {
+		return
+	}
+	// 匹配uuid，说明是3.0资源池
+	if uuidRegex.MatchString(request.ConfigValue.ValueString()) {
 		return
 	}
 	pattern := `^subnet-[a-z0-9]{10}$`

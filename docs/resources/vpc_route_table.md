@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_vpc_route_table"
+---
+
 # ctyun_vpc_route_table (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724
+-> 管理虚拟私有云路由表
 
 
 
@@ -28,7 +33,7 @@ resource "ctyun_vpc" "vpc_test" {
 
 resource "ctyun_vpc_route_table" "route" {
   vpc_id = ctyun_vpc.vpc_test.id
-  name = "route-t1f"
+  name   = "route-t1f"
 }
 ```
 
@@ -42,10 +47,24 @@ resource "ctyun_vpc_route_table" "route" {
 
 ### Optional
 
+- `bind_gateway` (Boolean) 是否绑定网关，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `route_type` (String) 类型，支持subnet,gateway
 
 ### Read-Only
 
 - `id` (String) ID，值与路由表ID相同
 - `route_table_id` (String) 路由表ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPC路由表
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpc_route_table.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_vpc_route_table.route_table_example rtb-12345,region-67890
+```

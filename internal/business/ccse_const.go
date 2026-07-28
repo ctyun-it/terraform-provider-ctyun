@@ -5,6 +5,11 @@ const (
 	CcseClusterSeriesManaged  = "cce.managed"  // 托管版
 	CcseClusterSeriesIcce     = "cce.icce"     // 智算版
 
+	CcseClusterSeriesStandardInt = 0 // 专有版
+	CcseClusterSeriesManagedInt  = 2
+	CcseClusterSeriesIcceInt     = 4
+
+	CcseRunningBizState   = 1
 	CcseRefundedBizState  = 4
 	CcseRefundingBizState = 18
 
@@ -31,4 +36,4 @@ var CcseApiServerElbSpecs = []string{"standardI", "standardII", "enhancedI", "en
 
 var CcseClusterVersions = []string{"1.31.6", "1.27.8", "1.29.3"}
 
-var CcseDiskTypes = []string{"SATA", "SSD", "SAS"}
+//var CcseDiskTypes = []string{"SATA", "SSD", "SAS"}

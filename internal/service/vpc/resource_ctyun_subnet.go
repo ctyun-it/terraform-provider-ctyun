@@ -2,12 +2,17 @@ package vpc
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	ctvpc2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -21,6 +26,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunSubnet{}
+	_ resource.ResourceWithConfigure   = &ctyunSubnet{}
+	_ resource.ResourceWithImportState = &ctyunSubnet{}
 )
 
 func NewCtyunSubnet() resource.Resource {
@@ -30,20 +42,24 @@ func NewCtyunSubnet() resource.Resource {
 type ctyunSubnet struct {
 	meta       *common.CtyunMetadata
 	vpcService *business.VpcService
+	name       string
 }
 
 func (c *ctyunSubnet) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_subnet"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10197656`,
+		MarkdownDescription: utils.FormatDesc("管理子网", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10197656"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
@@ -70,14 +86,16 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"dns": schema.SetAttribute{
 				ElementType: types.StringType,
 				Required:    true,
-				Description: "子网dns列表, 最多同时支持4个dns地址，支持更新",
+				Description: "子网dns列表, 最多同时支持2个dns地址，支持更新",
 				Validators: []validator.Set{
-					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(4),
+					setvalidator.SizeBetween(1, 2),
 					setvalidator.ValueStringsAre(validator2.Ip()),
 				},
 			},
@@ -115,29 +133,44 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 			"gateway_ip": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网关",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_start": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网段起始ip",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv4_end": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网网段结束ip",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_start": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网内可用的起始ipv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"ipv6_end": schema.StringAttribute{
 				Computed:    true,
 				Description: "子网内可用的结束ipv6地址",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
 				Validators: []validator.String{
@@ -155,6 +188,17 @@ func (c *ctyunSubnet) Schema(_ context.Context, _ resource.SchemaRequest, respon
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
+			},
+			"route_table_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "路由表ID 支持更新",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 		},
 	}
@@ -199,22 +243,34 @@ func (c *ctyunSubnet) Create(ctx context.Context, request resource.CreateRequest
 	}
 
 	plan.Id = types.StringValue(resp.SubnetId)
-	plan.RegionId = types.StringValue(regionId)
-	plan.ProjectId = types.StringValue(projectId)
 	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 	if response.Diagnostics.HasError() {
 		return
 	}
-
-	instance, ctyunRequestError := c.getAndMergeSubnet(ctx, plan)
+	if plan.RouteTableId.ValueString() != "" {
+		uuid := uuid.NewString()
+		params := &ctvpc2.CtvpcReplaceSubnetRouteTableRequest{
+			ClientToken:  &uuid,
+			RegionID:     plan.RegionId.ValueString(),
+			RouteTableID: plan.RouteTableId.ValueString(),
+			SubnetID:     plan.Id.ValueString(),
+		}
+		var resp2 *ctvpc2.CtvpcReplaceSubnetRouteTableResponse
+		resp2, err = c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp2.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp2.Message, *resp2.Description)
+			return
+		}
+	}
+	ctyunRequestError := c.getAndMergeSubnet(ctx, &plan)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+
+	response.Diagnostics.Append(response.State.Set(ctx, plan)...)
 }
 
 func (c *ctyunSubnet) Read(ctx context.Context, request resource.ReadRequest, response *resource.ReadResponse) {
@@ -224,16 +280,15 @@ func (c *ctyunSubnet) Read(ctx context.Context, request resource.ReadRequest, re
 		return
 	}
 
-	instance, err := c.getAndMergeSubnet(ctx, state)
+	err := c.getAndMergeSubnet(ctx, &state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+		if errors.Is(err, common.ResourceNotExistError) {
+			response.State.RemoveResource(ctx)
+			err = nil
+		}
 		return
 	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
@@ -266,13 +321,33 @@ func (c *ctyunSubnet) Update(ctx context.Context, request resource.UpdateRequest
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
+	if plan.RouteTableId.ValueString() != state.RouteTableId.ValueString() && plan.RouteTableId.ValueString() != "" {
+		state.RouteTableId = plan.RouteTableId
+		uuid := uuid.NewString()
+		params := &ctvpc2.CtvpcReplaceSubnetRouteTableRequest{
+			ClientToken:  &uuid,
+			RegionID:     plan.RegionId.ValueString(),
+			RouteTableID: plan.RouteTableId.ValueString(),
+			SubnetID:     plan.Id.ValueString(),
+		}
+		resp2, err2 := c.meta.Apis.SdkCtVpcApis.CtvpcReplaceSubnetRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err2 != nil {
+			response.Diagnostics.AddError(err2.Error(), err2.Error())
+			return
+		} else if resp2.StatusCode == common.ErrorStatusCode {
+			err2 = fmt.Errorf("API return error. Message: %s Description: %s", *resp2.Message, *resp2.Description)
+			response.Diagnostics.AddError(err2.Error(), err2.Error())
+			return
+		}
+	}
 
-	instance, ctyunRequestError := c.getAndMergeSubnet(ctx, state)
+	ctyunRequestError := c.getAndMergeSubnet(ctx, &state)
 	if ctyunRequestError != nil {
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+
+	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
 func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest, response *resource.DeleteResponse) {
@@ -286,7 +361,6 @@ func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest
 		ClientToken: uuid.NewString(),
 		RegionId:    state.RegionId.ValueString(),
 		SubnetId:    state.Id.ValueString(),
-		ProjectId:   state.ProjectId.ValueString(),
 	})
 	if err != nil {
 		response.Diagnostics.AddError(err.Error(), err.Error())
@@ -294,26 +368,42 @@ func (c *ctyunSubnet) Delete(ctx context.Context, request resource.DeleteRequest
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [subnetId],[vpcId],[regionId]
 func (c *ctyunSubnet) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<regionId>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunSubnetConfig
-	var subnetId, vpcId, regionId string
-	err := terraform_extend.Split(request.ID, &subnetId, &vpcId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
+	var subnetId, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		subnetId = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &subnetId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if subnetId == "" {
+		err = fmt.Errorf("subnet_id不能为空")
 		return
 	}
-
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 	cfg.Id = types.StringValue(subnetId)
-	cfg.VpcId = types.StringValue(vpcId)
 	cfg.RegionId = types.StringValue(regionId)
-
-	instance, err := c.getAndMergeSubnet(ctx, cfg)
+	err = c.getAndMergeSubnet(ctx, &cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
+	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 func (c *ctyunSubnet) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -326,18 +416,18 @@ func (c *ctyunSubnet) Configure(_ context.Context, request resource.ConfigureReq
 }
 
 // getAndMergeSubnet 查询子网
-func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConfig) (*CtyunSubnetConfig, error) {
-	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, &ctvpc.SubnetQueryRequest{
+func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg *CtyunSubnetConfig) error {
+	params := &ctvpc.SubnetQueryRequest{
 		RegionId:    cfg.RegionId.ValueString(),
-		ProjectId:   cfg.ProjectId.ValueString(),
 		ClientToken: uuid.NewString(),
 		SubnetId:    cfg.Id.ValueString(),
-	})
+	}
+	resp, err := c.meta.Apis.CtVpcApis.SubnetQueryApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		if err.ErrorCode() == common.OpenapiSubnetNotFound {
-			return nil, nil
+			return common.ResourceNotExistError
 		}
-		return nil, err
+		return err
 	}
 
 	dl := []types.String{}
@@ -348,7 +438,7 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConf
 
 	subnetType, err2 := business.SubnetTypeMap.ToOriginalScene(resp.Type, business.SubnetTypeMapScene1)
 	if err2 != nil {
-		return nil, err2
+		return err2
 	}
 
 	cfg.Id = types.StringValue(resp.SubnetId)
@@ -358,34 +448,44 @@ func (c *ctyunSubnet) getAndMergeSubnet(ctx context.Context, cfg CtyunSubnetConf
 	cfg.Description = types.StringValue(resp.Description)
 	cfg.Dns = dnsList
 	cfg.EnableIpv6 = types.BoolValue(resp.EnableIpv6)
+	cfg.ProjectId = types.StringValue(resp.ProjectID)
 	cfg.Type = types.StringValue(subnetType.(string))
 	cfg.GatewayIp = types.StringValue(resp.Gateway)
 	cfg.Ipv4Start = types.StringValue(resp.Start)
 	cfg.Ipv4End = types.StringValue(resp.End)
 	cfg.Ipv6Start = types.StringValue(resp.Ipv6Start)
 	cfg.Ipv6End = types.StringValue(resp.Ipv6End)
-	return &cfg, nil
+	cfg.RouteTableId = types.StringValue(resp.RouteTableId)
+	return nil
 }
 
 // checkCreate 校验创建动作是否能执行
 func (c *ctyunSubnet) checkCreate(ctx context.Context, plan CtyunSubnetConfig) error {
-	return c.vpcService.MustExist(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString(), plan.ProjectId.ValueString())
+	vpc, err := c.vpcService.GetVpcDetail(ctx, plan.VpcId.ValueString(), plan.RegionId.ValueString())
+	if err != nil {
+		return err
+	}
+	if vpc.ProjectID != plan.ProjectId.ValueString() {
+		return fmt.Errorf("子网的企业项目目前只支持和VPC相同")
+	}
+	return nil
 }
 
 type CtyunSubnetConfig struct {
-	Id          types.String `tfsdk:"id"`
-	Name        types.String `tfsdk:"name"`
-	VpcId       types.String `tfsdk:"vpc_id"`
-	Cidr        types.String `tfsdk:"cidr"`
-	Description types.String `tfsdk:"description"`
-	Dns         types.Set    `tfsdk:"dns"`
-	EnableIpv6  types.Bool   `tfsdk:"enable_ipv6"`
-	Type        types.String `tfsdk:"type"`
-	GatewayIp   types.String `tfsdk:"gateway_ip"`
-	Ipv4Start   types.String `tfsdk:"ipv4_start"`
-	Ipv4End     types.String `tfsdk:"ipv4_end"`
-	Ipv6Start   types.String `tfsdk:"ipv6_start"`
-	Ipv6End     types.String `tfsdk:"ipv6_end"`
-	ProjectId   types.String `tfsdk:"project_id"`
-	RegionId    types.String `tfsdk:"region_id"`
+	Id           types.String `tfsdk:"id"`
+	Name         types.String `tfsdk:"name"`
+	VpcId        types.String `tfsdk:"vpc_id"`
+	Cidr         types.String `tfsdk:"cidr"`
+	Description  types.String `tfsdk:"description"`
+	Dns          types.Set    `tfsdk:"dns"`
+	EnableIpv6   types.Bool   `tfsdk:"enable_ipv6"`
+	Type         types.String `tfsdk:"type"`
+	GatewayIp    types.String `tfsdk:"gateway_ip"`
+	Ipv4Start    types.String `tfsdk:"ipv4_start"`
+	Ipv4End      types.String `tfsdk:"ipv4_end"`
+	Ipv6Start    types.String `tfsdk:"ipv6_start"`
+	Ipv6End      types.String `tfsdk:"ipv6_end"`
+	ProjectId    types.String `tfsdk:"project_id"`
+	RegionId     types.String `tfsdk:"region_id"`
+	RouteTableId types.String `tfsdk:"route_table_id"`
 }

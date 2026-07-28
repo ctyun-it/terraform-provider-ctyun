@@ -46,8 +46,8 @@ type CtyunVpceServicesModel struct {
 	Rules          []CtyunVpceServicesRule `tfsdk:"rules"`
 	InstanceType   types.String            `tfsdk:"instance_type"`
 	InstanceID     types.String            `tfsdk:"instance_id"`
-	CreatedAt      types.String            `tfsdk:"created_at"`
-	UpdatedAt      types.String            `tfsdk:"updated_at"`
+	CreateTime     types.String            `tfsdk:"create_time"`
+	UpdateTime     types.String            `tfsdk:"update_time"`
 }
 
 type CtyunVpceServicesConfig struct {
@@ -63,7 +63,7 @@ type CtyunVpceServicesConfig struct {
 
 func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217013`,
+		MarkdownDescription: utils.FormatDesc("查询终端节点服务", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10217013"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -106,7 +106,7 @@ func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest
 							Description: "终端节点服务ID",
 						},
 						"name": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点服务名称",
 						},
 						"vpc_id": schema.StringAttribute{
@@ -155,13 +155,13 @@ func (c *ctyunVpceServices) Schema(_ context.Context, _ datasource.SchemaRequest
 							Computed:    true,
 							Description: "服务后端实例id,当type为interface时，必填",
 						},
-						"created_at": schema.StringAttribute{
-							Required:    true,
-							Description: "创建时间",
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_at": schema.StringAttribute{
-							Required:    true,
-							Description: "更新时间",
+						"update_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -184,7 +184,7 @@ func (c *ctyunVpceServices) Read(ctx context.Context, request datasource.ReadReq
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
@@ -228,8 +228,8 @@ func (c *ctyunVpceServices) Read(ctx context.Context, request datasource.ReadReq
 			Type:           utils.SecStringValue(e.RawType),
 			VpcID:          utils.SecStringValue(e.VpcID),
 			Name:           utils.SecStringValue(e.Name),
-			CreatedAt:      utils.SecStringValue(e.CreatedAt),
-			UpdatedAt:      utils.SecStringValue(e.UpdatedAt),
+			CreateTime:     utils.SecStringValue(e.CreatedAt),
+			UpdateTime:     utils.SecStringValue(e.UpdatedAt),
 		}
 		if len(e.Backends) > 0 {
 			item.InstanceType = utils.SecStringValue(e.Backends[0].InstanceType)

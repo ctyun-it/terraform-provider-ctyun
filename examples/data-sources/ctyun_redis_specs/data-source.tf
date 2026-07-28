@@ -11,6 +11,6 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_redis_specs" "test"{
+data "ctyun_redis_specs" "test" {
 
 }

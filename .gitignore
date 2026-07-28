@@ -24,11 +24,10 @@ docs/node_modules
 .idea
 *.iml
 *.test
-*.iml
+.run
 /archive
-
 docs/vendor
-
+.codefree
 # Test exclusions
 !command/test-fixtures/**/*.tfstate
 !command/test-fixtures/**/.terraform/

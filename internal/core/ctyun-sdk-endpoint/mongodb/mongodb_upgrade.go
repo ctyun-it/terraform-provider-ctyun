@@ -69,6 +69,15 @@ type MongodbUpgradeResponse struct {
 	ReturnObj  *MongodbUpgradeResponseReturnObj `json:"returnObj"`  // 返回对象，类型为 DataObject
 }
 
+type MongodbUpgradeResponseReturnObjData struct {
+	ErrorMessage string  `json:"errorMessage"`
+	Submitted    bool    `json:"submitted"`
+	NewOrderId   *string `json:"newOrderId"`
+	NewOrderNo   *string `json:"newOrderNo"`
+	TotalPrice   float64 `json:"totalPrice"`
+	Message      *string `json:"message"`
+}
+
 type MongodbUpgradeResponseReturnObj struct {
-	NewOrderId string `json:"newOrderId"` // 订单ID
+	Data *MongodbUpgradeResponseReturnObjData `json:"data"`
 }

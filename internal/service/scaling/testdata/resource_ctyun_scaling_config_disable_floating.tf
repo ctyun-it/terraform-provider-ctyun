@@ -7,8 +7,7 @@ resource "ctyun_scaling_config" "%[1]s" {
   login_mode      = "%[6]s"
   key_pair_id     = "%[7]s"
   monitor_service = %[8]t
-  az_names        = %[9]s
-  tags            = %[10]s
-  volumes         = %[11]s
+  tags            = %[9]s
+  volumes         = %[10]s
 }
 

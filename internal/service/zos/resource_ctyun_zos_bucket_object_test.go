@@ -127,6 +127,42 @@ func TestAccCtyunZosBucketObject(t *testing.T) {
 				},
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					key := ds.Attributes["key"]
+					bucket := ds.Attributes["bucket"]
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s,%s", bucket, key, regionId), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"acl",
+					"tags",
+					"source",
+					"content",
+				},
+			},
+
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					key := ds.Attributes["key"]
+					bucket := ds.Attributes["bucket"]
+					return fmt.Sprintf("%s,%s", bucket, key), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"acl",
+					"tags",
+					"source",
+					"content",
+				},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, dependenceBucket, key, source, nextAcl, nextTags) +
 					utils.LoadTestCase(datasourceFile, dnd, dependenceBucket),
 				Destroy: true,

@@ -48,6 +48,7 @@ func (a *CtvpcDhcpassociatevpcApi) Do(ctx context.Context, credential core.Crede
 type CtvpcDhcpassociatevpcRequest struct {
 	RegionID         string `json:"regionID,omitempty"`         /*  资源池 ID  */
 	DhcpOptionSetsID string `json:"dhcpOptionSetsID,omitempty"` /*  集合ID  */
+	VpcID            string `json:"vpcID,omitempty"`            /*  集合ID  */
 }
 
 type CtvpcDhcpassociatevpcResponse struct {

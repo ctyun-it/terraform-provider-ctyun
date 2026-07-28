@@ -63,10 +63,31 @@ type OceanfsListPermissionRuleRequest struct {
 	PageNo              int32  `json:"pageNo,omitempty"`              /*  页数。默认为1  */
 }
 
+type OceanfsListPermissionRuleReturnObjItemResponse struct {
+	PermissionRuleFuid      string  `json:"permissionRuleFuid"`
+	UpdateTime              string  `json:"updateTime"`
+	RegionID                string  `json:"regionID"`
+	PermissionGroupFuid     string  `json:"permissionGroupFuid"`
+	AuthAddr                *string `json:"authAddr"`
+	RwPermission            string  `json:"rwPermission"`
+	UserPermission          string  `json:"userPermission"`
+	PermissionRulePriority  int32   `json:"permissionRulePriority"`
+	PermissionRuleIsDefault bool    `json:"permissionRuleIsDefault"`
+}
+
+type OceanfsListPermissionRuleReturnObjResponse struct {
+	TotalCount   int32                                             `json:"totalCount"`
+	CurrentCount int32                                             `json:"currentCount"`
+	List         []*OceanfsListPermissionRuleReturnObjItemResponse `json:"list"`
+	PageSize     int32                                             `json:"pageSize"`
+	PageNo       int32                                             `json:"pageNo"`
+}
+
 type OceanfsListPermissionRuleResponse struct {
-	StatusCode  int32  `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
-	Message     string `json:"message"`     /*  响应描述，一般为英文描述  */
-	Description string `json:"description"` /*  响应描述，一般为中文描述  */
-	ErrorCode   string `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码.参考[结果码]  */
-	Error       string `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	StatusCode  int32                                       `json:"statusCode"`  /*  返回状态码(800 为成功，900 为失败)  */
+	Message     string                                      `json:"message"`     /*  响应描述，一般为英文描述  */
+	Description string                                      `json:"description"` /*  响应描述，一般为中文描述  */
+	ErrorCode   string                                      `json:"errorCode"`   /*  业务细分码，为 product.module.code 三段式码.参考[结果码]  */
+	Error       string                                      `json:"error"`       /*  业务细分码，为product.module.code三段式码大驼峰形式  */
+	ReturnObj   *OceanfsListPermissionRuleReturnObjResponse `json:"returnObj"`
 }

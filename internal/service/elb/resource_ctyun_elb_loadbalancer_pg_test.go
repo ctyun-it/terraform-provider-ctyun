@@ -2,11 +2,12 @@ package elb_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 // 测试经典型ELB创建、升级为保障型ELB、保障型负载均衡的信息修改和退订
@@ -52,14 +53,45 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 
 			// 创建保障型elb
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime := ds.Attributes["create_time"], ds.Attributes["update_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
+			},
+			// importState 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify: true,
+			},
+			// importState 2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionID), nil
+				},
+				ImportStateVerify: true,
 			},
 			// 保障型elb变配测试
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", update2SlaName),
 				),

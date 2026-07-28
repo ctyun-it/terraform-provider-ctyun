@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_backup"
+---
+
 # ctyun_ebs_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037428
+-> 管理云硬盘备份
 
 
 
@@ -21,9 +26,9 @@ provider "ctyun" {
 
 resource "ctyun_ebs_backup" "test" {
   repository_id = "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
-  disk_id = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
-  name  = "test"
-  full_backup = false
+  disk_id       = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
+  name          = "test"
+  full_backup   = false
 }
 ```
 
@@ -39,18 +44,16 @@ resource "ctyun_ebs_backup" "test" {
 ### Optional
 
 - `description` (String) 云硬盘备份描述
-- `full_backup` (Boolean) 是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。
+- `full_backup` (Boolean) 是否启用全量备份，如您是第一次备份，或者切换了存储库，则本次备份为全量备份，不受该参数影响。
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
 - `backup_size` (Number) 云硬盘备份大小，单位Byte
 - `backup_status` (String) 云硬盘备份状态，该接口会返回creating状态
-- `created_time` (String) 创建时间
 - `disk_size` (Number) 云硬盘大小，单位GB
 - `disk_type` (String) 云硬盘类型，取值范围为：SATA：普通IO。SAS：高IO。SSD：超高IO。FAST-SSD：极速型SSD。XSSD-0、XSSD-1、XSSD-2：X系列云硬盘
 - `encrypted` (Boolean) 云硬盘是否加密
-- `finished_time` (String) 备份完成时间
 - `freeze` (Boolean) 备份是否冻结
 - `id` (String) 云硬盘备份ID
 - `instance_id` (String) 云硬盘挂载的云主机ID
@@ -58,6 +61,15 @@ resource "ctyun_ebs_backup" "test" {
 - `paas` (Boolean) 是否支持PAAS
 - `project_id` (String) 企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为"0"
 - `repository_name` (String) 云硬盘备份存储库名称
-- `restore_finished_time` (String) 使用该云硬盘备份恢复完成时间
-- `restored_time` (String) 使用该云硬盘备份恢复数据时间
-- `updated_time` (String) 备份更新时间
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘备份
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_backup.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ebs_backup.example b4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```

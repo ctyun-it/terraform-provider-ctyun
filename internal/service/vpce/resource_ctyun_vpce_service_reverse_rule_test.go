@@ -45,6 +45,14 @@ func TestAccCtyunVpceServiceReverseRule(t *testing.T) {
 						id = rs.Primary.ID
 						return nil
 					},
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -81,6 +89,19 @@ func TestAccCtyunVpceServiceReverseRule(t *testing.T) {
 						return "", fmt.Errorf("id or region_id or endpoint_service_id is required")
 					}
 					return fmt.Sprintf("%s,%s,%s", id, endpointServiceID, regionId), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id = ds.ID
+					endpointServiceID := ds.Attributes["endpoint_service_id"]
+
+					return fmt.Sprintf("%s,%s", id, endpointServiceID), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{},

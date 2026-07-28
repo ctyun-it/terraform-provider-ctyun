@@ -13,8 +13,7 @@ resource "ctyun_subnet" "subnet_test" {
   description = "terraform测试使用"
   dns         = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
 }
 
@@ -47,18 +46,25 @@ resource "ctyun_elb_target_group" "test1" {
   name      = "tf-tg-for-target1_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "HTTP"
+  session_sticky_mode = "INSERT"
+  cookie_expire = "30"
 }
 
 resource "ctyun_elb_target_group" "test2" {
   name      = "tf-tg-for-target2_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 0
 }
 
 resource "ctyun_elb_target_group" "test3" {
   name      = "tf-tg-for-target3_3"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
+  protocol = "TCP"
+  proxy_protocol = 1
 }
 
 resource "ctyun_elb_target_group" "test4" {
@@ -90,17 +96,15 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 #
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-elb"
   display_name        = "tf-ecs-for-elb"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[2].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SSD"
   system_disk_size    = 40
   vpc_id = ctyun_vpc.vpc_test.id
   password            = var.password

@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpces"
+---
+
 # ctyun_vpces (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217121
+-> 查询终端节点
 
 
 
@@ -44,9 +49,9 @@ data "ctyun_vpces" "test" {
 <a id="nestedatt--vpces"></a>
 ### Nested Schema for `vpces`
 
-Required:
+Read-Only:
 
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `endpoint_service_id` (String) 终端节点服务ID
 - `id` (String) 终端节点ID
 - `name` (String) 终端节点名称
@@ -54,6 +59,6 @@ Required:
 - `subnet_id` (String) 子网ID
 - `subnet_ip` (String) 子网IP
 - `type` (String) 接口还是反向，interface:接口，reverse:反向
-- `updated_time` (String) 更新时间
+- `update_time` (String) 更新时间，为UTC格式
 - `vpc_id` (String) 所属的专有网络id
 - `whitelist_cidr` (Set of String) 白名单

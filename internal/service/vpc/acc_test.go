@@ -2,19 +2,30 @@ package vpc_test
 
 import (
 	"fmt"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 )
 
 const dependenceDir = "testdata/dependence"
 
 type Dependence struct {
-	vpcID           string
-	eipID           string
-	bandwidthID     string
-	ecsID           string
-	securityGroupID string
+	vpcID              string
+	eipID              string
+	bandwidthID        string
+	ecsID              string
+	securityGroupID    string
+	subnetID           string
+	instanceID         string
+	dataDiskID         string
+	networkInterfaceID string
+	vipId              string
+	vpcID2             string
+	dhcpID             string
+	routeTableID       string
+	ipv6BandwidthID    string
+	vipIpv6Address     string
 }
 
 var dependence Dependence
@@ -29,11 +40,21 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	dependence = Dependence{
-		vpcID:           outputs["vpc_id"].Value,
-		eipID:           outputs["eip_id"].Value,
-		bandwidthID:     outputs["bandwidth_id"].Value,
-		ecsID:           outputs["ecs_id"].Value,
-		securityGroupID: outputs["security_group_id"].Value,
+		vpcID:              outputs["vpc_id"].Value,
+		eipID:              outputs["eip_id"].Value,
+		bandwidthID:        outputs["bandwidth_id"].Value,
+		ecsID:              outputs["ecs_id"].Value,
+		securityGroupID:    outputs["security_group_id"].Value,
+		instanceID:         outputs["instance_id"].Value,
+		dataDiskID:         outputs["data_disk_id"].Value,
+		subnetID:           outputs["subnet_id"].Value,
+		networkInterfaceID: outputs["network_interface_id"].Value,
+		vipId:              outputs["vip_id"].Value,
+		vpcID2:             outputs["vpc_id2"].Value,
+		dhcpID:             outputs["dhcp_id"].Value,
+		routeTableID:       outputs["route_table_id"].Value,
+		ipv6BandwidthID:    outputs["ipv6_bandwidth_id"].Value,
+		vipIpv6Address:     outputs["vip_ipv6_address"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 

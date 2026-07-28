@@ -65,7 +65,10 @@ var OrderCycleTypes = []string{
 	OrderCycleTypeYear,
 	OrderCycleTypeOnDemand,
 }
-
+var OrderCycleTypesMY = []string{
+	OrderCycleTypeMonth,
+	OrderCycleTypeYear,
+}
 var OrderCycleTypeMap = utils.Must(
 	[]any{
 		OrderCycleTypeMonth,

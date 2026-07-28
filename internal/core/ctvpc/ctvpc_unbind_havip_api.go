@@ -52,16 +52,16 @@ type CtvpcUnbindHavipRequest struct {
 	HaVipID            string  `json:"haVipID,omitempty"`            /*  高可用虚IP的ID  */
 	NetworkInterfaceID string  `json:"networkInterfaceID,omitempty"` /*  虚拟网卡ID  */
 	InstanceID         *string `json:"instanceID,omitempty"`         /*  ECS示例ID，当 resourceType 为 VM / PM 时，必填  */
-	DoubleingID        *string `json:"DoubleingID,omitempty"`        /*  弹性IP ID，当 resourceType 为 NETWORK 时，必填  */
+	FloatingID         *string `json:"floatingID,omitempty"`         /*  弹性IP ID，当 resourceType 为 NETWORK 时，必填  */
 }
 
 type CtvpcUnbindHavipResponse struct {
-	StatusCode  int32                                `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
-	Message     *string                              `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
-	Description *string                              `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
-	ErrorCode   *string                              `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
-	ReturnObj   []*CtvpcUnbindHavipReturnObjResponse `json:"returnObj"`             /*  解绑状态  */
-	Error       *string                              `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	StatusCode  int32                              `json:"statusCode"`            /*  返回状态码（800为成功，900为失败）  */
+	Message     *string                            `json:"message,omitempty"`     /*  statusCode为900时的错误信息; statusCode为800时为success, 英文  */
+	Description *string                            `json:"description,omitempty"` /*  statusCode为900时的错误信息; statusCode为800时为成功, 中文  */
+	ErrorCode   *string                            `json:"errorCode,omitempty"`   /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
+	ReturnObj   *CtvpcUnbindHavipReturnObjResponse `json:"returnObj"`             /*  解绑状态  */
+	Error       *string                            `json:"error,omitempty"`       /*  statusCode为900时为业务细分错误码，三段式：product.module.code; statusCode为800时为SUCCESS  */
 }
 
 type CtvpcUnbindHavipReturnObjResponse struct {

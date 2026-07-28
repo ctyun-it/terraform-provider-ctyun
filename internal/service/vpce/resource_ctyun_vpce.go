@@ -34,6 +34,7 @@ var (
 
 type ctyunVpce struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpce() resource.Resource {
@@ -42,6 +43,7 @@ func NewCtyunVpce() resource.Resource {
 
 func (c *ctyunVpce) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce"
+	c.name = response.TypeName
 }
 
 type CtyunVpceConfig struct {
@@ -56,20 +58,27 @@ type CtyunVpceConfig struct {
 	WhitelistFlag     types.Bool   `tfsdk:"whitelist_flag"`
 	WhitelistCidr     types.Set    `tfsdk:"whitelist_cidr"`
 	Status            types.Int32  `tfsdk:"status"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217121`,
+		MarkdownDescription: utils.FormatDesc("管理终端节点", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10217121"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "主订单号",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -121,7 +130,8 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 					validator2.Ip(),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -158,6 +168,17 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 					setvalidator.SizeAtMost(20),
 					setvalidator.ValueStringsAre(validator2.Cidr()),
 				},
+			},
+			"create_time": schema.StringAttribute{
+				Description: "创建时间，为UTC格式",
+				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"update_time": schema.StringAttribute{
+				Description: "更新时间，为UTC格式",
+				Computed:    true,
 			},
 		},
 	}
@@ -207,7 +228,7 @@ func (c *ctyunVpce) Read(ctx context.Context, request resource.ReadRequest, resp
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "resource not found") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -277,20 +298,36 @@ func (c *ctyunVpce) Configure(_ context.Context, request resource.ConfigureReque
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [vpceID],[regionID]
 func (c *ctyunVpce) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := c.name + "导入失败：" + err.Error()
+			detail := "导入命令：terraform import " + c.name + ".[导入配置名称] [id],<region_id>"
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpceConfig
 	var endpointID, regionID string
-	err = terraform_extend.Split(request.ID, &endpointID, &regionID)
-	if err != nil {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		endpointID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &endpointID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if endpointID == "" {
+		err = fmt.Errorf("id不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ID = types.StringValue(endpointID)
 	// 查询远端
@@ -371,8 +408,16 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceEndpointNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		msg := utils.SecString(resp.Message)
+		if strings.Contains(msg, common.OpenapiVpceEndpointNotFound) {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", msg, utils.SecString(resp.Description))
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -384,6 +429,9 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	plan.Name = utils.SecStringValue(endpoint.Name)
 	plan.EndpointServiceID = utils.SecStringValue(endpoint.EndpointServiceID)
 	plan.Status = types.Int32Value(endpoint.Status)
+	plan.CreateTime = types.StringValue(utils.SecString(endpoint.CreatedTime))
+	plan.UpdateTime = types.StringValue(utils.SecString(endpoint.UpdatedTime))
+
 	Whitelist := utils.SecString(endpoint.Whitelist)
 	if len(Whitelist) > 0 {
 		t := strings.Split(Whitelist, ",")
@@ -455,7 +503,12 @@ func (c *ctyunVpce) delete(ctx context.Context, clientToken string, plan CtyunVp
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		msg := utils.SecString(resp.Message)
+		if strings.Contains(msg, common.OpenapiVpceEndpointNotFound) {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", msg, utils.SecString(resp.Description))
+		}
 		return
 	}
 	status = utils.SecString(resp.ReturnObj.MasterResourceStatus)
@@ -472,6 +525,11 @@ func (c *ctyunVpce) loopDelete(ctx context.Context, plan CtyunVpceConfig) (err e
 		func(currentTime int) bool {
 			status, err = c.delete(ctx, clientToken, plan)
 			if err != nil {
+				if errors.Is(err, common.ResourceNotExistError) {
+					err = nil
+					executeSuccessFlag = true
+					return false
+				}
 				return false
 			}
 			if status == "refunded" {

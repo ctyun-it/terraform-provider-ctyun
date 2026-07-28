@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm_device_raids"
+---
+
 # ctyun_ebm_device_raids (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10166084
+-> 查询物理机本地盘RAID
 
 
 
@@ -20,8 +25,8 @@ provider "ctyun" {
 }
 
 data "ctyun_ebm_device_raids" "test" {
-  region_id = "200000001852"
-  az_name = "cn-huabei2-tj1A-public-ctcloud"
+  region_id   = "200000001852"
+  az_name     = "cn-huabei2-tj1A-public-ctcloud"
   device_type = "physical.s5.2xlarge4"
   volume_type = "system"
 }

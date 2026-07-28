@@ -2,10 +2,12 @@ package ebm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
@@ -29,6 +31,7 @@ var (
 
 type ctyunEbmAssociationEbs struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbmAssociationEbs() resource.Resource {
@@ -37,6 +40,7 @@ func NewCtyunEbmAssociationEbs() resource.Resource {
 
 func (c *ctyunEbmAssociationEbs) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm_association_ebs"
+	c.name = response.TypeName
 }
 
 type CtyunEbmAssociationEbsConfig struct {
@@ -49,12 +53,14 @@ type CtyunEbmAssociationEbsConfig struct {
 
 func (c *ctyunEbmAssociationEbs) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10173867`,
+		MarkdownDescription: utils.FormatDesc("管理物理机与云硬盘的绑定关系", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10173867"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -154,7 +160,7 @@ func (c *ctyunEbmAssociationEbs) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -202,32 +208,70 @@ func (c *ctyunEbmAssociationEbs) Configure(_ context.Context, request resource.C
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instanceID],[ebsID],[regionID],[azName]
 func (c *ctyunEbmAssociationEbs) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[ebs_id],<az_name>,<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var cfg CtyunEbmAssociationEbsConfig
-	var instanceID, ebsID, regionID, azName string
-	err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &regionID, &azName)
-	if err != nil {
+	var config CtyunEbmAssociationEbsConfig
+
+	var instanceID, ebsID, azName, regionID string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入instance_id和ebs_id")
 		return
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID)
+		if err != nil {
+			return
+		}
+	case 2:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &instanceID, &ebsID, &azName, &regionID)
+		if err != nil {
+			return
+		}
 	}
 
-	cfg.InstanceID = types.StringValue(instanceID)
-	cfg.EbsID = types.StringValue(ebsID)
-	cfg.AzName = types.StringValue(azName)
-	cfg.RegionID = types.StringValue(regionID)
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if ebsID == "" {
+		err = fmt.Errorf("ebs_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if azName == "" {
+		err = fmt.Errorf("az_name不能为空")
+		return
+	}
+	config.InstanceID = types.StringValue(instanceID)
+	config.EbsID = types.StringValue(ebsID)
+	config.AzName = types.StringValue(azName)
+	config.RegionID = types.StringValue(regionID)
 
 	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
+	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // checkBeforeAssociate 绑定前检查
@@ -383,6 +427,16 @@ func (c *ctyunEbmAssociationEbs) checkAfterDissociation(ctx context.Context, pla
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbmAssociationEbsConfig) (err error) {
+	resp, err := c.meta.Apis.CtEbsApis.EbsShowApi.Do(ctx, c.meta.Credential, &ctebs.EbsShowRequest{
+		RegionId: plan.RegionID.ValueString(),
+		DiskId:   plan.EbsID.ValueString(),
+	})
+	if err != nil {
+		return err
+	}
+	if resp.IsSystemVolume {
+		return fmt.Errorf("不支持系统盘")
+	}
 	instance, err := business.NewEbmService(c.meta).GetEbmInfo(
 		ctx,
 		plan.InstanceID.ValueString(),
@@ -398,10 +452,10 @@ func (c *ctyunEbmAssociationEbs) getAndMerge(ctx context.Context, plan *CtyunEbm
 	for _, attachID := range instance.AttachedVolumes {
 		if ebsID == utils.SecString(attachID) {
 			plan.ID = types.StringValue(fmt.Sprintf(
-				"%s,%s,%s,%s",
-				instanceID, ebsID, plan.RegionID.ValueString(), plan.AzName.ValueString()))
+				"%s,%s",
+				instanceID, ebsID))
 			return
 		}
 	}
-	return fmt.Errorf("物理机 %s 和云硬盘 %s 未关联", instanceID, ebsID)
+	return common.ResourceNotExistError
 }

@@ -57,7 +57,17 @@ type CcseDeleteClusterRequest struct {
 	获取：
 	<span style="background-color: rgb(73, 204, 144);color: rgb(255,255,255);padding: 2px; margin:2px">查</span> <a href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=25&api=5851&data=87&vid=81" target="_blank">资源池列表查询</a>
 	*/
-	ProdInstId string `json:"prodInstId,omitempty"` /*  集群ID，获取方式请参见<a href="https://www.ctyun.cn/document/10083472/11002105">如何获取接口URI中参数</a>。  */
+	ProdInstId           string `json:"prodInstId,omitempty"` /*  集群ID，获取方式请参见<a href="https://www.ctyun.cn/document/10083472/11002105">如何获取接口URI中参数</a>。  */
+	RetainEcs            *bool  `json:"retainEcs,omitempty"`
+	RetainEbm            *bool  `json:"retainEbm,omitempty"`
+	RetainSecurityGroup  *bool  `json:"retainSecurityGroup,omitempty"`
+	RetainElb            *bool  `json:"retainElb,omitempty"`
+	RetainApiServiceEip  *bool  `json:"retainApiServiceEip,omitempty"`
+	RetainNat            *bool  `json:"retainNat,omitempty"`
+	RetainLtsData        *bool  `json:"retainLtsData,omitempty"`
+	RetainLtsVPCE        *bool  `json:"retainLtsVPCE,omitempty"`
+	RetainPrometheusData *bool  `json:"retainPrometheusData,omitempty"`
+	RetainPrometheusVPCE *bool  `json:"retainPrometheusVPCE,omitempty"`
 }
 
 type CcseDeleteClusterResponse struct {

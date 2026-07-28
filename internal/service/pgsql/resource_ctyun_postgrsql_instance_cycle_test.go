@@ -2,11 +2,12 @@ package pgsql_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
@@ -16,14 +17,14 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 	backupStorageType := `backup_storage_type="SSD"`
 	resourceFile := "resource_ctyun_pgsql_instance.tf"
 	cycleType := "month"
-	prodId := "Single1222"
-	storageType := "SATA"
+	prodId := 10003011
+	storageType := "SSD"
 	StorageSpace := 100
-	name := "pgsql-" + utils.GenerateRandomString()
+	name := "pgsql-t-" + utils.GenerateRandomString()
 	//password := "VqOcfgJ6Nf2houSe5C9sxgM4ycExVK+F0bBZwBGdiy8DCVXoSyck0lPxw9XMRgHur2lQYenOJ5K/FxZ30qlwbKG3NfgNoPq+AXDeSDdycGTqa1TzLdGnYwAeC/hEa8pyUKS9LdlW7nnM1nGUvGCXkGdzJP8lbHCwonzazEnF3RI="
-	password := "Kyk123=" + utils.GenerateRandomString()
+	password := "Kyk123=2" + utils.GenerateRandomString()
 	caseCensitive := true
-	flavorName := "s7.large.2"
+	flavorName := dependence.flavorName
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
 	securityGroupID := dependence.securityGroupID
@@ -31,7 +32,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 	azInfo := fmt.Sprintf(`availability_zone_info=[{"availability_zone_name":"%s", "availability_zone_count":1, "node_type":"master"}]`, azName)
 	period := fmt.Sprint(`cycle_count=1`)
 
-	updatedProdID := "Master2Slave1222"
+	updatedProdID := 10003024
 	updatedAzInfo := fmt.Sprintf(`availability_zone_info=[{"availability_zone_name":"%s", "availability_zone_count":2, "node_type":"master"}]`, azName)
 
 	resource.Test(t, resource.TestCase{
@@ -53,8 +54,16 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Single1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003011)),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime, updateTime, expireTime := ds.Attributes["create_time"], ds.Attributes["update_time"], ds.Attributes["expire_time"]
+						if utils.IsEmptyOrRfc3339(createTime) && utils.IsEmptyOrRfc3339(updateTime) && utils.IsEmptyOrRfc3339(expireTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 升配至1主2备
@@ -65,7 +74,7 @@ func TestAccCtyunPgsqlInstanceCycle(t *testing.T) {
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),
 					resource.TestCheckResourceAttr(resourceName, "cycle_type", cycleType),
-					resource.TestCheckResourceAttr(resourceName, "prod_id", "Master2Slave1222"),
+					resource.TestCheckResourceAttr(resourceName, "prod_id", fmt.Sprintf("%d", 10003024)),
 					resource.TestCheckResourceAttr(resourceName, "backup_storage_type", "SSD"),
 				),
 			},

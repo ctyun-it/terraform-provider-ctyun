@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_snapshot_policy_association"
+---
+
 # ctyun_ebs_snapshot_policy_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856**
+-> 管理云硬盘和快照策略的绑定关系
 
 
 
@@ -21,7 +26,7 @@ provider "ctyun" {
 
 resource "ctyun_ebs_snapshot_policy_association" "test" {
   snapshot_policy_id = "6f017e65-5340-4348-a2da-07c9aae44e5f"
-  disk_id_list = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
+  disk_id       = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
 }
 ```
 
@@ -30,7 +35,7 @@ resource "ctyun_ebs_snapshot_policy_association" "test" {
 
 ### Required
 
-- `disk_id_list` (String) 云硬盘ID列表，多台使用英文逗号分割
+- `disk_id` (String) 云硬盘ID
 - `snapshot_policy_id` (String) 云硬盘自动快照策略id
 
 ### Optional
@@ -40,3 +45,15 @@ resource "ctyun_ebs_snapshot_policy_association" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入云硬盘快照策略关联
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebs_snapshot_policy_association.[导入配置名称] [snapshot_policy_id],[disk_id],<region_id>
+# 示例
+terraform import ctyun_ebs_snapshot_policy_association.example b4d9a692-cd51-4a95-9769-492e237f148c,c4d9a692-cd51-4a95-9769-492e237f148c,bb9fdb42056f11eda1610242ac110002
+```

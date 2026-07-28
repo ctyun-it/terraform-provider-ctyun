@@ -13,7 +13,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
   enable_ipv6 = true
 }
@@ -25,8 +24,8 @@ resource "ctyun_security_group" "security_group_test" {
 }
 
 resource "ctyun_ecs_affinity_group" "affinity_group_test" {
-  affinity_group_name   = "tf-affinity-group-for-ecs"
-  affinity_group_policy = "anti-affinity"
+  name   = "tf-affinity-group-for-ecs"
+  policy = "anti-affinity"
 }
 
 resource "ctyun_keypair" "keypair_test" {
@@ -50,33 +49,56 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test2" {
   cpu    = 4
   ram    = 8
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-snapshot"
-  display_name        = "tf-ecs-for-snapshot"
+  display_name        = "tf-ecs-for-snapshot1"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id              = ctyun_vpc.vpc_test.id
   password            = var.password
+  # cycle_type          = "month"
+  # cycle_count = 1
   cycle_type          = "on_demand"
   subnet_id           = ctyun_subnet.subnet_test.id
-  is_destroy_instance = false
+  # is_destroy_instance = true
+}
+
+
+resource "ctyun_ebs" "ebs_test" {
+  count      = 3
+  name       = "ecs-data-volume${count.index+1}"
+  mode       = "vbd"
+  type       = "SATA"
+  size       = 60
+  cycle_type = "on_demand"
 }
 
 variable "password" {
   type      = string
   sensitive = true
+}
+
+# 查询网络接口资源
+resource "ctyun_port" "ecs_port_for_association_test" {
+  name                       = "ecs_port_for_association_test"
+  description                = "ecs_port_for_association_test"
+  subnet_id                  = ctyun_subnet.subnet_test.id
+  security_group_ids        = [ctyun_security_group.security_group_test.id]
+  secondary_private_ip_count = 1
+}
+
+resource "ctyun_ecs_backup_repo" "test" {
+  name = "ctyun_ecs_backup_repo_test_for_terraform"
+  cycle_count = "1"
+  cycle_type  = "month"
 }

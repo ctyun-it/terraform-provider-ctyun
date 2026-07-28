@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_backup"
+---
+
 # ctyun_ecs_backup (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761**
+-> 管理云主机备份
 
 
 
@@ -21,9 +26,9 @@ provider "ctyun" {
 
 resource "ctyun_ecs_backup" "test" {
   repository_id = "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
-  instance_id = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
-  name  = "test"
-  full_backup = false
+  instance_id   = "f16dfc3f-7375-4831-af16-a4cbd060ec89"
+  name          = "test"
+  full_backup   = false
 }
 ```
 
@@ -45,7 +50,7 @@ resource "ctyun_ecs_backup" "test" {
 ### Read-Only
 
 - `backup_type` (String) 备份类型
-- `created_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `disk_total_size` (Number) 云盘总容量大小，单位为GB
 - `id` (String) 云主机备份ID
 - `instance_backup_status` (String) 备份状态，取值范围：CREATING: 备份创建中, ACTIVE: 可用， RESTORING: 备份恢复中，DELETING: 删除中，EXPIRED：到期，ERROR：错误
@@ -53,3 +58,15 @@ resource "ctyun_ecs_backup" "test" {
 - `project_id` (String) 企业项目ID，企业项目管理服务提供统一的云资源按企业项目管理，以及企业项目内的资源管理，成员管理。您可以通过查看创建企业项目了解如何创建企业项目。注：默认值为"0"
 - `repository_name` (String) 云主机备份存储库名称
 - `used_size` (Number) 云硬盘备份已使用大小
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ECS备份
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_backup.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_ecs_backup.example 12345678-1234-1234-1234-123456789012,bb9fdb42056f11eda1610242ac110002
+```

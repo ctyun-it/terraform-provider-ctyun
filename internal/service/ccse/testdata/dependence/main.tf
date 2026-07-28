@@ -1,55 +1,88 @@
-data "ctyun_vpcs" "vpc_test" {
-       page_size = 50
-}
-
-locals {
-  vpcs = [for vpc in data.ctyun_vpcs.vpc_test.vpcs : vpc if vpc.name == "tf-vpc-for-paas"]
-  data_vpc_id = length(local.vpcs) > 0 ? local.vpcs[0].vpc_id : ""
-}
-
 resource "ctyun_vpc" "vpc_test" {
-  count    = local.data_vpc_id == "" ? 1 : 0
-  name        = "tf-vpc-for-paas"
+  name        = "tfvpc-ccse-${local.random_string}"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
   enable_ipv6 = true
-}
-
-locals {
-  real_vpc_id = local.data_vpc_id == "" ? try(ctyun_vpc.vpc_test[0].id, "") : local.data_vpc_id
-}
-
-data "ctyun_subnets" "subnet_test" {
-  vpc_id = local.real_vpc_id
-}
-
-locals {
-  subnets = [for subnet in data.ctyun_subnets.subnet_test.subnets : subnet if subnet.name == "tf-subnet-for-paas"]
-  data_subnet_id = length(local.subnets) > 0 ? local.subnets[0].subnet_id : ""
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  count    = local.data_vpc_id == "" ? 1 : 0
-  vpc_id      = local.real_vpc_id
-  name        = "tf-subnet-for-paas"
-  cidr        = "192.168.0.0/16"
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsubnet-ccse1-${local.random_string}"
+  cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
   dns         = [
     "8.8.8.8",
     "8.8.4.4"
   ]
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+resource "ctyun_subnet" "subnet_test2" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsubnet-ccse2-${local.random_string}"
+  cidr        = "192.168.2.0/24"
+  description = "terraform测试使用"
+  dns         = [
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+resource "ctyun_security_group" "security_group_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tfsg-ccse-${local.random_string}"
+  description = "terraform测试使用"
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
 
 locals {
-  real_subnet_id = local.data_subnet_id == "" ? try(ctyun_subnet.subnet_test[0].id, "") : local.data_subnet_id
+  real_vpc_id = ctyun_vpc.vpc_test.id
+  real_subnet_id = ctyun_subnet.subnet_test.id
+  real_subnet_id2 = ctyun_subnet.subnet_test2.id
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 4
   ram    = 8
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
+}
+
+data "ctyun_ccse_images" "ccse_images" {
+  instance_type = "ecs"
+  flavor_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+}
+
+data "ctyun_zones" "test" {
+
+}
+
+data "ctyun_ebm_device_types" "test" {
+  for_each = { for az in data.ctyun_zones.test.zones: az => az }
+  az_name = each.value
+}
+
+locals {
+  # 筛选全部有余量的规格
+  all_device_types = flatten([
+    for device_type_inst in values(data.ctyun_ebm_device_types.test) : [
+      for dt in device_type_inst.device_types : dt
+      # if dt.available == true # 核心过滤条件
+    ]
+  ])
+
+  # 不支持云盘的弹性裸金属
+  cloud_boot_false_list  = [for dt in local.all_device_types : dt if dt.cloud_boot == false]
+  first_cloud_boot_false = length(local.cloud_boot_false_list) > 0 ? local.cloud_boot_false_list[0] : null
 }
 
 locals {
@@ -67,7 +100,7 @@ resource "ctyun_ccse_cluster" "test" {
     cluster_domain = "www.ctyun.com"
     network_plugin = "cubecni"
     start_port = 30000
-    end_port   = 65535
+    end_port   = 32767
     elb_prod_code = "standardI"
     pod_subnet_id_list = [local.real_subnet_id]
     cycle_type  = "on_demand"
@@ -77,31 +110,32 @@ resource "ctyun_ccse_cluster" "test" {
     deploy_type   = "single"
     kube_proxy    = "ipvs"
     cluster_series = "cce.managed"
-    series_type = "managedbase"
+    series_type = "managedpro"
+    node_scale = 50
   }
 
 
   slave_host = {
     instance_type = "ecs"
-    mirror_id     = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+    mirror_id     = data.ctyun_ccse_images.ccse_images.images[0].id
     mirror_type   = 1
     item_def_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
 
     az_infos = [
       {
-        az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+        az_name = data.ctyun_zones.test.zones[0]
         size    = 1
       }
     ]
 
     sys_disk = {
-      type = "SAS"
+      type = "XSSD-1"
       size = 80
     }
 
     data_disks = [
       {
-        type = "SATA"
+        type = "XSSD-1"
         size = 150
       }
     ]
@@ -110,6 +144,23 @@ resource "ctyun_ccse_cluster" "test" {
 
 locals {
   chart_name = "node-problem-detector"
+  chart_name2 = "cube-cluster-autoscaler"
+}
+
+data "ctyun_ccse_plugin_market" "autoscaler" {
+  chart_name = local.chart_name2
+  chart_version = "1.1.2"
+  values_type = "YAML"
+  depends_on = [
+    ctyun_ccse_cluster.test
+  ]
+}
+
+resource "ctyun_ccse_plugin" "example1" {
+  cluster_id = ctyun_ccse_cluster.test.id
+  chart_name = local.chart_name2
+  chart_version = "1.1.2"
+  values_yaml = data.ctyun_ccse_plugin_market.autoscaler.values
 }
 
 data "ctyun_ccse_plugin_market" "test" {
@@ -157,6 +208,7 @@ locals {
   )
 }
 
+#### 云主机
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
@@ -170,7 +222,7 @@ resource "ctyun_ecs" "ecs_test" {
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
   security_group_ids  = [ctyun_ccse_cluster.test.base_info.security_group_id]
-  system_disk_type    = "sata"
+  system_disk_type    = "SAS"
   system_disk_size    = 40
   vpc_id              =  local.real_vpc_id
   password            = var.password
@@ -179,65 +231,59 @@ resource "ctyun_ecs" "ecs_test" {
   is_destroy_instance = false
 }
 
-data "ctyun_zones" "test" {
-
-}
-
-locals {
-  device_type1 = "physical.s5.2xlarge4"      // az2、有本地盘、弹性、不支持云硬盘
-  az2 = data.ctyun_zones.test.zones[1]
-}
-
-data "ctyun_ebm_device_raids" "system_raid" {
-  az_name = local.az2
-  device_type = local.device_type1
-  volume_type = "system"
-}
-
-data "ctyun_ebm_device_raids" "data_raid" {
-  az_name = local.az2
-  device_type = local.device_type1
-  volume_type = "data"
-}
-
-data "ctyun_ebm_device_images" "test" {
-  az_name = local.az2
-  device_type = local.device_type1
-  os_type = "linux"
-  image_type = "standard"
-}
-
-locals {
-  system_raids = data.ctyun_ebm_device_raids.system_raid.raids
-  system_raid_id = length(local.system_raids) > 0 ? local.system_raids[0].uuid : null
-
-  data_raids = data.ctyun_ebm_device_raids.data_raid.raids
-  data_raid_id = length(local.data_raids) > 0 ? local.data_raids[0].uuid : null
-}
-
-data "ctyun_ebm_device_images" "dependence" {
-  az_name = local.az2
-  device_type = local.device_type1
-  os_type = "linux"
-  image_type = "standard"
-}
-
-resource "ctyun_ebm" "ebm_test" {
-  az_name = local.az2
-  instance_name = "tf-ebm-for-ccsedisplay"
-  hostname = "tf-ebm-for-ccse"
-  password = var.password
-  cycle_type = "on_demand"
-  device_type = local.device_type1
-  image_uuid = data.ctyun_ebm_device_images.dependence.images[0].image_uuid
-  security_group_ids = [ctyun_ccse_cluster.test.base_info.security_group_id]
-  system_volume_raid_uuid = local.system_raid_id
-  data_volume_raid_uuid = local.data_raid_id
-  vpc_id = local.real_vpc_id
-  subnet_id = local.real_subnet_id
-}
 
 variable "password" {
   type      = string
   sensitive = true
 }
+
+#### 物理机
+#
+# data "ctyun_ebm_device_raids" "system_raid" {
+#   az_name = local.az2
+#   device_type = local.device_type1
+#   volume_type = "system"
+# }
+#
+# data "ctyun_ebm_device_raids" "data_raid" {
+#   az_name = local.az2
+#   device_type = local.device_type1
+#   volume_type = "data"
+# }
+#
+# data "ctyun_ebm_device_images" "test" {
+#   az_name = local.az2
+#   device_type = local.device_type1
+#   os_type = "linux"
+#   image_type = "standard"
+# }
+#
+# locals {
+#   system_raids = data.ctyun_ebm_device_raids.system_raid.raids
+#   system_raid_id = length(local.system_raids) > 0 ? local.system_raids[0].uuid : null
+#
+#   data_raids = data.ctyun_ebm_device_raids.data_raid.raids
+#   data_raid_id = length(local.data_raids) > 0 ? local.data_raids[0].uuid : null
+# }
+#
+# data "ctyun_ebm_device_images" "dependence" {
+#   az_name = local.az2
+#   device_type = local.device_type1
+#   os_type = "linux"
+#   image_type = "standard"
+# }
+#
+# resource "ctyun_ebm" "ebm_test" {
+#   az_name = local.az2
+#   instance_name = "tf-ebm-for-ccsedisplay"
+#   hostname = "tf-ebm-for-ccse"
+#   password = var.password
+#   cycle_type = "on_demand"
+#   device_type = local.device_type1
+#   image_uuid = data.ctyun_ebm_device_images.dependence.images[0].image_uuid
+#   security_group_ids = [ctyun_ccse_cluster.test.base_info.security_group_id]
+#   system_volume_raid_uuid = local.system_raid_id
+#   data_volume_raid_uuid = local.data_raid_id
+#   vpc_id = local.real_vpc_id
+#   subnet_id = local.real_subnet_id
+# }

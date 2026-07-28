@@ -41,8 +41,8 @@ type CtyunVpcesModel struct {
 	SubnetIP          types.String `tfsdk:"subnet_ip"`
 	WhitelistCidr     types.Set    `tfsdk:"whitelist_cidr"`
 	Status            types.Int32  `tfsdk:"status"`
-	CreatedTime       types.String `tfsdk:"created_time"`
-	UpdatedTime       types.String `tfsdk:"updated_time"`
+	CreateTime        types.String `tfsdk:"create_time"`
+	UpdateTime        types.String `tfsdk:"update_time"`
 }
 
 type CtyunVpcesConfig struct {
@@ -59,7 +59,7 @@ type CtyunVpcesConfig struct {
 
 func (c *ctyunVpces) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10217121`,
+		MarkdownDescription: utils.FormatDesc("查询终端节点", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10217121"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Computed:    true,
@@ -98,49 +98,49 @@ func (c *ctyunVpces) Schema(_ context.Context, _ datasource.SchemaRequest, respo
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点ID",
 						},
 						"endpoint_service_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点服务ID",
 						},
 						"type": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "接口还是反向，interface:接口，reverse:反向",
 						},
 						"name": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "终端节点名称",
 						},
 						"vpc_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "所属的专有网络id",
 						},
 						"subnet_id": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "子网ID",
 						},
 						"subnet_ip": schema.StringAttribute{
-							Required:    true,
+							Computed:    true,
 							Description: "子网IP",
 						},
 						"whitelist_cidr": schema.SetAttribute{
 							ElementType: types.StringType,
-							Required:    true,
+							Computed:    true,
 							Description: "白名单",
 						},
 						"status": schema.Int32Attribute{
-							Required:    true,
+							Computed:    true,
 							Description: "endpoint状态,1表示已链接，2表示未链接",
 						},
-						"created_time": schema.StringAttribute{
-							Required:    true,
-							Description: "创建时间",
+						"create_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
-							Required:    true,
-							Description: "更新时间",
+						"update_time": schema.StringAttribute{
+							Computed:    true,
+							Description: "更新时间，为UTC格式",
 						},
 					},
 				},
@@ -163,7 +163,7 @@ func (c *ctyunVpces) Read(ctx context.Context, request datasource.ReadRequest, r
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)
@@ -208,8 +208,8 @@ func (c *ctyunVpces) Read(ctx context.Context, request datasource.ReadRequest, r
 			VpcID:             utils.SecStringValue(e.VpcID),
 			Name:              utils.SecStringValue(e.Name),
 			Status:            types.Int32Value(e.Status),
-			CreatedTime:       utils.SecStringValue(e.CreatedTime),
-			UpdatedTime:       utils.SecStringValue(e.UpdatedTime),
+			CreateTime:        utils.SecStringValue(e.CreatedTime),
+			UpdateTime:        utils.SecStringValue(e.UpdatedTime),
 		}
 		if e.EndpointObj != nil {
 			item.SubnetID = utils.SecStringValue(e.EndpointObj.SubnetID)

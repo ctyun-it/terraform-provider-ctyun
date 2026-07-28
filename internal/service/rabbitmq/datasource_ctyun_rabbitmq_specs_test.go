@@ -9,6 +9,7 @@ import (
 )
 
 func TestAccCtyunRabbitmqSpecs(t *testing.T) {
+	t.Parallel()
 	dnd := utils.GenerateRandomString()
 
 	datasourceName := "data.ctyun_rabbitmq_specs." + dnd

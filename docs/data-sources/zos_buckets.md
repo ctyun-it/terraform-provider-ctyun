@@ -1,5 +1,10 @@
+---
+subcategory: "对象存储（CT-ZOS，Zettabyte Object Storage）"
+page_title: "CTYUN: ctyun_zos_buckets"
+---
+
 # ctyun_zos_buckets (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181237
+-> 查询对象存储桶列表
 
 
 
@@ -20,7 +25,7 @@ provider "ctyun" {
 }
 
 data "ctyun_zos_buckets" "test" {
-  page_no = 1
+  page_no   = 1
   page_size = 10
 }
 
@@ -54,7 +59,7 @@ Read-Only:
 - `az_policy` (String) AZ策略，single-az或multi-az
 - `bucket` (String) 桶名
 - `cmk_uuid` (String) 加密ID，若isEncrypted为false，此值为空字符串
-- `creation_date` (String) 创建日期，为ISO8601格式
+- `create_time` (String) 创建日期，为ISO8601格式
 - `is_encrypted` (Boolean) 是否加密
 - `project_id` (String) 企业项目ID
 - `region_name` (String) 区域名称

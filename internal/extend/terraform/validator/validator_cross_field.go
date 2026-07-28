@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 type validatorCrossField struct {
@@ -28,8 +29,40 @@ type validatorCrossFieldResponse struct {
 	Diagnostics diag.Diagnostics
 }
 
-func CrossFieldBool(expression path.Expression, sourceValues, targetValues []attr.Value) validator.Bool {
-	return &validatorCrossField{sourceExpression: expression, sourceValues: sourceValues, targetValues: targetValues}
+func CrossFieldBool(expression path.Expression, sourceValues []any, targetValues []bool) validator.Bool {
+	return &validatorCrossField{sourceExpression: expression, sourceValues: ToAttrValueSlice(sourceValues), targetValues: ToAttrValueSlice(targetValues)}
+}
+
+func CrossFieldString(expression path.Expression, sourceValues []any, targetValues []string) validator.String {
+	return &validatorCrossField{sourceExpression: expression, sourceValues: ToAttrValueSlice(sourceValues), targetValues: ToAttrValueSlice(targetValues)}
+}
+
+func CrossFieldInt32(expression path.Expression, sourceValues []any, targetValues []int32) validator.Int32 {
+	return &validatorCrossField{sourceExpression: expression, sourceValues: ToAttrValueSlice(sourceValues), targetValues: ToAttrValueSlice(targetValues)}
+}
+
+func (v validatorCrossField) ValidateInt32(ctx context.Context, req validator.Int32Request, resp *validator.Int32Response) {
+	validateReq := validatorCrossFieldRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &validatorCrossFieldResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
+}
+
+func (v validatorCrossField) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	validateReq := validatorCrossFieldRequest{
+		Config:         req.Config,
+		ConfigValue:    req.ConfigValue,
+		Path:           req.Path,
+		PathExpression: req.PathExpression,
+	}
+	validateResp := &validatorCrossFieldResponse{}
+	v.Validate(ctx, validateReq, validateResp)
+	resp.Diagnostics.Append(validateResp.Diagnostics...)
 }
 
 func (v validatorCrossField) ValidateBool(ctx context.Context, req validator.BoolRequest, resp *validator.BoolResponse) {
@@ -92,4 +125,21 @@ func (v validatorCrossField) Description(_ context.Context) string {
 
 func (v validatorCrossField) MarkdownDescription(ctx context.Context) string {
 	return v.Description(ctx)
+}
+
+func ToAttrValueSlice[T any](slice []T) []attr.Value {
+	result := make([]attr.Value, len(slice))
+	for i, v := range slice {
+		switch val := any(v).(type) {
+		case int32:
+			result[i] = types.Int32Value(val)
+		case bool:
+			result[i] = types.BoolValue(val)
+		case string:
+			result[i] = types.StringValue(val)
+		default:
+			panic(fmt.Sprintf("unsupported type %T", val))
+		}
+	}
+	return result
 }

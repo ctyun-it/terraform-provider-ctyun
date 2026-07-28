@@ -52,6 +52,14 @@ func TestAccCtyunSNat1(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "snat_ips.#", "1"),
 					resource.TestCheckResourceAttrSet(resourceName, "snat_id"),
 					resource.TestCheckResourceAttr(resourceName, "description", "我是一条description"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -140,13 +148,27 @@ func TestAccCtyunSNat2(t *testing.T) {
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
 					id := ds.ID
+					natGatewayId := ds.Attributes["snat_gateway_id"]
 					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					return fmt.Sprintf("%s,%s,%s", id, natGatewayId, regionId), nil
+				},
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					natGatewayId := ds.Attributes["snat_gateway_id"]
+					return fmt.Sprintf("%s,%s", id, natGatewayId), nil
 				},
 				ImportStateVerifyIgnore: []string{
 					"nat_gateway_id",
 				},
 			},
+
 			// 2.3destroy
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, natGatewayID, updatedTfSourceSubnetID, snatIps, "test"),

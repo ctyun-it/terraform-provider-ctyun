@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_template_market"
+---
+
 # ctyun_ccse_template_market (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137
+-> 查询云容器引擎模板市场
 
 
 
@@ -31,7 +36,7 @@ provider "ctyun" {
 
 # 指定版本时，可以查模板Values
 data "ctyun_ccse_template_market" "test" {
-  tpl_name = "elasticsearch"
+  tpl_name    = "elasticsearch"
   tpl_version = "7.10.2"
   values_type = "YAML"
 }

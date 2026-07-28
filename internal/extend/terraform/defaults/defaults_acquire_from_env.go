@@ -31,11 +31,22 @@ func (d globalStringDefault) MarkdownDescription(_ context.Context) string {
 func (d globalStringDefault) DefaultString(_ context.Context, req defaults.StringRequest, resp *defaults.StringResponse) {
 	metadata := common.AcquireCtyunMetadata()
 	value := metadata.GetExtra(d.ctyunMetadataExtraKey)
+	var key string
+	switch d.ctyunMetadataExtraKey {
+	case common.ExtraRegionId:
+		key = "region_id"
+	case common.ExtraAzName:
+		key = "az_name"
+	case common.ExtraProjectId:
+		key = "project_id"
+	default:
+		panic("invalid extra key")
+	}
 	if value == "" && d.mustAcquire {
 		resp.Diagnostics.AddAttributeError(
 			req.Path,
-			"当前值为空，ctyun_provider未配置且环境变量未设置",
-			"当前值为空，ctyun_provider未配置且环境变量未设置")
+			fmt.Sprintf("%s值为空，且ctyun_provider与环境变量均未设置", key),
+			fmt.Sprintf("%s值为空，且ctyun_provider与环境变量均未设置", key))
 		return
 	}
 	resp.PlanValue = types.StringValue(value)

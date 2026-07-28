@@ -56,14 +56,14 @@ type CtgkafkaConsumerGroupResetV3Request struct {
 	ProdInstId         string                                                   `json:"prodInstId,omitempty"` /*  实例ID。  */
 	GroupName          string                                                   `json:"groupName,omitempty"`  /*  消费组名称。  */
 	TopicName          string                                                   `json:"topicName,omitempty"`  /*  主题名称。  */
-	RawType            int32                                                    `json:"type,omitempty"`       /*  类型，<li>0：重置到latest。 <li>1：按时间重置。<li>2：重置到earliest。<li>3：按位点重置，此类型参数partitionShiftList为必填。  */
+	RawType            int32                                                    `json:"type"`                 /*  类型，<li>0：重置到latest。 <li>1：按时间重置。<li>2：重置到earliest。<li>3：按位点重置，此类型参数partitionShiftList为必填。  */
 	PartitionShiftList []*CtgkafkaConsumerGroupResetV3PartitionShiftListRequest `json:"partitionShiftList"`   /*  位点重置列表，当type为3时必填。  */
 	Time               int64                                                    `json:"time,omitempty"`       /*  重置时间点毫秒时间戳，type=1时必填。  */
 }
 
 type CtgkafkaConsumerGroupResetV3PartitionShiftListRequest struct {
-	Partition int32 `json:"partition,omitempty"` /*  主题分区号。  */
-	ShiftBy   int64 `json:"shiftBy,omitempty"`   /*  主题分区消费位点向左或向右移动的相对位置，例如当前offset是1000，当shiftBy=-10重置后offset=990，当shiftBy=10重置后offset=1010。  */
+	Partition int32 `json:"partition"` /*  主题分区号。  */
+	ShiftBy   int64 `json:"shiftBy"`   /*  主题分区消费位点向左或向右移动的相对位置，例如当前offset是1000，当shiftBy=-10重置后offset=990，当shiftBy=10重置后offset=1010。  */
 }
 
 type CtgkafkaConsumerGroupResetV3Response struct {

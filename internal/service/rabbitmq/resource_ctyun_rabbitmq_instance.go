@@ -3,6 +3,14 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
+	amqp2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/amqp"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -10,25 +18,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
-	"regexp"
-	"strings"
-
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/amqp"
-
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
-
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -39,9 +36,11 @@ var (
 )
 
 type ctyunRabbitmqInstance struct {
-	meta       *common.CtyunMetadata
-	vpcService *business.VpcService
-	sgService  *business.SecurityGroupService
+	meta        *common.CtyunMetadata
+	name        string
+	vpcService  *business.VpcService
+	sgService   *business.SecurityGroupService
+	orderLooper *business.OrderLooper
 }
 
 func NewCtyunRabbitmqInstance() resource.Resource {
@@ -50,6 +49,7 @@ func NewCtyunRabbitmqInstance() resource.Resource {
 
 func (c *ctyunRabbitmqInstance) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_rabbitmq_instance"
+	c.name = response.TypeName
 }
 
 type CtyunRabbitmqInstanceConfig struct {
@@ -68,23 +68,33 @@ type CtyunRabbitmqInstanceConfig struct {
 	SubnetID        types.String `tfsdk:"subnet_id"`
 	SecurityGroupID types.String `tfsdk:"security_group_id"`
 	CycleType       types.String `tfsdk:"cycle_type"`
+	ActualCycleType types.String `tfsdk:"actual_cycle_type"`
 	CycleCount      types.Int32  `tfsdk:"cycle_count"`
+	Endpoint        types.String `tfsdk:"endpoint"`
+	SslEndpoint     types.String `tfsdk:"ssl_endpoint"`
+	CreateTime      types.String `tfsdk:"create_time"`
+	ExpireTime      types.String `tfsdk:"expire_time"`
 
 	zoneList []string
 }
 
 func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967`,
+		MarkdownDescription: utils.FormatDesc("管理RabbitMQ实例", "分布式消息服务RabbitMQ", "https://www.ctyun.cn/document/10000118/10001967"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Computed:    true,
 				Description: "名称",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseDependencyForUnknown(path.Root("instance_name")),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
@@ -92,7 +102,7 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -101,6 +111,9 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "主订单号",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -176,10 +189,10 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 				},
 			},
 			"subnet_id": schema.StringAttribute{
-				Required:    true,
-				Description: "子网ID",
+				Optional:    true, // 因无法从API查询，为了导入时正常，改为选填，Create中要校验
+				Description: "子网ID，创建时必填，导入时不填",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					validator2.SubnetValidate(),
@@ -195,20 +208,16 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 					validator2.SecurityGroupValidate(),
 				},
 			},
-
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
-				Description: "订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填",
+				Description: "订购周期类型，取值范围：month：按月，on_demand：按需，支持更新。当此值为month时，cycle_count为必填",
 				Validators: []validator.String{
-					stringvalidator.OneOf("month", "on_demand"),
-				},
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringvalidator.OneOf(business.OrderCycleTypeMonth, business.OrderCycleTypeOnDemand),
 				},
 			},
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
-				Description: "订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36",
+				Description: "订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新",
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
@@ -220,8 +229,40 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 					),
 					int32validator.OneOf(1, 2, 3, 5, 6, 7, 12, 24, 36),
 				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
+			},
+			"actual_cycle_type": schema.StringAttribute{
+				Computed:    true,
+				Description: "服务端当前实际计费类型（可能与 cycle_type 不一致，如包周期未到期时）。",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
+				},
+			},
+			"endpoint": schema.StringAttribute{
+				Computed:    true,
+				Description: "接入点",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"ssl_endpoint": schema.StringAttribute{
+				Computed:    true,
+				Description: "SSL接入点",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"create_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "创建时间，UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"expire_time": schema.StringAttribute{
+				Computed:    true,
+				Description: "到期时间，为UTC格式，按需时为空",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.UseStringStateIfDependencyUnchanged(path.Root("cycle_type")),
 				},
 			},
 		},
@@ -282,7 +323,7 @@ func (c *ctyunRabbitmqInstance) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "权限校验失败") {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -320,12 +361,17 @@ func (c *ctyunRabbitmqInstance) Update(ctx context.Context, request resource.Upd
 	if err != nil {
 		return
 	}
+	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
 		return
 	}
 
+	if !plan.SubnetID.IsUnknown() && !plan.SubnetID.IsNull() && state.SubnetID.IsNull() {
+		state.SubnetID = plan.SubnetID
+		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -341,7 +387,7 @@ func (c *ctyunRabbitmqInstance) Delete(ctx context.Context, request resource.Del
 	if response.Diagnostics.HasError() {
 		return
 	}
-	instance, err := c.getByID(ctx, state)
+	instance, err := c.queryDetailByID(ctx, state)
 	if err != nil {
 		return
 	}
@@ -378,20 +424,36 @@ func (c *ctyunRabbitmqInstance) Configure(_ context.Context, request resource.Co
 	c.meta = meta
 	c.vpcService = business.NewVpcService(meta)
 	c.sgService = business.NewSecurityGroupService(meta)
+	c.orderLooper = business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionID]
 func (c *ctyunRabbitmqInstance) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunRabbitmqInstanceConfig
 	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		id = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &id, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if id == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -401,14 +463,26 @@ func (c *ctyunRabbitmqInstance) ImportState(ctx context.Context, request resourc
 	if err != nil {
 		return
 	}
+	// 确保创建时间和到期时间是RFC3339的
+	_, cycleCount, err := utils.CalculateMonth(cfg.CreateTime.ValueString(), cfg.ExpireTime.ValueString())
+	if err != nil {
+		return
+	}
+	if cycleCount > 0 {
+		cfg.CycleCount = types.Int32Value(cycleCount)
+	} else {
+		cfg.CycleCount = types.Int32Null()
+	}
+	cfg.CycleType = cfg.ActualCycleType
+	cfg.MasterOrderID = types.StringValue("unknown")
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunRabbitmqInstance) checkBeforeCreate(ctx context.Context, plan *CtyunRabbitmqInstanceConfig) (err error) {
-	regionID, projectID := plan.RegionID.ValueString(), plan.ProjectID.ValueString()
+	regionID := plan.RegionID.ValueString()
 	vpc, subnetID, sgID := plan.VpcID.ValueString(), plan.SubnetID.ValueString(), plan.SecurityGroupID.ValueString()
-	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID, projectID)
+	subnets, err := c.vpcService.GetVpcSubnet(ctx, vpc, regionID)
 	if err != nil {
 		return err
 	}
@@ -448,7 +522,7 @@ func (c *ctyunRabbitmqInstance) checkSpecParams(ctx context.Context, plan CtyunR
 		RegionId: plan.RegionID.ValueString(),
 	}
 	// 调用API
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpProdDetailApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpProdDetailApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -554,7 +628,7 @@ func (c *ctyunRabbitmqInstance) createPrePayOrder(ctx context.Context, plan Ctyu
 		ZoneList:        plan.zoneList,
 	}
 
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesCreatePrePayOrderApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesCreatePrePayOrderApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -565,6 +639,7 @@ func (c *ctyunRabbitmqInstance) createPrePayOrder(ctx context.Context, plan Ctyu
 		return
 	}
 	masterOrderID = resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -584,7 +659,7 @@ func (c *ctyunRabbitmqInstance) createPostPayOrder(ctx context.Context, plan Cty
 		ZoneList:        plan.zoneList,
 	}
 
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesCreatePostPayOrderApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesCreatePostPayOrderApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -595,12 +670,13 @@ func (c *ctyunRabbitmqInstance) createPostPayOrder(ctx context.Context, plan Cty
 		return
 	}
 	masterOrderID = resp.ReturnObj.Data.NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
 // getAndMerge 从远端查询
 func (c *ctyunRabbitmqInstance) getAndMerge(ctx context.Context, plan *CtyunRabbitmqInstanceConfig) (err error) {
-	instance, err := c.getByID(ctx, *plan)
+	instance, err := c.queryDetailByID(ctx, *plan)
 	if err != nil {
 		return
 	}
@@ -609,20 +685,62 @@ func (c *ctyunRabbitmqInstance) getAndMerge(ctx context.Context, plan *CtyunRabb
 	if plan.ZoneList.IsNull() {
 		plan.ZoneList = types.SetNull(types.StringType)
 	}
-
+	plan.DiskType = types.StringValue(instance.DiskType)
 	plan.DiskSize = types.Int32Value(utils.StringToInt32Must(instance.Space) / instance.NodeCount)
 	plan.NodeNum = types.Int32Value(instance.NodeCount)
 	plan.SpecName = types.StringValue(instance.Prod)
+	cTime, eTime := utils.ConvertToUTCZ(time.RFC3339, instance.CreateTime), utils.ConvertToUTCZ(time.RFC3339, instance.ExpireTime)
+	plan.CreateTime = types.StringValue(cTime)
+	plan.ExpireTime = types.StringValue(eTime)
+	plan.Endpoint = types.StringValue(instance.Endpoint)
+	plan.SslEndpoint = types.StringValue(instance.SslEndpoint)
+	plan.ActualCycleType = types.StringValue(map[string]string{"1": business.OrderCycleTypeMonth, "2": business.OrderCycleTypeOnDemand}[instance.BillMode])
+	ins, err := c.queryByName(ctx, *plan)
+	if err != nil {
+		return
+	}
+	if ins == nil {
+		return fmt.Errorf("查询实例 %s 失败", plan.InstanceName.ValueString())
+	}
+	plan.VpcID = types.StringValue(ins.VpcUuid)
+	plan.ProjectID = types.StringValue(ins.OuterProjectId)
+	plan.SecurityGroupID = types.StringValue(ins.SecurityGroupCode)
+	zone, err := business.NewRegionService(c.meta).GetZonesCnByRegionID(ctx, plan.RegionID.ValueString())
+	if err != nil {
+		return err
+	}
+	z := []string{}
+	zm := map[string]bool{}
+	for _, cname := range ins.AzNames {
+		if !zm[cname] {
+			z = append(z, zone[cname])
+			zm[cname] = true
+		}
+	}
+	zones, diags := basetypes.NewSetValueFrom(ctx, types.StringType, z)
+	if diags.HasError() {
+		return fmt.Errorf("未查询到可用区 %v", diags.Errors())
+	}
+	plan.ZoneList = zones
 	return
 }
 
 func (c *ctyunRabbitmqInstance) checkBeforeUpdate(ctx context.Context, plan, state CtyunRabbitmqInstanceConfig) (err error) {
-	instance, err := c.getByID(ctx, state)
+	instance, err := c.queryDetailByID(ctx, state)
 	if err != nil {
 		return
 	}
 	if instance.Status != 1 {
 		return fmt.Errorf("请在实例处于运行中状态时再进行更新操作")
+	}
+	if strings.Contains(plan.SpecName.ValueString(), "single") && !strings.Contains(state.SpecName.ValueString(), "single") {
+		return fmt.Errorf("不支持单机版和周期版互转")
+	}
+	if strings.Contains(plan.SpecName.ValueString(), "cluster") && !strings.Contains(state.SpecName.ValueString(), "cluster") {
+		return fmt.Errorf("不支持单机版和周期版互转")
+	}
+	if plan.CycleType.Equal(state.CycleType) && !plan.CycleCount.Equal(state.CycleCount) {
+		return fmt.Errorf("不支持续订")
 	}
 
 	return nil
@@ -646,6 +764,68 @@ func (c *ctyunRabbitmqInstance) update(ctx context.Context, plan, state CtyunRab
 	if err != nil {
 		return
 	}
+	err = c.updateCycle(ctx, plan, state)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// updateCycle 包周期到期转按需和按需转包周期
+func (c *ctyunRabbitmqInstance) updateCycle(ctx context.Context, plan, state CtyunRabbitmqInstanceConfig) (err error) {
+	if plan.CycleType.Equal(state.CycleType) {
+		return
+	}
+	if plan.CycleType.ValueString() == business.OnDemandCycleType {
+		err = c.transToPrePaid(ctx, plan, state)
+	} else {
+		err = c.transChargeType(ctx, plan, state)
+	}
+	return
+}
+
+// transToPrePaid 包周期到期转按需
+func (c *ctyunRabbitmqInstance) transToPrePaid(ctx context.Context, plan, state CtyunRabbitmqInstanceConfig) (err error) {
+	params := &amqp2.AmqpTransToPrePaidRequest{
+		RegionId:   state.RegionID.ValueString(),
+		ProdInstId: state.ID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkAmqpApis.AmqpTransToPrePaidApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCodeString {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	}
+	masterOrderID := resp.ReturnObj.Data.MasterOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
+	return
+}
+
+// transChargeType 按需转包周期
+func (c *ctyunRabbitmqInstance) transChargeType(ctx context.Context, plan, state CtyunRabbitmqInstanceConfig) (err error) {
+	autoPay := true
+	params := &amqp2.AmqpTransChargeTypeRequest{
+		RegionId:   state.RegionID.ValueString(),
+		ProdInstId: state.ID.ValueString(),
+		CycleCnt:   plan.CycleCount.ValueInt32(),
+		AutoPay:    &autoPay,
+	}
+	resp, err := c.meta.Apis.SdkAmqpApis.AmqpTransChargeTypeApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCodeString {
+		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	}
+	masterOrderID := resp.ReturnObj.Data[0].MasterOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -673,7 +853,7 @@ func (c *ctyunRabbitmqInstance) diskExtend(ctx context.Context, plan, state Ctyu
 		DiskExtendSize: plan.DiskSize.ValueInt32(),
 		AutoPay:        true,
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesDiskExtendApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesDiskExtendApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -683,26 +863,22 @@ func (c *ctyunRabbitmqInstance) diskExtend(ctx context.Context, plan, state Ctyu
 		err = common.InvalidReturnObjError
 		return
 	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, resp.ReturnObj.Data.NewOrderId)
 	return
 }
 
 // checkAfterUpdateDiskSize 检查磁盘大小是否变更成功
 func (c *ctyunRabbitmqInstance) checkAfterUpdateDiskSize(ctx context.Context, plan, state CtyunRabbitmqInstanceConfig) (err error) {
 	var executeSuccessFlag bool
-	var successCnt int
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryDetailResponseReturnObjData
-			instance, err = c.getByID(ctx, state)
+			instance, err = c.queryDetailByID(ctx, state)
 			if err != nil {
 				return false
 			}
 			if instance.Status != 1 || utils.StringToInt32Must(instance.Space) != plan.DiskSize.ValueInt32()*instance.NodeCount {
-				return true
-			}
-			successCnt++
-			if successCnt < 3 {
 				return true
 			}
 			executeSuccessFlag = true
@@ -712,7 +888,7 @@ func (c *ctyunRabbitmqInstance) checkAfterUpdateDiskSize(ctx context.Context, pl
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("磁盘变配时间过长")
+		err = fmt.Errorf("实例 %s(%s) 磁盘变配时间过长", plan.InstanceName.ValueString(), state.ID.ValueString())
 	}
 	return
 }
@@ -741,7 +917,7 @@ func (c *ctyunRabbitmqInstance) nodeExtend(ctx context.Context, plan, state Ctyu
 		ExtendNodeNum: plan.NodeNum.ValueInt32(),
 		AutoPay:       true,
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesNodeExtendApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesNodeExtendApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -751,6 +927,7 @@ func (c *ctyunRabbitmqInstance) nodeExtend(ctx context.Context, plan, state Ctyu
 		err = common.InvalidReturnObjError
 		return
 	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, resp.ReturnObj.Data.NewOrderId)
 	return
 }
 
@@ -762,7 +939,7 @@ func (c *ctyunRabbitmqInstance) checkAfterUpdateNodeNum(ctx context.Context, pla
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryDetailResponseReturnObjData
-			instance, err = c.getByID(ctx, state)
+			instance, err = c.queryDetailByID(ctx, state)
 			if err != nil {
 				return false
 			}
@@ -780,7 +957,7 @@ func (c *ctyunRabbitmqInstance) checkAfterUpdateNodeNum(ctx context.Context, pla
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("节点数量变配时间过长")
+		err = fmt.Errorf("实例 %s(%s) 节点数量变配时间过长", plan.InstanceName.ValueString(), state.ID.ValueString())
 	}
 	return
 }
@@ -811,7 +988,7 @@ func (c *ctyunRabbitmqInstance) specExtend(ctx context.Context, plan, state Ctyu
 		SpecName:   plan.SpecName.ValueString(),
 		AutoPay:    true,
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesSpecExtendApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesSpecExtendApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -821,6 +998,7 @@ func (c *ctyunRabbitmqInstance) specExtend(ctx context.Context, plan, state Ctyu
 		err = common.InvalidReturnObjError
 		return
 	}
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, resp.ReturnObj.Data.NewOrderId)
 	return
 }
 
@@ -832,7 +1010,7 @@ func (c *ctyunRabbitmqInstance) checkAfterUpdateSpec(ctx context.Context, plan, 
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryDetailResponseReturnObjData
-			instance, err = c.getByID(ctx, state)
+			instance, err = c.queryDetailByID(ctx, state)
 			if err != nil {
 				return false
 			}
@@ -850,7 +1028,7 @@ func (c *ctyunRabbitmqInstance) checkAfterUpdateSpec(ctx context.Context, plan, 
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("规格变配时间过长")
+		err = fmt.Errorf("实例 %s(%s) 规格变配时间过长", plan.InstanceName.ValueString(), state.ID.ValueString())
 	}
 	return
 }
@@ -865,7 +1043,7 @@ func (c *ctyunRabbitmqInstance) updateName(ctx context.Context, plan, state Ctyu
 		ProdInstId:   state.ID.ValueString(),
 		InstanceName: plan.InstanceName.ValueString(),
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesInstanceNameApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesInstanceNameApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -882,13 +1060,20 @@ func (c *ctyunRabbitmqInstance) unsubscribe(ctx context.Context, plan CtyunRabbi
 		RegionId:   plan.RegionID.ValueString(),
 		ProdInstId: plan.ID.ValueString(),
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesUnsubscribeInstApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesUnsubscribeInstApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
+	} else if resp.ReturnObj == nil ||
+		len(resp.ReturnObj.Data.BatchOrderPlacementResults) == 0 ||
+		len(resp.ReturnObj.Data.BatchOrderPlacementResults[0].OrderPlacedEvents) == 0 {
+		err = common.InvalidReturnObjError
+		return
 	}
+	masterOrderID := resp.ReturnObj.Data.BatchOrderPlacementResults[0].OrderPlacedEvents[0].NewOrderId
+	err = c.orderLooper.WaitOrderFinish(ctx, c.meta.Credential, masterOrderID)
 	return
 }
 
@@ -898,7 +1083,7 @@ func (c *ctyunRabbitmqInstance) destroy(ctx context.Context, plan CtyunRabbitmqI
 		RegionId:   plan.RegionID.ValueString(),
 		ProdInstId: plan.ID.ValueString(),
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstanceDeleteApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstanceDeleteApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -915,14 +1100,13 @@ func (c *ctyunRabbitmqInstance) checkAfterCreate(ctx context.Context, plan Ctyun
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryResponseReturnObjData
-			instance, err = c.getByName(ctx, plan)
+			instance, err = c.queryByName(ctx, plan)
 			if err != nil {
 				return false
 			}
 			if instance == nil || instance.Status != 1 || instance.ProdInstId == "" {
 				return true
 			}
-			time.Sleep(30 * time.Second)
 			id = instance.ProdInstId
 			executeSuccessFlag = true
 			return false
@@ -931,19 +1115,19 @@ func (c *ctyunRabbitmqInstance) checkAfterCreate(ctx context.Context, plan Ctyun
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("创建时间过长")
+		err = fmt.Errorf("实例 %s 创建时间过长", plan.InstanceName.ValueString())
 	}
 	return
 }
 
 // checkAfterUnsubscribe 退订后检查
-func (c *ctyunRabbitmqInstance) checkAfterUnsubscribe(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (err error) {
+func (c *ctyunRabbitmqInstance) checkAfterUnsubscribe(ctx context.Context, state CtyunRabbitmqInstanceConfig) (err error) {
 	var executeSuccessFlag bool
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryResponseReturnObjData
-			instance, err = c.getByName(ctx, plan)
+			instance, err = c.queryByName(ctx, state)
 			if err != nil {
 				return false
 			}
@@ -957,19 +1141,19 @@ func (c *ctyunRabbitmqInstance) checkAfterUnsubscribe(ctx context.Context, plan 
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("退订时间过长")
+		err = fmt.Errorf("实例 %s(%s)退订时间过长", state.InstanceName.ValueString(), state.ID.ValueString())
 	}
 	return
 }
 
 // checkAfterDestroy 销毁后检查
-func (c *ctyunRabbitmqInstance) checkAfterDestroy(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (err error) {
+func (c *ctyunRabbitmqInstance) checkAfterDestroy(ctx context.Context, state CtyunRabbitmqInstanceConfig) (err error) {
 	var executeSuccessFlag bool
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
 			var instance *amqp.AmqpInstancesQueryResponseReturnObjData
-			instance, err = c.getByName(ctx, plan)
+			instance, err = c.queryByName(ctx, state)
 			if err != nil {
 				return false
 			}
@@ -983,19 +1167,20 @@ func (c *ctyunRabbitmqInstance) checkAfterDestroy(ctx context.Context, plan Ctyu
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("销毁时间过长")
+		err = fmt.Errorf("实例 %s(%s) 销毁时间过长", state.InstanceName.ValueString(), state.ID.ValueString())
 	}
 	return
 }
 
-// getByName 根据名称查询集群
-func (c *ctyunRabbitmqInstance) getByName(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (instance *amqp.AmqpInstancesQueryResponseReturnObjData, err error) {
+// queryByName 根据名称查询集群
+func (c *ctyunRabbitmqInstance) queryByName(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (instance *amqp.AmqpInstancesQueryResponseReturnObjData, err error) {
 	params := &amqp.AmqpInstancesQueryRequest{
-		RegionId: plan.RegionID.ValueString(),
-		PageNum:  1,
-		PageSize: 100,
+		RegionId:    plan.RegionID.ValueString(),
+		PageNum:     1,
+		PageSize:    100,
+		ClusterName: plan.InstanceName.ValueString(),
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesQueryApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesQueryApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {
@@ -1014,13 +1199,13 @@ func (c *ctyunRabbitmqInstance) getByName(ctx context.Context, plan CtyunRabbitm
 	return
 }
 
-// getByID 根据ID查询集群
-func (c *ctyunRabbitmqInstance) getByID(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (instance *amqp.AmqpInstancesQueryDetailResponseReturnObjData, err error) {
+// queryDetailByID 根据ID查询集群详情
+func (c *ctyunRabbitmqInstance) queryDetailByID(ctx context.Context, plan CtyunRabbitmqInstanceConfig) (instance *amqp.AmqpInstancesQueryDetailResponseReturnObjData, err error) {
 	params := &amqp.AmqpInstancesQueryDetailRequest{
 		RegionId:   plan.RegionID.ValueString(),
 		ProdInstId: plan.ID.ValueString(),
 	}
-	resp, err := c.meta.Apis.SdkAmqpApis.AmqpInstancesQueryDetailApi.Do(ctx, c.meta.Credential, params)
+	resp, err := c.meta.Apis.AmqpApis.AmqpInstancesQueryDetailApi.Do(ctx, c.meta.Credential, params)
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCodeString {

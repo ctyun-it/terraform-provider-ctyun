@@ -2,6 +2,7 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -28,6 +29,7 @@ var (
 
 type ctyunVpcRouteTableRule struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpcRouteTableRule() resource.Resource {
@@ -36,6 +38,7 @@ func NewCtyunVpcRouteTableRule() resource.Resource {
 
 func (c *ctyunVpcRouteTableRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_route_table_rule"
+	c.name = response.TypeName
 }
 
 type CtyunVpcRouteTableRuleConfig struct {
@@ -50,18 +53,25 @@ type CtyunVpcRouteTableRuleConfig struct {
 	Description  types.String `tfsdk:"description"`
 }
 
+var NextHopType = []string{"vpcpeering", "havip", "bm", "vm", "natgw", "igw", "igw6", "dc", "ticc", "vpngw", "enic"}
+
 func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10171000`,
+		MarkdownDescription: utils.FormatDesc("管理虚拟私有云路由表规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026755/10171000"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"rule_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "规则id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -99,7 +109,7 @@ func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequ
 				Required:    true,
 				Description: "下一跳设备类型，支持vpcpeering、havip、bm、vm、natgw、igw、igw6、dc、ticc、vpngw、enic",
 				Validators: []validator.String{
-					stringvalidator.OneOf("vpcpeering", "havip", "bm", "vm", "natgw", "igw", "igw6", "dc", "ticc", "vpngw", "enic"),
+					stringvalidator.OneOf(NextHopType...),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -131,6 +141,9 @@ func (c *ctyunVpcRouteTableRule) Schema(_ context.Context, _ resource.SchemaRequ
 				Description: "规则描述，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 		},
@@ -180,7 +193,7 @@ func (c *ctyunVpcRouteTableRule) Read(ctx context.Context, request resource.Read
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未找到") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -250,18 +263,45 @@ func (c *ctyunVpcRouteTableRule) Configure(_ context.Context, request resource.C
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [ruleID],[routeTableID],[regionID]
 func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[route_table_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpcRouteTableRuleConfig
 	var ruleID, routeTableID, regionID string
-	err = terraform_extend.Split(request.ID, &ruleID, &routeTableID, &regionID)
-	if err != nil {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("id和route_table_id必须输入")
+		return
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &ruleID, &routeTableID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if ruleID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if routeTableID == "" {
+		err = fmt.Errorf("route_table_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	cfg.RegionID = types.StringValue(regionID)
@@ -270,6 +310,17 @@ func (c *ctyunVpcRouteTableRule) ImportState(ctx context.Context, request resour
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {
+		return
+	}
+	var validNHT bool
+	for _, v := range NextHopType {
+		if v == cfg.NextHopType.ValueString() {
+			validNHT = true
+			break
+		}
+	}
+	if !validNHT {
+		err = fmt.Errorf("仅支持导入自定义路由规则")
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
@@ -333,7 +384,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		pageNo++
 	}
 	if len(rules) == 0 {
-		err = common.InvalidReturnObjResultsError
+		err = common.ResourceNotExistError
 		return
 	}
 	var exist bool
@@ -349,7 +400,7 @@ func (c *ctyunVpcRouteTableRule) getAndMerge(ctx context.Context, plan *CtyunVpc
 		}
 	}
 	if !exist {
-		err = fmt.Errorf("未找到路由表 %s 下的规则 %s", routeTableID, ruleID)
+		err = common.ResourceNotExistError
 	}
 	return
 }
@@ -361,9 +412,10 @@ func (c *ctyunVpcRouteTableRule) update(ctx context.Context, plan, state CtyunVp
 	}
 	ruleID, regionID, description := state.RuleID.ValueString(), state.RegionID.ValueString(), plan.Description.ValueString()
 	params := &ctvpc.CtvpcModifyRouteRuleRequest{
-		RegionID:    regionID,
-		RouteRuleID: ruleID,
-		Description: &description,
+		RegionID:     regionID,
+		RouteRuleID:  ruleID,
+		Description:  &description,
+		RouteTableID: plan.RouteTableID.ValueString(),
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcModifyRouteRuleApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

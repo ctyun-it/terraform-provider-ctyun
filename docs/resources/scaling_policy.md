@@ -1,5 +1,10 @@
+---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
+page_title: "CTYUN: ctyun_scaling_policy"
+---
+
 # ctyun_scaling_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241454
+-> 管理弹性伸缩策略
 
 
 
@@ -40,7 +45,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_security_group" "sg_test" {
@@ -55,8 +59,8 @@ resource "ctyun_security_group" "sg_test" {
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
-  page_no = 1
-  page_size = 10
+  page_no    = 1
+  page_size  = 10
 }
 
 locals {
@@ -70,14 +74,14 @@ resource "ctyun_keypair" "scaling_test" {
 
 resource "ctyun_scaling_config" "config_test" {
   name            = "sc-for-policy"
-  image_id        =  local.image_id
+  image_id        = local.image_id
   flavor_name     = "s7.large.2"
-  use_floatings   = "diable"
+  use_floatings   = "disable"
   login_mode      = "key_pair"
   key_pair_id     = ctyun_keypair.scaling_test.id
   monitor_service = true
   az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
-  volumes         = [{"volume_type":"SATA", "volume_size": 40, "flag":"OS"}]
+  volumes         = [{ "volume_type" : "SATA", "volume_size" : 40, "flag" : "OS" }]
 }
 
 
@@ -99,7 +103,7 @@ resource "ctyun_scaling_group" "group_test" {
 
 # 告警策略
 resource "ctyun_scaling_policy" "policy_alert_example" {
-  group_id                    = ctyun_security_group.sg_test.id
+  group_id                    = ctyun_scaling_group.group_test.id
   name                        = "alert-policy-example"
   policy_type                 = "alert"
   operate_unit                = "percent"
@@ -156,3 +160,15 @@ resource "ctyun_scaling_policy" "policy_alert_example" {
 ### Read-Only
 
 - `id` (Number) 伸缩策略id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入伸缩策略
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_scaling_policy.[导入配置名称] [id],[group_id],<region_id>
+# 示例
+terraform import ctyun_scaling_policy.scaling_policy_example 123456789,987654321,<region-123456>
+```

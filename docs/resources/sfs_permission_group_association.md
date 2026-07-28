@@ -1,5 +1,10 @@
+---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
+page_title: "CTYUN: ctyun_sfs_permission_group_association"
+---
+
 # ctyun_sfs_permission_group_association (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192625
+-> 管理弹性文件服务和权限组的绑定关系
 
 
 
@@ -28,7 +33,7 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
-  name = "permission-group_example"
+  name        = "permission-group-example"
   description = "创建sfs规则组"
 }
 
@@ -48,25 +53,25 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
+
 resource "ctyun_sfs" "sfs_test" {
-  sfs_type     = "performance"
-  sfs_protocol = "nfs"
-  name         = "sfs-example"
-  sfs_size     = 500
-  cycle_type   = "on_demand"
-  az_name      = "cn-huadong1-jsnj1A-public-ctcloud"
-  vpc_id       = ctyun_vpc.vpc_test.id
-  subnet_id    = ctyun_subnet.subnet_test.id
+  type       = "performance"
+  protocol   = "nfs"
+  name       = "sfs-example"
+  size       = 500
+  cycle_type = "on_demand"
+  az_name    = "cn-huadong1-jsnj1A-public-ctcloud"
+  vpc_id     = ctyun_vpc.vpc_test.id
+  subnet_id  = ctyun_subnet.subnet_test.id
 }
 
 
 resource "ctyun_sfs_permission_group_association" "sfs_permission_group_association_test" {
-  permission_group_fuid = ctyun_sfs_permission_group.sfs_permission_group_test.id
-  sfs_uid               = ctyun_sfs.sfs_test.id
-  vpc_id                = ctyun_vpc.vpc_test1.id
+  permission_group_id = ctyun_sfs_permission_group.sfs_permission_group_test.id
+  sfs_id              = ctyun_sfs.sfs_test.id
+  vpc_id              = ctyun_vpc.vpc_test1.id
 }
 ```
 
@@ -75,9 +80,9 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 
 ### Required
 
-- `permission_group_fuid` (String) 权限组ID，支持更新
-- `sfs_uid` (String) 弹性文件系统唯一ID
-- `vpc_id` (String) vpcID
+- `permission_group_id` (String) 权限组ID
+- `sfs_id` (String) 弹性文件系统唯一ID
+- `vpc_id` (String) 虚拟私有云ID
 
 ### Optional
 
@@ -86,8 +91,20 @@ resource "ctyun_sfs_permission_group_association" "sfs_permission_group_associat
 ### Read-Only
 
 - `id` (String) ID
-- `permission_group_description` (String) 权限组描述
-- `permission_group_is_default` (Boolean) 是否为默认权限组
-- `permission_group_name` (String) 权限组名称
-- `vpc_cidr` (String) vpc cidr
-- `vpc_name` (String) vpc名称
+- `is_default` (Boolean, Deprecated) 废弃字段
+- `permission_group_description` (String, Deprecated) 废弃字段
+- `permission_group_name` (String, Deprecated) 废弃字段
+- `vpc_cidr` (String, Deprecated) 废弃字段
+- `vpc_name` (String, Deprecated) 废弃字段
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS权限组关联
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs_permission_group_association.[导入配置名称] [sfs_id],[vpc_id],[permission_group_id],<region_id>
+# 示例
+terraform import ctyun_sfs_permission_group_association.permission_group_association_example sfs-789012,vpc-123456,xxxxxxxx,<region-345678>
+```

@@ -23,12 +23,12 @@ resource "ctyun_elb_health_check" "test" {
 }
 
 resource "ctyun_elb_target_group" "target_group_test" {
-  name      = "tf_target_group"
-  vpc_id    = ctyun_vpc.vpc_test.id
-  algorithm = "wrr"
-  health_check_id = ctyun_elb_health_check.test.id
+  name                = "tf_target_group"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  algorithm           = "wrr"
+  health_check_id     = ctyun_elb_health_check.test.id
   session_sticky_mode = "SOURCE_IP"
-  source_ip_timeout = 30
-  proxy_protocol = 1
-  protocol = "TCP"
+  source_ip_timeout   = 30
+  proxy_protocol      = 1
+  protocol            = "TCP"
 }

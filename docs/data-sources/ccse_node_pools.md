@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_node_pools"
+---
+
 # ctyun_ccse_node_pools (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452
+-> 查询云容器引擎节点池
 
 
 
@@ -20,7 +25,7 @@ provider "ctyun" {
 }
 
 data "ctyun_ccse_node_pools" "test" {
-  cluster_id               = "19b4be67777e40e690b97c3a8664a1f9"
+  cluster_id = "19b4be67777e40e690b97c3a8664a1f9"
 }
 
 output "t" {

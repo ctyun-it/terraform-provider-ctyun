@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_listeners"
+---
+
 # ctyun_elb_listeners (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276
+-> 查询弹性负载均衡监听器
 
 
 
@@ -50,7 +55,7 @@ Read-Only:
 - `ca_enabled` (Boolean) 是否开启双向认证
 - `certificate_id` (String) 证书ID
 - `client_certificate_id` (String) 双向认证的证书ID
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `default_action_type` (String) 默认规则动作类型: forward / redirect
 - `description` (String) 描述
 - `forward_config` (Attributes List) 转发配置 (see [below for nested schema](#nestedatt--listeners--forward_config))
@@ -64,15 +69,12 @@ Read-Only:
 - `redirect_listener_id` (String) 重定向监听器ID
 - `region_id` (String) 资源池ID
 - `status` (String) 监听器状态: DOWN / ACTIVE
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
 
 <a id="nestedatt--listeners--forward_config"></a>
 ### Nested Schema for `listeners.forward_config`
 
-Required:
+Read-Only:
 
 - `target_group_id` (String) 后端服务组ID
-
-Optional:
-
 - `weight` (Number) 权重，取值范围：1-256。默认为100

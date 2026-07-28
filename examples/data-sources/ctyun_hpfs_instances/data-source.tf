@@ -12,7 +12,7 @@ provider "ctyun" {
 }
 
 data "ctyun_hpfs_instances" "test" {
-  sfs_status = "available"
-  sfs_protocol = "hpfs"
-  az_name = "cn-huadong1-jsnj1A-public-ctcloud"
+  status   = "available"
+  protocol = "hpfs"
+  az_name  = "cn-huadong1-jsnj1A-public-ctcloud"
 }

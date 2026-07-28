@@ -5,6 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+	"time"
 )
 
 const dependenceDir = "testdata/dependence"
@@ -19,6 +20,9 @@ type Dependence struct {
 	kafkaClusterDiskType  string
 	kafkaClusterSpecName  string
 	kafkaClusterSpecName2 string
+	instanceID            string
+	topicName             string
+	userName              string
 }
 
 var dependence Dependence
@@ -45,6 +49,9 @@ func TestMain(m *testing.M) {
 		kafkaSingleDiskType:   outputs["kafka_single_disk_type"].Value,
 		kafkaSingleSpecName:   outputs["kafka_single_spec_name"].Value,
 		kafkaSingleSpecName2:  outputs["kafka_single_spec_name2"].Value,
+		instanceID:            outputs["instance_id"].Value,
+		topicName:             outputs["topic_name"].Value,
+		userName:              outputs["user_name"].Value,
 	}
 	fmt.Println("依赖资源初始化完毕")
 
@@ -54,6 +61,12 @@ func TestMain(m *testing.M) {
 	fmt.Println("开始清理依赖资源")
 	// 清理依赖资源
 	terraform.DestroyResource(dependenceDir)
+	time.Sleep(3 * time.Minute)
+	err = terraform.DestroyResource(dependenceDir)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	fmt.Println("依赖资源清理完毕")
 
 	os.Exit(code)

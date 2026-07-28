@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -42,7 +43,7 @@ func (c *CtyunScalings) Configure(ctx context.Context, request datasource.Config
 
 func (c *CtyunScalings) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725`,
+		MarkdownDescription: utils.FormatDesc("查询弹性伸缩组", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -100,9 +101,9 @@ func (c *CtyunScalings) Schema(ctx context.Context, request datasource.SchemaReq
 							Computed:    true,
 							Description: "实例移出策略",
 						},
-						"create_date": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"group_id": schema.Int64Attribute{
 							Computed:    true,
@@ -110,7 +111,7 @@ func (c *CtyunScalings) Schema(ctx context.Context, request datasource.SchemaReq
 						},
 						"update_date": schema.StringAttribute{
 							Computed:    true,
-							Description: "更新时间",
+							Description: "更新时间，为UTC格式",
 						},
 						"health_mode": schema.StringAttribute{
 							Computed:    true,
@@ -275,7 +276,7 @@ type CtyunScalingsModel struct {
 	MinCount            types.Int32  `tfsdk:"min_count"`              // 最小云主机数
 	ExpectedCount       types.Int32  `tfsdk:"expected_count"`         // 期望云主机数
 	MoveOutStrategy     types.String `tfsdk:"move_out_strategy"`      // 实例移出策略
-	CreateDate          types.String `tfsdk:"create_date"`            // 创建时间
+	CreateDate          types.String `tfsdk:"create_time"`            // 创建时间
 	GroupID             types.Int64  `tfsdk:"group_id"`               // 伸缩组ID
 	UpdateDate          types.String `tfsdk:"update_date"`            // 更新时间
 	HealthMode          types.String `tfsdk:"health_mode"`            // 健康检查方式

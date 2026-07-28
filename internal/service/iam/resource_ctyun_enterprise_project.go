@@ -2,10 +2,12 @@ package iam
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,21 +18,29 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource                = &ctyunEnterpriseProject{}
+	_ resource.ResourceWithConfigure   = &ctyunEnterpriseProject{}
+	_ resource.ResourceWithImportState = &ctyunEnterpriseProject{}
+)
+
 func NewCtyunEnterpriseProject() resource.Resource {
 	return &ctyunEnterpriseProject{}
 }
 
 type ctyunEnterpriseProject struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEnterpriseProject) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_enterprise_project"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10358242`,
+		MarkdownDescription: utils.FormatDesc("管理企业项目", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10358242"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -39,7 +49,7 @@ func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "企业项目名称，长度为1-32",
+				Description: "企业项目名称，长度为1-32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(1, 32),
 				},
@@ -56,7 +66,7 @@ func (c *ctyunEnterpriseProject) Schema(_ context.Context, _ resource.SchemaRequ
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "企业项目描述，长度最大为64",
+				Description: "企业项目描述，长度最大为64，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(64),
 				},
@@ -179,13 +189,19 @@ func (c *ctyunEnterpriseProject) Delete(ctx context.Context, request resource.De
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [enterpriseProjectId]
 func (c *ctyunEnterpriseProject) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunEnterpriseProjectConfig
 	var enterpriseProjectId string
-	err := terraform_extend.Split(request.ID, &enterpriseProjectId)
+	err = terraform_extend.Split(request.ID, &enterpriseProjectId)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -193,7 +209,6 @@ func (c *ctyunEnterpriseProject) ImportState(ctx context.Context, request resour
 
 	instance, err := c.getAndMergeEnterpriseProject(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -232,11 +247,16 @@ func (c *ctyunEnterpriseProject) getAndMergeEnterpriseProject(ctx context.Contex
 
 // changeStatus 改变状态
 func (c *ctyunEnterpriseProject) changeStatus(ctx context.Context, projectId string, statusTo string) error {
-	//status, err := business.EnterpriseProjectStatusMap.FromOriginalScene(statusTo, business.EnterpriseProjectSceneRequest)
-	//if err != nil {
-	//	return err
-	//}
+	// 停用
 	_, err := c.meta.Apis.CtIamApis.EnterpriseProjectStatusUpdateApi.Do(ctx, c.meta.Credential, &ctiam.EnterpriseProjectStatusUpdateRequest{
+		ProjectId: projectId,
+		Status:    2,
+	})
+	if err != nil {
+		return err
+	}
+	// 删除
+	_, err = c.meta.Apis.CtIamApis.EnterpriseProjectStatusUpdateApi.Do(ctx, c.meta.Credential, &ctiam.EnterpriseProjectStatusUpdateRequest{
 		ProjectId: projectId,
 		Status:    3,
 	})

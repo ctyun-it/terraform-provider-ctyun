@@ -1,5 +1,10 @@
+---
+subcategory: "文档数据库服务（MongoDB）"
+page_title: "CTYUN: ctyun_mongodb_association_eip"
+---
+
 # ctyun_mongodb_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034467/10183412
+-> 管理MongoDB实例和弹性IP的绑定关系
 
 
 
@@ -18,11 +23,60 @@ terraform {
 provider "ctyun" {
 
 }
+resource "ctyun_vpc" "vpc_test" {
+  name        = "tf-vpc-for-mon"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  enable_ipv6 = true
+}
 
+resource "ctyun_subnet" "subnet_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tf-subnet-for-mon"
+  cidr        = "192.168.0.0/16"
+  description = "terraform测试使用"
+  dns = [
+    "8.8.8.8",
+    "8.8.4.4"
+  ]
+}
+
+resource "ctyun_security_group" "security_group_test" {
+  vpc_id      = ctyun_vpc.vpc_test.id
+  name        = "tf-sg-for-mon"
+  description = "terraform测试使用"
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+resource "ctyun_mongodb_instance" "test" {
+  cycle_type          = "on_demand"
+  vpc_id              = ctyun_vpc.vpc_test.id
+  flavor_name         = "s7.large.2"
+  subnet_id           = ctyun_subnet.subnet_test.id
+  security_group_id   = ctyun_security_group.security_group_test.id
+  name                = "mongodb-12ab"
+  prod_id             = "10013001" # 3.4单机版；可通过data.ctyun_mongodb_specs查询
+  storage_type        = "SATA"
+  storage_space       = 100
+  backup_storage_type = "OS"
+  password            = var.password
+}
+
+variable "password" {
+  type      = string
+  sensitive = true
+}
+resource "ctyun_eip" "eip_test" {
+  name        = "tf-eip-for-mon"
+  bandwidth   = 2
+  cycle_type  = "month"
+  cycle_count = 1
+}
 resource "ctyun_mongodb_association_eip" "test" {
-  eip_id = "eip-xjw2ndksn3"
-  inst_id = "85d8cb5914ae4b6b9852635f3bc43023"
-  host_ip = "192.168.1.2"
+  eip_id      = ctyun_eip.eip_test.id
+  instance_id = ctyun_mongodb_instance.test.id
 }
 ```
 
@@ -31,15 +85,26 @@ resource "ctyun_mongodb_association_eip" "test" {
 
 ### Required
 
-- `eip_id` (String) 弹性id
-- `host_ip` (String) 主机ip
-- `inst_id` (String) 实例id
+- `eip_id` (String) 弹性IP的ID
+- `instance_id` (String) 实例id
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池Id
 
 ### Read-Only
 
-- `eip_address` (String) 弹性ip对应的地址
+- `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入mongodb关联eip
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mongodb_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_mongodb_association_eip.mongodb_association_eip_example ff532dfa5e3744928bcb16daf50b4b69,eip-qjefnklk36,region-11111111
+```

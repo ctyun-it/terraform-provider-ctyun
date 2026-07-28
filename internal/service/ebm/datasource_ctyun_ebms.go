@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	_ datasource.DataSource              = &ctyunEbmDeviceTypes{}
-	_ datasource.DataSourceWithConfigure = &ctyunEbmDeviceTypes{}
+	_ datasource.DataSource              = &ctyunEbms{}
+	_ datasource.DataSourceWithConfigure = &ctyunEbms{}
 )
 
 type ctyunEbms struct {
@@ -46,8 +46,8 @@ type CtyunEbmsModel struct {
 	Freezing             types.Bool                 `tfsdk:"freezing"`
 	Expired              types.Bool                 `tfsdk:"expired"`
 	CreateTime           types.String               `tfsdk:"create_time"`
-	UpdatedTime          types.String               `tfsdk:"updated_time"`
-	ExpiredTime          types.String               `tfsdk:"expired_time"`
+	UpdateTime           types.String               `tfsdk:"update_time"`
+	ExpireTime           types.String               `tfsdk:"expire_time"`
 }
 type CtyunEbmsNetworkCardList struct {
 	InterfaceID types.String `tfsdk:"interface_id"`
@@ -67,7 +67,7 @@ type CtyunEbmsConfig struct {
 
 func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040106`,
+		MarkdownDescription: utils.FormatDesc("查询物理机列表", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10040106"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -143,31 +143,27 @@ func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"interface_id": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "物理机网卡id",
 									},
 									"port_uuid": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "弹性网卡id",
 									},
 									"fixed_ip": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "内网IPv4地址",
 									},
 									"master": schema.BoolAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "是否主节点(True代表主节点)",
 									},
 									"ipv6": schema.StringAttribute{
-										Optional:    true,
 										Computed:    true,
 										Description: "内网IPv6地址",
 									},
 									"subnet_id": schema.StringAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "子网id",
 									},
 								},
@@ -189,15 +185,15 @@ func (c *ctyunEbms) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 						},
 						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "最后更新时间",
+							Description: "更新时间，为UTC格式",
 						},
-						"expired_time": schema.StringAttribute{
+						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "到期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
 					},
 				},
@@ -220,7 +216,7 @@ func (c *ctyunEbms) Read(ctx context.Context, request datasource.ReadRequest, re
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)
@@ -265,9 +261,9 @@ func (c *ctyunEbms) Read(ctx context.Context, request datasource.ReadRequest, re
 			OsTypeName:           utils.SecStringValue(ebm.OsTypeName),
 			Freezing:             utils.SecBoolValue(ebm.Freezing),
 			Expired:              utils.SecBoolValue(ebm.Expired),
-			UpdatedTime:          utils.SecStringValue(ebm.UpdatedTime),
+			UpdateTime:           utils.SecStringValue(ebm.UpdatedTime),
 			CreateTime:           utils.SecStringValue(ebm.CreateTime),
-			ExpiredTime:          utils.SecStringValue(ebm.ExpiredTime),
+			ExpireTime:           utils.SecStringValue(ebm.ExpiredTime),
 		}
 
 		item.AttachedVolumes = utils.StrPointerArrayToStrArray(ebm.AttachedVolumes)

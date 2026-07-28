@@ -11,12 +11,8 @@ provider "ctyun" {
   env = "prod"
 }
 
-
-
 resource "ctyun_ecs_backup_repo" "test" {
-  repository_name = "test111"
+  name =  "tf-test-ctyun_ecs_backup_repo"
   cycle_count = "5"
-  cycle_type  = "MONTH"
+  cycle_type  = "month"
 }
-
-

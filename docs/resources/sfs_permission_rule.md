@@ -1,5 +1,10 @@
+---
+subcategory: "弹性文件服务（CT-SFS，Scalable File Service）"
+page_title: "CTYUN: ctyun_sfs_permission_rule"
+---
+
 # ctyun_sfs_permission_rule (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027350/10192622
+-> 管理弹性文件服务权限组规则
 
 
 
@@ -27,16 +32,16 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
-  name = "permission-group_example"
+  name        = "permission-group-example"
   description = "创建sfs规则组"
 }
 
 
 resource "ctyun_sfs_permission_rule" "sfs_permission_rule_test" {
-  permission_group_fuid    =  ctyun_sfs_permission_group.sfs_permission_group_test.id
-  auth_addr                = "192.168.1.0/24"
-  rw_permission            = "ro"
-  permission_rule_priority = 200
+  permission_group_id = ctyun_sfs_permission_group.sfs_permission_group_test.id
+  auth_addr           = "192.168.1.0/24"
+  rw_permission       = "ro"
+  priority            = 200
 }
 ```
 
@@ -46,8 +51,8 @@ resource "ctyun_sfs_permission_rule" "sfs_permission_rule_test" {
 ### Required
 
 - `auth_addr` (String) 授权地址。支持IPv4和IPv6两种网络类型，可填写单个IP或者单个网段。同一权限组内，授权地址不能重复格式。ipv4格式为： 192.168.1.0/24，ipv6格式为：0000:0000:0000:0000:0000:0000:0000:0000/0。支持更新
-- `permission_group_fuid` (String) 权限组FUID标识
-- `permission_rule_priority` (Number) 规则优先级(数值越小优先级越高),有效范围为1-400。当同一个权限组内单个 IP 与网段中包含的 IP 的权限有冲突时，会生效优先级高的规则。注：优先级不可重复，支持更新
+- `permission_group_id` (String) 权限组ID
+- `priority` (Number) 规则优先级(数值越小优先级越高),有效范围为1-400。当同一个权限组内单个 IP 与网段中包含的 IP 的权限有冲突时，会生效优先级高的规则。注：优先级不可重复，支持更新
 - `rw_permission` (String) 读写权限，可选值: 'rw' (读写), 'ro' (只读)，支持更新
 
 ### Optional
@@ -57,4 +62,16 @@ resource "ctyun_sfs_permission_rule" "sfs_permission_rule_test" {
 ### Read-Only
 
 - `id` (String) 权限组规则唯一标识
-- `update_time` (String) 更新时间。UTC时间
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入SFS权限规则
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_sfs_permission_rule.[导入配置名称] [id],[permission_group_id],<region_id>
+# 示例
+terraform import ctyun_sfs_permission_rule.sfs_permission_rule_example rule-12345,group-12345,bb9fdb42056f11eda1610242ac110002
+```

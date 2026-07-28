@@ -62,3 +62,23 @@ output "instance_uuid2" {
 output "instance_uuid3" {
   value = ctyun_ecs.ecs_test3.id
 }
+
+output "image_id1" {
+  value =data.ctyun_images.image_test.images[0].id
+}
+
+output "image_id2" {
+  value =data.ctyun_images.image_test2.images[0].id
+}
+
+output "az_name" {
+  value = data.ctyun_zones.test.zones[0]
+}
+
+output "flavor_name" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+}
+
+output "flavor_name2" {
+  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
+}

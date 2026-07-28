@@ -39,6 +39,14 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "group_name", groupName),
 					resource.TestCheckResourceAttr(resourceName, "group_white_list_count", "2"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			// 更新白名单
@@ -55,9 +63,45 @@ func TestAccCtyunMysqlWhiteListTest(t *testing.T) {
 					utils.LoadTestCase(datasourceFile, dnd, prodInstId),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "white_lists.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "white_lists.0.group_name", groupName),
+					resource.TestCheckTypeSetElemNestedAttrs(datasourceName, "white_lists.*", map[string]string{
+						"group_name": groupName,
+					}),
 					resource.TestCheckResourceAttr(datasourceName, "white_lists.0.group_white_list_count", "4"),
 				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["group_name"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
+			},
+			// 3. 导入测试
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["instance_id"],
+						rs.Primary.Attributes["group_name"],
+					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
 			},
 			// 销毁
 			{

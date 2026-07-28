@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm_device_types"
+---
+
 # ctyun_ebm_device_types (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001
+-> 查询物理机可用的规格列表
 
 
 
@@ -20,8 +25,8 @@ provider "ctyun" {
 }
 
 data "ctyun_ebm_device_types" "test" {
-  region_id            = "200000001852"
-  az_name              = "cn-huabei2-tj-3a-public-ctcloud"
+  region_id = "200000001852"
+  az_name   = "cn-huabei2-tj-3a-public-ctcloud"
 }
 
 output "ctyun_ebm_device_types_test" {
@@ -45,6 +50,10 @@ output "ctyun_ebm_device_types_test" {
 <a id="nestedatt--device_types"></a>
 ### Nested Schema for `device_types`
 
+Optional:
+
+- `available` (Boolean) 是否可用（true：可用；false：不可用，已售罄）
+
 Read-Only:
 
 - `az_name` (String) 可用区
@@ -59,7 +68,6 @@ Read-Only:
 - `cpu_model` (String) cpu型号
 - `cpu_sockets` (Number) 物理cpu数量
 - `cpu_thread_amount` (Number) 单个cpu核超线程数量
-- `create_time` (String) 创建时间
 - `data_volume_amount` (Number) 数据盘数量
 - `data_volume_description` (String) 数据盘描述
 - `data_volume_interface` (String) 数据盘接口；包含SAS、SATA、NVMe
@@ -97,4 +105,3 @@ Read-Only:
 - `system_volume_interface` (String) 系统盘接口类型；包含SAS、SATA、NVMe
 - `system_volume_size` (Number) 系统盘单盘大小(GB)
 - `system_volume_type` (String) 系统盘介质类型； 包含SSD、HDD
-- `update_time` (String) 最后更新时间

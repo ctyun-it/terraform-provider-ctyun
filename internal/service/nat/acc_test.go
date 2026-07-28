@@ -10,13 +10,17 @@ import (
 const dependenceDir = "testdata/dependence"
 
 type Dependence struct {
-	vpcID     string
-	eipID     string
-	eipID1    string
-	natID     string
-	subnetID1 string
-	subnetID2 string
-	ecsID     string
+	vpcID         string
+	eipID         string
+	eipID1        string
+	natID         string
+	privateNatID  string
+	subnetID1     string
+	subnetID2     string
+	ecsID         string
+	privateNatIP1 string
+	privateNatIP2 string
+	portId        string
 }
 
 var dependence Dependence
@@ -30,13 +34,17 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 	dependence = Dependence{
-		vpcID:     outputs["vpc_id"].Value,
-		eipID:     outputs["eip_id"].Value,
-		eipID1:    outputs["eip_id1"].Value,
-		natID:     outputs["nat_id"].Value,
-		subnetID1: outputs["subnet_id1"].Value,
-		subnetID2: outputs["subnet_id2"].Value,
-		ecsID:     outputs["ecs_id"].Value,
+		vpcID:         outputs["vpc_id"].Value,
+		eipID:         outputs["eip_id"].Value,
+		eipID1:        outputs["eip_id1"].Value,
+		natID:         outputs["nat_id"].Value,
+		privateNatID:  outputs["private_nat_id"].Value,
+		subnetID1:     outputs["subnet_id1"].Value,
+		subnetID2:     outputs["subnet_id2"].Value,
+		ecsID:         outputs["ecs_id"].Value,
+		privateNatIP1: outputs["private_nat_ip1"].Value,
+		privateNatIP2: outputs["private_nat_ip2"].Value,
+		portId:        outputs["port_id"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

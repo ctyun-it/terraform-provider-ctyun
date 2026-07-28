@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebs"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -36,22 +37,22 @@ type ctyunEbsSnapshotPoliciesModel struct {
 	RepeatTimes              types.String `tfsdk:"repeat_times"`
 	RetentionTime            types.Int32  `tfsdk:"retention_time"`
 	ProjectId                types.String `tfsdk:"project_id"`
-	SnapshotPolicyStatus     types.String `tfsdk:"snapshot_policy_status"`
+	SnapshotPolicyStatus     types.String `tfsdk:"status"`
 	BoundDiskNum             types.Int32  `tfsdk:"bound_disk_num"`
-	SnapshotPolicyCreateTime types.String `tfsdk:"snapshot_policy_create_time"`
+	SnapshotPolicyCreateTime types.String `tfsdk:"create_time"`
 }
 
 type ctyunEbsSnapshotPoliciesConfig struct {
 	RegionID                 types.String                    `tfsdk:"region_id"`
 	PolicyName               types.String                    `tfsdk:"name"`
 	PolicyID                 types.String                    `tfsdk:"id"`
-	SnapshotPolicies         []ctyunEbsSnapshotPoliciesModel `tfsdk:"snapshot_policies"`
-	SnapshotPolicyTotalCount types.Int32                     `tfsdk:"snapshot_policy_total_count"`
+	SnapshotPolicies         []ctyunEbsSnapshotPoliciesModel `tfsdk:"policies"`
+	SnapshotPolicyTotalCount types.Int32                     `tfsdk:"total_count"`
 }
 
 func (c *ctyunEbsSnapshotPolicies) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118840`,
+		MarkdownDescription: utils.FormatDesc("查询云硬盘快照策略", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10118840"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -66,11 +67,11 @@ func (c *ctyunEbsSnapshotPolicies) Schema(_ context.Context, _ datasource.Schema
 				Optional:    true,
 				Description: "云硬盘自动快照策略ID，32字符",
 			},
-			"snapshot_policy_total_count": schema.Int32Attribute{
+			"total_count": schema.Int32Attribute{
 				Computed:    true,
 				Description: "云硬盘自动快照策略总数",
 			},
-			"snapshot_policies": schema.ListNestedAttribute{
+			"policies": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -101,7 +102,7 @@ func (c *ctyunEbsSnapshotPolicies) Schema(_ context.Context, _ datasource.Schema
 							Computed:    true,
 							Description: "企业项目ID",
 						},
-						"snapshot_policy_status": schema.StringAttribute{
+						"status": schema.StringAttribute{
 							Computed:    true,
 							Description: "自动快照策略状态，取值范围：activated:启用，deactivated：停用",
 						},
@@ -109,9 +110,9 @@ func (c *ctyunEbsSnapshotPolicies) Schema(_ context.Context, _ datasource.Schema
 							Computed:    true,
 							Description: "关联云硬盘的数量",
 						},
-						"snapshot_policy_create_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "策略创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 					},
 				}},
@@ -133,7 +134,7 @@ func (c *ctyunEbsSnapshotPolicies) Read(ctx context.Context, request datasource.
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	config.RegionID = types.StringValue(regionId)

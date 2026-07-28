@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_health_checks"
+---
+
 # ctyun_elb_health_checks (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032101
+-> 查询弹性负载均衡健康检查
 
 
 

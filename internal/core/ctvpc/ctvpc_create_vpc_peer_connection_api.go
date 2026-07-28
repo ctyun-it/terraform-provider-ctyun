@@ -54,6 +54,8 @@ type CtvpcCreateVpcPeerConnectionRequest struct {
 	AcceptEmail    *string `json:"acceptEmail,omitempty"`    /*  对端vpc账户的邮箱，当建立跨帐号的对等链接是，需要提交  */
 	Name           string  `json:"name,omitempty"`           /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
 	RegionID       string  `json:"regionID,omitempty"`       /*  区域id  */
+	Description    *string `json:"description"`
+	ProjectID      string  `json:"projectID,omitempty"`
 }
 
 type CtvpcCreateVpcPeerConnectionResponse struct {

@@ -78,13 +78,18 @@ type CtvpcDhcpoptionsetsqueryReturnObjResponse struct {
 	TotalPage    int32                                               `json:"totalPage"`    /*  总页数  */
 }
 
+type vpcListResponse struct {
+	VpcID   *string `json:"vpcID,omitempty"`
+	VpcName *string `json:"vpcName,omitempty"`
+}
+
 type CtvpcDhcpoptionsetsqueryReturnObjResultsResponse struct {
-	DhcpOptionSetsID *string   `json:"dhcpOptionSetsID,omitempty"` /*  dhcpoptionsets  ID  */
-	Name             *string   `json:"name,omitempty"`             /*  名字  */
-	Description      *string   `json:"description,omitempty"`      /*  描述  */
-	DomainName       []*string `json:"domainName"`                 /*  域名  */
-	DnsList          []*string `json:"dnsList"`                    /*  ip 列表  */
-	VpcList          []*string `json:"vpcList"`                    /*  vpc 列表  */
-	CreatedAt        *string   `json:"createdAt,omitempty"`        /*  创建时间  */
-	UpdatedAt        *string   `json:"updatedAt,omitempty"`        /*  更新时间  */
+	DhcpOptionSetsID *string            `json:"dhcpOptionSetsID,omitempty"` /*  dhcpoptionsets  ID  */
+	Name             *string            `json:"name,omitempty"`             /*  名字  */
+	Description      *string            `json:"description,omitempty"`      /*  描述  */
+	DomainName       *string            `json:"domainName"`                 /*  域名  */
+	DnsList          []*string          `json:"dnsList"`                    /*  ip 列表  */
+	VpcList          []*vpcListResponse `json:"vpcList"`                    /*  vpc 列表  */
+	CreatedAt        *string            `json:"createdAt,omitempty"`        /*  创建时间  */
+	UpdatedAt        *string            `json:"updatedAt,omitempty"`        /*  更新时间  */
 }

@@ -3,6 +3,7 @@ package ebm
 import (
 	"context"
 	"fmt"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -17,7 +18,8 @@ var (
 )
 
 type ctyunEbmDeviceTypes struct {
-	meta *common.CtyunMetadata
+	meta       *common.CtyunMetadata
+	ebmService *business.EbmService
 }
 
 func NewCtyunEbmDeviceTypes() datasource.DataSource {
@@ -29,13 +31,13 @@ func (c *ctyunEbmDeviceTypes) Metadata(_ context.Context, request datasource.Met
 }
 
 type CtyunEbmDeviceTypesModel struct {
+	Available               types.Bool   `tfsdk:"available"`
 	ID                      types.Int32  `tfsdk:"id"`
 	DeviceType              types.String `tfsdk:"device_type"`
 	CpuModel                types.String `tfsdk:"cpu_model"`
 	NvmeVolumeType          types.String `tfsdk:"nvme_volume_type"`
 	NameZh                  types.String `tfsdk:"name_zh"`
 	NvmeVolumeInterface     types.String `tfsdk:"nvme_volume_interface"`
-	UpdateTime              types.String `tfsdk:"update_time"`
 	SystemVolumeSize        types.Int32  `tfsdk:"system_volume_size"`
 	SystemVolumeType        types.String `tfsdk:"system_volume_type"`
 	CpuManufacturer         types.String `tfsdk:"cpu_manufacturer"`
@@ -61,7 +63,6 @@ type CtyunEbmDeviceTypesModel struct {
 	NvmeVolumeSize          types.Int32  `tfsdk:"nvme_volume_size"`
 	CpuSockets              types.Int32  `tfsdk:"cpu_sockets"`
 	CpuAmount               types.Int32  `tfsdk:"cpu_amount"`
-	CreateTime              types.String `tfsdk:"create_time"`
 	SupportCloud            types.Bool   `tfsdk:"support_cloud"`
 	DataVolumeAmount        types.Int32  `tfsdk:"data_volume_amount"`
 	NumaNodeAmount          types.Int32  `tfsdk:"numa_node_amount"`
@@ -91,7 +92,7 @@ type CtyunEbmDeviceTypesConfig struct {
 
 func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10754001`,
+		MarkdownDescription: utils.FormatDesc("查询物理机可用的规格列表", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10754001"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -135,10 +136,6 @@ func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaReque
 						"nvme_volume_interface": schema.StringAttribute{
 							Computed:    true,
 							Description: "NVME接口类型；包含SAS、SATA、NVMe",
-						},
-						"update_time": schema.StringAttribute{
-							Computed:    true,
-							Description: "最后更新时间",
 						},
 						"system_volume_size": schema.Int64Attribute{
 							Computed:    true,
@@ -240,10 +237,6 @@ func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 							Description: "单个cpu核数",
 						},
-						"create_time": schema.StringAttribute{
-							Computed:    true,
-							Description: "创建时间",
-						},
 						"support_cloud": schema.BoolAttribute{
 							Computed:    true,
 							Description: "是否支持云盘",
@@ -316,6 +309,10 @@ func (c *ctyunEbmDeviceTypes) Schema(_ context.Context, _ datasource.SchemaReque
 							Computed:    true,
 							Description: "项目信息",
 						},
+						"available": schema.BoolAttribute{
+							Optional:    true,
+							Description: "是否可用（true：可用；false：不可用，已售罄）",
+						},
 					},
 				},
 			},
@@ -338,7 +335,7 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = fmt.Errorf("regionId不能为空")
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)
@@ -372,7 +369,6 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 			NvmeVolumeType:          utils.SecStringValue(f.NvmeVolumeType),
 			NameZh:                  utils.SecStringValue(f.NameZh),
 			NvmeVolumeInterface:     utils.SecStringValue(f.NvmeVolumeInterface),
-			UpdateTime:              utils.SecStringValue(f.UpdateTime),
 			SystemVolumeSize:        types.Int32Value(f.SystemVolumeSize),
 			SystemVolumeType:        utils.SecStringValue(f.SystemVolumeType),
 			CpuManufacturer:         utils.SecStringValue(f.CpuManufacturer),
@@ -398,7 +394,6 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 			NvmeVolumeSize:          types.Int32Value(f.NvmeVolumeSize),
 			CpuSockets:              types.Int32Value(f.CpuSockets),
 			CpuAmount:               types.Int32Value(f.CpuAmount),
-			CreateTime:              utils.SecStringValue(f.CreateTime),
 			SupportCloud:            utils.SecBoolValue(f.SupportCloud),
 			DataVolumeAmount:        types.Int32Value(f.DataVolumeAmount),
 			NumaNodeAmount:          types.Int32Value(f.NumaNodeAmount),
@@ -422,6 +417,10 @@ func (c *ctyunEbmDeviceTypes) Read(ctx context.Context, request datasource.ReadR
 	config.DeviceTypes = deviceTypes
 	config.RegionID = types.StringValue(regionId)
 	config.AzName = types.StringValue(azName)
+	err = c.bindAvailable(ctx, config)
+	if err != nil {
+		return
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &config)...)
 }
 
@@ -431,4 +430,16 @@ func (c *ctyunEbmDeviceTypes) Configure(_ context.Context, request datasource.Co
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.ebmService = business.NewEbmService(c.meta)
+}
+
+func (c *ctyunEbmDeviceTypes) bindAvailable(ctx context.Context, config CtyunEbmDeviceTypesConfig) error {
+	stocks, err := c.ebmService.GetDeviceTypeStock(ctx, config.RegionID.ValueString(), config.AzName.ValueString())
+	if err != nil {
+		return err
+	}
+	for i, deviceType := range config.DeviceTypes {
+		config.DeviceTypes[i].Available = types.BoolValue(stocks[deviceType.DeviceType.ValueString()] > 0)
+	}
+	return nil
 }

@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库PostgreSQL版"
+page_title: "CTYUN: ctyun_postgresql_association_eip"
+---
+
 # ctyun_postgresql_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10174601
+-> 管理PostgreSQL实例和弹性IP的绑定关系
 
 
 
@@ -34,7 +39,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_security_group" "sg_pgsql_test" {
@@ -52,26 +56,18 @@ variable "password" {
 }
 
 resource "ctyun_postgresql_instance" "test" {
-  cycle_type            = "on_demand"
-  host_type             = "S7"
-  prod_id               = "Single1222"
-  storage_type          = "SATA"
-  storage_space         = 100
-  name                  = "pgsql-test"
-  password              = var.password
-  case_sensitive        = true
-  instance_series       = "S"
-  prod_performance_spec = "2C4G"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.sg_pgsql_test.id
-  availability_zone_info = [
-    { "availability_zone_name" : "cn-gs-qyi2-1a-public-ctcloud", "availability_zone_count" : 1, "node_type" : "master" }
-  ] // availability_zone_name值根据情况而定
-  backup_storage_type   = "SATA"
-  backup_storage_space  = 100
-  os_type               = "ctyunos"
-  cpu_type              = "Intel"
+  cycle_type          = "on_demand"
+  prod_id             = 10003011 # 12.2单机版；可通过data.ctyun_postgresql_specs查询
+  flavor_name         = "c7.xlarge.4"
+  storage_type        = "SSD"
+  storage_space       = 120
+  name                = "pgsql-test-tf1"
+  password            = var.password
+  case_sensitive      = true
+  vpc_id              = ctyun_vpc.vpc_test.id
+  subnet_id           = ctyun_subnet.subnet_test.id
+  security_group_id   = ctyun_security_group.sg_pgsql_test.id
+  backup_storage_type = "OS"
 }
 
 resource "ctyun_eip" "eip_test" {
@@ -82,9 +78,8 @@ resource "ctyun_eip" "eip_test" {
 }
 
 resource "ctyun_postgresql_association_eip" "pgsql_association_eip_test" {
-  eip_id = ctyun_eip.eip_test.id
-  eip    = ctyun_eip.eip_test.address
-  inst_id = ctyun_postgresql_instance.test.id
+  eip_id      = ctyun_eip.eip_test.id
+  instance_id = ctyun_postgresql_instance.test.id
 }
 ```
 
@@ -93,15 +88,27 @@ resource "ctyun_postgresql_association_eip" "pgsql_association_eip_test" {
 
 ### Required
 
-- `eip_id` (String) 弹性id
-- `inst_id` (String) 实例id
+- `eip_id` (String) 弹性IP的ID
+- `instance_id` (String) 实例id
 
 ### Optional
 
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
-- `region_id` (String) 资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量
+- `project_id` (String) 废弃字段，请不要指定
+- `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 
 ### Read-Only
 
-- `eip` (String) 弹性ip地址
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
+- `id` (String) id
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入PostgreSQL关联EIP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_postgresql_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_postgresql_association_eip.association_example 20d1e9aa262246bf86b2915c6364715e,eip-qjefnklk36,<region_id>
+```

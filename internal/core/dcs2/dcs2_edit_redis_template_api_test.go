@@ -27,9 +27,8 @@ func TestDcs2EditRedisTemplateApi_Do(t *testing.T) {
 		},
 		Params: []*Dcs2EditRedisTemplateParamsRequest{
 			{
-				ParamName:     "hash-max-ziplist-value",
-				OriginalValue: "60",
-				CurrentValue:  "66",
+				ParamName:    "hash-max-ziplist-value",
+				CurrentValue: "66",
 			},
 		},
 	}

@@ -46,10 +46,10 @@ func TestAccCtyunSfsPermissionGroupRule(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, authAddr, rwPermission, priority),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid),
+					resource.TestCheckResourceAttr(resourceName, "permission_group_id", permissionGroupFuid),
 					resource.TestCheckResourceAttr(resourceName, "auth_addr", authAddr),
 					resource.TestCheckResourceAttr(resourceName, "rw_permission", rwPermission),
-					resource.TestCheckResourceAttr(resourceName, "permission_rule_priority", fmt.Sprintf("%d", priority)),
+					resource.TestCheckResourceAttr(resourceName, "priority", fmt.Sprintf("%d", priority)),
 					resource.TestCheckResourceAttrSet(resourceName, "region_id"),
 				),
 			},
@@ -58,13 +58,13 @@ func TestAccCtyunSfsPermissionGroupRule(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, updatedAuthAddr, updatedRwPermission, updatedPriority),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid),
+					resource.TestCheckResourceAttr(resourceName, "permission_group_id", permissionGroupFuid),
 					resource.TestCheckResourceAttr(resourceName, "auth_addr", updatedAuthAddr),
 					resource.TestCheckResourceAttr(resourceName, "rw_permission", updatedRwPermission),
-					resource.TestCheckResourceAttr(resourceName, "permission_rule_priority", fmt.Sprintf("%d", updatedPriority)),
+					resource.TestCheckResourceAttr(resourceName, "priority", fmt.Sprintf("%d", updatedPriority)),
 				),
 			},
-			// 3. 资源导入测试
+			// 3. 资源导入测试1
 			{
 				ResourceName: resourceName,
 				ImportState:  true,
@@ -77,9 +77,25 @@ func TestAccCtyunSfsPermissionGroupRule(t *testing.T) {
 					// 构造导入ID: "id,region_id"
 					return fmt.Sprintf("%s,%s,%s",
 						rs.Primary.ID,
+						rs.Primary.Attributes["permission_group_id"],
 						rs.Primary.Attributes["region_id"],
-						rs.Primary.Attributes["permission_group_fuid"],
 					), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
+			},
+			// 3. 资源导入测试2
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+
+					// 构造导入ID: "id,region_id"
+					return fmt.Sprintf("%s,%s", rs.Primary.ID, rs.Primary.Attributes["permission_group_id"]), nil
 				},
 				ImportStateVerify:       true,
 				ImportStateVerifyIgnore: []string{}, // 不需要忽略任何字段
@@ -89,7 +105,7 @@ func TestAccCtyunSfsPermissionGroupRule(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, updatedAuthAddr, updatedRwPermission, updatedPriority) +
 					utils.LoadTestCase(datasourceFile, dnd, permissionGroupFuid),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "permission_group_fuid", permissionGroupFuid)),
+					resource.TestCheckResourceAttr(datasourceName, "permission_group_id", permissionGroupFuid)),
 			},
 			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, updatedAuthAddr, updatedRwPermission, updatedPriority),
@@ -136,10 +152,10 @@ func TestAccCtyunSfsPermissionGroupRuleIPv6ToIPv4(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, ipv6AuthAddr, rwPermission, priority),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid),
+					resource.TestCheckResourceAttr(resourceName, "permission_group_id", permissionGroupFuid),
 					resource.TestCheckResourceAttr(resourceName, "auth_addr", ipv6AuthAddr),
 					resource.TestCheckResourceAttr(resourceName, "rw_permission", rwPermission),
-					resource.TestCheckResourceAttr(resourceName, "permission_rule_priority", fmt.Sprintf("%d", priority)),
+					resource.TestCheckResourceAttr(resourceName, "priority", fmt.Sprintf("%d", priority)),
 					resource.TestCheckResourceAttrSet(resourceName, "region_id"),
 				),
 			},
@@ -148,10 +164,10 @@ func TestAccCtyunSfsPermissionGroupRuleIPv6ToIPv4(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, ipv4AuthAddr, updatedRwPermission, updatedPriority),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid),
+					resource.TestCheckResourceAttr(resourceName, "permission_group_id", permissionGroupFuid),
 					resource.TestCheckResourceAttr(resourceName, "auth_addr", ipv4AuthAddr),
 					resource.TestCheckResourceAttr(resourceName, "rw_permission", updatedRwPermission),
-					resource.TestCheckResourceAttr(resourceName, "permission_rule_priority", fmt.Sprintf("%d", updatedPriority)),
+					resource.TestCheckResourceAttr(resourceName, "priority", fmt.Sprintf("%d", updatedPriority)),
 				),
 			},
 			// 3. 验证datasource
@@ -159,11 +175,11 @@ func TestAccCtyunSfsPermissionGroupRuleIPv6ToIPv4(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid, ipv4AuthAddr, updatedRwPermission, updatedPriority) +
 					utils.LoadTestCase(datasourceFile, dnd, permissionGroupFuid, fmt.Sprintf("%s.id", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "permission_rules.0.auth_addr", ipv4AuthAddr),
-					resource.TestCheckResourceAttr(datasourceName, "permission_rules.0.permission_group_fuid", permissionGroupFuid),
-					resource.TestCheckResourceAttr(datasourceName, "permission_rules.0.rw_permission", updatedRwPermission),
-					resource.TestCheckResourceAttr(datasourceName, "permission_rules.0.permission_rule_priority", fmt.Sprintf("%d", updatedPriority)),
-					resource.TestCheckResourceAttr(datasourceName, "permission_rules.0.user_permission", "no_root_squash"),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.auth_addr", ipv4AuthAddr),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.permission_group_id", permissionGroupFuid),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.rw_permission", updatedRwPermission),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.priority", fmt.Sprintf("%d", updatedPriority)),
+					resource.TestCheckResourceAttr(datasourceName, "rules.0.user_permission", "no_root_squash"),
 				),
 			},
 			{

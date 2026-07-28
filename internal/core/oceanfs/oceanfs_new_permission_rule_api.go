@@ -56,6 +56,7 @@ type OceanfsNewPermissionRuleRequest struct {
 	RwPermission           string `json:"rwPermission,omitempty"`           /*  读写权限控制。有效值范围：rw、ro  */
 	UserPermission         string `json:"userPermission,omitempty"`         /*  nfs 访问用户映射。有效值范围：no_root_squash  */
 	PermissionRulePriority int32  `json:"permissionRulePriority,omitempty"` /*  优先级。有效值范围：1-400  */
+
 }
 
 type OceanfsNewPermissionRuleResponse struct {

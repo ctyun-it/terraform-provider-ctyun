@@ -57,7 +57,7 @@ func TestAccCtyunVpcRouteTable(t *testing.T) {
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
+					id := ds.Attributes["route_table_id"]
 					regionId := ds.Attributes["region_id"]
 					return fmt.Sprintf("%s,%s", id, regionId), nil
 				},
@@ -65,7 +65,94 @@ func TestAccCtyunVpcRouteTable(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"project_id"},
 			},
 			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.Attributes["route_table_id"]
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
+			},
+			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, dependence.vpcID) +
+					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Destroy: true,
+			},
+		},
+	})
+}
+func TestAccCtyunVpcRouteGatewayTable(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+	dnd := utils.GenerateRandomString()
+	resourceName := "ctyun_vpc_route_table." + rnd
+	datasourceName := "data.ctyun_vpc_route_tables." + dnd
+	resourceFile := "resource_ctyun_vpc_route_table_gateway.tf"
+	datasourceFile := "datasource_ctyun_vpc_route_tables.tf"
+	routeType := fmt.Sprintf("route_type = \"%s\"", "gateway")
+	bind_gateway := fmt.Sprintf("bind_gateway = %s", "true")
+	bind_update := fmt.Sprintf("bind_gateway = %s", "false")
+
+	initName := "terraform-unit-gateway"
+	updatedName := "terraform-route-gateway-table"
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, dependence.vpcID, routeType, bind_gateway),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+					resource.TestCheckResourceAttrSet(resourceName, "route_table_id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, dependence.vpcID, routeType, bind_update),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, dependence.vpcID, routeType, bind_update) +
+					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(datasourceName, "route_tables.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "route_tables.0.name", updatedName),
+				),
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.Attributes["route_table_id"]
+					regionId := ds.Attributes["region_id"]
+					return fmt.Sprintf("%s,%s", id, regionId), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.Attributes["route_table_id"]
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, updatedName, dependence.vpcID, routeType, bind_update) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Destroy: true,
 			},

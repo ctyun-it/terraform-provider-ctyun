@@ -2,11 +2,14 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -27,6 +30,7 @@ var (
 
 type CtyunElbAcl struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *CtyunElbAcl) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -38,17 +42,51 @@ func (c *CtyunElbAcl) Configure(ctx context.Context, request resource.ConfigureR
 }
 
 func (c *CtyunElbAcl) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunElbAclConfig
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	if ID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+
+	err = c.getAndMergeAcl(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunElbAcl) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_acl"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10032777**`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡ACL", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10032777"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -64,9 +102,10 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
+				Description: "负载均衡ACL名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
+					validator2.AclName(),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -77,50 +116,38 @@ func (c *CtyunElbAcl) Schema(ctx context.Context, request resource.SchemaRequest
 					stringvalidator.LengthAtLeast(1),
 					validator2.Desc(),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"source_ips": schema.SetAttribute{
 				Required:    true,
-				Description: "IP地址的集合或者CIDR, 单次最多添加 10 条数据，支持更新",
+				Description: "IP地址的集合或者CIDR, 单次最多添加 50 条数据，支持更新",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
-					setvalidator.SizeAtMost(10),
+					setvalidator.SizeAtMost(50),
 					setvalidator.ValueStringsAre(stringvalidator.UTF8LengthAtLeast(1)),
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "访问控制ID",
-			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
 				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
+				Description: "访问控制ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
-			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"project_id": schema.StringAttribute{
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -173,12 +200,13 @@ func (c *CtyunElbAcl) Read(ctx context.Context, request resource.ReadRequest, re
 	// 查询远端
 	err = c.getAndMergeAcl(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
+
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -212,6 +240,7 @@ func (c *CtyunElbAcl) Update(ctx context.Context, request resource.UpdateRequest
 	if err != nil {
 		return
 	}
+	state.ProjectId = plan.ProjectId
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -294,6 +323,9 @@ func (c *CtyunElbAcl) getAndMergeAcl(ctx context.Context, config *CtyunElbAclCon
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiAccessControlNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -385,7 +417,6 @@ type CtyunElbAclConfig struct {
 	Description types.String `tfsdk:"description"` //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_+= <>?:,.,/;'[]·！@#￥%……&*（） ——+={}
 	SourceIps   types.Set    `tfsdk:"source_ips"`  //IP地址的集合或者CIDR, 单次最多添加 10 条数据
 	ID          types.String `tfsdk:"id"`          //访问控制ID
-	AzName      types.String `tfsdk:"az_name"`     //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
 	CreateTime  types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	ProjectId   types.String `tfsdk:"project_id"`  //企业项目ID
 }

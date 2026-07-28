@@ -1,5 +1,10 @@
+---
+subcategory: "NAT网关（CT-NAT Gateway）"
+page_title: "CTYUN: ctyun_nat_snats"
+---
+
 # ctyun_nat_snats (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10166268
+-> 查询公网NAT网关snat规则
 
 
 
@@ -19,7 +24,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_nat_snats" "test"{
+data "ctyun_nat_snats" "test" {
   nat_gateway_id = "natgw-asdsmh8scy"
 }
 ```
@@ -29,11 +34,11 @@ data "ctyun_nat_snats" "test"{
 
 ### Required
 
-- `nat_gateway_id` (String) AT网关ID，选填
+- `nat_gateway_id` (String) NAT网关ID
 
 ### Optional
 
-- `page_number` (Number) 列表的页码，默认值为1
+- `page_no` (Number) 列表的页码，默认值为1
 - `page_size` (Number) 分页查询时每页的行数，最大值为50，默认值为10。
 - `region_id` (String) 资源池id，如果不填这默认使用provider ctyun总region_id 或者环境变量
 - `snat_id` (String) snat id，选填
@@ -41,18 +46,18 @@ data "ctyun_nat_snats" "test"{
 
 ### Read-Only
 
-- `snats` (Attributes List) (see [below for nested schema](#nestedatt--snats))
+- `snats` (Attributes List) snat列表 (see [below for nested schema](#nestedatt--snats))
 
 <a id="nestedatt--snats"></a>
 ### Nested Schema for `snats`
 
 Read-Only:
 
-- `creation_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `description` (String) 描述
 - `eips` (Attributes List) 绑定的 eip 信息 (see [below for nested schema](#nestedatt--snats--eips))
+- `id` (String) snat id
 - `nat_gateway_id` (String) nat 网关 ID
-- `snat_id` (String) snat id
 - `subnet_cidr` (String) 要查询的NAT网关所属VPC子网的cidr
 - `subnet_id` (String) 子网 ID
 - `subnet_type` (Number) 子网类型：1-有vpcID的子网，0-自定义

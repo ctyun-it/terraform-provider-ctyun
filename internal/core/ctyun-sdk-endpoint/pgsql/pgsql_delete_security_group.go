@@ -39,8 +39,8 @@ func (this *PgsqlDeleteSecurityGroupApi) Do(ctx context.Context, credential ctyu
 	if req.InstanceId == "" {
 		err = errors.New("missing required field: InstanceName(实例名称)")
 	}
-	builder.AddParam("securityGroupId", req.SecurityGroupId)
-	builder.AddParam("instanceId", req.InstanceId)
+	//builder.AddParam("securityGroupId", req.SecurityGroupId)
+	//builder.AddParam("instanceId", req.InstanceId)
 
 	resp, err := this.client.RequestToEndpoint(ctx, EndpointNamePgSql, builder)
 	if err != nil {

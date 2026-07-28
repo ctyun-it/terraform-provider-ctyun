@@ -20,19 +20,19 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
 }
 
 resource "ctyun_ccse_node_pool" "example" {
-  cluster_id               = "dd92f3a6b034431bb7dceb849aed1220"
-  name           = "default-pool"
-  cycle_type              = "month"
-  cycle_count = 1
-  auto_renew = true
-  instance_type            = "ecs"
-  mirror_id                = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
-  mirror_type              = 1
-  key_pair_name           = "KeyPair-de15"
-  use_affinity_group       = true
-  affinity_group_id      = "f8b18511-4327-4c3f-9373-c6d661889fcb"
-  item_def_name            = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
-  max_pod_num              = 110
+  cluster_id         = "dd92f3a6b034431bb7dceb849aed1220"
+  name               = "default-pool"
+  cycle_type         = "month"
+  cycle_count        = 1
+  auto_renew         = true
+  instance_type      = "ecs"
+  mirror_id          = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+  mirror_type        = 1
+  key_pair_name      = "KeyPair-de15"
+  use_affinity_group = true
+  affinity_group_id  = "f8b18511-4327-4c3f-9373-c6d661889fcb"
+  item_def_name      = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  max_pod_num        = 110
   az_infos = [
     {
       az_name = "cn-huadong1-jsnj1A-public-ctcloud"

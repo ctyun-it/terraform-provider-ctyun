@@ -2,10 +2,12 @@ package iam
 
 import (
 	"context"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,21 +19,29 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+var (
+	_ resource.Resource                = &ctyunIamUser{}
+	_ resource.ResourceWithConfigure   = &ctyunIamUser{}
+	_ resource.ResourceWithImportState = &ctyunIamUser{}
+)
+
 func NewCtyunIamUser() resource.Resource {
 	return &ctyunIamUser{}
 }
 
 type ctyunIamUser struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunIamUser) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_iam_user"
+	c.name = response.TypeName
 }
 
 func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10355289`,
+		MarkdownDescription: utils.FormatDesc("管理用户", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10355289"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -44,14 +54,14 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "用户名，长度为4到32位",
+				Description: "用户名，长度为4到32位，支持更新",
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(4, 32),
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "密码，密码必须包含数字大小写字母，密码长度必须在8-26位之间，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
+				Optional:    true,
+				Description: "密码，创建时必填，导入时不填。密码必须包含数字大小写字母，密码长度必须在8-26位之间，支持更新，密码必须包含特殊字符：$./,;~!@#%_$^*?+{}[-]",
 				Sensitive:   true,
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(8, 26),
@@ -59,21 +69,21 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			},
 			"phone": schema.StringAttribute{
 				Required:    true,
-				Description: "手机号",
+				Description: "手机号，支持更新",
 				Validators: []validator.String{
 					validator2.Phone(),
 				},
 			},
 			"email": schema.StringAttribute{
 				Required:    true,
-				Description: "登录邮箱",
+				Description: "登录邮箱，支持更新",
 				Validators: []validator.String{
 					validator2.Email(),
 				},
 			},
 			"user_group_ids": schema.SetAttribute{
 				Required:    true,
-				Description: "用户组id，用户加入的目标安全组id，创建用户时至少加入一个用户组",
+				Description: "用户组id，用户加入的目标用户组，创建用户时至少加入一个用户组，支持更新",
 				ElementType: types.StringType,
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
@@ -83,7 +93,7 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "备注，长度最大为64",
+				Description: "备注，长度最大为64，支持更新",
 				Default:     stringdefault.StaticString(""),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(64),
@@ -94,12 +104,21 @@ func (c *ctyunIamUser) Schema(_ context.Context, _ resource.SchemaRequest, respo
 }
 
 func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateRequest, response *resource.CreateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
 	var plan CtyunIamUserConfig
 	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
 		return
 	}
-
+	if plan.Password.ValueString() == "" {
+		err = fmt.Errorf("创建时密码必须填写")
+		return
+	}
 	var userGroupIds []types.String
 	plan.UserGroupIds.ElementsAs(ctx, &userGroupIds, true)
 	var ugs []ctiam.UserGroup
@@ -117,7 +136,6 @@ func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateReques
 		Groups:             ugs,
 	})
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -127,9 +145,8 @@ func (c *ctyunIamUser) Create(ctx context.Context, request resource.CreateReques
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeIamUser(ctx, plan)
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	instance, err := c.getAndMergeIamUser(ctx, plan)
+	if err != nil {
 		return
 	}
 	if instance == nil {
@@ -158,6 +175,12 @@ func (c *ctyunIamUser) Read(ctx context.Context, request resource.ReadRequest, r
 }
 
 func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			response.Diagnostics.AddError(err.Error(), err.Error())
+		}
+	}()
 	var state CtyunIamUserConfig
 	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
 	if response.Diagnostics.HasError() {
@@ -170,7 +193,7 @@ func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateReques
 		return
 	}
 
-	_, err := c.meta.Apis.CtIamApis.UserUpdateApi.Do(ctx, c.meta.Credential, &ctiam.UserUpdateRequest{
+	_, err = c.meta.Apis.CtIamApis.UserUpdateApi.Do(ctx, c.meta.Credential, &ctiam.UserUpdateRequest{
 		UserId:      state.Id.ValueString(),
 		Remark:      plan.Description.ValueString(),
 		LoginEmail:  plan.Email.ValueString(),
@@ -179,34 +202,30 @@ func (c *ctyunIamUser) Update(ctx context.Context, request resource.UpdateReques
 		Prohibit:    0,
 	})
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
 	// 更新密码
 	if !plan.Password.Equal(state.Password) {
-		_, err := c.meta.Apis.CtIamApis.UserResetPasswordApi.Do(ctx, c.meta.Credential, &ctiam.UserResetPasswordRequest{
+		_, err = c.meta.Apis.CtIamApis.UserResetPasswordApi.Do(ctx, c.meta.Credential, &ctiam.UserResetPasswordRequest{
 			UserId:      state.Id.ValueString(),
 			OldPassword: state.Password.ValueString(),
 			NewPassword: plan.Password.ValueString(),
 		})
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
 			return
 		}
 	}
 
 	// 更新用户组
-	err2 := c.updateUserGroup(ctx, state, plan)
+	err = c.updateUserGroup(ctx, state, plan)
 	if err != nil {
-		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
 	}
 
-	instance, ctyunRequestError := c.getAndMergeIamUser(ctx, state)
+	instance, err := c.getAndMergeIamUser(ctx, state)
 	instance.Password = plan.Password
-	if ctyunRequestError != nil {
-		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
+	if err != nil {
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -228,13 +247,19 @@ func (c *ctyunIamUser) Delete(ctx context.Context, request resource.DeleteReques
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [iamUserId]
 func (c *ctyunIamUser) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [id]", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunIamUserConfig
 	var iamUserId string
-	err := terraform_extend.Split(request.ID, &iamUserId)
+	err = terraform_extend.Split(request.ID, &iamUserId)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 
@@ -242,7 +267,6 @@ func (c *ctyunIamUser) ImportState(ctx context.Context, request resource.ImportS
 
 	instance, err := c.getAndMergeIamUser(ctx, cfg)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)

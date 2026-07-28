@@ -1,5 +1,10 @@
+---
+subcategory: "分布式消息服务RabbitMQ"
+page_title: "CTYUN: ctyun_rabbitmq_instance"
+---
+
 # ctyun_rabbitmq_instance (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967
+-> 管理RabbitMQ实例
 
 
 
@@ -31,10 +36,9 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test-mq"
   cidr        = "192.168.0.0/16"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
 }
 
@@ -44,31 +48,31 @@ resource "ctyun_security_group" "security_group_test" {
   description = "terraform测试使用"
 }
 
-data "ctyun_zones" "test"{
+data "ctyun_zones" "test" {
 
 }
 
-data "ctyun_rabbitmq_specs" "test"{
+data "ctyun_rabbitmq_specs" "test" {
 
 }
 
 locals {
-  single_sku = [for sku in data.ctyun_rabbitmq_specs.test.specs[0].sku : sku if sku.prod_name == "单机版"]
+  single_sku       = [for sku in data.ctyun_rabbitmq_specs.test.specs[0].sku : sku if sku.prod_name == "单机版"]
   single_disk_type = local.single_sku[0].disk_item.res_items[0]
   single_spec_name = local.single_sku[0].res_item.res_items[0].spec[0].spec_name
 }
 
 resource "ctyun_rabbitmq_instance" "test" {
-  instance_name = "tf-rabbitmq-example"
-  spec_name = local.single_spec_name
-  node_num = 1
-  zone_list = [data.ctyun_zones.test.zones[0]]
-  disk_type = local.single_disk_type
-  disk_size = 300
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
+  instance_name     = "tf-rabbitmq-example"
+  spec_name         = local.single_spec_name
+  node_num          = 1
+  zone_list         = [data.ctyun_zones.test.zones[0]]
+  disk_type         = local.single_disk_type
+  disk_size         = 300
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
   security_group_id = ctyun_security_group.security_group_test.id
-  cycle_type = "on_demand"
+  cycle_type        = "on_demand"
 }
 ```
 
@@ -77,25 +81,42 @@ resource "ctyun_rabbitmq_instance" "test" {
 
 ### Required
 
-- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
+- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需，支持更新。当此值为month时，cycle_count为必填
 - `disk_size` (Number) 单个节点的磁盘存储空间，单位为GB，必须为100的倍数，实例总存储空间为diskSize * nodeNum，支持更新
 - `disk_type` (String) 磁盘类型，通常支持SAS、SSD、FAST-SSD
 - `instance_name` (String) 实例名称，支持更新
 - `node_num` (Number) 节点数。支持1、3、5、7、9，支持更新
 - `security_group_id` (String) 安全组ID
 - `spec_name` (String) 实例的规格类型，建议使用ctyun_rabbitmq_specs查看，支持更新
-- `subnet_id` (String) 子网ID
 - `vpc_id` (String) 虚拟私有云ID
 - `zone_list` (Set of String) 实例所在可用区信息，只能传一个或三个可用区，可通过ctyun_regions查看
 
 ### Optional
 
-- `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36
+- `cycle_count` (Number) 订购时长，该参数在cycle_type为month时才生效，当cycle_type=month，支持传递1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `subnet_id` (String) 子网ID，创建时必填，导入时不填
 
 ### Read-Only
 
+- `actual_cycle_type` (String) 服务端当前实际计费类型（可能与 cycle_type 不一致，如包周期未到期时）。
+- `create_time` (String) 创建时间，UTC格式
+- `endpoint` (String) 接入点
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) ID
 - `master_order_id` (String) 主订单号
 - `name` (String) 名称
+- `ssl_endpoint` (String) SSL接入点
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入RabbitMQ实例
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_rabbitmq_instance.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_rabbitmq_instance.instance_example inst123456,<region_id>
+```

@@ -2,19 +2,24 @@ package vpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -30,6 +35,7 @@ var (
 
 type ctyunVpcRouteTable struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpcRouteTable() resource.Resource {
@@ -38,6 +44,7 @@ func NewCtyunVpcRouteTable() resource.Resource {
 
 func (c *ctyunVpcRouteTable) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpc_route_table"
+	c.name = response.TypeName
 }
 
 type CtyunVpcRouteTableConfig struct {
@@ -47,20 +54,27 @@ type CtyunVpcRouteTableConfig struct {
 	VpcID        types.String `tfsdk:"vpc_id"`
 	Name         types.String `tfsdk:"name"`
 	ProjectID    types.String `tfsdk:"project_id"`
+	RouteType    types.String `tfsdk:"route_type"`
+	BindGateway  types.Bool   `tfsdk:"bind_gateway"`
 }
 
 func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724`,
+		MarkdownDescription: utils.FormatDesc("管理虚拟私有云路由表", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10027724"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID，值与路由表ID相同",
+				Computed:    true,
+				Description: "ID，值与路由表ID相同",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"route_table_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "路由表ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -80,7 +94,7 @@ func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
 				},
 				Validators: []validator.String{
 					validator2.Project(),
@@ -102,6 +116,31 @@ func (c *ctyunVpcRouteTable) Schema(_ context.Context, _ resource.SchemaRequest,
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}-]+$"), "名称不符合规则"),
+				},
+			},
+			"route_type": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "类型，支持subnet,gateway",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
+				Default: stringdefault.StaticString("subnet"),
+			},
+			"bind_gateway": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否绑定网关，支持更新",
+				Default:     booldefault.StaticBool(false),
+				Validators: []validator.Bool{
+					validator2.AlsoRequiresEqualBool(
+						path.MatchRoot("route_type"),
+						types.StringValue("gateway"),
+					),
+					validator2.ConflictsWithEqualBool(
+						path.MatchRoot("route_type"),
+						types.StringValue("subnet"),
+					),
 				},
 			},
 		},
@@ -155,7 +194,7 @@ func (c *ctyunVpcRouteTable) Read(ctx context.Context, request resource.ReadRequ
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
 			response.State.RemoveResource(ctx)
 		}
@@ -185,7 +224,7 @@ func (c *ctyunVpcRouteTable) Update(ctx context.Context, request resource.Update
 		return
 	}
 	// 更新
-	err = c.update(ctx, plan, state)
+	err = c.update(ctx, &plan, &state)
 	if err != nil {
 		return
 	}
@@ -225,20 +264,37 @@ func (c *ctyunVpcRouteTable) Configure(_ context.Context, request resource.Confi
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [routeTableID],[regionID]
 func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunVpcRouteTableConfig
 	var routeTableID, regionID string
-	err = terraform_extend.Split(request.ID, &routeTableID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		routeTableID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &routeTableID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if routeTableID == "" {
+		err = fmt.Errorf("id不能为空")
 		return
 	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.RouteTableID = types.StringValue(routeTableID)
 	// 查询远端
@@ -246,39 +302,95 @@ func (c *ctyunVpcRouteTable) ImportState(ctx context.Context, request resource.I
 	if err != nil {
 		return
 	}
+	cfg.ProjectID = types.StringValue(c.meta.GetExtraIfEmpty(cfg.ProjectID.ValueString(), common.ExtraProjectId))
 	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
 }
 
 // checkBeforeCreate 创建前检查
 func (c *ctyunVpcRouteTable) checkBeforeCreate(ctx context.Context, plan CtyunVpcRouteTableConfig) (err error) {
-	vpcID, regionID, projectID := plan.VpcID.ValueString(), plan.RegionID.ValueString(), plan.ProjectID.ValueString()
-	err = business.NewVpcService(c.meta).MustExist(ctx, vpcID, regionID, projectID)
+	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
+	err = business.NewVpcService(c.meta).MustExist(ctx, vpcID, regionID)
 	return
 }
 
 // create 创建路由表
 func (c *ctyunVpcRouteTable) create(ctx context.Context, plan CtyunVpcRouteTableConfig) (routeTableID string, err error) {
-	vpcID, regionID, projectID := plan.VpcID.ValueString(), plan.RegionID.ValueString(), plan.ProjectID.ValueString()
-	params := &ctvpc.CtvpcCreateRouteTableRequest{
-		ClientToken: uuid.NewString(),
-		RegionID:    regionID,
-		VpcID:       vpcID,
-		Name:        plan.Name.ValueString(),
+	vpcID, regionID := plan.VpcID.ValueString(), plan.RegionID.ValueString()
+
+	if plan.RouteType.ValueString() == "subnet" {
+		params := &ctvpc.CtvpcCreateRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
+	} else {
+		params := &ctvpc.CtvpcCreateGatewayRouteTableRequest{
+			ClientToken: uuid.NewString(),
+			RegionID:    regionID,
+			VpcID:       vpcID,
+			Name:        plan.Name.ValueString(),
+			ProjectID:   plan.ProjectID.ValueStringPointer(),
+		}
+		var resp *ctvpc.CtvpcCreateGatewayRouteTableResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcCreateGatewayRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		} else if resp.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		routeTableID = *resp.ReturnObj.Id
+		if plan.BindGateway.ValueBool() {
+			gatewaparams := &ctvpc.CtvpcListIPv4GwRequest{
+				RegionID: regionID,
+				VpcID:    plan.VpcID.ValueStringPointer(),
+			}
+			var respGateway *ctvpc.CtvpcListIPv4GwResponse
+			respGateway, err = c.meta.Apis.SdkCtVpcApis.CtvpcListIPv4GwApi.Do(ctx, c.meta.SdkCredential, gatewaparams)
+			if err != nil {
+				return
+			} else if respGateway.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respGateway.Message, *respGateway.Description)
+				return
+			} else if respGateway.ReturnObj == nil {
+				err = common.InvalidReturnObjError
+				return
+			}
+			ipv4GwID := *respGateway.ReturnObj[0].Id
+			paramsIpv4 := &ctvpc.CtvpcIpv4GwBindRouteTableRequest{
+				ClientToken:  uuid.NewString(),
+				RegionID:     plan.RegionID.ValueString(),
+				Ipv4GwID:     ipv4GwID,
+				RouteTableID: routeTableID,
+			}
+			var respIpv4 *ctvpc.CtvpcIpv4GwBindRouteTableResponse
+			respIpv4, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwBindRouteTableApi.Do(ctx, c.meta.SdkCredential, paramsIpv4)
+			if err != nil {
+				return
+			} else if respIpv4.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respIpv4.Message, *respIpv4.Description)
+				return
+			}
+		}
 	}
-	if projectID != "" {
-		params.ProjectID = &projectID
-	}
-	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	}
-	routeTableID = *resp.ReturnObj.Id
+
 	return
 }
 
@@ -292,7 +404,10 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiRouteTableAccessFailed {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -301,29 +416,89 @@ func (c *ctyunVpcRouteTable) getAndMerge(ctx context.Context, plan *CtyunVpcRout
 	}
 	plan.VpcID = utils.SecStringValue(resp.ReturnObj.VpcID)
 	plan.Name = utils.SecStringValue(resp.ReturnObj.Name)
+	if resp.ReturnObj.RawType == 2 {
+		plan.RouteType = types.StringValue("gateway") // Gateway
+		if resp.ReturnObj.Ipv4Gw != nil {
+			plan.BindGateway = types.BoolValue(true)
+		} else {
+			plan.BindGateway = types.BoolValue(false)
+		}
+	} else {
+		plan.BindGateway = types.BoolValue(false)
+		plan.RouteType = types.StringValue("subnet") // Subnet
+	}
 	plan.ID = plan.RouteTableID
 	return
 }
 
 // update 更新路由表
-func (c *ctyunVpcRouteTable) update(ctx context.Context, plan, state CtyunVpcRouteTableConfig) (err error) {
-	if plan.Name.Equal(state.Name) {
-		return
-	}
+func (c *ctyunVpcRouteTable) update(ctx context.Context, plan, state *CtyunVpcRouteTableConfig) (err error) {
 	routeTableID, regionID, name := state.RouteTableID.ValueString(), state.RegionID.ValueString(), plan.Name.ValueString()
-	params := &ctvpc.CtvpcUpdateRouteTableAttributeRequest{
-		ClientToken:  uuid.NewString(),
-		RegionID:     regionID,
-		RouteTableID: routeTableID,
-		Name:         &name,
+	if !plan.Name.Equal(state.Name) {
+		params := &ctvpc.CtvpcUpdateRouteTableAttributeRequest{
+			ClientToken:  uuid.NewString(),
+			RegionID:     regionID,
+			RouteTableID: routeTableID,
+			Name:         &name,
+		}
+		var resp *ctvpc.CtvpcUpdateRouteTableAttributeResponse
+		resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcUpdateRouteTableAttributeApi.Do(ctx, c.meta.SdkCredential, params)
+		if err != nil {
+			return
+		} else if resp.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+			return
+		}
 	}
-	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcUpdateRouteTableAttributeApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-		return
+	if plan.BindGateway.ValueBool() != state.BindGateway.ValueBool() {
+		gatewaparams := &ctvpc.CtvpcListIPv4GwRequest{
+			RegionID: regionID,
+			VpcID:    plan.VpcID.ValueStringPointer(),
+		}
+		var respGateway *ctvpc.CtvpcListIPv4GwResponse
+		respGateway, err = c.meta.Apis.SdkCtVpcApis.CtvpcListIPv4GwApi.Do(ctx, c.meta.SdkCredential, gatewaparams)
+		if err != nil {
+			return
+		} else if respGateway.StatusCode == common.ErrorStatusCode {
+			err = fmt.Errorf("API return error. Message: %s Description: %s", *respGateway.Message, *respGateway.Description)
+			return
+		} else if respGateway.ReturnObj == nil {
+			err = common.InvalidReturnObjError
+			return
+		}
+		ipv4GwID := *respGateway.ReturnObj[0].Id
+		if plan.BindGateway.ValueBool() {
+			paramsIpv4 := &ctvpc.CtvpcIpv4GwBindRouteTableRequest{
+				ClientToken:  uuid.NewString(),
+				RegionID:     plan.RegionID.ValueString(),
+				Ipv4GwID:     ipv4GwID,
+				RouteTableID: plan.RouteTableID.ValueString(),
+			}
+			var respIpv4 *ctvpc.CtvpcIpv4GwBindRouteTableResponse
+			respIpv4, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwBindRouteTableApi.Do(ctx, c.meta.SdkCredential, paramsIpv4)
+			if err != nil {
+				return
+			} else if respIpv4.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *respIpv4.Message, *respIpv4.Description)
+				return
+			}
+		} else {
+			params := &ctvpc.CtvpcIpv4GwUnbindRouteTableRequest{
+				RegionID:    plan.RegionID.ValueString(),
+				Ipv4GwID:    ipv4GwID,
+				ClientToken: uuid.NewString(),
+			}
+			var resp *ctvpc.CtvpcIpv4GwUnbindRouteTableResponse
+			resp, err = c.meta.Apis.SdkCtVpcApis.CtvpcIpv4GwUnbindRouteTableApi.Do(ctx, c.meta.SdkCredential, params)
+			if err != nil {
+				return
+			} else if resp.StatusCode == common.ErrorStatusCode {
+				err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+				return
+			}
+		}
 	}
+	state.BindGateway = plan.BindGateway
 	return
 }
 

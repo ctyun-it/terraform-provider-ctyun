@@ -37,7 +37,7 @@ func (c *ctyunNats) Metadata(_ context.Context, request datasource.MetadataReque
 
 func (c *ctyunNats) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026759/10033140`,
+		MarkdownDescription: utils.FormatDesc("查询公网NAT网关", "NAT网关（CT-NAT Gateway）", "https://www.ctyun.cn/document/10026759/10033140"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -48,16 +48,9 @@ func (c *ctyunNats) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 				Optional:    true,
 				Description: "要查询的NAT网关的ID",
 			},
-			"page_number": schema.Int32Attribute{
-				Optional:    true,
-				Description: "列表的页码，默认值为1",
-				Validators: []validator.Int32{
-					int32validator.AtLeast(1),
-				},
-			},
 			"page_no": schema.Int32Attribute{
 				Optional:    true,
-				Description: "列表的页码，默认值为 1, 推荐使用该字段, pageNumber 后续会废弃",
+				Description: "列表的页码，默认值为 1",
 				Validators: []validator.Int32{
 					int32validator.AtLeast(1),
 				},
@@ -118,11 +111,11 @@ func (c *ctyunNats) Schema(_ context.Context, _ datasource.SchemaRequest, respon
 						},
 						"expire_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "过期时间",
+							Description: "到期时间，为UTC格式，按需时为空",
 						},
-						"creation_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"project_id": schema.StringAttribute{
 							Computed:    true,
@@ -150,7 +143,7 @@ func (c *ctyunNats) Read(ctx context.Context, request datasource.ReadRequest, re
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}
@@ -232,7 +225,6 @@ func (c *ctyunNats) ParseInt32IfEmpty(value types.Int32, defaultValue int32) int
 type CtyunNatsConfig struct {
 	RegionID     types.String     `tfsdk:"region_id"`      //区域id
 	NatGatewayID types.String     `tfsdk:"nat_gateway_id"` //要查询的NAT网关的ID。
-	PageNumber   types.Int32      `tfsdk:"page_number"`    //	列表的页码，默认值为1。
 	PageNo       types.Int32      `tfsdk:"page_no"`        //列表的页码，默认值为 1, 推荐使用该字段, pageNumber 后续会废弃
 	PageSize     types.Int32      `tfsdk:"page_size"`      //分页查询时每页的行数，最大值为50，默认值为10。
 	Nats         []CtyunNatsModel `tfsdk:"nats"`           // 获取的nat列表
@@ -249,6 +241,6 @@ type CtyunNatsModel struct {
 	VpcID        types.String `tfsdk:"vpc_id"`         //虚拟私有云 id
 	VpcName      types.String `tfsdk:"vpc_name"`       //虚拟私有云名字
 	ExpireTime   types.String `tfsdk:"expire_time"`    //过期时间
-	CreationTime types.String `tfsdk:"creation_time"`  //创建时间
+	CreationTime types.String `tfsdk:"create_time"`    //创建时间
 	ProjectID    types.String `tfsdk:"project_id"`     //项目 ID
 }

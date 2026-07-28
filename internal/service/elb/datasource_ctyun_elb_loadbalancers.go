@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -32,7 +33,7 @@ func (c *ctyunElbLoadBalancers) Metadata(_ context.Context, request datasource.M
 
 func (c *ctyunElbLoadBalancers) Schema(_ context.Context, _ datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10138703`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡列表", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10138703"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -120,11 +121,11 @@ func (c *ctyunElbLoadBalancers) Schema(_ context.Context, _ datasource.SchemaReq
 								stringvalidator.OneOf(business.AdminStatusName...),
 							},
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "created_time",
+							Description: "create_time",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -296,7 +297,7 @@ type CtyunElbLoadBalancersModel struct {
 	AdminStatus      types.String   `tfsdk:"admin_status"`       //管理状态: DOWN / ACTIVE
 	Status           types.String   `tfsdk:"status"`             //负载均衡状态: DOWN / ACTIVE
 	ResourceType     types.String   `tfsdk:"resource_type"`      //负载均衡类型: external / internal
-	CreatedTime      types.String   `tfsdk:"created_time"`       //创建时间，为UTC格式
-	UpdatedTime      types.String   `tfsdk:"updated_time"`       //更新时间，为UTC格式
+	CreatedTime      types.String   `tfsdk:"create_time"`        //创建时间，为UTC格式
+	UpdatedTime      types.String   `tfsdk:"update_time"`        //更新时间，为UTC格式
 	// 查询的参数
 }

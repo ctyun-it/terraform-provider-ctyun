@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -31,7 +32,7 @@ func (c *CtyunElbTargetGroups) Metadata(ctx context.Context, request datasource.
 
 func (c *CtyunElbTargetGroups) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155289`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载后端服务组", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155289"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -115,11 +116,11 @@ func (c *CtyunElbTargetGroups) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "状态: DOWN / ACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -144,7 +145,7 @@ func (c *CtyunElbTargetGroups) Read(ctx context.Context, request datasource.Read
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}
@@ -240,6 +241,6 @@ type CtyunTargetGroupModel struct {
 	RewriteCookieName types.String `tfsdk:"rewrite_cookie_name"` //cookie重写名称
 	SourceIpTimeout   types.Int32  `tfsdk:"source_ip_timeout"`   //源IP会话保持超时时间
 	Status            types.String `tfsdk:"status"`              //状态: DOWN / ACTIVE
-	CreatedTime       types.String `tfsdk:"created_time"`        //创建时间，为UTC格式
-	UpdatedTime       types.String `tfsdk:"updated_time"`        //更新时间，为UTC格式
+	CreatedTime       types.String `tfsdk:"create_time"`         //创建时间，为UTC格式
+	UpdatedTime       types.String `tfsdk:"update_time"`         //更新时间，为UTC格式
 }

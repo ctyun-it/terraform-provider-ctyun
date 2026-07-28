@@ -15,5 +15,6 @@ resource "ctyun_redis_instance" "%[1]s" {
   cycle_type = "month"
   cycle_count = 1
   auto_renew = true
-  auto_renew_cycle_count = 12
+  auto_renew_cycle_count = 6
+  host_type = "C"
 }

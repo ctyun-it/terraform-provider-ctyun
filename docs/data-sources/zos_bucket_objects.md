@@ -1,5 +1,10 @@
+---
+subcategory: "对象存储（CT-ZOS，Zettabyte Object Storage）"
+page_title: "CTYUN: ctyun_zos_bucket_objects"
+---
+
 # ctyun_zos_bucket_objects (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026735/10181324
+-> 查询对象存储桶中的对象
 
 
 
@@ -19,8 +24,14 @@ provider "ctyun" {
   env = "prod"
 }
 
+resource "ctyun_zos_bucket" "foo" {
+  bucket       = "acc-tesss"
+  acl          = "public-read"
+  storage_type = "STANDARD_IA"
+}
+
 data "ctyun_zos_bucket_objects" "test" {
-  bucket = "acc.te21fdsfdasfdsdwqedwed23e-asd.1"
+  bucket = ctyun_zos_bucket.foo.bucket
 }
 ```
 

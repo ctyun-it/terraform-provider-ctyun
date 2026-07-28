@@ -2,11 +2,11 @@ package vpce
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -16,17 +16,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
 )
 
 var (
-	_ resource.Resource                = &ctyunVpceServiceConnection{}
-	_ resource.ResourceWithConfigure   = &ctyunVpceServiceConnection{}
-	_ resource.ResourceWithImportState = &ctyunVpceServiceConnection{}
+	_ resource.Resource              = &ctyunVpceServiceConnection{}
+	_ resource.ResourceWithConfigure = &ctyunVpceServiceConnection{}
 )
 
 type ctyunVpceServiceConnection struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunVpceServiceConnection() resource.Resource {
@@ -35,6 +34,7 @@ func NewCtyunVpceServiceConnection() resource.Resource {
 
 func (c *ctyunVpceServiceConnection) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_vpce_service_connection"
+	c.name = response.TypeName
 }
 
 type CtyunVpceServiceConnectionConfig struct {
@@ -47,12 +47,14 @@ type CtyunVpceServiceConnectionConfig struct {
 
 func (c *ctyunVpceServiceConnection) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10043026`,
+		MarkdownDescription: utils.FormatDesc("接受或拒绝终端节点连接申请", "VPC终端节点（VPC Endpoint）", "https://www.ctyun.cn/document/10042658/10043026"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -144,7 +146,7 @@ func (c *ctyunVpceServiceConnection) Read(ctx context.Context, request resource.
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist apply") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -204,31 +206,6 @@ func (c *ctyunVpceServiceConnection) Configure(_ context.Context, request resour
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [enpointServiceID],[endpointID],[regionID]
-func (c *ctyunVpceServiceConnection) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var err error
-	defer func() {
-		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
-		}
-	}()
-	var cfg CtyunVpceServiceConnectionConfig
-	var enpointServiceID, endpointID, regionID string
-	err = terraform_extend.Split(request.ID, &enpointServiceID, &endpointID, &regionID)
-	if err != nil {
-		return
-	}
-	cfg.RegionID = types.StringValue(regionID)
-	cfg.EndpointID = types.StringValue(endpointID)
-	cfg.EndpointServiceID = types.StringValue(enpointServiceID)
-	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
-	if err != nil {
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
-}
-
 // getAndMerge 从远端查询
 func (c *ctyunVpceServiceConnection) getAndMerge(ctx context.Context, plan *CtyunVpceServiceConnectionConfig) (err error) {
 	params := &ctvpc.CtvpcShowEndpointServiceConnectionsRequest{
@@ -239,6 +216,9 @@ func (c *ctyunVpceServiceConnection) getAndMerge(ctx context.Context, plan *Ctyu
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointServiceConnectionsApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
+		return
+	} else if utils.SecString(resp.ErrorCode) == common.OpenapiVpceServiceAccessFailed {
+		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
@@ -255,7 +235,7 @@ func (c *ctyunVpceServiceConnection) getAndMerge(ctx context.Context, plan *Ctyu
 			return
 		}
 	}
-	err = fmt.Errorf("apply not exist")
+	err = common.ResourceNotExistError
 	return
 }
 

@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce_service_reverse_rules"
+---
+
 # ctyun_vpce_service_reverse_rules (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048506
+-> 查询终端节点服务反向规则
 
 
 
@@ -49,7 +54,7 @@ data "ctyun_vpce_service_transit_ips" "test" {
 
 Read-Only:
 
-- `created_at` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `endpoint_id` (String) 终端节点id
 - `id` (String) 规则ID
 - `protocol` (String) 协议，TCP:TCP协议,UDP:UDP协议
@@ -57,3 +62,4 @@ Read-Only:
 - `target_port` (Number) 目标端口(1-65535)
 - `transit_ip` (String) 中转地址
 - `transit_port` (Number) 中转端口(1-65535)
+- `update_time` (String) 更新时间，为UTC格式

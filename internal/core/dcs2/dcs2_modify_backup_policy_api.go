@@ -49,8 +49,10 @@ func (a *Dcs2ModifyBackupPolicyApi) Do(ctx context.Context, credential core.Cred
 type Dcs2ModifyBackupPolicyRequest struct {
 	RegionId              string /*  资源池ID，您可以查看<a href="https://www.ctyun.cn/document/10026730/10028695">地域和可用区</a>来了解资源池<br><span style="background-color: rgb(73, 204, 144);color: rgb(255,255,255);padding: 2px; margin:2px">查</span> <a href="https://eop.ctyun.cn/ebp/ctapiDocument/search?sid=49&api=7830&isNormal=1&vid=270">查询可用的资源池</a>  */
 	ProdInstId            string `json:"prodInstId,omitempty"`            /*  实例ID  */
+	EnableAutoBackup      bool   `json:"enableAutoBackup"`                /*  是否开启自动备份，true为开启，false为关闭*/
 	PreferredBackupPeriod string `json:"preferredBackupPeriod,omitempty"` /*  日期范围，1-7表示周一至周日，多个日期使用英文逗号分隔。  */
 	PreferredBackupTime   string `json:"preferredBackupTime,omitempty"`   /*  备份时间，0-23点准点  */
+	BackupRetentionPeriod string `json:"backupRetentionPeriod,omitempty"` /*  备份文件保留天数，默认值3，允许1-7天。  */
 }
 
 type Dcs2ModifyBackupPolicyResponse struct {

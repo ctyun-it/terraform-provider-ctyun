@@ -1,5 +1,10 @@
+---
+subcategory: "物理机服务（CT-DPS，Dedicated Physical Server）"
+page_title: "CTYUN: ctyun_ebm"
+---
+
 # ctyun_ebm (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027724
+-> 管理物理机
 
 
 
@@ -27,35 +32,34 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-for-ebm"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
-  type = "common"
+  type        = "common"
 }
 
 resource "ctyun_security_group" "security_group_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-ebm"
   description = "terraform测试使用"
 }
 
 resource "ctyun_security_group" "security_group_test2" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-ebm2"
   description = "terraform测试使用"
 }
 
 locals {
-  device_type1 = "physical.s5.2xlarge4"      // az1、有本地盘、弹性、不支持云硬盘
-  device_type2 = "physical.s5.2xlarge1"      // az2、无本地盘、弹性、支持云硬盘
-  az2 = "cn-huadong1-jsnj2A-public-ctcloud"
+  device_type1 = "physical.s5.2xlarge4" // az1、有本地盘、弹性、不支持云硬盘
+  device_type2 = "physical.s5.2xlarge1" // az2、无本地盘、弹性、支持云硬盘
+  az2          = "cn-huadong1-jsnj2A-public-ctcloud"
 }
 
 data "ctyun_ebm_device_raids" "system_raid" {
@@ -70,31 +74,24 @@ data "ctyun_ebm_device_raids" "data_raid" {
 
 data "ctyun_ebm_device_images" "test" {
   device_type = local.device_type1
-  os_type = "linux"
-  image_type = "standard"
+  os_type     = "linux"
+  image_type  = "standard"
 }
 
 locals {
-  system_raids = data.ctyun_ebm_device_raids.system_raid.raids
+  system_raids   = data.ctyun_ebm_device_raids.system_raid.raids
   system_raid_id = length(local.system_raids) > 0 ? local.system_raids[0].uuid : null
 
-  data_raids = data.ctyun_ebm_device_raids.data_raid.raids
+  data_raids   = data.ctyun_ebm_device_raids.data_raid.raids
   data_raid_id = length(local.data_raids) > 0 ? local.data_raids[0].uuid : null
 }
 
 
 data "ctyun_ebm_device_images" "dependence" {
   device_type = local.device_type2
-  az_name = local.az2
-  os_type = "linux"
-  image_type = "standard"
-}
-
-resource "ctyun_eip" "eip_test" {
-  name                = "tf-eip-for-ebm"
-  bandwidth           = 1
-  cycle_type          = "on_demand"
-  demand_billing_type = "upflowc"
+  az_name     = local.az2
+  os_type     = "linux"
+  image_type  = "standard"
 }
 
 variable "password" {
@@ -104,36 +101,35 @@ variable "password" {
 
 # 创建一台带从云硬盘启动，带弹性IP的弹性裸金属
 resource "ctyun_ebm" "ebm_test" {
-  az_name   = local.az2
-  instance_name = "tf-ebm-for-ebm"
-  hostname = "tf-ebm-for-ebm"
-  password = var.password
-  eip_id = ctyun_eip.eip_test.id
-  cycle_type = "on_demand"
-  device_type = local.device_type2
-  image_uuid = data.ctyun_ebm_device_images.dependence.images[0].image_uuid
+  az_name            = local.az2
+  instance_name      = "tf-ebm-for-ebm"
+  hostname           = "tf-ebm-for-ebm"
+  password           = var.password
+  bandwidth          = 2
+  cycle_type         = "on_demand"
+  device_type        = local.device_type2
+  image_uuid         = data.ctyun_ebm_device_images.dependence.images[0].image_uuid
   security_group_ids = [ctyun_security_group.security_group_test.id]
-  vpc_id = ctyun_vpc.vpc_test.id
-  system_disk_size = 100
-  system_disk_type = "sata"
-  subnet_id = ctyun_subnet.subnet_test.id
+  vpc_id             = ctyun_vpc.vpc_test.id
+  system_disk_size   = 100
+  system_disk_type   = "SATA"
+  subnet_id          = ctyun_subnet.subnet_test.id
 }
 
 # 创建一台本地盘弹性裸金属
 resource "ctyun_ebm" "ebm_test2" {
-  instance_name = "tf-ebm-for-ebm"
-  hostname = "tf-ebm-for-ebm"
-  password = var.password
-  eip_id = ctyun_eip.eip_test.id
-  cycle_type = "on_demand"
-  device_type = local.device_type1
-  image_uuid = data.ctyun_ebm_device_images.test.images[0].image_uuid
-  security_group_ids = [ctyun_security_group.security_group_test.id]
-  vpc_id = ctyun_vpc.vpc_test.id
+  instance_name           = "tf-ebm-for-ebm"
+  hostname                = "tf-ebm-for-ebm"
+  password                = var.password
+  cycle_type              = "on_demand"
+  device_type             = local.device_type1
+  image_uuid              = data.ctyun_ebm_device_images.test.images[0].image_uuid
+  security_group_ids      = [ctyun_security_group.security_group_test.id]
+  vpc_id                  = ctyun_vpc.vpc_test.id
   system_volume_raid_uuid = local.system_raid_id
-  data_volume_raid_uuid = local.data_raid_id
-  status = "running"
-  subnet_id = ctyun_subnet.subnet_test.id
+  data_volume_raid_uuid   = local.data_raid_id
+  status                  = "running"
+  subnet_id               = ctyun_subnet.subnet_test.id
 }
 ```
 
@@ -154,25 +150,28 @@ resource "ctyun_ebm" "ebm_test2" {
 
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写。
 - `az_name` (String) 可用区名称
+- `bandwidth` (Number) 带宽大小，传递时会自动创建弹性IP并绑定，单位为Mbit/s，取值范围：[1, 2000]
 - `cycle_count` (Number) 订购时长，最长订购周期为60个月（5年）；非按需时必填
 - `data_volume_raid_uuid` (String) 本地数据盘raid类型，如果有本地盘则必填，可通过ctyun_ebm_device_raids查询
-- `eip_id` (String) 弹性公网IP的ID
+- `fixed_ip` (String) 加入子网后的ip地址
 - `key_pair_name` (String) 密钥对名词，和password只能传其中之一
+- `metadata` (Map of String) 物理机元数据信息，键值对形式，支持更新
 - `password` (String, Sensitive) 密码(必须包含大小写字母和（一个数字或者特殊字符）长度8到30位)，未传入有效的keyName时必须传入password，支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `security_group_ids` (Set of String) 主网卡安全组ID，套餐smart_nic_exist为true可支持安全组。创建弹性裸金属必须传入安全组ID，标准裸金属不支持传入安全组ID
 - `status` (String) 物理机状态，支持running（开机）和stopped（关机），默认running，支持更新
-- `system_disk_size` (Number) 系统盘大小，单位为G，取值范围：[100, 2048]，当前不支持公网
-- `system_disk_type` (String) 系统盘类型，sata：普通IO，sas：高IO，ssd：超高IO
+- `system_disk_size` (Number) 系统盘大小（单位GB），取值范围：[100, 2048]，当前不支持公网
+- `system_disk_type` (String) 系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO
 - `system_volume_raid_uuid` (String) 本地系统盘raid类型，如果有本地盘则必填，可通过ctyun_ebm_device_raids查询
 - `user_data` (String) 用户自定义数据，需要以Base64方式编码，Base64编码后的长度限制为1-16384字符
 
 ### Read-Only
 
 - `actual_image_id` (String) 实际镜像id，重装、集群纳管等操作会导致actual_image_id与image_id不同
+- `create_time` (String) 创建时间，为UTC格式
 - `eip_address` (String) 弹性公网IP的地址
-- `fixed_ip` (String) 加入子网后的ip地址
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) ID
 - `instance_id` (String) 物理机UUID，值与id相同
 - `interface_id` (String) 主网卡UUID
@@ -180,3 +179,16 @@ resource "ctyun_ebm" "ebm_test2" {
 - `name` (String) 名称
 - `port_id` (String) 主网卡PORT UUID
 - `system_disk_id` (String) 系统盘的id
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入物理机
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ebm.[导入配置名称] [id],<az_name>,<region_id>
+# 示例
+terraform import ctyun_ebm.ebm_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,cn-zj-hgh7-1a-public-ctcloud,200000003329
+```

@@ -1,5 +1,10 @@
+---
+subcategory: "弹性伸缩服务（CT-AS，Auto Scaling）"
+page_title: "CTYUN: ctyun_scaling_config"
+---
+
 # ctyun_scaling_config (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10241446
+-> 管理弹性伸缩配置
 
 
 
@@ -27,8 +32,8 @@ variable "password" {
 data "ctyun_images" "image_test" {
   name       = "CentOS Linux 8.4"
   visibility = "public"
-  page_no = 1
-  page_size = 10
+  page_no    = 1
+  page_size  = 10
 }
 
 locals {
@@ -44,9 +49,12 @@ resource "ctyun_scaling_config" "scaling_config_example" {
   login_mode      = "password"
   password        = var.password
   monitor_service = true
-  az_names        = ["cn-huadong1-jsnj1A-public-ctcloud", "cn-huadong1-jsnj2A-public-ctcloud"]
-  tags            =[{"key":"provider", "value":"scaling_conifg"}, {"key":"version", "value":"1.1.1"}]
-  volumes         = [{"volume_type":"SATA", "volume_size":40, "flag":"OS"}, {"volume_type":"SAS", "volume_size":100, "flag":"DATA"}]
+  az_names = ["cn-huadong1-jsnj1A-public-ctcloud", "cn-huadong1-jsnj2A-public-ctcloud"]
+  tags = [{ "key" : "provider", "value" : "scaling_conifg" }, { "key" : "version", "value" : "1.1.1" }]
+  volumes = [
+    { "volume_type" : "SATA", "volume_size" : 40, "flag" : "OS" },
+    { "volume_type" : "SAS", "volume_size" : 100, "flag" : "DATA" }
+  ]
 }
 ```
 
@@ -59,12 +67,12 @@ resource "ctyun_scaling_config" "scaling_config_example" {
 - `image_id` (String) 镜像ID，可以通过data.ctyun_images(datasource)获取，支持更新
 - `login_mode` (String) 登录方式: password-密码, key_pair-密钥对，支持更新
 - `name` (String) 伸缩配置名称,长度为 2～15 个字符，允许使用大小写字母、数字或连字符（-）。不能以点号（.）或连字符（-）开头或结尾，不能连续使用点号（.）或连字符（-），也不能仅使用数字，支持更新
-- `use_floatings` (String) 是否使用弹性IP: diable-不使用, auto-自动分配。支持更新
+- `use_floatings` (String) 是否使用弹性IP: disable-不使用, auto-自动分配。支持更新
 - `volumes` (Attributes List) 磁盘类型和大小列表，最多添加9块硬盘。系统盘仅支持1块。数据盘最多支持8块，支持更新。 (see [below for nested schema](#nestedatt--volumes))
 
 ### Optional
 
-- `az_names` (Set of String) 可用区列表，仅多可用区资源池支持，支持更新
+- `az_names` (Set of String) 可用区列表，不填写默认包含该资源池下所有AZ，支持更新
 - `bandwidth` (Number) 弹性IP带宽(Mbps)，范围1-3000，支持更新
 - `key_pair_id` (String) 密钥对ID，login_mode为key_pair时必填，支持更新
 - `monitor_service` (Boolean) 是否开启详细监控，支持更新
@@ -82,7 +90,7 @@ resource "ctyun_scaling_config" "scaling_config_example" {
 
 Required:
 
-- `flag` (String) 磁盘类型: OS-系统盘, DATA-数据盘，系统盘限制1块。，支持更新
+- `flag` (String) 磁盘类型: OS-系统盘, DATA-数据盘，系统盘限制1块。支持更新
 - `volume_size` (Number) 磁盘大小(GB)，支持更新
 - `volume_type` (String) 磁盘类型: SATA/SAS/SSD/SATA-KUNPENG/SATA-HAIGUANG/SAS-KUNPENG/SAS-HAIGUANG/SSD-genric，支持更新
 
@@ -98,3 +106,15 @@ Required:
 
 - `key` (String) 标签键，支持更新
 - `value` (String) 标签值，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入伸缩配置
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_scaling_config.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_scaling_config.scaling_config_example 123456789,<region-123456>
+```

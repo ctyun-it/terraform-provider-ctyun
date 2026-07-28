@@ -79,9 +79,9 @@ type CcseListPluginInstancesRequest struct {
 type CcseListPluginInstancesResponse struct {
 	StatusCode int32                                     `json:"statusCode,omitempty"` /*  状态码  */
 	RequestId  string                                    `json:"requestId,omitempty"`  /*  请求id  */
-	Message    string                                    `json:"message,omitempty"`    /*  提示信息  */
+	Message    string                                    `json:"msg,omitempty"`        /*  提示信息  */
 	ReturnObj  *CcseListPluginInstancesReturnObjResponse `json:"returnObj"`            /*  分页查询结果对象  */
-	Error      string                                    `json:"error,omitempty"`      /*  错误码  */
+	Error      string                                    `json:"errorCode,omitempty"`  /*  错误码  */
 }
 
 type CcseListPluginInstancesReturnObjResponse struct {

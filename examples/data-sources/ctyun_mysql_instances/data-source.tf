@@ -12,5 +12,5 @@ provider "ctyun" {
 }
 
 data "ctyun_mysql_instances" "test" {
-  
+
 }

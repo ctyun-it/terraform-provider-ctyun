@@ -14,17 +14,15 @@ func TestAccCtyunHpfsClusters(t *testing.T) {
 	datasourceFile := "datasource_ctyun_hpfs_clusters.tf"
 
 	sfsType := "hpfs_perf"
-	azName := "cn-huadong1-jsnj1A-public-ctcloud"
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			//查询datasource
 			{
-				Config: utils.LoadTestCase(datasourceFile, dnd, sfsType, azName),
+				Config: utils.LoadTestCase(datasourceFile, dnd, sfsType),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "hpfs_clusters.0.sfs_type", sfsType),
-					resource.TestCheckResourceAttr(datasourceName, "hpfs_clusters.0.az_name", azName),
+					resource.TestCheckResourceAttr(datasourceName, "clusters.0.type", sfsType),
 				),
 			},
 		},

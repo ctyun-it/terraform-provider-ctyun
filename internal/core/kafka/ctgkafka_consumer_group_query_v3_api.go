@@ -61,20 +61,22 @@ type CtgkafkaConsumerGroupQueryV3Request struct {
 }
 
 type CtgkafkaConsumerGroupQueryV3Response struct {
-	StatusCode string                                         `json:"statusCode,omitempty"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
-	Message    string                                         `json:"message,omitempty"`    /*  描述状态。  */
-	ReturnObj  *CtgkafkaConsumerGroupQueryV3ReturnObjResponse `json:"returnObj"`            /*  返回对象。  */
-	Error      string                                         `json:"error,omitempty"`      /*  错误码，描述错误信息。  */
+	StatusCode string                                         `json:"statusCode"` /*  接口系统层面状态码。成功："800"，失败："900"。  */
+	Message    string                                         `json:"message"`    /*  描述状态。  */
+	ReturnObj  *CtgkafkaConsumerGroupQueryV3ReturnObjResponse `json:"returnObj"`  /*  返回对象。  */
+	Error      string                                         `json:"error"`      /*  错误码，描述错误信息。  */
 }
 
 type CtgkafkaConsumerGroupQueryV3ReturnObjResponse struct {
-	Data  []*CtgkafkaConsumerGroupQueryV3ReturnObjDataResponse `json:"data"`            /*  返回数据。  */
-	Total int32                                                `json:"total,omitempty"` /*  总记录数。  */
+	Data  []*CtgkafkaConsumerGroupQueryV3ReturnObjDataResponse `json:"data"`  /*  返回数据。  */
+	Total int32                                                `json:"total"` /*  总记录数。  */
 }
 
 type CtgkafkaConsumerGroupQueryV3ReturnObjDataResponse struct {
-	Id          int32  `json:"id,omitempty"`          /*  消费组ID。  */
-	Name        string `json:"name,omitempty"`        /*  消费组名。  */
-	Description string `json:"description,omitempty"` /*  消费组描述。  */
-	Ctime       string `json:"ctime,omitempty"`       /*  创建时间。  */
+	Id            int32  `json:"id"`            /*  消费组ID。  */
+	Name          string `json:"name"`          /*  消费组名。  */
+	Description   string `json:"description"`   /*  消费组描述。  */
+	Ctime         string `json:"ctime"`         /*  创建时间。  */
+	State         string `json:"state"`         /*  消费组状态  */
+	CoordinatorId int32  `json:"coordinatorId"` /*  协调器编号  */
 }

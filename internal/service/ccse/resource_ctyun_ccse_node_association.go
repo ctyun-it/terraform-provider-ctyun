@@ -2,13 +2,16 @@ package ccse
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ccse2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ccse"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -29,7 +32,11 @@ var (
 )
 
 type ctyunCcseNodeAssociation struct {
-	meta *common.CtyunMetadata
+	meta        *common.CtyunMetadata
+	name        string
+	ecsService  *business.EcsService
+	ebmService  *business.EbmService
+	ccseService *business.CcseService
 }
 
 func NewCtyunCcseNodeAssociation() resource.Resource {
@@ -38,6 +45,7 @@ func NewCtyunCcseNodeAssociation() resource.Resource {
 
 func (c *ctyunCcseNodeAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ccse_node_association"
+	c.name = response.TypeName
 }
 
 type CtyunCcseNodeAssociationConfig struct {
@@ -61,7 +69,7 @@ type CtyunCcseNodeAssociationConfig struct {
 
 func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452`,
+		MarkdownDescription: utils.FormatDesc("纳管云容器引擎节点", "云容器引擎（CCSE）", "https://www.ctyun.cn/document/10083472/10318452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -119,7 +127,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Description: "部署后执行自定义脚本，base64编码",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -129,7 +137,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				Optional:    true,
 				Description: "部署前执行自定义脚本，base64编码",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
@@ -156,8 +164,8 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 				},
 			},
 			"password": schema.StringAttribute{
-				Required:    true,
-				Description: "用户密码，需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头",
+				Optional:    true,
+				Description: "用户密码，纳管时必填，导入时不填。需要满足以下规则：长度在8～30个字符；必须包含大写字母、小写字母、数字以及特殊符号中的三项；特殊符号可选：()`~!@#$%^&*_-+=|{}[]:;'<>,.?/\\且不能以斜线号/开头",
 				Validators: []validator.String{
 					stringvalidator.Any(
 						stringvalidator.All(
@@ -178,7 +186,7 @@ func (c *ctyunCcseNodeAssociation) Schema(_ context.Context, _ resource.SchemaRe
 					),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 				Sensitive: true,
 			},
@@ -259,7 +267,7 @@ func (c *ctyunCcseNodeAssociation) Read(ctx context.Context, request resource.Re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -270,6 +278,30 @@ func (c *ctyunCcseNodeAssociation) Read(ctx context.Context, request resource.Re
 }
 
 func (c *ctyunCcseNodeAssociation) Update(ctx context.Context, request resource.UpdateRequest, response *resource.UpdateResponse) {
+	// tf文件中的
+	var plan CtyunCcseNodeAssociationConfig
+	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	// state中的
+	var state CtyunCcseNodeAssociationConfig
+	response.Diagnostics.Append(request.State.Get(ctx, &state)...)
+	if response.Diagnostics.HasError() {
+		return
+	}
+	if !plan.VisibilityHostScript.IsUnknown() && !plan.VisibilityHostScript.IsNull() && state.VisibilityHostScript.IsNull() {
+		state.VisibilityHostScript = plan.VisibilityHostScript
+		response.Diagnostics.AddWarning("visibility_host_script的更新仅写入状态文件", "在import时，状态文件中visibility_host_script为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.VisibilityPostHostScript.IsUnknown() && !plan.VisibilityPostHostScript.IsNull() && state.VisibilityPostHostScript.IsNull() {
+		state.VisibilityPostHostScript = plan.VisibilityPostHostScript
+		response.Diagnostics.AddWarning("visibility_post_host_script的更新仅写入状态文件", "在import时，状态文件中visibility_post_host_script为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if !plan.Password.IsUnknown() && !plan.Password.IsNull() && state.Password.IsNull() {
+		state.Password = plan.Password
+		response.Diagnostics.AddWarning("password的更新仅写入状态文件", "在import时，状态文件中password为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	return
 }
 
@@ -302,22 +334,49 @@ func (c *ctyunCcseNodeAssociation) Configure(_ context.Context, request resource
 	}
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
+	c.ecsService = business.NewEcsService(meta)
+	c.ebmService = business.NewEbmService(meta)
+	c.ccseService = business.NewCcseService(meta)
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [name],[clusterID],[regionID]
 func (c *ctyunCcseNodeAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [cluster_id],[name],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunCcseNodeAssociationConfig
 	var name, clusterID, regionID string
-	err = terraform_extend.Split(request.ID, &name, &clusterID, &regionID)
-	if err != nil {
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &clusterID, &name)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &clusterID, &name, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if name == "" {
+		err = fmt.Errorf("name不能为空")
 		return
 	}
+	if clusterID == "" {
+		err = fmt.Errorf("cluster_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+
 	cfg.RegionID = types.StringValue(regionID)
 	cfg.ClusterID = types.StringValue(clusterID)
 	cfg.Name = types.StringValue(name)
@@ -427,7 +486,11 @@ func (c *ctyunCcseNodeAssociation) getNodeDetailByName(ctx context.Context, plan
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		if resp.Error == common.OpenapiCCSENotExist || strings.Contains(resp.Message, "不存在") {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -448,10 +511,14 @@ func (c *ctyunCcseNodeAssociation) getCustomPoolID(ctx context.Context, plan Cty
 	resp, err := c.meta.Apis.SdkCcseApis.CcseListNodePoolsApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
+	} else if resp.StatusCode != common.NormalStatusCode {
+		if resp.Error == common.OpenapiCCSENotExist {
+			err = common.ResourceNotExistError
+		} else {
+			err = fmt.Errorf("API return error. Message: %s", resp.Message)
+		}
 		return
-	} else if len(resp.ReturnObj.Records) == 0 {
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj.Records) == 0 {
 		err = common.InvalidReturnObjError
 		return
 	}
@@ -474,7 +541,26 @@ func (c *ctyunCcseNodeAssociation) getAndMerge(ctx context.Context, plan *CtyunC
 	plan.IsEvict = types.BoolValue(map[int32]bool{1: true, 0: false}[node.IsEvict])
 	plan.NodeType = types.StringValue(map[int32]string{1: "master", 0: "slave"}[node.NodeType])
 	plan.NodeStatus = types.StringValue(node.NodeStatus)
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", plan.Name.ValueString(), plan.ClusterID.ValueString(), plan.RegionID.ValueString()))
+	plan.AzName = types.StringValue(node.ZoneCode)
+	plan.InstanceID = types.StringValue(node.EcsId)
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", plan.ClusterID.ValueString(), plan.Name.ValueString()))
+
+	var imageID string
+	if strings.HasPrefix(node.EcsId, "ss-") {
+		imageID, err = c.ebmService.GetEbmImageID(ctx, node.EcsId, plan.RegionID.ValueString(), node.ZoneCode)
+		if err != nil {
+			return
+		}
+		plan.MirrorID = types.StringValue(imageID)
+		plan.InstanceType = types.StringValue("ebm")
+	} else {
+		imageID, err = c.ecsService.GetEcsImageID(ctx, node.EcsId, plan.RegionID.ValueString())
+		if err != nil {
+			return
+		}
+		plan.MirrorID = types.StringValue(imageID)
+		plan.InstanceType = types.StringValue("ecs")
+	}
 	return
 }
 

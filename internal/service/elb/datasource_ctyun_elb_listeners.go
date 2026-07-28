@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -40,7 +39,7 @@ func (c *ctyunElbListeners) Metadata(ctx context.Context, request datasource.Met
 
 func (c *ctyunElbListeners) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10140276`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡监听器", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10140276"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -130,15 +129,12 @@ func (c *ctyunElbListeners) Schema(ctx context.Context, request datasource.Schem
 							NestedObject: schema.NestedAttributeObject{
 								Attributes: map[string]schema.Attribute{
 									"target_group_id": schema.StringAttribute{
-										Required:    true,
+										Computed:    true,
 										Description: "后端服务组ID",
 									},
 									"weight": schema.Int32Attribute{
-										Optional:    true,
+										Computed:    true,
 										Description: "权重，取值范围：1-256。默认为100",
-										Validators: []validator.Int32{
-											int32validator.Between(1, 256),
-										},
 									},
 								},
 							},
@@ -163,11 +159,11 @@ func (c *ctyunElbListeners) Schema(ctx context.Context, request datasource.Schem
 							Computed:    true,
 							Description: "监听器状态: DOWN / ACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -296,6 +292,6 @@ type CtyunElbListenersDetailModel struct {
 	AccessControlType   types.String       `tfsdk:"access_control_type"`
 	ForwardedForEnabled types.Bool         `tfsdk:"forwarded_for_enabled"`
 	Status              types.String       `tfsdk:"status"`
-	CreatedTime         types.String       `tfsdk:"created_time"`
-	UpdatedTime         types.String       `tfsdk:"updated_time"`
+	CreatedTime         types.String       `tfsdk:"create_time"`
+	UpdatedTime         types.String       `tfsdk:"update_time"`
 }

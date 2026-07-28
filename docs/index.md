@@ -2,7 +2,7 @@
 
 ## 依赖
 
-- terraform v1.10.5，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
+- terraform v1.5.7，[下载地址](https://developer.hashicorp.com/terraform/install)，请按照官方指引安装
 - 天翼云账号AK、SK，[点击进入](https://www.ctyun.cn/console/user/setting)，在账号中心，安全设置，用户AccessKey中查看
 
 ## 建议配置
@@ -36,9 +36,9 @@ provider_installation {
 }
 ```
 
-- 目录结构准备：`C:\Users\<用户>\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\<version>\<arch>`
+- 目录结构准备：`C:\Users\[用户]\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\[version]\[arch]`
 
-- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\1.2.0\windows_amd64`
+- 例如创建目录：`C:\Users\Administrator\AppData\Roaming\provider-cache\registry.terraform.io\ctyun-it\ctyun\2.3.0\windows_amd64`
 
 - 将可执行文件terraform-provider-ctyun粘贴到上述目录。
 
@@ -60,23 +60,23 @@ provider_installation {
 
 ```
 # Linux 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/linux_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/2.3.0/linux_amd64
 
 # MacOS 示例
-mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64
+mkdir -p /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/2.3.0/darwin_amd64
 ```
 
 - 将可执行文件复制到目录中
 
 ```
 # Linux 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/linux_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/2.3.0/linux_amd64/
 
 # MacOS 示例
-cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64/
+cp terraform-provider-ctyun /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/2.3.0/darwin_amd64/
 ```
 
-- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/1.2.0/darwin_amd64/terraform-provider-ctyun`
+- 添加可执行权限：`chmod +x /opt/.terraform.d/provider-cache/registry.terraform.io/ctyun-it/ctyun/2.3.0/darwin_amd64/terraform-provider-ctyun`
 
 
 ## 安装验证
@@ -126,8 +126,8 @@ resource "ctyun_ecs" "ecs_test" {
 }
 ```
 
-- PaaS产品实例在terraform destroy时可以删除，但相关联的底层资源不能马上释放，所以删除子网和安全组时会报错。涉及CCSE、Redis、Kafka、RabbitMq、Mysql、PostgreSql、MogoDB。预计完善时间8月底。
-- 如果您想要将state文件保存到对象存储，可参考https://developer.hashicorp.com/terraform/language/v1.11.x/backend/s3，示例如下，endpoints中的s3是控制台页面上桶的终端节点：
+- PaaS产品实例在terraform destroy时可以删除，但相关联的底层资源不能马上释放，所以删除子网和安全组时会报错。涉及CCSE、Redis、Kafka、RabbitMq、Mysql、PostgreSql、MogoDB。
+- 如果您想要将state文件保存到对象存储，可参考[使用对象存储保存state](https://developer.hashicorp.com/terraform/language/v1.11.x/backend/s3)，示例如下，endpoints中的s3是控制台页面上桶的终端节点：
 - 需要配置对象存储的AK和SK到环境变量：AWS_ACCESS_KEY_ID 和 AWS_SECRET_ACCESS_KEY
 
 ```
@@ -150,7 +150,7 @@ terraform {
   required_providers {
     ctyun = {
       source = "ctyun-it/ctyun"
-      version = "1.2.0"
+      version = "2.3.0"
     }
   }
 }

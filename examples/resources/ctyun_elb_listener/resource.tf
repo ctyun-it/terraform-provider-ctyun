@@ -26,7 +26,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
@@ -52,7 +51,7 @@ resource "ctyun_elb_listener" "elb_listener_test" {
   protocol            = "TCP"
   protocol_port       = 12345
   default_action_type = "forward"
-  target_groups = [{ target_group_id = ctyun_elb_target_group.test2.id }]
+  target_groups       = [{ target_group_id = ctyun_elb_target_group.test2.id }]
   listener_cps        = 1
   establish_timeout   = 100
 }

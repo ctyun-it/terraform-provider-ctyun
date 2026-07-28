@@ -51,10 +51,12 @@ type CtvpcPrefixlistCreateRequest struct {
 	Limit           int32                                          `json:"limit"`              /*  前缀列表支持的最大条目容量，创建后将无法修改,限制1-200条，具体以账户配额为准,不能小于前缀列表规则个数  */
 	AddressType     int32                                          `json:"addressType"`        /*  地址类型，4：ipv4，6：ipv6  */
 	PrefixListRules []*CtvpcPrefixlistCreatePrefixListRulesRequest `json:"prefixListRules"`    /*  接口业务数据  */
+	Description     *string                                        `json:"description"`
 }
 
 type CtvpcPrefixlistCreatePrefixListRulesRequest struct {
-	Cidr string `json:"cidr,omitempty"` /*  前缀列表条目,cidr  */
+	Cidr        string  `json:"cidr,omitempty"`        /*  前缀列表条目,cidr  */
+	Description *string `json:"description,omitempty"` /*  前缀列表条目描述，支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 0 - 512  */
 }
 
 type CtvpcPrefixlistCreateResponse struct {

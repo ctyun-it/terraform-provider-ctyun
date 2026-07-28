@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_backup_policy_bind_repo"
+---
+
 # ctyun_ecs_backup_policy_bind_repo (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10235038
+-> 管理云主机备份存储库和备份策略的绑定关系
 
 
 
@@ -20,7 +25,7 @@ provider "ctyun" {
 }
 
 resource "ctyun_ecs_backup_policy_bind_repo" "test" {
-  id = "a4b793881bbd42edaa6a0002900e5819"
+  policy_id     = "a4b793881bbd42edaa6a0002900e5819"
   repository_id = "0cd13a89-5ada-42a7-95e8-60fb9705eecc"
 }
 ```
@@ -40,3 +45,15 @@ resource "ctyun_ecs_backup_policy_bind_repo" "test" {
 ### Read-Only
 
 - `id` (String) ID
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ECS备份策略绑定存储库
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_backup_policy_bind_repo.example [policy_id],[repository_id],<region_id>
+# 示例
+terraform import ctyun_ecs_backup_policy_bind_repo.example 12345678-1234-1234-1234-123456789012,87654321-4321-4321-4321-210987654321,bb9fdb42056f11eda1610242ac110002
+```

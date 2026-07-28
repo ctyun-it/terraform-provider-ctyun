@@ -1,5 +1,10 @@
+---
+subcategory: "分布式缓存服务Redis版"
+page_title: "CTYUN: ctyun_redis_instances"
+---
+
 # ctyun_redis_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10029420/11030280
+-> 查询Redis实例
 
 
 
@@ -19,7 +24,7 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_redis_instances" "test"{
+data "ctyun_redis_instances" "test" {
 
 }
 ```

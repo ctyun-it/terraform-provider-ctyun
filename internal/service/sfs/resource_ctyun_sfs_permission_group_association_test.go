@@ -17,7 +17,6 @@ func TestAccCtyunSfsPermissionGroupAssociation(t *testing.T) {
 	sfsUID := dependence.SfsUID
 	vpcID1 := dependence.vpcID1
 	permissionGroupFuid1 := dependence.sfsPermissionGroupID
-	permissionGroupFuid2 := dependence.sfsPermissionGroupID1
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -33,41 +32,49 @@ func TestAccCtyunSfsPermissionGroupAssociation(t *testing.T) {
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid1, sfsUID, vpcID1),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid1),
-					resource.TestCheckResourceAttr(resourceName, "sfs_uid", sfsUID),
+					resource.TestCheckResourceAttr(resourceName, "permission_group_id", permissionGroupFuid1),
+					resource.TestCheckResourceAttr(resourceName, "sfs_id", sfsUID),
 					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID1),
-					resource.TestCheckResourceAttrSet(resourceName, "vpc_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "vpc_cidr"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_description"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_is_default"),
 				),
 			},
-			// 2. 资源更新测试（更换为第二个权限组）
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid2, sfsUID, vpcID1),
-				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttrSet(resourceName, "region_id"),
-					resource.TestCheckResourceAttr(resourceName, "permission_group_fuid", permissionGroupFuid2),
-					resource.TestCheckResourceAttr(resourceName, "sfs_uid", sfsUID),
-					resource.TestCheckResourceAttr(resourceName, "vpc_id", vpcID1),
-					resource.TestCheckResourceAttrSet(resourceName, "vpc_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "vpc_cidr"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_name"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_description"),
-					resource.TestCheckResourceAttrSet(resourceName, "permission_group_is_default"),
-				),
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s",
+						rs.Primary.Attributes["sfs_id"],
+						rs.Primary.Attributes["vpc_id"],
+						rs.Primary.Attributes["permission_group_id"],
+					), nil
+				},
+				ImportStateVerifyIgnore: []string{},
 			},
-			// 3. 资源导入测试
 			{
-				ResourceName:            resourceName,
-				ImportState:             true,
-				ImportStateVerify:       true,
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s,%s,%s",
+						rs.Primary.Attributes["sfs_id"],
+						rs.Primary.Attributes["vpc_id"],
+						rs.Primary.Attributes["permission_group_id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
+				},
 				ImportStateVerifyIgnore: []string{},
 			},
 			// 4. 清理资源
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid2, sfsUID, vpcID1),
+				Config:  utils.LoadTestCase(resourceFile, rnd, permissionGroupFuid1, sfsUID, vpcID1),
 				Destroy: true,
 			},
 		},

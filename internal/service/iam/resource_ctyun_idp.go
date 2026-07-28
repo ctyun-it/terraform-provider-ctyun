@@ -5,7 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,7 +15,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"regexp"
-	"strconv"
+)
+
+var (
+	_ resource.Resource                = &ctyunIdp{}
+	_ resource.ResourceWithConfigure   = &ctyunIdp{}
 )
 
 func NewCtyunIdp() resource.Resource {
@@ -24,15 +28,17 @@ func NewCtyunIdp() resource.Resource {
 
 type ctyunIdp struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunIdp) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_idp"
+	c.name = response.TypeName
 }
 
 func (c *ctyunIdp) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390452`,
+		MarkdownDescription: utils.FormatDesc("管理身份认证信息", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10390452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.Int64Attribute{
 				Computed:    true,
@@ -44,14 +50,14 @@ func (c *ctyunIdp) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"file": schema.StringAttribute{
 				Required:    true,
-				Description: "联邦登录文件",
+				Description: "联邦登录文件，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
 			},
 			"file_name": schema.StringAttribute{
 				Required:    true,
-				Description: "文件名称（需携带后缀）",
+				Description: "文件名称（需携带后缀），支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 					stringvalidator.RegexMatches(regexp.MustCompile(`^.+\..+$`), "文件名需要携带后缀"),
@@ -62,6 +68,9 @@ func (c *ctyunIdp) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "身份提供商名称",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"type": schema.StringAttribute{
@@ -90,7 +99,7 @@ func (c *ctyunIdp) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			},
 			"description": schema.StringAttribute{
 				Optional:    true,
-				Description: "描述",
+				Description: "描述，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthAtLeast(1),
 				},
@@ -203,31 +212,6 @@ func (c *ctyunIdp) Delete(ctx context.Context, request resource.DeleteRequest, r
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-}
-
-// 导入命令：terraform import [配置标识].[导入配置名称] [idpId]
-func (c *ctyunIdp) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var cfg CtyunIdpConfig
-	var idpId string
-	err := terraform_extend.Split(request.ID, &idpId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-
-	value, err := strconv.ParseInt(idpId, 10, 64)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-
-	cfg.Id = types.Int64Value(value)
-	instance, err := c.getAndMergeIdp(ctx, cfg)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
 
 func (c *ctyunIdp) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {

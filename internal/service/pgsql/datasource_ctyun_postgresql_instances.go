@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/pgsql"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -42,7 +43,7 @@ func (c *ctyunPgsqlInstances) Metadata(ctx context.Context, request datasource.M
 
 func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165`,
+		MarkdownDescription: utils.FormatDesc("查询PostgreSQL实例", "关系数据库PostgreSQL版", "https://www.ctyun.cn/document/10034019/10153165"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -54,7 +55,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 				Computed:    true,
 				Description: "项目ID",
 			},
-			"page_num": schema.Int32Attribute{
+			"page_no": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "当前页码。默认:1",
@@ -67,7 +68,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 					int32validator.Between(1, 500),
 				},
 			},
-			"prod_inst_name": schema.StringAttribute{
+			"name": schema.StringAttribute{
 				Optional:    true,
 				Description: "实例名称，支持模糊匹配",
 			},
@@ -79,7 +80,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 				Optional:    true,
 				Description: "标签值（二级标签）",
 			},
-			"prod_inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Optional:    true,
 				Description: "实例ID",
 			},
@@ -90,7 +91,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 					stringvalidator.OneOf("primary", "readonly"),
 				},
 			},
-			"pgsql_instances": schema.ListNestedAttribute{
+			"instances": schema.ListNestedAttribute{
 				Computed: true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
@@ -102,7 +103,7 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 							Computed:    true,
 							Description: "数据库引擎类型",
 						},
-						"prod_inst_id": schema.StringAttribute{
+						"instance_id": schema.StringAttribute{
 							Computed:    true,
 							Description: "实例唯一ID",
 						},
@@ -139,19 +140,18 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 							},
 						},
 						"read_port": schema.Int32Attribute{
-							Computed:    true,
-							Description: "读连接端口号",
-							Validators: []validator.Int32{
-								int32validator.Between(1, 65535),
-							},
+							Computed:           true,
+							Description:        "读连接端口号",
+							DeprecationMessage: "已弃用，请使用port",
 						},
 						"vip": schema.StringAttribute{
 							Computed:    true,
 							Description: "虚拟IP地址",
 						},
 						"write_port": schema.Int32Attribute{
-							Computed:    true,
-							Description: "写连接端口号",
+							Computed:           true,
+							Description:        "写连接端口号",
+							DeprecationMessage: "已弃用，请使用port",
 						},
 						"readonly_instance_ids": schema.StringAttribute{
 							Computed:    true,
@@ -167,6 +167,10 @@ func (c *ctyunPgsqlInstances) Schema(ctx context.Context, request datasource.Sch
 							Validators: []validator.Int32{
 								int32validator.Between(1, 3),
 							},
+						},
+						"port": schema.Int32Attribute{
+							Computed:    true,
+							Description: "读写端口号",
 						},
 					},
 				},
@@ -190,13 +194,13 @@ func (c *ctyunPgsqlInstances) Read(ctx context.Context, request datasource.ReadR
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		err = errors.New("region ID不能为空！")
+		err = errors.New("region_id不能为空！")
 		return
 	}
 	params := &pgsql.PgsqlListRequest{}
 
-	if config.PageNum.ValueInt32() == 0 {
-		config.PageNum = types.Int32Value(1)
+	if config.PageNo.ValueInt32() == 0 {
+		config.PageNo = types.Int32Value(1)
 		params.PageNum = 1
 	}
 	if config.PageSize.ValueInt32() == 0 {
@@ -242,15 +246,16 @@ func (c *ctyunPgsqlInstances) Read(ctx context.Context, request datasource.ReadR
 	instances := resp.ReturnObj.List
 	for _, instance := range instances {
 		pgsqlInstance := CtyunPgsqlInstanceInfoModel{}
-		pgsqlInstance.CreateTime = types.StringValue(instance.CreateTime)
+		pgsqlInstance.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(instance.CreateTime))
 		pgsqlInstance.ProdDbEngine = types.StringValue(instance.ProdDbEngine)
-		pgsqlInstance.ProdInstId = types.StringValue(instance.ProdInstId)
+		pgsqlInstance.ID = types.StringValue(instance.ProdInstId)
 		pgsqlInstance.Name = types.StringValue(instance.ProdInstName)
 		pgsqlInstance.ProdRunningStatus = types.Int32Value(instance.ProdRunningStatus)
 		pgsqlInstance.Alive = types.Int32Value(instance.Alive)
 		pgsqlInstance.ProdOrderStatus = types.Int32Value(instance.ProdOrderStatus)
 		pgsqlInstance.ProdType = types.Int32Value(instance.ProdType)
 		pgsqlInstance.ReadPort = types.Int32Value(instance.ReadPort)
+		pgsqlInstance.Port = types.Int32Value(instance.Port)
 		pgsqlInstance.Vip = types.StringValue(instance.Vip)
 		pgsqlInstance.WritePort = types.Int32Value(instance.WritePort)
 		pgsqlInstance.InstanceType = types.StringValue(instance.InstanceType)
@@ -270,22 +275,22 @@ func (c *ctyunPgsqlInstances) Read(ctx context.Context, request datasource.ReadR
 }
 
 type CtyunPgsqlInstancesConfig struct {
-	RegionID       types.String                  `tfsdk:"region_id"`      // 区域id
-	ProjectID      types.String                  `tfsdk:"project_id"`     // 项目id
-	PageNum        types.Int32                   `tfsdk:"page_num"`       // 当前页（必填）
-	PageSize       types.Int32                   `tfsdk:"page_size"`      // 页大小，范围1-500（必填）
-	ProdInstName   types.String                  `tfsdk:"prod_inst_name"` // 实例名称，支持模糊匹配（可选）
-	LabelName      types.String                  `tfsdk:"label_name"`     // 标签名称（一级标签）（可选）
-	LabelValue     types.String                  `tfsdk:"label_value"`    // 标签值（二级标签）（可选）
-	ProdInstID     types.String                  `tfsdk:"prod_inst_id"`   // 实例id（可选）
-	InstanceType   types.String                  `tfsdk:"instance_type"`  // 实例类型（primary/readonly）（可选）
-	PgsqlInstances []CtyunPgsqlInstanceInfoModel `tfsdk:"pgsql_instances"`
+	RegionID       types.String                  `tfsdk:"region_id"`     // 区域id
+	ProjectID      types.String                  `tfsdk:"project_id"`    // 项目id
+	PageNo         types.Int32                   `tfsdk:"page_no"`       // 当前页（必填）
+	PageSize       types.Int32                   `tfsdk:"page_size"`     // 页大小，范围1-500（必填）
+	ProdInstName   types.String                  `tfsdk:"name"`          // 实例名称，支持模糊匹配（可选）
+	LabelName      types.String                  `tfsdk:"label_name"`    // 标签名称（一级标签）（可选）
+	LabelValue     types.String                  `tfsdk:"label_value"`   // 标签值（二级标签）（可选）
+	ProdInstID     types.String                  `tfsdk:"instance_id"`   // 实例id（可选）
+	InstanceType   types.String                  `tfsdk:"instance_type"` // 实例类型（primary/readonly）（可选）
+	PgsqlInstances []CtyunPgsqlInstanceInfoModel `tfsdk:"instances"`
 }
 
 type CtyunPgsqlInstanceInfoModel struct {
 	CreateTime          types.String `tfsdk:"create_time"`           // 创建时间
 	ProdDbEngine        types.String `tfsdk:"prod_db_engine"`        // 数据库实例引擎
-	ProdInstId          types.String `tfsdk:"prod_inst_id"`          // 实例ID
+	ID                  types.String `tfsdk:"instance_id"`           // 实例ID
 	Name                types.String `tfsdk:"name"`                  // 实例名称
 	ProdRunningStatus   types.Int32  `tfsdk:"prod_running_status"`   // 运行状态代码
 	Alive               types.Int32  `tfsdk:"alive"`                 // 实例存活状态
@@ -297,4 +302,5 @@ type CtyunPgsqlInstanceInfoModel struct {
 	ReadonlyInstanceIds types.String `tfsdk:"readonly_instance_ids"` // 只读实例ID列表,用逗号分割
 	InstanceType        types.String `tfsdk:"instance_type"`         // 实例类型
 	ToolType            types.Int32  `tfsdk:"tool_type"`             // 备份工具类型
+	Port                types.Int32  `tfsdk:"port"`                  // 端口
 }

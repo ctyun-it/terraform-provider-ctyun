@@ -16,6 +16,8 @@ func TestCtgkafkaTopicCreateV3Api_Do(t *testing.T) {
 
 	// 构造请求
 	var needFlush bool = false
+	var uncleanLeaderElectionEnable bool = false
+	var remoteStorageEnable bool = false
 	request := &CtgkafkaTopicCreateV3Request{
 		RegionId:          "bb9fdb42056f11eda1610242ac110002",
 		ProdInstId:        "68eef42fd8d042bb960d3c3244d9243e",
@@ -29,6 +31,19 @@ func TestCtgkafkaTopicCreateV3Api_Do(t *testing.T) {
 		NeedFlush:         &needFlush,
 		TimestampType:     "CreateTime",
 		Description:       "备注",
+		Labels: []*CtgkafkaTopicCreateV3LabelsRequest{
+			{
+				Key:   "testKey",
+				Value: "testValue",
+			},
+		},
+		StrategyName:                "strategyName",
+		CleanupPolicy:               "delete",
+		UncleanLeaderElectionEnable: &uncleanLeaderElectionEnable,
+		SegmentMs:                   259200000,
+		SegmentBytes:                1073741824,
+		RemoteStorageEnable:         &remoteStorageEnable,
+		LocalRetentionMs:            1073741824,
 	}
 
 	// 发起调用

@@ -1,5 +1,10 @@
+---
+subcategory: "VPC终端节点（VPC Endpoint）"
+page_title: "CTYUN: ctyun_vpce_service_transit_ip"
+---
+
 # ctyun_vpce_service_transit_ip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10042658/10048507
+-> 管理终端节点服务中转IP
 
 
 
@@ -27,29 +32,28 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-test-tmp"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
 
 resource "ctyun_vpce_service" "test" {
-  name  = "tf-vpce-server-tmp"
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
+  name            = "tf-vpce-server-tmp"
+  vpc_id          = ctyun_vpc.vpc_test.id
+  subnet_id       = ctyun_subnet.subnet_test.id
   auto_connection = true
-  type = "reverse"
+  type            = "reverse"
 }
 
 resource "ctyun_vpce_service_transit_ip" "test" {
   endpoint_service_id = ctyun_vpce_service.test.id
-  subnet_id = ctyun_subnet.subnet_test.id
+  subnet_id           = ctyun_subnet.subnet_test.id
 }
 ```
 
@@ -68,4 +72,18 @@ resource "ctyun_vpce_service_transit_ip" "test" {
 
 ### Read-Only
 
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) ID，使用中转IP地址，和transit_ip相等
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入VPCE Service Transit IP
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_vpce_service_transit_ip.[导入配置名称] [endpoint_service_id],[transit_ip],<region_id>
+# 示例
+terraform import ctyun_vpce_service_transit_ip.example service-123,192.168.1.100,region-123
+```

@@ -6,15 +6,20 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctiam"
-	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+)
+
+var (
+	_ resource.Resource                = &ctyunPolicyAssociationUserGroup{}
+	_ resource.ResourceWithConfigure   = &ctyunPolicyAssociationUserGroup{}
 )
 
 func NewCtyunPolicyAssociationUserGroup() resource.Resource {
@@ -23,16 +28,18 @@ func NewCtyunPolicyAssociationUserGroup() resource.Resource {
 
 type ctyunPolicyAssociationUserGroup struct {
 	meta             *common.CtyunMetadata
+	name             string
 	userGroupService *business.UserGroupService
 }
 
 func (c *ctyunPolicyAssociationUserGroup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_iam_policy_association_user_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunPolicyAssociationUserGroup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392`,
+		MarkdownDescription: utils.FormatDesc("管理策略和用户组的绑定关系", "统一身份认证（Identity and Access Management，简称IAM）", "https://www.ctyun.cn/document/10345725/10409392"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -66,7 +73,7 @@ func (c *ctyunPolicyAssociationUserGroup) Schema(_ context.Context, _ resource.S
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
-				Default: stringdefault.StaticString(""),
+				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, false),
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
@@ -163,26 +170,6 @@ func (c *ctyunPolicyAssociationUserGroup) Delete(ctx context.Context, request re
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [privilegeId]
-func (c *ctyunPolicyAssociationUserGroup) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	var cfg CtyunPolicyAssociationUserGroupConfig
-	var privilegeId string
-	err := terraform_extend.Split(request.ID, &privilegeId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-
-	cfg.Id = types.StringValue(privilegeId)
-
-	instance, err := c.getAndMergeIamPolicyAssociationUserGroup(ctx, cfg)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
-}
-
 func (c *ctyunPolicyAssociationUserGroup) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
 	if request.ProviderData == nil {
 		return
@@ -216,9 +203,9 @@ func (c *ctyunPolicyAssociationUserGroup) checkAndGetRangeType(ctx context.Conte
 			return "", errors.New("策略：" + cfg.PolicyId.ValueString() + "为资源池级别的范围，授权时必须填写资源池ID")
 		}
 	case business.PolicyRangeGlobal:
-		// 如果是全局级别的范围，用户又填写资源池ID，报错
+		// 如果是全局级别的范围，用户又填写资源池ID，忽略
 		if !cfg.RegionId.IsNull() && !cfg.RegionId.IsUnknown() && cfg.RegionId.ValueString() != "" {
-			return "", errors.New("策略：" + cfg.PolicyId.ValueString() + "为全局级别的范围，授权时不能填写资源池ID")
+			//return "", errors.New("策略：" + cfg.PolicyId.ValueString() + "为全局级别的范围，授权时不能填写资源池ID")
 		}
 	}
 	key, err2 := business.PolicyRangeMap.Map(resp.PolicyRange, business.PolicyRangeMapScene1, business.PolicyRangeMapScene2)
@@ -240,15 +227,15 @@ func (c *ctyunPolicyAssociationUserGroup) getAndMergeIamPolicyAssociationUserGro
 		return nil, err
 	}
 
-	regionId := ""
-	if resp.RegionId != "No ProjectID" {
-		regionId = resp.RegionId
-	}
+	//regionId := ""
+	//if resp.RegionId != "No ProjectID" {
+	//	regionId = resp.RegionId
+	//}
 
 	cfg.Id = types.StringValue(resp.PrivilegeId)
 	cfg.UserGroupId = types.StringValue(resp.Id)
 	cfg.PolicyId = types.StringValue(resp.PolicyId)
-	cfg.RegionId = types.StringValue(regionId)
+	//cfg.RegionId = types.StringValue(regionId)
 	return &cfg, nil
 }
 

@@ -1,5 +1,10 @@
+---
+subcategory: "弹性云主机（CT-ECS，Elastic Cloud Server）"
+page_title: "CTYUN: ctyun_ecs_backup_policy"
+---
+
 # ctyun_ecs_backup_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033770
+-> 管理云主机备份策略
 
 
 
@@ -20,20 +25,20 @@ provider "ctyun" {
 }
 
 resource "ctyun_ecs_backup_policy" "test" {
-    name           = "test"
-    cycle_type            = "week"
-    cycle_week            = "0,2,6"
-    time                  = "1,20"
-    status                = 1
-    retention_type        = "num"
-    retention_num         = 20
-    full_backup_interval  = -1
-    adv_retention_status  = true
+  name                 = "test"
+  cycle_type           = "week"
+  cycle_week           = "0,2,6"
+  time                 = "1,20"
+  status               = 1
+  retention_type       = "num"
+  retention_num        = 20
+  full_backup_interval = -1
+  adv_retention_status = true
 
-    # 当启用高级保留策略且retention_type为num时，可以配置高级保留策略
-    adv_retention {
-     adv_day = 3
-    }
+  # 当启用高级保留策略且retention_type为num时，可以配置高级保留策略
+  adv_retention = {
+    adv_day = 3
+  }
 }
 ```
 
@@ -48,7 +53,7 @@ resource "ctyun_ecs_backup_policy" "test" {
 
 ### Optional
 
-- `adv_retention` (Block, Optional) 高级保留策略内容，只有retentionType为num且advRetentionStatus为true才生效。支持更新 (see [below for nested schema](#nestedblock--adv_retention))
+- `adv_retention` (Attributes) 高级保留策略内容，只有retentionType为num且advRetentionStatus为true才生效。支持更新 (see [below for nested schema](#nestedatt--adv_retention))
 - `adv_retention_status` (Boolean) 是否开启高级保留策略，false（不启用），true(启用)，默认值为false。需校验云主机备份保留类型（retentionType），若保留类型为按数量保存（num），可开启高级保留策略；若保留类型为date（按时间保存）或all（永久保存），不可开启高级保留策略。支持更新
 - `cycle_day` (Number) 备份周期（天），取值范围：[1, 30]，默认值为1。注：只有cycleType为day时有效。支持更新
 - `cycle_week` (String) 备份周期（星期），星期取值范围：0~6（代表周几，其中0为周日），默认值是0。注：只有cycleType为week时有效；如果一周有多天备份，以逗号隔开（如周日周三进行快照，则填写"0,3"）。支持更新
@@ -66,7 +71,7 @@ resource "ctyun_ecs_backup_policy" "test" {
 - `repository_list` (Attributes List) 策略已绑定的云主机备份库列表 (see [below for nested schema](#nestedatt--repository_list))
 - `resource_ids` (String) 策略已绑定的云主机ID，以逗号分隔
 
-<a id="nestedblock--adv_retention"></a>
+<a id="nestedatt--adv_retention"></a>
 ### Nested Schema for `adv_retention`
 
 Optional:
@@ -84,3 +89,15 @@ Read-Only:
 
 - `repository_id` (String) 云主机备份库ID
 - `repository_name` (String) 云主机备份库名称
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入ECS备份策略
+# [] 标记的参数为必填参数
+# <> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_ecs_backup_policy.example [id],<region_id>
+# 示例
+terraform import ctyun_ecs_backup_policy.example 12345678-1234-1234-1234-123456789012,bb9fdb42056f11eda1610242ac110002
+```

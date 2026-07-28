@@ -5,6 +5,7 @@ import "github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 const (
 	EipAssociationTypeVm  = "vm"
 	EipAssociationTypeVip = "vip"
+	EipAssociationTypeBm  = "bm"
 
 	EipBandwidthTypeStandalone = "standalone"
 	EipBandwidthTypeShare      = "share"
@@ -36,6 +37,7 @@ const (
 var EipAssociationTypes = []string{
 	EipAssociationTypeVm,
 	EipAssociationTypeVip,
+	EipAssociationTypeBm,
 }
 
 var EipDemandBillingTypes = []string{
@@ -63,15 +65,18 @@ var EipAssociationTypeMap = utils.Must(
 	[]any{
 		EipAssociationTypeVm,
 		EipAssociationTypeVip,
+		EipAssociationTypeBm,
 	},
 	map[utils.Scene][]any{
 		EipAssociationTypeMapScene1: {
 			1,
 			2,
+			3,
 		},
 		EipAssociationTypeMapScene2: {
 			"INSTANCE",
 			"VIP",
+			"PHYSICALINSTANCE",
 		},
 	},
 )

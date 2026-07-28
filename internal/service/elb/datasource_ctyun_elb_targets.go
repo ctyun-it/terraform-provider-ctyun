@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -40,7 +41,7 @@ func (c *ctyunElbTargets) Metadata(_ context.Context, request datasource.Metadat
 
 func (c *ctyunElbTargets) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10196689`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡后端主机列表", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10196689"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -55,7 +56,7 @@ func (c *ctyunElbTargets) Schema(ctx context.Context, request datasource.SchemaR
 				Optional:    true,
 				Description: "后端服务ID列表，以,分隔",
 			},
-			"elb_targets": schema.ListNestedAttribute{
+			"targets": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "后端主机列表",
 				NestedObject: schema.NestedAttributeObject{
@@ -124,11 +125,11 @@ func (c *ctyunElbTargets) Schema(ctx context.Context, request datasource.SchemaR
 								stringvalidator.OneOf(business.ElbRuleStatus...),
 							},
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -153,7 +154,7 @@ func (c *ctyunElbTargets) Read(ctx context.Context, request datasource.ReadReque
 	}
 	regionId := c.meta.GetExtraIfEmpty(config.RegionID.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionID不能为空"
+		msg := "region_id不能为空"
 		response.Diagnostics.AddError(msg, msg)
 		return
 	}
@@ -209,7 +210,7 @@ type CtyunElbTargetsConfig struct {
 	RegionID      types.String     `tfsdk:"region_id"`       //区域ID
 	TargetGroupID types.String     `tfsdk:"target_group_id"` //	后端服务组ID
 	IDs           types.String     `tfsdk:"ids"`             //后端服务ID列表，以,分隔
-	ElbTargets    []ElbTargetModel `tfsdk:"elb_targets"`
+	ElbTargets    []ElbTargetModel `tfsdk:"targets"`
 }
 
 type ElbTargetModel struct {
@@ -226,6 +227,6 @@ type ElbTargetModel struct {
 	HealthCheckStatus     types.String `tfsdk:"health_check_status"`      //IPv4的健康检查状态: offline / online / unknown
 	HealthCheckStatusIpv6 types.String `tfsdk:"health_check_status_ipv6"` //IPv6的健康检查状态: offline / online / unknown
 	Status                types.String `tfsdk:"status"`                   //状态: DOWN / ACTIVE
-	CreatedTime           types.String `tfsdk:"created_time"`             //创建时间，为UTC格式
-	UpdatedTime           types.String `tfsdk:"updated_time"`             //更新时间，为UTC格式
+	CreatedTime           types.String `tfsdk:"create_time"`              //创建时间，为UTC格式
+	UpdatedTime           types.String `tfsdk:"update_time"`              //更新时间，为UTC格式
 }

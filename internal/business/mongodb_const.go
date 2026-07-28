@@ -55,7 +55,10 @@ const (
 	MongodbStorageTypeSSD        = "SSD"        // 超高IO
 	MongodbStorageTypeSAS        = "SAS"        // 高IO
 	MongodbStorageTypeSATA       = "SATA"       // 普通IO
-	MongodbStorageTypeSSDGenric  = "SSD-Genric" // 通用型SSD
+	MongodbStorageTypeSSDGenric  = "SSD-genric" // 通用型SSD
+	MongodbStorageTypeXSSD0      = "XSSD-0"
+	MongodbStorageTypeXSSD1      = "XSSD-1"
+	MongodbStorageTypeXSSD2      = "XSSD-2"
 	MongodbBackupStorageTypeSSD  = "SSD"
 	MongodbBackupStorageTypeSAS  = "SAS"
 	MongodbBackupStorageTypeSATA = "SATA"
@@ -297,6 +300,9 @@ var MongodbStorageType = []string{
 	MongodbStorageTypeSAS,
 	MongodbStorageTypeSATA,
 	MongodbStorageTypeSSDGenric,
+	MongodbStorageTypeXSSD0,
+	MongodbStorageTypeXSSD1,
+	MongodbStorageTypeXSSD2,
 }
 
 var MongodbInstanceSeriesDict = map[string]string{
@@ -359,4 +365,28 @@ var MongodbReplicaNodeNum = map[string]int32{
 	"Replica3R60": 3,
 	"Replica5R60": 5,
 	"Replica7R60": 7,
+}
+
+// MongodbSpecTypeToNodeNum 根据 specType（如"副本集三副本"）获取副本节点数量
+var MongodbSpecTypeToNodeNum = map[string]int32{
+	"副本集三副本": 3,
+	"副本集五副本": 5,
+	"副本集七副本": 7,
+}
+
+var MongodbCpuTypeDict = map[string]int32{
+	"KunPeng":  10,
+	"Hygon":    20,
+	"Intel":    30,
+	"AMD":      40,
+	"Phytium":  50,
+	"Loongson": 60,
+}
+
+var MongodbSpecTypeDict = map[string]string{
+	"单机版":    MongodbProdTypeSingle,
+	"副本集三副本": MongodbProdTypeReplica,
+	"副本集五副本": MongodbProdTypeReplica,
+	"副本集七副本": MongodbProdTypeReplica,
+	"集群版":    MongodbProdTypeCluster,
 }

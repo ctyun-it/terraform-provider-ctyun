@@ -15,7 +15,6 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
   enable_ipv6 = true
   lifecycle {
@@ -36,8 +35,6 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
 }
 
 # 创建密钥对
@@ -53,7 +50,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name     = "ds-ecs-${count.index + 1}"
   flavor_id        = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id         = data.ctyun_images.image_test.images[0].id
-  system_disk_type = "sata"
+  system_disk_type = "SATA"
   system_disk_size = 40
   vpc_id           = ctyun_vpc.vpc_test.id
   cycle_type       = "on_demand"
@@ -69,7 +66,7 @@ resource "ctyun_ebs" "ebs_test" {
   count = 5
   name       = "ebs-for-vm-${count.index + 1}"
   mode       = "vbd"
-  type       = "sata"
+  type       = "SATA"
   size       = 60
   cycle_type = "month"
   cycle_count = 1

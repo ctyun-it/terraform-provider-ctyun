@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/hpfs"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -40,14 +41,14 @@ func NewCtyunHpfsClusters() datasource.DataSource {
 
 func (c *ctyunHpfsClusters) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10088932/10090437`,
+		MarkdownDescription: utils.FormatDesc("查询并行文件服务支持的集群类型", "并行文件服务HPFS（CT-HPFS，High Performance File Storage）", "https://www.ctyun.cn/document/10088932/10090437"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "资源池id",
 			},
-			"sfs_type": schema.StringAttribute{
+			"type": schema.StringAttribute{
 				Optional:    true,
 				Description: "类型，hpfs_perf(HPC性能型)",
 			},
@@ -73,12 +74,12 @@ func (c *ctyunHpfsClusters) Schema(ctx context.Context, request datasource.Schem
 					int32validator.Between(1, 50),
 				},
 			},
-			"hpfs_clusters": schema.ListNestedAttribute{
+			"clusters": schema.ListNestedAttribute{
 				Computed:    true,
 				Description: "hpfs集群列表",
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
-						"cluster_name": schema.StringAttribute{
+						"name": schema.StringAttribute{
 							Computed:    true,
 							Description: "集群名称",
 						},
@@ -86,7 +87,7 @@ func (c *ctyunHpfsClusters) Schema(ctx context.Context, request datasource.Schem
 							Computed:    true,
 							Description: "该集群是否可以售卖",
 						},
-						"sfs_type": schema.StringAttribute{
+						"type": schema.StringAttribute{
 							Computed:    true,
 							Description: "集群的存储类型",
 						},
@@ -94,7 +95,7 @@ func (c *ctyunHpfsClusters) Schema(ctx context.Context, request datasource.Schem
 							Computed:    true,
 							Description: "多可用区下的可用区名字",
 						},
-						"sfs_protocol": schema.SetAttribute{
+						"protocol": schema.SetAttribute{
 							Computed:    true,
 							ElementType: types.StringType,
 							Description: "集群支持的协议列表",
@@ -139,6 +140,7 @@ func (c *ctyunHpfsClusters) Read(ctx context.Context, request datasource.ReadReq
 		err = errors.New("region id 为空")
 		return
 	}
+	config.RegionID = types.StringValue(regionId)
 	params := &hpfs.HpfsListClusterRequest{
 		RegionID: regionId,
 		PageNo:   1,
@@ -147,8 +149,10 @@ func (c *ctyunHpfsClusters) Read(ctx context.Context, request datasource.ReadReq
 	if !config.SfsType.IsNull() {
 		params.SfsType = config.SfsType.ValueString()
 	}
-	if !config.AzName.IsNull() {
-		params.AzName = config.AzName.ValueString()
+	azName := c.meta.GetExtraIfEmpty(config.AzName.ValueString(), common.ExtraAzName)
+	if azName != "" {
+		config.AzName = types.StringValue(azName)
+		params.AzName = azName
 	}
 	if !config.EbmDeviceType.IsNull() {
 		params.EbmDeviceType = config.EbmDeviceType.ValueString()
@@ -213,11 +217,11 @@ func (c *ctyunHpfsClusters) Read(ctx context.Context, request datasource.ReadReq
 }
 
 type CtyunHpfsClusterModel struct {
-	ClusterName     types.String `tfsdk:"cluster_name"`     // 集群名称
+	ClusterName     types.String `tfsdk:"name"`             // 集群名称
 	RemainingStatus types.Bool   `tfsdk:"remaining_status"` // 是否可以售卖
-	SfsType         types.String `tfsdk:"sfs_type"`         // 集群的存储类型
+	SfsType         types.String `tfsdk:"type"`             // 集群的存储类型
 	AzName          types.String `tfsdk:"az_name"`          // 多可用区下的可用区名字
-	SfsProtocol     types.Set    `tfsdk:"sfs_protocol"`     // 支持的协议列表
+	SfsProtocol     types.Set    `tfsdk:"protocol"`         // 支持的协议列表
 	Baselines       types.Set    `tfsdk:"baselines"`        // 性能基线列表
 	NetworkType     types.String `tfsdk:"network_type"`     // 集群的网络类型
 	EbmDeviceTypes  types.Set    `tfsdk:"ebm_device_types"` // 裸金属设备规格列表
@@ -225,10 +229,10 @@ type CtyunHpfsClusterModel struct {
 
 type CtyunHpfsClustersConfig struct {
 	RegionID      types.String            `tfsdk:"region_id"`       // 资源池 ID
-	SfsType       types.String            `tfsdk:"sfs_type"`        // 文件系统类型
+	SfsType       types.String            `tfsdk:"type"`            // 文件系统类型
 	AzName        types.String            `tfsdk:"az_name"`         // 可用区名称
 	EbmDeviceType types.String            `tfsdk:"ebm_device_type"` // 裸金属设备规格
 	PageNo        types.Int32             `tfsdk:"page_no"`         // 分页页码
 	PageSize      types.Int32             `tfsdk:"page_size"`       // 每页元素数量
-	HpfsClusters  []CtyunHpfsClusterModel `tfsdk:"hpfs_clusters"`   // hpfs cluster列表
+	HpfsClusters  []CtyunHpfsClusterModel `tfsdk:"clusters"`        // hpfs cluster列表
 }

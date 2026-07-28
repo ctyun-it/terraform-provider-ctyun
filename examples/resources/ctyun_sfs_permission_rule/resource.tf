@@ -19,14 +19,14 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_sfs_permission_group" "sfs_permission_group_test" {
-  name = "permission-group_example"
+  name        = "permission-group-example"
   description = "创建sfs规则组"
 }
 
 
 resource "ctyun_sfs_permission_rule" "sfs_permission_rule_test" {
-  permission_group_fuid    =  ctyun_sfs_permission_group.sfs_permission_group_test.id
-  auth_addr                = "192.168.1.0/24"
-  rw_permission            = "ro"
-  permission_rule_priority = 200
+  permission_group_id = ctyun_sfs_permission_group.sfs_permission_group_test.id
+  auth_addr           = "192.168.1.0/24"
+  rw_permission       = "ro"
+  priority            = 200
 }

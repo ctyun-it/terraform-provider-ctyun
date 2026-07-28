@@ -10,6 +10,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -20,6 +21,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEcsBackup{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsBackup{}
+	_ resource.ResourceWithImportState = &ctyunEcsBackup{}
 )
 
 /*
@@ -33,10 +40,12 @@ func NewCtyunEcsBackup() resource.Resource {
 type ctyunEcsBackup struct {
 	meta       *common.CtyunMetadata
 	ecsService *business.EcsService
+	name       string
 }
 
 func (c *ctyunEcsBackup) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ecs_backup"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupConfig struct {
@@ -53,7 +62,7 @@ type CtyunEcsBackupConfig struct {
 	RepositoryName       types.String `tfsdk:"repository_name"`
 	DiskTotalSize        types.Int64  `tfsdk:"disk_total_size"`
 	UsedSize             types.Int64  `tfsdk:"used_size"`
-	CreatedTime          types.String `tfsdk:"created_time"`
+	CreatedTime          types.String `tfsdk:"create_time"`
 	BackupType           types.String `tfsdk:"backup_type"`
 	FullBackup           types.Bool   `tfsdk:"full_backup"`
 	ProjectID            types.String `tfsdk:"project_id"`
@@ -61,7 +70,7 @@ type CtyunEcsBackupConfig struct {
 
 func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026751/10033761**`,
+		MarkdownDescription: utils.FormatDesc("管理云主机备份", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026751/10033761"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -116,6 +125,7 @@ func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 			},
 			"full_backup": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "是否启用全量备份，取值范围：true：是，false：否。若启用该参数，则此次备份的类型为全量备份。注：只有4.0资源池支持该参数。",
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.RequiresReplace(),
@@ -147,9 +157,9 @@ func (c *ctyunEcsBackup) Schema(_ context.Context, _ resource.SchemaRequest, res
 				Computed:    true,
 				Description: "云硬盘备份已使用大小",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "创建时间",
+				Description: "创建时间，为UTC格式",
 			},
 			"backup_type": schema.StringAttribute{
 				Computed:    true,
@@ -241,6 +251,9 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode != common.OpenapiEcsBackupPolicyNotFound {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -268,6 +281,13 @@ func (c *ctyunEcsBackup) getAndMerge(ctx context.Context, cfg *CtyunEcsBackupCon
 	cfg.CreatedTime = types.StringValue(result.CreatedTime)
 	cfg.ProjectID = types.StringValue(result.ProjectID)
 	cfg.BackupType = types.StringValue(result.BackupType)
+	if cfg.FullBackup.IsUnknown() || cfg.FullBackup.IsNull() {
+		if result.BackupType == "FULL" {
+			cfg.FullBackup = types.BoolValue(true)
+		} else {
+			cfg.FullBackup = types.BoolValue(false)
+		}
+	}
 	return
 }
 
@@ -286,6 +306,10 @@ func (c *ctyunEcsBackup) Read(ctx context.Context, request resource.ReadRequest,
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 
@@ -373,7 +397,9 @@ func (c *ctyunEcsBackup) create(ctx context.Context, plan *CtyunEcsBackupConfig)
 		InstanceBackupName:        plan.InstanceBackupName.ValueString(),
 		InstanceBackupDescription: plan.InstanceBackupDescription.ValueString(),
 		RepositoryID:              plan.RepositoryID.ValueString(),
-		FullBackup:                plan.FullBackup.ValueBool(),
+	}
+	if plan.FullBackup.ValueBool() {
+		params.FullBackup = true
 	}
 
 	// 创建实例
@@ -459,22 +485,41 @@ func (c *ctyunEcsBackup) ImportState(ctx context.Context, request resource.Impor
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var cfg CtyunEcsBackupConfig
-	var id, regionID string
-	err = terraform_extend.Split(request.ID, &id, &regionID)
-	if err != nil {
-		return
-	}
-	cfg.RegionID = types.StringValue(regionID)
-	cfg.Id = types.StringValue(id)
-	// 查询远端
-	err = c.getAndMerge(ctx, &cfg)
-	if err != nil {
-		return
+	var config CtyunEcsBackupConfig
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		ID = request.ID
+
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	if ID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	config.Id = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionId)
+
+	// 调用Read方法获取最新状态
+	err = c.getAndMerge(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }

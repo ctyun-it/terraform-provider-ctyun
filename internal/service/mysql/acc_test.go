@@ -2,9 +2,10 @@ package mysql_test
 
 import (
 	"fmt"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"os"
 	"testing"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 )
 
 const dependenceDir = "testdata/dependence"
@@ -16,7 +17,13 @@ type Dependence struct {
 	eipID           string
 	eipAddress      string
 	mysqlID         string
+	mysqlID2        string
 	azName          string
+	taskID          string
+	templateID      string
+	backupTimeStamp string
+	flavorName      string
+	flavorName2     string
 }
 
 var dependence Dependence
@@ -26,6 +33,8 @@ func TestMain(m *testing.M) {
 		return
 	}
 	fmt.Println("开始初始化依赖资源")
+	os.Setenv("CTYUN_REGION_ID", "200000002530")
+	os.Setenv("CTYUN_AZ_NAME", "cn-huanan2-1A-public-ctcloud")
 	outputs, err := terraform.ApplyResource(dependenceDir)
 	if err != nil {
 		fmt.Println(err)
@@ -37,9 +46,15 @@ func TestMain(m *testing.M) {
 		subnetID:        outputs["subnet_id"].Value,
 		securityGroupID: outputs["security_group_id"].Value,
 		eipID:           outputs["eip_id"].Value,
-		eipAddress:      outputs["eip_address"].Value,
+		//eipAddress: outputs["eip_address"].Value,
 		mysqlID:         outputs["mysql_id"].Value,
+		mysqlID2:        outputs["mysql_id"].Value,
 		azName:          outputs["az_name"].Value,
+		taskID:          outputs["task_id"].Value,
+		templateID:      outputs["template_id"].Value,
+		backupTimeStamp: outputs["backup_timestamp"].Value,
+		flavorName:      outputs["flavor_name"].Value,
+		flavorName2:     outputs["flavor_name2"].Value,
 	}
 
 	fmt.Println("依赖资源初始化完毕")

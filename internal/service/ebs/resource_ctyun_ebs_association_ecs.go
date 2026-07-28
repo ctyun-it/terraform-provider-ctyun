@@ -9,6 +9,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,6 +17,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunEbsAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsAssociation{}
+	_ resource.ResourceWithImportState = &ctyunEbsAssociation{}
 )
 
 func NewCtyunEbsAssociation() resource.Resource {
@@ -24,17 +32,19 @@ func NewCtyunEbsAssociation() resource.Resource {
 
 type ctyunEbsAssociation struct {
 	meta       *common.CtyunMetadata
+	name       string
 	ecsService *business.EcsService
 	ebsService *business.EbsService
 }
 
 func (c *ctyunEbsAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_association_ecs"
+	c.name = response.TypeName
 }
 
 func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10169293`,
+		MarkdownDescription: utils.FormatDesc("管理云硬盘和云主机的绑定关系", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10169293"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -53,7 +63,7 @@ func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest
 			},
 			"instance_id": schema.StringAttribute{
 				Required:    true,
-				Description: "云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载",
+				Description: "云主机id，多可用区资源池下，云硬盘和云主机必须在同个az才能支持挂载；XSSD类型云硬盘支持绑定的云主机规格包括：s8,m8,c8,c8ne,m8ne,s8e,c8e,m8e,hc3,hm3",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -179,18 +189,45 @@ func (c *ctyunEbsAssociation) Delete(ctx context.Context, request resource.Delet
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [diskId],[ecsId],[regionId]
 func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [disk_id],[instance_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsAssociationConfig
 	var diskId, ecsId, regionId string
-	err = terraform_extend.Split(request.ID, &diskId, &ecsId, &regionId)
-	if err != nil {
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("ebs_id和instance_id必须输入")
+		return
+	case 1:
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &diskId, &ecsId)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &diskId, &ecsId, &regionId)
+		if err != nil {
+			return
+		}
+	}
+
+	if diskId == "" {
+		err = fmt.Errorf("ebs_id不能为空")
+		return
+	}
+	if ecsId == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
 		return
 	}
 
@@ -201,6 +238,10 @@ func (c *ctyunEbsAssociation) ImportState(ctx context.Context, request resource.
 	var instance *CtyunEbsAssociationConfig
 	instance, err = c.getAndMergeEbsAssociationEcs(ctx, cfg)
 	if err != nil {
+		return
+	}
+	if instance == nil {
+		err = common.ResourceNotExistError
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -225,17 +266,16 @@ func (c *ctyunEbsAssociation) getAndMergeEbsAssociationEcs(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if len(resp.Attachments) == 0 {
-		return nil, nil
+	if resp.IsSystemVolume {
+		return nil, fmt.Errorf("不支持系统盘")
 	}
 	for _, each := range resp.Attachments {
 		if each.InstanceId == cfg.InstanceId.ValueString() {
-			cfg.InstanceId = types.StringValue(each.InstanceId)
-			break
+			cfg.ID = types.StringValue(fmt.Sprintf("%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString()))
+			return &cfg, nil
 		}
 	}
-	cfg.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", cfg.EbsId.ValueString(), cfg.InstanceId.ValueString(), cfg.RegionId.ValueString()))
-	return &cfg, err
+	return nil, nil
 }
 
 type CtyunEbsAssociationConfig struct {

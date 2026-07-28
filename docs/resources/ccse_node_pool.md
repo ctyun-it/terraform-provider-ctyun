@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_node_pool"
+---
+
 # ctyun_ccse_node_pool (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10318452
+-> 管理云容器引擎节点池
 
 
 
@@ -28,19 +33,19 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
 }
 
 resource "ctyun_ccse_node_pool" "example" {
-  cluster_id               = "dd92f3a6b034431bb7dceb849aed1220"
-  name           = "default-pool"
-  cycle_type              = "month"
-  cycle_count = 1
-  auto_renew = true
-  instance_type            = "ecs"
-  mirror_id                = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
-  mirror_type              = 1
-  key_pair_name           = "KeyPair-de15"
-  use_affinity_group       = true
-  affinity_group_id      = "f8b18511-4327-4c3f-9373-c6d661889fcb"
-  item_def_name            = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
-  max_pod_num              = 110
+  cluster_id         = "dd92f3a6b034431bb7dceb849aed1220"
+  name               = "default-pool"
+  cycle_type         = "month"
+  cycle_count        = 1
+  auto_renew         = true
+  instance_type      = "ecs"
+  mirror_id          = "3f80d8c0-8eb5-4afa-a506-13ba68b61872"
+  mirror_type        = 1
+  key_pair_name      = "KeyPair-de15"
+  use_affinity_group = true
+  affinity_group_id  = "f8b18511-4327-4c3f-9373-c6d661889fcb"
+  item_def_name      = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  max_pod_num        = 110
   az_infos = [
     {
       az_name = "cn-huadong1-jsnj1A-public-ctcloud"
@@ -97,7 +102,7 @@ resource "ctyun_ccse_node_pool" "example" {
 
 ### Optional
 
-- `affinity_group_id` (String) 云主机组id
+- `affinity_group_id` (String) 云主机组id，use_affinity_group为true时必填
 - `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，支持更新
 - `cycle_count` (Number) 订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年，支持更新
 - `data_disks` (Attributes List) 数据盘信息，支持更新 (see [below for nested schema](#nestedatt--data_disks))
@@ -130,7 +135,7 @@ Required:
 
 Required:
 
-- `type` (String) 数据盘类型，支持SATA、SAS、SSD，支持更新
+- `type` (String) 数据盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新
 
 Optional:
 
@@ -143,4 +148,4 @@ Optional:
 Required:
 
 - `size` (Number) 系统盘大小，单位为G，支持范围40-2040，支持更新
-- `type` (String) 系统盘类型，支持SATA、SAS、SSD，支持更新
+- `type` (String) 系统盘类型，支持SATA、SAS、SSD、SSD-genric、FAST-SSD、XSSD-0、XSSD-1、XSSD-2，支持更新

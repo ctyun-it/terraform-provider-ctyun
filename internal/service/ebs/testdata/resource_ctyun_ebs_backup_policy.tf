@@ -10,7 +10,7 @@ resource "ctyun_ebs_backup_policy" "%[1]s" {
     adv_retention_status  = true
 
     # 当启用高级保留策略且retention_type为num时，可以配置高级保留策略
-    adv_retention {
+    adv_retention = {
      adv_day = 3
     }
 }

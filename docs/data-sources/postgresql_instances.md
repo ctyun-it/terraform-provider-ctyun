@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库PostgreSQL版"
+page_title: "CTYUN: ctyun_postgresql_instances"
+---
+
 # ctyun_postgresql_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10034019/10153165
+-> 查询PostgreSQL实例
 
 
 
@@ -19,7 +24,7 @@ provider "ctyun" {
   env = "prod"
 }
 data "ctyun_postgresql_instances" "test" {
-  
+
 }
 ```
 
@@ -28,36 +33,37 @@ data "ctyun_postgresql_instances" "test" {
 
 ### Optional
 
+- `instance_id` (String) 实例ID
 - `instance_type` (String) 实例类型（primary/readonly）
 - `label_name` (String) 标签名称（一级标签）
 - `label_value` (String) 标签值（二级标签）
-- `page_num` (Number) 当前页码。默认:1
+- `name` (String) 实例名称，支持模糊匹配
+- `page_no` (Number) 当前页码。默认:1
 - `page_size` (Number) 页大小，范围1-500。默认:20
-- `prod_inst_id` (String) 实例ID
-- `prod_inst_name` (String) 实例名称，支持模糊匹配
 - `project_id` (String) 项目ID
 - `region_id` (String) 资源池ID
 
 ### Read-Only
 
-- `pgsql_instances` (Attributes List) (see [below for nested schema](#nestedatt--pgsql_instances))
+- `instances` (Attributes List) (see [below for nested schema](#nestedatt--instances))
 
-<a id="nestedatt--pgsql_instances"></a>
-### Nested Schema for `pgsql_instances`
+<a id="nestedatt--instances"></a>
+### Nested Schema for `instances`
 
 Read-Only:
 
 - `alive` (Number) 实例存活状态: 0(存活), -1(异常)
 - `create_time` (String) 实例创建时间
+- `instance_id` (String) 实例唯一ID
 - `instance_type` (String) 实例类型: primary(主实例), readonly(只读实例)
 - `name` (String) 实例名称
+- `port` (Number) 读写端口号
 - `prod_db_engine` (String) 数据库引擎类型
-- `prod_inst_id` (String) 实例唯一ID
 - `prod_order_status` (Number) 订单状态: 0(正常),1(冻结),2(删除),3(操作中),4(失败),2005(扩容中)
 - `prod_running_status` (Number) 运行状态: 0(运行中),1(重启中),2(备份中),3(恢复中),1001(已停止),1006(复失败),1007(VIP不可用),1008(GATEWAY不可用),1009(主库不可用),1010(备库不可用),1021(实例维护中),2000(开通中),2002(已退订),2005(扩容中),2011(冻结)
 - `prod_type` (Number) 部署方式: 0(单机部署),1(主备部署)
-- `read_port` (Number) 读连接端口号
+- `read_port` (Number, Deprecated) 读连接端口号
 - `readonly_instance_ids` (String) 关联的只读实例ID列表
 - `tool_type` (Number) 备份工具类型: 1(pg_baseback), 2(pgbackrest), 3(s3)
 - `vip` (String) 虚拟IP地址
-- `write_port` (Number) 写连接端口号
+- `write_port` (Number, Deprecated) 写连接端口号

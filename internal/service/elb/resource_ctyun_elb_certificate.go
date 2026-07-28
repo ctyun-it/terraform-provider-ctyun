@@ -2,12 +2,16 @@ package elb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -28,6 +32,7 @@ var (
 
 type CtyunElbCertificate struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunElbCertificate() resource.Resource {
@@ -35,8 +40,34 @@ func NewCtyunElbCertificate() resource.Resource {
 }
 
 func (c *CtyunElbCertificate) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunElbCertificateConfig
+	var ID, regionID string
+	if strings.Count(request.ID, common.ImportSeparator) == 0 {
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		ID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionID)
+		if err != nil {
+			return
+		}
+	}
+	config.ID = types.StringValue(ID)
+	config.RegionID = types.StringValue(regionID)
+
+	err = c.getAndMergeCertificate(ctx, &config)
+	if err != nil {
+		return
+	}
+
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunElbCertificate) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -49,11 +80,12 @@ func (c *CtyunElbCertificate) Configure(ctx context.Context, request resource.Co
 
 func (c *CtyunElbCertificate) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_elb_certificate"
+	c.name = response.TypeName
 }
 
 func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416`,
+		MarkdownDescription: utils.FormatDesc("管理弹性负载均衡访问证书", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155416"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -69,9 +101,10 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 			},
 			"name": schema.StringAttribute{
 				Required:    true,
-				Description: "唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
+				Description: "证书名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新",
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(2, 32),
+					validator2.AclName(),
 				},
 			},
 			"description": schema.StringAttribute{
@@ -81,6 +114,9 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Validators: []validator.String{
 					stringvalidator.LengthBetween(0, 128),
 					validator2.Desc(),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"type": schema.StringAttribute{
@@ -97,17 +133,17 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				Optional:    true,
 				Description: "服务器证书私钥，type=Server服务器证书此字段必填",
 				Validators: []validator.String{
-					validator2.AlsoRequiresEqualString(
-						path.MatchRoot("type"),
-						types.StringValue(business.CertificateTypeServer),
-					),
+					//validator2.AlsoRequiresEqualString(
+					//	path.MatchRoot("type"),
+					//	types.StringValue(business.CertificateTypeServer),
+					//),
 					validator2.ConflictsWithEqualString(
 						path.MatchRoot("type"),
 						types.StringValue(business.CertificateTypeCA),
 					),
 				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.NullIgnoreString(),
 				},
 			},
 			"certificate": schema.StringAttribute{
@@ -121,46 +157,31 @@ func (c *CtyunElbCertificate) Schema(ctx context.Context, request resource.Schem
 				},
 			},
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "证书ID",
+				Computed:    true,
+				Description: "证书ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"status": schema.StringAttribute{
 				Computed:    true,
 				Description: "状态: ACTIVE / INACTIVE",
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "更新时间，为UTC格式",
 			},
-			"az_name": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				// az时候有必要设定默认值
-				Default: defaults.AcquireFromGlobalString(common.ExtraAzName, false),
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Validators: []validator.String{
-					stringvalidator.UTF8LengthAtLeast(1),
-				},
-			},
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 		},
 	}
@@ -217,10 +238,9 @@ func (c *CtyunElbCertificate) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeCertificate(ctx, &state)
 	if err != nil {
-		// 有待确定
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "不存在") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -257,6 +277,12 @@ func (c *CtyunElbCertificate) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
+
+	if !plan.PrivateKey.IsUnknown() && !plan.PrivateKey.IsNull() && state.PrivateKey.IsNull() {
+		state.PrivateKey = plan.PrivateKey
+		response.Diagnostics.AddWarning("private_key的更新仅写入状态文件", "在import时，状态文件中private_key为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -403,6 +429,9 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	if err != nil {
 		return err
 	} else if resp.StatusCode == common.ErrorStatusCode {
+		if resp.ErrorCode == common.OpenapiCertificateAccessFailed {
+			return common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
 	} else if resp.ReturnObj == nil {
@@ -416,6 +445,8 @@ func (c *CtyunElbCertificate) getAndMergeCertificate(ctx context.Context, config
 	config.UpdatedTime = types.StringValue(returnObj.UpdatedTime)
 	config.Name = types.StringValue(returnObj.Name)
 	config.Description = types.StringValue(returnObj.Description)
+	config.Type = types.StringValue(returnObj.RawType)
+	config.Certificate = types.StringValue(returnObj.Certificate)
 	return
 }
 
@@ -425,17 +456,15 @@ func (c *CtyunElbCertificate) updateElbCertificate(ctx context.Context, state *C
 		RegionID:      state.RegionID.ValueString(),
 		CertificateID: state.ID.ValueString(),
 	}
-	if plan.ProjectID.ValueString() != "" && plan.ProjectID.ValueString() != state.ProjectID.ValueString() {
-		params.ProjectID = plan.ProjectID.ValueString()
-	}
+
 	if plan.Name.ValueString() != "" && plan.Name.ValueString() != state.Name.ValueString() {
 		params.Name = plan.Name.ValueString()
 	}
 	if plan.Description.ValueString() != "" && plan.Description.ValueString() != state.Description.ValueString() {
 		params.Description = plan.Description.ValueString()
 	}
-	// 若projectID, 证书名称和证书描述为空的话，不必更新直接返回
-	if params.ProjectID == "" && params.Name == "" && params.Description == "" {
+	// , 证书名称和证书描述为空的话，不必更新直接返回
+	if params.Name == "" && params.Description == "" {
 		return
 	}
 
@@ -453,16 +482,15 @@ func (c *CtyunElbCertificate) updateElbCertificate(ctx context.Context, state *C
 }
 
 type CtyunElbCertificateConfig struct {
-	RegionID    types.String `tfsdk:"region_id"`    //资源池ID
-	Name        types.String `tfsdk:"name"`         //	唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
-	Description types.String `tfsdk:"description"`  //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128
-	Type        types.String `tfsdk:"type"`         //证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
-	PrivateKey  types.String `tfsdk:"private_key"`  //服务器证书私钥，服务器证书此字段必填
-	Certificate types.String `tfsdk:"certificate"`  //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
-	ID          types.String `tfsdk:"id"`           //证书ID
-	Status      types.String `tfsdk:"status"`       //状态: ACTIVE / INACTIVE
-	CreatedTime types.String `tfsdk:"created_time"` //创建时间，为UTC格式
-	UpdatedTime types.String `tfsdk:"updated_time"` //更新时间，为UTC格式
-	AzName      types.String `tfsdk:"az_name"`      //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`   //项目ID
+	RegionID    types.String `tfsdk:"region_id"`   //资源池ID
+	Name        types.String `tfsdk:"name"`        //	唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
+	Description types.String `tfsdk:"description"` //支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128
+	Type        types.String `tfsdk:"type"`        //证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
+	PrivateKey  types.String `tfsdk:"private_key"` //服务器证书私钥，服务器证书此字段必填
+	Certificate types.String `tfsdk:"certificate"` //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
+	ID          types.String `tfsdk:"id"`          //证书ID
+	Status      types.String `tfsdk:"status"`      //状态: ACTIVE / INACTIVE
+	CreatedTime types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	UpdatedTime types.String `tfsdk:"update_time"` //更新时间，为UTC格式
+	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
 }

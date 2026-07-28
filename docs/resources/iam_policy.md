@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_policy"
+---
+
 # ctyun_iam_policy (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10390484
+-> 管理权限策略
 
 
 
@@ -23,8 +28,8 @@ resource "ctyun_iam_policy" "iam_policy_test" {
   name        = "terraform_policy_test1"
   description = "terraform测试新建策略"
   range       = "region"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"
@@ -51,16 +56,16 @@ resource "ctyun_iam_policy" "iam_policy_test" {
 ### Required
 
 - `content` (Attributes) 权限控制的对象 (see [below for nested schema](#nestedatt--content))
-- `name` (String) 策略的名称，长度最大为64
+- `name` (String) 策略的名称，长度最大为64，支持更新
 
 ### Optional
 
-- `description` (String) 策略描述，长度最大为128
-- `range` (String) 策略范围，region：资源池级别，global：全局级别，默认为全局级别global
+- `description` (String) 策略描述，长度最大为128，支持更新
+- `range` (String) 策略范围，region：资源池级别，global：全局级别，默认为全局级别global，支持更新
 
 ### Read-Only
 
-- `id` (String) 绑定关系id
+- `id` (String) 策略ID
 
 <a id="nestedatt--content"></a>
 ### Nested Schema for `content`
@@ -71,16 +76,28 @@ Required:
 
 Optional:
 
-- `version` (String) 权限控制的版本号，默认为1.1
+- `version` (String) 权限控制的版本号，目前只支持为1.1
 
 <a id="nestedatt--content--statement"></a>
 ### Nested Schema for `content.statement`
 
 Required:
 
-- `action` (Set of String) 对应权限点的code，必填，项目至少为1个，详见ctyun_iam_authorities中的code属性
-- `effect` (String) 对应的权限策略动作，allow：允许，deny：拒绝
+- `action` (Set of String) 对应权限点的code，必填，项目至少为1个，详见ctyun_iam_authorities中的code属性，支持更新
+- `effect` (String) 对应的权限策略动作，allow：允许，deny：拒绝，支持更新
 
 Optional:
 
-- `resource` (Set of String) 资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*
+- `resource` (Set of String) 资源池级别的维度，当权限点为资源池级别时候才生效，不填默认写*，支持更新
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入IAM策略资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_iam_policy.[导入配置名称] [id]
+# 示例
+terraform import ctyun_iam_policy.policy_example 376f2f85-ff34-c4e0-4f5b-320dd427a271
+```

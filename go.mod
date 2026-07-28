@@ -9,11 +9,14 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 )
 
+require github.com/Taoja/sm4 v0.0.0-20210702124949-ed65c23ff019
+
 replace github.com/aws/aws-sdk-go v1.38.63 => ./internal/core/zos-sdk/aws-sdk-go-1.38.63
 
 replace github.com/jmespath/go-jmespath v0.4.0 => ./internal/core/zos-sdk/go-jmespath-0.4.0
 
 require (
+	github.com/fernet/fernet-go v0.0.0-20240119011108-303da6aec611
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/hashicorp/terraform-plugin-framework v1.14.1

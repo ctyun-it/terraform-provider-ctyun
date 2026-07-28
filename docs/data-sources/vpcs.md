@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_vpcs"
+---
+
 # ctyun_vpcs (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10028487
+-> 查询虚拟私有云列表
 
 
 
@@ -58,7 +63,7 @@ Read-Only:
 - `ipv6_enabled` (Boolean) 是否开启ipv6
 - `name` (String) 名称
 - `nat_gateway_ids` (List of String) 网关id列表
-- `project_id` (String) 企业项目ID，默认为`0`
+- `project_id` (String) 企业项目ID
 - `secondary_cidrs` (List of String) 附加网段
 - `subnet_ids` (List of String) 子网id列表
 - `vpc_id` (String) vpc示例ID

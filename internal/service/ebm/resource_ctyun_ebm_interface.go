@@ -2,6 +2,7 @@ package ebm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -23,13 +24,14 @@ import (
 )
 
 var (
-	_ resource.Resource                = &ctyunEbm{}
-	_ resource.ResourceWithConfigure   = &ctyunEbm{}
-	_ resource.ResourceWithImportState = &ctyunEbm{}
+	_ resource.Resource                = &ctyunEbmInterface{}
+	_ resource.ResourceWithConfigure   = &ctyunEbmInterface{}
+	_ resource.ResourceWithImportState = &ctyunEbmInterface{}
 )
 
 type ctyunEbmInterface struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func NewCtyunEbmInterface() resource.Resource {
@@ -38,6 +40,7 @@ func NewCtyunEbmInterface() resource.Resource {
 
 func (c *ctyunEbmInterface) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebm_interface"
+	c.name = response.TypeName
 }
 
 type CtyunEbmInterfaceConfig struct {
@@ -55,16 +58,21 @@ type CtyunEbmInterfaceConfig struct {
 
 func (c *ctyunEbmInterface) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027724/10040142`,
+		MarkdownDescription: utils.FormatDesc("管理物理机的弹性网卡", "物理机服务（CT-DPS，Dedicated Physical Server）", "https://www.ctyun.cn/document/10027724/10040142"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"interface_id": schema.StringAttribute{
 				Computed:    true,
 				Description: "网卡ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -190,6 +198,10 @@ func (c *ctyunEbmInterface) Read(ctx context.Context, request resource.ReadReque
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
@@ -274,31 +286,68 @@ func (c *ctyunEbmInterface) Configure(_ context.Context, request resource.Config
 	c.meta = meta
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [instance_id],[interface_id],[regionID],[azName]
 func (c *ctyunEbmInterface) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[interface_id],<az_name>,<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-	var plan CtyunEbmInterfaceConfig
-	var instanceID, interfaceID, regionID, azName string
-	err = terraform_extend.Split(request.ID, &instanceID, &interfaceID, &regionID, &azName)
-	if err != nil {
-		return
-	}
-	plan.InterfaceID = types.StringValue(interfaceID)
-	plan.InstanceID = types.StringValue(instanceID)
-	plan.RegionID = types.StringValue(regionID)
-	plan.AzName = types.StringValue(azName)
+	var config CtyunEbmInterfaceConfig
 
-	// 查询远端
-	err = c.getAndMerge(ctx, &plan)
+	var instanceID, interfaceID, regionID, azName string
+	cnt := strings.Count(request.ID, common.ImportSeparator)
+	switch cnt {
+	case 0:
+		err = fmt.Errorf("至少需要输入instance_id和interface_id")
+		return
+	case 1:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		azName = c.meta.GetExtraIfEmpty(azName, common.ExtraAzName)
+		err = terraform_extend.Split(request.ID, &instanceID, &interfaceID)
+		if err != nil {
+			return
+		}
+	case 2:
+		regionID = c.meta.GetExtraIfEmpty(regionID, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &interfaceID, &azName)
+		if err != nil {
+			return
+		}
+	default:
+		err = terraform_extend.Split(request.ID, &instanceID, &interfaceID, &azName, &regionID)
+		if err != nil {
+			return
+		}
+	}
+
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if interfaceID == "" {
+		err = fmt.Errorf("interface_id不能为空")
+		return
+	}
+	if regionID == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	if azName == "" {
+		err = fmt.Errorf("az_name不能为空")
+		return
+	}
+	config.InstanceID = types.StringValue(instanceID)
+	config.InterfaceID = types.StringValue(interfaceID)
+	config.AzName = types.StringValue(azName)
+	config.RegionID = types.StringValue(regionID)
+	err = c.getAndMerge(ctx, &config)
 	if err != nil {
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, &plan)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 // checkBeforeCreate 创建前检查
@@ -418,8 +467,7 @@ func (c *ctyunEbmInterface) getAndMerge(ctx context.Context, plan *CtyunEbmInter
 			return
 		}
 	}
-	err = fmt.Errorf("未找到目标网卡 %s", plan.InterfaceID.ValueString())
-	return
+	return common.ResourceNotExistError
 }
 
 // updateInterface 更新网卡的安全组

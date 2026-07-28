@@ -1,0 +1,11 @@
+release-note:new-resource
+ctyun_private_zone
+
+release-note:new-resource
+ctyun_private_zone_record
+
+release-note:new-data-source
+ctyun_private-zones
+
+release-note:new-data-source
+ctyun_private_zone_records

@@ -7,6 +7,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -41,7 +42,7 @@ func (c *CtyunScalingEcsList) Metadata(ctx context.Context, request datasource.M
 
 func (c *CtyunScalingEcsList) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027725/10216515`,
+		MarkdownDescription: utils.FormatDesc("查询弹性伸缩组的云主机列表", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725/10216515"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -90,9 +91,9 @@ func (c *CtyunScalingEcsList) Schema(ctx context.Context, request datasource.Sch
 							Computed:    true,
 							Description: "企业项目ID",
 						},
-						"create_date": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
-							Description: "创建时间",
+							Description: "创建时间，为UTC格式",
 						},
 						"id": schema.Int64Attribute{
 							Computed:    true,
@@ -220,7 +221,7 @@ type CtyunScalingEcsListModel struct {
 	GroupID       types.Int64  `tfsdk:"group_id"`       // 伸缩组ID
 	AzName        types.String `tfsdk:"az_name"`        // 实例所在的可用区
 	ProjectID     types.String `tfsdk:"project_id"`     // 企业项目ID
-	CreateDate    types.String `tfsdk:"create_date"`    // 创建时间
+	CreateDate    types.String `tfsdk:"create_time"`    // 创建时间
 	ID            types.Int64  `tfsdk:"id"`             // 实例ID
 	Status        types.String `tfsdk:"status"`         // 伸缩活动状态
 	InstanceName  types.String `tfsdk:"instance_name"`  // 云主机名称

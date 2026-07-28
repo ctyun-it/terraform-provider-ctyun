@@ -6,6 +6,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	ctelb "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctelb"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -28,7 +29,7 @@ func (c *ctyunElbCertificates) Metadata(ctx context.Context, request datasource.
 
 func (c *ctyunElbCertificates) Schema(ctx context.Context, request datasource.SchemaRequest, response *datasource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416`,
+		MarkdownDescription: utils.FormatDesc("查询弹性负载均衡访问证书", "弹性负载均衡（CT-ELB ，Elastic Load Balancing）", "https://www.ctyun.cn/document/10026756/10155416"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -95,11 +96,11 @@ func (c *ctyunElbCertificates) Schema(ctx context.Context, request datasource.Sc
 							Computed:    true,
 							Description: "状态: ACTIVE / INACTIVE",
 						},
-						"created_time": schema.StringAttribute{
+						"create_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "创建时间，为UTC格式",
 						},
-						"updated_time": schema.StringAttribute{
+						"update_time": schema.StringAttribute{
 							Computed:    true,
 							Description: "更新时间，为UTC格式",
 						},
@@ -194,16 +195,16 @@ type CtyunElbCertificatesConfig struct {
 }
 
 type CtyunElbCertificatesInfoModel struct {
-	RegionID    types.String `tfsdk:"region_id"`    //资源池ID
-	AzName      types.String `tfsdk:"az_name"`      //可用区名称
-	ProjectID   types.String `tfsdk:"project_id"`   //项目ID
-	ID          types.String `tfsdk:"id"`           //证书ID
-	Name        types.String `tfsdk:"name"`         //名称
-	Description types.String `tfsdk:"description"`  //描述
-	Type        types.String `tfsdk:"type"`         //证书类型: server / ca
-	PrivateKey  types.String `tfsdk:"private_key"`  //服务器证书私钥
-	Certificate types.String `tfsdk:"certificate"`  //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
-	Status      types.String `tfsdk:"status"`       //状态: ACTIVE / INACTIVE
-	CreatedTime types.String `tfsdk:"created_time"` //创建时间，为UTC格式
-	UpdatedTime types.String `tfsdk:"updated_time"` //更新时间，为UTC格式
+	RegionID    types.String `tfsdk:"region_id"`   //资源池ID
+	AzName      types.String `tfsdk:"az_name"`     //可用区名称
+	ProjectID   types.String `tfsdk:"project_id"`  //项目ID
+	ID          types.String `tfsdk:"id"`          //证书ID
+	Name        types.String `tfsdk:"name"`        //名称
+	Description types.String `tfsdk:"description"` //描述
+	Type        types.String `tfsdk:"type"`        //证书类型: server / ca
+	PrivateKey  types.String `tfsdk:"private_key"` //服务器证书私钥
+	Certificate types.String `tfsdk:"certificate"` //type为Server该字段表示服务器证书公钥Pem内容;type为Ca该字段表示Ca证书Pem内容
+	Status      types.String `tfsdk:"status"`      //状态: ACTIVE / INACTIVE
+	CreatedTime types.String `tfsdk:"create_time"` //创建时间，为UTC格式
+	UpdatedTime types.String `tfsdk:"update_time"` //更新时间，为UTC格式
 }

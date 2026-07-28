@@ -7,6 +7,8 @@ import (
 const EndpointName = "ctecs"
 
 type Apis struct {
+	CtecsEcsGetAutoRenewConfigApi                   *CtecsEcsGetAutoRenewConfigApi
+	CtecsEcsUpdateAutoRenewConfigApi                *CtecsEcsUpdateAutoRenewConfigApi
 	CtecsDeleteInstanceAndRelatedResourceApi        *CtecsDeleteInstanceAndRelatedResourceApi
 	CtecsRecoverUnsubscribeInstanceV41Api           *CtecsRecoverUnsubscribeInstanceV41Api
 	CtecsGetCaAgentApi                              *CtecsGetCaAgentApi
@@ -229,6 +231,8 @@ func NewApis(endpointUrl string, client *core.CtyunClient) *Apis {
 		Url:  endpointUrl,
 	})
 	return &Apis{
+		CtecsEcsUpdateAutoRenewConfigApi:                NewCtecsEcsUpdateAutoRenewConfigApi(client),
+		CtecsEcsGetAutoRenewConfigApi:                   NewCtecsEcsGetAutoRenewConfigApi(client),
 		CtecsDeleteInstanceAndRelatedResourceApi:        NewCtecsDeleteInstanceAndRelatedResourceApi(client),
 		CtecsRecoverUnsubscribeInstanceV41Api:           NewCtecsRecoverUnsubscribeInstanceV41Api(client),
 		CtecsGetCaAgentApi:                              NewCtecsGetCaAgentApi(client),

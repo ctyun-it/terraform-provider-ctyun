@@ -1,5 +1,10 @@
+---
+subcategory: "分布式消息服务RabbitMQ"
+page_title: "CTYUN: ctyun_rabbitmq_instances"
+---
+
 # ctyun_rabbitmq_instances (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10000118/10001967
+-> 查询RabbitMQ实例
 
 
 
@@ -20,7 +25,7 @@ provider "ctyun" {
 }
 
 data "ctyun_rabbitmq_instances" "tbidgqvfbs" {
-  instance_id ="8d839e64a4314edb8121d0d1f69b8b19"
+  instance_id = "8d839e64a4314edb8121d0d1f69b8b19"
 }
 
 output "list" {
@@ -48,9 +53,9 @@ output "list" {
 Read-Only:
 
 - `bill_mode` (String) 账单
-- `create_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `engine_type` (String) 引擎类型
-- `expire_time` (String) 过期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `id` (String) id
 - `instance_name` (String) 实例名称
 - `prod` (String) 规格

@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,9 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
+	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -16,9 +20,14 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"regexp"
 	"strings"
 	"time"
+)
+
+var (
+	_ resource.Resource                = &ctyunEbsSnapshotPolicyAssociation{}
+	_ resource.ResourceWithConfigure   = &ctyunEbsSnapshotPolicyAssociation{}
+	_ resource.ResourceWithImportState = &ctyunEbsSnapshotPolicyAssociation{}
 )
 
 /*
@@ -31,27 +40,31 @@ func NewCtyunEbsSnapshotPolicyAssociation() resource.Resource {
 
 type ctyunEbsSnapshotPolicyAssociation struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEbsSnapshotPolicyAssociation) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_snapshot_policy_association"
+	c.name = response.TypeName
 }
 
 type CtyunEbsSnapshotPolicyAssociationConfig struct {
 	ID               types.String `tfsdk:"id"`
 	SnapshotPolicyID types.String `tfsdk:"snapshot_policy_id"`
 	RegionID         types.String `tfsdk:"region_id"`
-	DiskIDList       types.String `tfsdk:"disk_id_list"`
+	DiskID           types.String `tfsdk:"disk_id"`
 }
 
 func (c *ctyunEbsSnapshotPolicyAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10027696/10118856**`,
+		MarkdownDescription: utils.FormatDesc("管理云硬盘和快照策略的绑定关系", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10118856"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "ID",
+				Computed:    true,
+				Description: "ID",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"snapshot_policy_id": schema.StringAttribute{
 				Required:    true,
@@ -75,18 +88,14 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Schema(_ context.Context, _ resource
 				},
 				Default: defaults2.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
-			"disk_id_list": schema.StringAttribute{
+			"disk_id": schema.StringAttribute{
 				Required:    true,
-				Description: "云硬盘ID列表，多台使用英文逗号分割",
+				Description: "云硬盘ID",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 				Validators: []validator.String{
-					stringvalidator.LengthAtLeast(1), // 至少包含一个字符
-					stringvalidator.RegexMatches(
-						regexp.MustCompile(`^[a-zA-Z0-9\-_,]+$`),
-						"必须是由逗号分隔的UUID列表",
-					),
+					validator2.UUID(),
 				},
 			},
 		},
@@ -110,7 +119,10 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Create(ctx context.Context, request 
 	if err != nil {
 		return
 	}
-
+	err = c.createSnapshotOrder(ctx, plan)
+	if err != nil {
+		return
+	}
 	// 实际创建
 	err = c.create(ctx, plan)
 	if err != nil {
@@ -146,9 +158,9 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Read(ctx context.Context, request re
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
-			response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
 			err = nil
+			response.State.RemoveResource(ctx)
 		}
 		return
 	}
@@ -193,13 +205,11 @@ func (c *ctyunEbsSnapshotPolicyAssociation) Configure(_ context.Context, request
 
 // create 创建
 func (c *ctyunEbsSnapshotPolicyAssociation) create(ctx context.Context, plan CtyunEbsSnapshotPolicyAssociationConfig) (err error) {
-
 	params := &ctebs2.EbsApplyPolicyEbsSnapRequest{
 		RegionID:         plan.RegionID.ValueString(),
 		SnapshotPolicyID: plan.SnapshotPolicyID.ValueString(),
-		TargetDiskIDs:    plan.DiskIDList.ValueString(),
+		TargetDiskIDs:    plan.DiskID.ValueString(),
 	}
-
 	// 创建实例
 	resp, err := c.meta.Apis.SdkCtEbsApis.EbsApplyPolicyEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -214,6 +224,29 @@ func (c *ctyunEbsSnapshotPolicyAssociation) create(ctx context.Context, plan Cty
 		return
 	}
 
+	return
+}
+
+func (c *ctyunEbsSnapshotPolicyAssociation) createSnapshotOrder(ctx context.Context, plan CtyunEbsSnapshotPolicyAssociationConfig) (err error) {
+	clientToken := uuid.NewString()
+	params := &ctebs2.EbsCreateOrderEbsSnapRequest{
+		RegionID:    plan.RegionID.ValueString(),
+		ClientToken: &clientToken,
+		DiskID:      plan.DiskID.ValueString(),
+	}
+	resp, err := c.meta.Apis.SdkCtEbsApis.EbsCreateOrderEbsSnapApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode != common.NormalStatusCode {
+		if *resp.Description == "云硬盘已经开通过快照服务" {
+			return
+		}
+		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	}
 	return
 }
 
@@ -236,31 +269,19 @@ func (c *ctyunEbsSnapshotPolicyAssociation) checkBeforeBindDisks(ctx context.Con
 	} else if resp.ReturnObj.SnapshotPolicyTotalCount != 1 {
 		return fmt.Errorf("自动快照策略必须存在")
 	}
-
-	if cfg.DiskIDList.ValueString() != "" {
-		// 拆分实例ID列表
-		diskIds := strings.Split(cfg.DiskIDList.ValueString(), ",")
-		// 对每个实例ID进行校验
-		for _, diskId := range diskIds {
-			//云硬盘只能绑定一个自动快照策略，如果一个云硬盘已经绑定了自动快照策略，再次调用该接口绑定新的自动快照策略，旧的自动快照策略会自动解绑。
-
-			//查询云硬盘
-			_, err2 := c.meta.Apis.CtEbsApis.EbsShowApi.Do(ctx, c.meta.Credential, &ctebs.EbsShowRequest{
-				RegionId: cfg.RegionID.ValueString(),
-				DiskId:   diskId,
-			})
-			if err2 != nil {
-				// 实例已经被退订的情况
-				if err2.ErrorCode() == common.EcsInstanceNotFound {
-					return nil
-				}
-				return err2
-			}
-
+	diskId := cfg.DiskID.ValueString()
+	//查询云硬盘
+	_, err2 := c.meta.Apis.CtEbsApis.EbsShowApi.Do(ctx, c.meta.Credential, &ctebs.EbsShowRequest{
+		RegionId: cfg.RegionID.ValueString(),
+		DiskId:   diskId,
+	})
+	if err2 != nil {
+		// 实例已经被退订的情况
+		if err2.ErrorCode() == common.EcsInstanceNotFound {
+			return nil
 		}
-
+		return err2
 	}
-
 	return
 }
 
@@ -271,25 +292,21 @@ func (c *ctyunEbsSnapshotPolicyAssociation) checkAfterBindDisks(ctx context.Cont
 	retryer, _ := business.NewRetryer(time.Second*10, 180)
 	retryer.Start(
 		func(currentTime int) bool {
-			if plan.DiskIDList.ValueString() != "" {
-				snapshotPolicyID, err = c.getBindingDisks(ctx, plan)
-				if err != nil {
-					return false
-				}
-				if snapshotPolicyID == plan.SnapshotPolicyID.ValueString() {
-					executeSuccessFlag = true
-					return false
-				}
-
+			snapshotPolicyID, err = c.getBindingDisks(ctx, plan)
+			if err != nil {
+				return false
 			}
-
+			if snapshotPolicyID == plan.SnapshotPolicyID.ValueString() {
+				executeSuccessFlag = true
+				return false
+			}
 			return true
 		})
 	if err != nil {
 		return
 	}
 	if !executeSuccessFlag {
-		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联  regionID： %s", plan.SnapshotPolicyID.String(), plan.DiskIDList.ValueString(), plan.RegionID.ValueString())
+		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联", plan.SnapshotPolicyID.String(), plan.DiskID.ValueString())
 	}
 	return nil
 }
@@ -302,7 +319,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) checkBeforeDissociate(ctx context.Co
 		return
 	}
 	if snapshotPolicyID != plan.SnapshotPolicyID.ValueString() {
-		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联", plan.SnapshotPolicyID.String(), plan.DiskIDList.ValueString())
+		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联", plan.SnapshotPolicyID.String(), plan.DiskID.ValueString())
 		return
 	}
 	return
@@ -329,7 +346,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) checkAfterDissociation(ctx context.C
 		return
 	}
 	if !executeSuccessFlag {
-		return fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘%s  解绑失败", plan.SnapshotPolicyID.ValueString(), plan.DiskIDList.ValueString())
+		return fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 解绑失败", plan.SnapshotPolicyID.ValueString(), plan.DiskID.ValueString())
 	}
 	return nil
 }
@@ -338,7 +355,7 @@ func (c *ctyunEbsSnapshotPolicyAssociation) checkAfterDissociation(ctx context.C
 func (c *ctyunEbsSnapshotPolicyAssociation) delete(ctx context.Context, plan CtyunEbsSnapshotPolicyAssociationConfig) (err error) {
 	params := &ctebs2.EbsCancelPolicyEbsSnapRequest{
 		RegionID:      plan.RegionID.ValueString(),
-		TargetDiskIDs: plan.DiskIDList.ValueString(),
+		TargetDiskIDs: plan.DiskID.ValueString(),
 	}
 
 	// 创建实例
@@ -359,89 +376,84 @@ func (c *ctyunEbsSnapshotPolicyAssociation) delete(ctx context.Context, plan Cty
 }
 
 func (c *ctyunEbsSnapshotPolicyAssociation) getBindingDisks(ctx context.Context, plan CtyunEbsSnapshotPolicyAssociationConfig) (snapshotPolicyID string, err error) {
-	// 拆分磁盘ID列表
-	diskIds := strings.Split(plan.DiskIDList.ValueString(), ",")
-	var firstPolicyID string
-	firstPolicyIDSet := false
-
-	for _, diskId := range diskIds {
-		diskId = strings.TrimSpace(diskId)
-		if diskId == "" {
-			continue
-		}
-
-		// 组装请求体
-		params := &ctebs2.EbsQueryEbsByIDRequest{
-			RegionID: plan.RegionID.ValueStringPointer(),
-			DiskID:   diskId,
-		}
-
-		// 调用API
-		resp, err := c.meta.Apis.SdkCtEbsApis.EbsQueryEbsByIDApi.Do(ctx, c.meta.SdkCredential, params)
-		if err != nil {
-			return "", err
-		} else if resp.StatusCode == common.ErrorStatusCode {
-			err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
-			return "", err
-		} else if resp.ReturnObj == nil {
-			err = common.InvalidReturnObjError
-			return "", err
-		}
-
-		// 安全处理SnapshotPolicyID
-		var currentPolicyID string
-		if resp.ReturnObj.SnapshotPolicyID != nil {
-			currentPolicyID = *resp.ReturnObj.SnapshotPolicyID
-		}
-		// 如果resp.ReturnObj.SnapshotPolicyID是nil，currentPolicyID保持为空字符串
-
-		// 设置参考策略ID
-		if !firstPolicyIDSet {
-			firstPolicyID = currentPolicyID
-			firstPolicyIDSet = true
-		} else if firstPolicyID != currentPolicyID {
-			// 磁盘间绑定的策略不一致
-			return currentPolicyID, nil
-		}
+	diskId := plan.DiskID.ValueString()
+	// 组装请求体
+	params := &ctebs2.EbsQueryEbsByIDRequest{
+		RegionID: plan.RegionID.ValueString(),
+		DiskID:   diskId,
 	}
 
-	return firstPolicyID, nil
+	// 调用API
+	resp, err := c.meta.Apis.SdkCtEbsApis.EbsQueryEbsByIDApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return "", err
+	} else if resp.ErrorCode == common.EbsEbsInfoNotExists {
+		err = common.ResourceNotExistError
+		return
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return "", err
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return "", err
+	}
+	return resp.ReturnObj.SnapshotPolicyID, nil
 }
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEbsSnapshotPolicyAssociation) getAndMerge(ctx context.Context, plan *CtyunEbsSnapshotPolicyAssociationConfig) (err error) {
-	policyId, diskIDList, regionID := plan.SnapshotPolicyID.ValueString(), plan.DiskIDList.ValueString(), plan.RegionID.ValueString()
+	policyId, diskID, regionID := plan.SnapshotPolicyID.ValueString(), plan.DiskID.ValueString(), plan.RegionID.ValueString()
 	snapshotPolicyID, err := c.getBindingDisks(ctx, *plan)
 	if err != nil {
 		return
 	}
 	if snapshotPolicyID != plan.SnapshotPolicyID.ValueString() {
-		err = fmt.Errorf("云硬盘自动快照策略 %s 和云硬盘 %s 未关联  regionID： %s", policyId, diskIDList, regionID)
+		err = common.ResourceNotExistError
 		return
 	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskIDList, regionID))
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskID, regionID))
 	return
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyID],[diskIDList],[regionID]
 func (c *ctyunEbsSnapshotPolicyAssociation) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := c.name + "导入失败：" + err.Error()
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [snapshot_policy_id],[disk_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEbsSnapshotPolicyAssociationConfig
-	var diskIDList, policyID, regionID string
-	err = terraform_extend.Split(request.ID, &policyID, &diskIDList, &regionID)
-	if err != nil {
+
+	var policyID, diskID, regionId string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &policyID, &diskID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &policyID, &diskID, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if policyID == "" {
+		err = fmt.Errorf("snapshot_policy_id不能为空")
 		return
 	}
-
-	cfg.DiskIDList = types.StringValue(diskIDList)
+	if diskID == "" {
+		err = fmt.Errorf("disk_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 	cfg.SnapshotPolicyID = types.StringValue(policyID)
-	cfg.RegionID = types.StringValue(regionID)
-
+	cfg.RegionID = types.StringValue(regionId)
+	cfg.DiskID = types.StringValue(diskID)
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)
 	if err != nil {

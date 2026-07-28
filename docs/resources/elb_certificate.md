@@ -1,5 +1,10 @@
+---
+subcategory: "弹性负载均衡（CT-ELB ，Elastic Load Balancing）"
+page_title: "CTYUN: ctyun_elb_certificate"
+---
+
 # ctyun_elb_certificate (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026756/10155416
+-> 管理弹性负载均衡访问证书
 
 
 
@@ -33,20 +38,31 @@ resource "ctyun_elb_certificate" "certificate_test" {
 ### Required
 
 - `certificate` (String) type为Server 该字段表示服务器证书公钥Pem内容;type为Ca 该字段表示Ca证书Pem内容
-- `name` (String) 唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
+- `name` (String) 证书名称。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32，支持更新
 - `type` (String) 证书类型。取值范围：Server（服务器证书）、Ca（Ca证书）
 
 ### Optional
 
-- `az_name` (String) 可用区名称，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128，支持更新
 - `private_key` (String) 服务器证书私钥，type=Server服务器证书此字段必填
-- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
+- `project_id` (String, Deprecated) 企业项目ID
 - `region_id` (String) 资源池ID
 
 ### Read-Only
 
-- `created_time` (String) 创建时间，为UTC格式
+- `create_time` (String) 创建时间，为UTC格式
 - `id` (String) 证书ID
 - `status` (String) 状态: ACTIVE / INACTIVE
-- `updated_time` (String) 更新时间，为UTC格式
+- `update_time` (String) 更新时间，为UTC格式
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入负载均衡证书
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_elb_certificate.[导入配置名称] [id],<region_id>
+# 示例
+terraform import ctyun_elb_certificate.elb_certificate_example 376f2f85-ff34-c4e0-4f5b-320dd427a271,<region_id>
+```

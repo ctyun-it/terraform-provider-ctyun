@@ -2,6 +2,7 @@ package ebs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
@@ -9,6 +10,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -21,6 +23,12 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunEcsBackupPolicyBindDisks{}
+	_ resource.ResourceWithConfigure   = &ctyunEcsBackupPolicyBindDisks{}
+	_ resource.ResourceWithImportState = &ctyunEcsBackupPolicyBindDisks{}
+)
+
 /*
 云硬盘备份策略绑定云硬盘
 */
@@ -31,10 +39,12 @@ func NewCtyunEcsBackupPolicyBindDisks() resource.Resource {
 
 type ctyunEcsBackupPolicyBindDisks struct {
 	meta *common.CtyunMetadata
+	name string
 }
 
 func (c *ctyunEcsBackupPolicyBindDisks) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_ebs_backup_policy_bind_disks"
+	c.name = response.TypeName
 }
 
 type CtyunEcsBackupPolicyBindDisksConfig struct {
@@ -46,7 +56,7 @@ type CtyunEcsBackupPolicyBindDisksConfig struct {
 
 func (c *ctyunEcsBackupPolicyBindDisks) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026752/10037452**`,
+		MarkdownDescription: utils.FormatDesc("管理云硬盘和备份策略的绑定关系", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10026752/10037452"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
@@ -146,7 +156,7 @@ func (c *ctyunEcsBackupPolicyBindDisks) Read(ctx context.Context, request resour
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "未关联") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -218,23 +228,23 @@ func (c *ctyunEcsBackupPolicyBindDisks) create(ctx context.Context, plan CtyunEc
 }
 
 func (c *ctyunEcsBackupPolicyBindDisks) checkBeforeBindDisks(ctx context.Context, cfg CtyunEcsBackupPolicyBindDisksConfig) (err error) {
-	params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
-		RegionID: cfg.RegionID.ValueString(),
-		PolicyID: cfg.PolicyID.ValueString(),
-	}
-	// 调用API
-	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
-	if err != nil {
-		return
-	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
-		return
-	} else if resp.ReturnObj.CurrentCount != 1 {
-		return fmt.Errorf("备份策略必须存在")
-	}
+	//params := &ctebsbackup.EbsbackupListBackupPolicyRequest{
+	//	RegionID: cfg.RegionID.ValueString(),
+	//	PolicyID: cfg.PolicyID.ValueString(),
+	//}
+	//// 调用API
+	//resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListBackupPolicyApi.Do(ctx, c.meta.SdkCredential, params)
+	//if err != nil {
+	//	return
+	//} else if resp.StatusCode == common.ErrorStatusCode {
+	//	err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+	//	return
+	//} else if resp.ReturnObj == nil {
+	//	err = common.InvalidReturnObjError
+	//	return
+	//} else if resp.ReturnObj.CurrentCount != 1 {
+	//	return fmt.Errorf("备份策略必须存在")
+	//}
 
 	if cfg.DiskIDList.ValueString() != "" {
 		// 拆分实例ID列表
@@ -368,6 +378,9 @@ func (c *ctyunEcsBackupPolicyBindDisks) getBindingDisks(ctx context.Context, pla
 	resp, err := c.meta.Apis.CtEbsBackupApis.EbsbackupListEbsBackupPolicyDisksApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return
+	} else if resp.ErrorCode == common.OpenapiEbsBackupPolicyNotFound {
+		err = common.ResourceNotExistError
+		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return
@@ -387,37 +400,47 @@ func (c *ctyunEcsBackupPolicyBindDisks) getBindingDisks(ctx context.Context, pla
 
 // getAndMerge 查询绑定关系
 func (c *ctyunEcsBackupPolicyBindDisks) getAndMerge(ctx context.Context, plan *CtyunEcsBackupPolicyBindDisksConfig) (err error) {
-	policyId, diskIDList, regionID := plan.PolicyID.ValueString(), plan.DiskIDList.ValueString(), plan.RegionID.ValueString()
+	policyId, regionID := plan.PolicyID.ValueString(), plan.RegionID.ValueString()
 	bindID, err := c.getBindingDisks(ctx, *plan)
 	if err != nil {
 		return
 	}
-	if bindID != diskIDList {
-		err = fmt.Errorf("云硬盘策略 %s 和云硬盘 %s 未关联  regionID： %s", policyId, diskIDList, regionID)
-		return
-	}
-	plan.ID = types.StringValue(fmt.Sprintf("%s,%s,%s", policyId, diskIDList, regionID))
+	plan.DiskIDList = types.StringValue(bindID)
+	plan.ID = types.StringValue(fmt.Sprintf("%s,%s", policyId, regionID))
 	return
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [policyID],[diskIDList],[regionID]
 func (c *ctyunEcsBackupPolicyBindDisks) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [policy_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
 	var cfg CtyunEcsBackupPolicyBindDisksConfig
-	var diskIDList, policyID, regionID string
-	err = terraform_extend.Split(request.ID, &policyID, &diskIDList, &regionID)
-	if err != nil {
-		return
+	var policyID, regionId string
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		policyID = request.ID
+	} else {
+		err = terraform_extend.Split(request.ID, &policyID, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
-	cfg.DiskIDList = types.StringValue(diskIDList)
+	if policyID == "" {
+		err = fmt.Errorf("policy_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 	cfg.PolicyID = types.StringValue(policyID)
-	cfg.RegionID = types.StringValue(regionID)
+	cfg.RegionID = types.StringValue(regionId)
 
 	// 查询远端
 	err = c.getAndMerge(ctx, &cfg)

@@ -27,11 +27,10 @@ resource "ctyun_subnet" "subnet_test" {
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 
-resource "ctyun_elb_loadbalancer" "listener_test" {
+resource "ctyun_elb_loadbalancer" "test" {
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-for-listener"
   sla_name      = "elb.s2.small"
@@ -41,18 +40,36 @@ resource "ctyun_elb_loadbalancer" "listener_test" {
   cycle_count   = 1
 }
 
+resource "ctyun_elb_target_group" "test1" {
+  name      = "tf-tg-for-target1_12"
+  vpc_id    = ctyun_vpc.vpc_test.id
+  algorithm = "wrr"
+}
+
 resource "ctyun_elb_target_group" "test2" {
   name      = "tf-tg-for-target2_12"
   vpc_id    = ctyun_vpc.vpc_test.id
   algorithm = "wrr"
 }
 
+resource "ctyun_elb_listener" "test" {
+  loadbalancer_id     = ctyun_elb_loadbalancer.test.id
+  name                = "tf-listener-for-rule"
+  protocol            = "HTTP"
+  protocol_port       = 12345
+  default_action_type = "forward"
+  target_groups = [{ target_group_id : ctyun_elb_target_group.test2.id }]
+}
+
 resource "ctyun_elb_rule" "rule_test" {
-  listener_id = ctyun_elb_loadbalancer.listener_test.id
+  listener_id = ctyun_elb_listener.test.id
   conditions = [
-    { "type" : "server_name", "condition_server_name" : "terraform-test.com" }
+    {
+      "condition_type" : "server_name",
+      "condition_server_name" : "terraform-test.com"
+    }
   ]
   action_type          = "forward"
-  action_target_groups = [{target_group_id=ctyun_elb_target_group.test2.id}]
+  action_target_groups = [{ target_group_id = ctyun_elb_target_group.test1.id }]
 }
 

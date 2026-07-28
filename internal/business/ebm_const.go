@@ -2,6 +2,7 @@ package business
 
 const (
 	EbmExtIpNotUse   = "0"
+	EbmAuto          = "1"
 	EbmExtIpUseExist = "2"
 
 	EbmOrderOnCycle  = "ORDER_ON_CYCLE"
@@ -22,4 +23,10 @@ var EbmDiskTypes = []string{
 	EbsDiskTypeSata,
 	EbsDiskTypeSas,
 	EbsDiskTypeSsd,
+}
+
+var EbmDiskTypesUpper = []string{
+	"SATA",
+	"SAS",
+	"SSD",
 }

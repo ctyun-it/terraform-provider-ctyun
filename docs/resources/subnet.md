@@ -1,5 +1,10 @@
+---
+subcategory: "虚拟私有云（Virtual Private Cloud，VPC）"
+page_title: "CTYUN: ctyun_subnet"
+---
+
 # ctyun_subnet (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026755/10197656
+-> 管理子网
 
 
 
@@ -24,10 +29,9 @@ resource "ctyun_subnet" "subnet_test" {
   name        = "subnet-test"
   cidr        = "10.0.0.0/8"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
@@ -39,7 +43,7 @@ resource "ctyun_subnet" "subnet_test" {
 ### Required
 
 - `cidr` (String) 网段，取值范围：10.0.0.0/8~10.255.255.0/24或者172.16.0.0/12~172.31.255.0/24或者192.168.0.0/16~192.168.255.0/24。约束：必须是cidr格式，例如:192.168.0.0/16
-- `dns` (Set of String) 子网dns列表, 最多同时支持4个dns地址，支持更新
+- `dns` (Set of String) 子网dns列表, 最多同时支持2个dns地址，支持更新
 - `name` (String) 子网名称，支持字母、中文、数字，下划线以及-，中文/英文字母开头，长度 2-32，支持更新
 - `vpc_id` (String) 虚拟私有云ID
 
@@ -49,6 +53,7 @@ resource "ctyun_subnet" "subnet_test" {
 - `enable_ipv6` (Boolean) 是否开启IPv6网段，false：不开启，true: 开启，默认为不开启false，注意：在子网内开启IPv6网段时，必须保证所在vpc也启用了开启IPv6网段
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `route_table_id` (String) 路由表ID 支持更新
 - `type` (String) 子网类型，common：普通子网，cbm：裸金属子网，默认为普通子网common
 
 ### Read-Only
@@ -59,3 +64,15 @@ resource "ctyun_subnet" "subnet_test" {
 - `ipv4_start` (String) 子网网段起始ip
 - `ipv6_end` (String) 子网内可用的结束ipv6地址
 - `ipv6_start` (String) 子网内可用的起始ipv6地址
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入子网
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_subnet.example [id],<region_id>
+# 示例
+terraform import ctyun_subnet.example 4a0a1e86-0736-4c33-9478-359a1307a2c8,bb9fdb42056f11eda1610242ac110002
+```

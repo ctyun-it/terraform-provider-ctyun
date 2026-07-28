@@ -11,6 +11,6 @@ provider "ctyun" {
   env = "prod"
 }
 
-data "ctyun_rabbitmq_specs" "test"{
+data "ctyun_rabbitmq_specs" "test" {
 
 }

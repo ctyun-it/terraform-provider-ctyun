@@ -22,10 +22,10 @@ func TestAccCtyunDNat(t *testing.T) {
 
 	natGatewayId := dependence.natID
 	dnatType := "custom"
-	internalPort := utils.GenerateRandomPort(0, 65535)
-	updatedInternalPort := utils.GenerateRandomPort(0, 65535)
-	externalPort := utils.GenerateRandomPort(0, 1024)
-	updatedExternalPort := utils.GenerateRandomPort(0, 1024)
+	internalPort := utils.GenerateRandomPort(1, 65535)
+	updatedInternalPort := utils.GenerateRandomPort(1, 65535)
+	externalPort := utils.GenerateRandomPort(1, 1024)
+	updatedExternalPort := utils.GenerateRandomPort(1, 1024)
 
 	internalIp := "127.0.0.1"
 	updatedInternalIp := "127.0.0.2"
@@ -54,6 +54,14 @@ func TestAccCtyunDNat(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "protocol", protocol),
 					resource.TestCheckResourceAttr(resourceName, "dnat_type", dnatType),
 					resource.TestCheckResourceAttrSet(resourceName, "dnat_id"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
 			{
@@ -98,6 +106,21 @@ func TestAccCtyunDNat(t *testing.T) {
 				},
 			},
 			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					ngID := ds.Attributes["nat_gateway_id"]
+					return fmt.Sprintf("%s,%s", id, ngID), nil
+				},
+				ImportStateVerifyIgnore: []string{
+					"dnat_type",
+					"internal_ip",
+				},
+			},
+			{
 				Config:  utils.LoadTestCase(resourceFile, rnd, natGatewayId, dependence.eipID1, updatedProtocol, updatedExternalPort, updatedInternalPort, dnatType, updatedInternalIp),
 				Destroy: true,
 			},
@@ -118,10 +141,10 @@ func TestAccCtyunDNat2(t *testing.T) {
 	natGatewayId := dependence.natID
 	dnatType := "instance"
 	serverType := "VM"
-	internalPort := utils.GenerateRandomPort(0, 65535)
-	updatedInternalPort := utils.GenerateRandomPort(0, 65535)
-	externalPort := utils.GenerateRandomPort(0, 1024)
-	updatedExternalPort := utils.GenerateRandomPort(0, 1024)
+	internalPort := utils.GenerateRandomPort(1, 65535)
+	updatedInternalPort := utils.GenerateRandomPort(1, 65535)
+	externalPort := utils.GenerateRandomPort(1, 1024)
+	updatedExternalPort := utils.GenerateRandomPort(1, 1024)
 
 	protocol := "tcp"
 	updatedProtocol := "udp"

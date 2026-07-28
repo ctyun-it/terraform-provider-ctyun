@@ -7,10 +7,13 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/mysql"
+	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
-	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -30,28 +33,63 @@ var (
 
 type CtyunMysqlWhiteList struct {
 	meta *common.CtyunMetadata
+	name string
+}
+
+func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import %s.[导入配置名称] [instance_id],[name],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
+	var config CtyunMysqlWhiteListConfig
+	var name, instanceID, regionId string
+	if strings.Count(request.ID, common.ImportSeparator) < 2 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &instanceID, &name)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &instanceID, &name, &regionId)
+		if err != nil {
+			return
+		}
+	}
+	if instanceID == "" {
+		err = fmt.Errorf("instance_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
+	config.GroupName = types.StringValue(name)
+	config.ProdInstID = types.StringValue(instanceID)
+	config.RegionID = types.StringValue(regionId)
+	err = c.getAndMergeMysqlAccessWhiteList(ctx, &config)
+	if err != nil {
+		return
+	}
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10133794`,
+		MarkdownDescription: utils.FormatDesc("管理MySQL实例的白名单", "关系数据库MySQL版", "https://www.ctyun.cn/document/10033813/10133794"),
 		Attributes: map[string]schema.Attribute{
 			"project_id": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
-				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
-				Validators: []validator.String{
-					validator2.Project(),
-				},
+				Optional:           true,
+				DeprecationMessage: "废弃字段，请不要指定",
+				Description:        "企业项目ID",
 			},
 			"region_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "资源池id,如果不填这默认使用provider ctyun总region_id 或者环境变量",
+				Description: "资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID",
 				Default:     defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -60,7 +98,7 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 			},
-			"prod_inst_id": schema.StringAttribute{
+			"instance_id": schema.StringAttribute{
 				Required:    true,
 				Description: "mysql实例id",
 				PlanModifiers: []planmodifier.String{
@@ -83,7 +121,7 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"group_white_list": schema.SetAttribute{
 				Required:    true,
 				ElementType: types.StringType,
-				Description: "白名单ip列表，举例：['192.168.0.1', '192.168.0.*'],指定IP地址192.168.0.1：表示允许192.168.0.1的IP地址访问实例。 指定IP地址192.168.0.*：表示允许从192.168.0.1到192.168.0.255的IP地址访问实例。",
+				Description: "白名单ip列表，支持更新，举例：['192.168.0.1', '192.168.0.*'],指定IP地址192.168.0.1：表示允许192.168.0.1的IP地址访问实例。 指定IP地址192.168.0.*：表示允许从192.168.0.1到192.168.0.255的IP地址访问实例。",
 				Validators: []validator.Set{
 					setvalidator.SizeAtLeast(1),
 					setvalidator.ValueStringsAre(stringvalidator.UTF8LengthAtLeast(1)),
@@ -92,18 +130,27 @@ func (c *CtyunMysqlWhiteList) Schema(ctx context.Context, request resource.Schem
 			"group_white_list_count": schema.Int32Attribute{
 				Computed:    true,
 				Description: "白名单分组组内数量",
+				PlanModifiers: []planmodifier.Int32{
+					explanmodifier.UseInt32StateIfDependencyUnchanged(path.Root("group_white_list")),
+				},
 			},
-			"created_time": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "创建时间",
+				Description: "创建时间，为UTC格式",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
-			"updated_time": schema.StringAttribute{
+			"update_time": schema.StringAttribute{
 				Computed:    true,
-				Description: "更新时间",
+				Description: "更新时间，为UTC格式",
 			},
-			"access_machine_type": schema.StringAttribute{
+			"id": schema.StringAttribute{
 				Computed:    true,
-				Description: "访问类型",
+				Description: "id 唯一标识",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -158,7 +205,7 @@ func (c *CtyunMysqlWhiteList) Read(ctx context.Context, request resource.ReadReq
 	// 查询远端
 	err = c.getAndMergeMysqlAccessWhiteList(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exist") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -178,7 +225,6 @@ func (c *CtyunMysqlWhiteList) Update(ctx context.Context, request resource.Updat
 		}
 	}()
 	// 读取tf文件中配置
-
 	var plan CtyunMysqlWhiteListConfig
 	response.Diagnostics.Append(request.Plan.Get(ctx, &plan)...)
 	if response.Diagnostics.HasError() {
@@ -204,6 +250,7 @@ func (c *CtyunMysqlWhiteList) Update(ctx context.Context, request resource.Updat
 	if err != nil {
 		return
 	}
+	state.ProjectID = plan.ProjectID
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -236,14 +283,12 @@ func (c *CtyunMysqlWhiteList) Delete(ctx context.Context, request resource.Delet
 		InstID:   state.ProdInstID.ValueStringPointer(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbDeleteAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
 	} else if resp == nil {
 		err = errors.New("删除mysql白名单过程中，response返回为空, 请稍后再试！")
+		return
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
@@ -253,13 +298,10 @@ func (c *CtyunMysqlWhiteList) Delete(ctx context.Context, request resource.Delet
 
 func (c *CtyunMysqlWhiteList) Metadata(ctx context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_mysql_white_list"
+	c.name = response.TypeName
 }
 func NewCtyunMysqlWhiteList() resource.Resource {
 	return &CtyunMysqlWhiteList{}
-}
-
-func (c *CtyunMysqlWhiteList) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
-	// todo
 }
 
 func (c *CtyunMysqlWhiteList) Configure(ctx context.Context, request resource.ConfigureRequest, response *resource.ConfigureResponse) {
@@ -285,21 +327,17 @@ func (c *CtyunMysqlWhiteList) CreateMysqlAccessWhiteList(ctx context.Context, co
 		InstID:   config.ProdInstID.ValueStringPointer(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbCreateAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return
 	} else if resp == nil {
 		err = errors.New("创建mysql白名单过程中，response返回为空, 请稍后再试！")
+		return
 	} else if resp.StatusCode != 0 {
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
 	}
-
 	return
-
 }
 
 func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Context, config *CtyunMysqlWhiteListConfig) (err error) {
@@ -310,9 +348,6 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		InstID:   config.ProdInstID.ValueStringPointer(),
 		RegionID: config.RegionID.ValueString(),
 	}
-	if !config.ProjectID.IsNull() && !config.ProjectID.IsUnknown() {
-		header.ProjectID = config.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbGetAccessWhiteList.Do(ctx, c.meta.Credential, &params, &header)
 	if err != nil {
 		return err
@@ -320,25 +355,47 @@ func (c *CtyunMysqlWhiteList) getAndMergeMysqlAccessWhiteList(ctx context.Contex
 		err = errors.New("查询mysql白名单过程中，response返回为空, 请稍后再试！")
 		return
 	} else if resp.StatusCode != 0 {
+		if strings.Contains(resp.Error, "MYSQL_10002") || strings.Contains(resp.Message, "outerProdInstId not exist") {
+			err = common.ResourceNotExistError
+			return
+		}
 		err = fmt.Errorf("API return error. Message: %s", resp.Message)
 		return
-	} else if resp.ReturnObj == nil {
-		err = common.InvalidReturnObjError
+	} else if resp.ReturnObj == nil || len(resp.ReturnObj) == 0 {
+		err = common.ResourceNotExistError
 		return
 	}
-	for _, whileListInfo := range resp.ReturnObj {
-		if whileListInfo.GroupName == config.GroupName.ValueString() {
-			config.GroupWhiteListCount = types.Int32Value(whileListInfo.GroupWhiteListCount)
-			config.AccessMachineType = types.StringValue(whileListInfo.AccessMachineType)
-			config.GroupName = types.StringValue(whileListInfo.GroupName)
-			config.CreatedTime = types.StringValue(fmt.Sprintf("%d", whileListInfo.CreateTime))
-			config.UpdatedTime = types.StringValue(fmt.Sprintf("%d", whileListInfo.UpdateTime))
-			groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, whileListInfo.WhiteList)
+	var exist bool
+	for _, item := range resp.ReturnObj {
+		if item.GroupName == config.GroupName.ValueString() {
+			config.GroupWhiteListCount = types.Int32Value(item.GroupWhiteListCount)
+			config.CreatedTime = types.StringValue(utils.FromUnixToUTC(item.CreateTime))
+			config.UpdatedTime = types.StringValue(utils.FromUnixToUTC(item.UpdateTime))
+			if item.WhiteList == nil {
+				item.WhiteList = make([]string, 0)
+			}
+			groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, item.WhiteList)
 			if diags.HasError() {
-				return
+				return fmt.Errorf("convert whiteList failed: %v", diags)
 			}
 			config.GroupWhiteList = groupWhiteList
+			exist = true
+			break
 		}
+	}
+	if !exist {
+		err = common.ResourceNotExistError
+		return
+	}
+	config.ID = types.StringValue(fmt.Sprintf("%s,%s", config.ProdInstID.ValueString(), config.GroupName.ValueString()))
+	if config.GroupWhiteList.IsNull() || config.GroupWhiteList.IsUnknown() {
+		initGroupWhiteList := make([]string, 0)
+		groupWhiteList, diags := types.SetValueFrom(ctx, types.StringType, initGroupWhiteList)
+		if diags.HasError() {
+			err = fmt.Errorf(diags[0].Detail())
+			return
+		}
+		config.GroupWhiteList = groupWhiteList
 	}
 	return
 }
@@ -359,9 +416,6 @@ func (c *CtyunMysqlWhiteList) updateMysqlWhiteList(ctx context.Context, state *C
 		InstID:   state.ProdInstID.ValueStringPointer(),
 		RegionID: state.RegionID.ValueString(),
 	}
-	if !state.ProjectID.IsNull() && !state.ProjectID.IsUnknown() {
-		header.ProjectID = state.ProjectID.ValueStringPointer()
-	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbUpdateAccessWhiteList.Do(ctx, c.meta.Credential, params, header)
 	if err != nil {
 		return err
@@ -379,13 +433,13 @@ func (c *CtyunMysqlWhiteList) updateMysqlWhiteList(ctx context.Context, state *C
 type CtyunMysqlWhiteListConfig struct {
 	ProjectID           types.String `tfsdk:"project_id"`
 	RegionID            types.String `tfsdk:"region_id"`
-	ProdInstID          types.String `tfsdk:"prod_inst_id"`
+	ProdInstID          types.String `tfsdk:"instance_id"`
 	GroupName           types.String `tfsdk:"group_name"`
 	GroupWhiteList      types.Set    `tfsdk:"group_white_list"`
 	GroupWhiteListCount types.Int32  `tfsdk:"group_white_list_count"`
-	CreatedTime         types.String `tfsdk:"created_time"`
-	UpdatedTime         types.String `tfsdk:"updated_time"`
-	AccessMachineType   types.String `tfsdk:"access_machine_type"` // 访问类型
+	CreatedTime         types.String `tfsdk:"create_time"`
+	UpdatedTime         types.String `tfsdk:"update_time"`
+	ID                  types.String `tfsdk:"id"`
 }
 
 // checkStatus 数据库状态为running
@@ -423,9 +477,6 @@ func (c *CtyunMysqlWhiteList) getDetail(ctx context.Context, state CtyunMysqlWhi
 	detailHeaders := &mysql.TeledbQueryDetailRequestHeaders{
 		InstID:   state.ProdInstID.ValueString(),
 		RegionID: state.RegionID.ValueString(),
-	}
-	if state.ProjectID.ValueString() != "" {
-		detailHeaders.ProjectID = state.ProjectID.ValueStringPointer()
 	}
 	resp, err := c.meta.Apis.SdkCtMysqlApis.TeledbQueryDetailApi.Do(ctx, c.meta.Credential, detailParams, detailHeaders)
 	if err != nil {

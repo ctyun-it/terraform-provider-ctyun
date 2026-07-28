@@ -1,5 +1,10 @@
+---
+subcategory: "云硬盘（CT-EVS，Elastic Volume Service）"
+page_title: "CTYUN: ctyun_ebs_snapshots"
+---
+
 # ctyun_ebs_snapshots (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10335345
+-> 查询云硬盘快照
 
 
 
@@ -55,11 +60,11 @@ Read-Only:
 
 - `availability_zone` (String) 可用区名称
 - `az_name` (String) 可用区名称
-- `create_time` (String) 创建时间
+- `create_time` (String) 创建时间，为UTC格式
 - `delete_time` (String) 删除时间
 - `description` (String) 描述信息
 - `disk_id` (String) 云硬盘ID
-- `expire_time` (String) 过期时间
+- `expire_time` (String) 到期时间，为UTC格式，按需时为空
 - `freezing` (Boolean) 是否被冻结
 - `id` (String) 云硬盘快照ID
 - `is_encryted` (Boolean) 是否是加密盘
@@ -71,7 +76,7 @@ Read-Only:
 - `retention_time` (Number) 快照保留时间
 - `snapshot_status` (String) 云硬盘快照状态，取值为：creating/deleting/rollbacking/cloning/available/error，分别对应创建中/删除中/回滚中/从快照创建云硬盘中/可用/错误
 - `snapshot_type` (String) 快照类型，取值为：manu：手动，timer：自动
-- `update_time` (String) 更新时间
+- `update_time` (String) 更新时间，为UTC格式
 - `volume_attr` (String) 云硬盘属性，取值为：data：数据盘，system：系统盘
 - `volume_name` (String) 云硬盘名称
 - `volume_size` (Number) 云硬盘大小

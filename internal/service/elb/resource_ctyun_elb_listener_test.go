@@ -29,8 +29,8 @@ func TestAccCtyunElbListener1(t *testing.T) {
 	// 当default action type = redirect, redirectListenerID必填
 	// target_groups 和redirectListenerID 用%[7]s来控制
 	//targetGroupIds := fmt.Sprintf(`{target_group_id="%s"},{target_group_id="%s"}`, dependence.targetGroupID, dependence.targetGroupID2)
-	targetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID2)
-	tfTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, targetGroupIds)
+	tcpTargetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID2)
+	tcpTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, tcpTargetGroupIds)
 
 	// nat64 需要开始ipv6
 
@@ -46,6 +46,8 @@ func TestAccCtyunElbListener1(t *testing.T) {
 	tfResponseTimeout := fmt.Sprintf(`response_timeout=%d`, 100)
 
 	tfEnableNat64 := fmt.Sprintf("enable_nat_64=%t", false)
+	httpTargetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID4)
+	httpTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, httpTargetGroupIds)
 
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
@@ -58,14 +60,46 @@ func TestAccCtyunElbListener1(t *testing.T) {
 		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
 		Steps: []resource.TestStep{
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, 8081, defaultActionType, tfTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE"),
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, 8081, defaultActionType, tcpTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "listener_cps", "1"),
 					resource.TestCheckResourceAttr(resourceName, "establish_timeout", "100"),
+					func(s *terraform.State) error {
+						ds := s.RootModule().Resources[resourceName].Primary
+						createTime := ds.Attributes["create_time"]
+						if utils.IsEmptyOrRfc3339(createTime) {
+							return nil
+						}
+						return fmt.Errorf("time format doesn't match")
+					},
 				),
 			},
+			// import state 1
+			{ResourceName: resourceName,
+				ImportState: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}},
+			// import state 2
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, tfEnableNat64, "", tfCPS, tfEstablishTimeout, "", "", "DOWN"),
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					regionID := ds.Attributes["region_id"]
+
+					return fmt.Sprintf("%s,%s", id, regionID), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{},
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tcpTargetGroupID, tfEnableNat64, "", tfCPS, tfEstablishTimeout, "", "", "DOWN"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "enable_nat_64", "false"),
 					resource.TestCheckResourceAttr(resourceName, "listener_cps", "1"),
@@ -73,11 +107,11 @@ func TestAccCtyunElbListener1(t *testing.T) {
 				),
 			},
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, tfEnableNat64, "", tfCPS, tfEstablishTimeout, "", "", "DOWN"),
+				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, protocolTCP, protocolPort, defaultActionType, tcpTargetGroupID, tfEnableNat64, "", tfCPS, tfEstablishTimeout, "", "", "DOWN"),
 				Destroy: true,
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, tfTargetGroupID, tfEnableNat64, tfQPS, "", "", tfIdleTimeout, tfResponseTimeout, "ACTIVE"),
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, httpTargetGroupID, tfEnableNat64, tfQPS, "", "", tfIdleTimeout, tfResponseTimeout, "ACTIVE"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "enable_nat_64", "false"),
 					resource.TestCheckResourceAttr(resourceName, "listener_qps", "1"),
@@ -86,7 +120,7 @@ func TestAccCtyunElbListener1(t *testing.T) {
 				),
 			},
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, tfTargetGroupID, tfEnableNat64, tfQPS, "", "", tfIdleTimeout, tfResponseTimeout, "ACTIVE"),
+				Config:  utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, httpTargetGroupID, tfEnableNat64, tfQPS, "", "", tfIdleTimeout, tfResponseTimeout, "ACTIVE"),
 				Destroy: true,
 			},
 		},
@@ -120,7 +154,7 @@ func TestAccCtyunElbListener2(t *testing.T) {
 	// target_groups 和redirectListenerID 用%[7]s来控制
 	//targetGroupIds := fmt.Sprintf(`{target_group_id="%s"},{target_group_id="%s"}`, dependence.targetGroupID, dependence.targetGroupID2)
 	targetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID2)
-	updatedTargetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID3)
+	updatedTargetGroupIds := fmt.Sprintf(`{target_group_id="%s"}`, dependence.targetGroupID4)
 
 	tfTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, targetGroupIds)
 	updatedTargetGroupID := fmt.Sprintf(`target_groups=[%s]`, updatedTargetGroupIds)
@@ -161,9 +195,21 @@ func TestAccCtyunElbListener2(t *testing.T) {
 					resource.TestCheckResourceAttr(resourceName, "default_action_type", defaultActionType),
 				),
 			},
+			// import state 1
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					ds := s.RootModule().Resources[resourceName].Primary
+					id := ds.ID
+					return fmt.Sprintf("%s", id), nil
+				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{}},
+			// import state 2
 			// 1.2 update验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, protocolTCP, protocolPort, defaultActionType, updatedTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE"),
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
@@ -176,22 +222,11 @@ func TestAccCtyunElbListener2(t *testing.T) {
 			},
 			// 1.3 datasource验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, protocolTCP, protocolPort, defaultActionType, updatedTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE") +
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, updatedName, protocolTCP, protocolPort, defaultActionType, tfTargetGroupID, "", "", tfCPS, tfEstablishTimeout, "", "", "ACTIVE") +
 					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf("ids=%s.id", resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "listeners.#", "1"),
 				),
-			},
-			{
-				ResourceName:      resourceName,
-				ImportState:       true,
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"loadbalancer_id",
-					"project_id",
-					"protocol",
-					"protocol_port",
-				},
 			},
 			// 1.4 destroy验证
 			{
@@ -202,7 +237,7 @@ func TestAccCtyunElbListener2(t *testing.T) {
 			// 2 详细信息验证，protocol=HTTP， defaultActionType=forward, targetGroupID必填
 			// 2.1 Create
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, tfTargetGroupID, "", "", "", "", "", "", "DOWN"),
+				Config: utils.LoadTestCase(resourceFile, rnd, loadbalanceID, name, ProtocolHTTP, protocolPort, defaultActionType, updatedTargetGroupID, "", "", "", "", "", "", "DOWN"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttrSet(resourceName, "id"),
 					resource.TestCheckResourceAttr(resourceName, "name", name),

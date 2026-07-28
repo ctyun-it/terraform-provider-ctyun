@@ -1,5 +1,10 @@
+---
+subcategory: "云容器引擎（CCSE）"
+page_title: "CTYUN: ctyun_ccse_plugin_market"
+---
+
 # ctyun_ccse_plugin_market (Data Source)
--> 详细说明请见文档：https://www.ctyun.cn/document/10083472/10656137
+-> 查询云容器引擎插件市场
 
 
 
@@ -31,9 +36,9 @@ provider "ctyun" {
 
 # 指定版本时，可以查插件Values
 data "ctyun_ccse_plugin_market" "test" {
-  chart_name = "cubevk-profile"
+  chart_name    = "cubevk-profile"
   chart_version = "1.0.4"
-  values_type = "YAML"
+  values_type   = "YAML"
 }
 
 output "plugin" {

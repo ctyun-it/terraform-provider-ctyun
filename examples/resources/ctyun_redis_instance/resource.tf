@@ -24,20 +24,19 @@ resource "ctyun_vpc" "vpc_test" {
 }
 
 resource "ctyun_subnet" "subnet_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-re"
   cidr        = "192.168.1.0/24"
   description = "terraform测试使用"
-  dns         = [
+  dns = [
     "114.114.114.114",
-    "8.8.8.8",
-    "8.8.4.4"
+    "8.8.8.8"
   ]
   enable_ipv6 = true
 }
 
 resource "ctyun_security_group" "security_group_test" {
-  vpc_id = ctyun_vpc.vpc_test.id
+  vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-re"
   description = "terraform测试使用"
 }
@@ -60,19 +59,19 @@ resource "ctyun_security_group" "security_group_test" {
 
 # 包周期
 resource "ctyun_redis_instance" "tbidgqvfbs" {
-  instance_name = "tf-redis-1cbppywerkb"
-  version = "BASIC"
-  edition = "StandardSingle"
-  password = var.password
-  engine_version = "7.0"
-  maintenance_time = "02:00-04:00"
-  protection_status = false
-  shard_mem_size = 8
-  vpc_id = ctyun_vpc.vpc_test.id
-  subnet_id = ctyun_subnet.subnet_test.id
-  security_group_id = ctyun_security_group.security_group_test.id
-  cycle_type = "month"
-  cycle_count = 1
-  auto_renew = true
+  instance_name          = "tf-redis-1cbppywerkb"
+  version                = "BASIC"
+  edition                = "StandardSingle"
+  password               = var.password
+  engine_version         = "7.0"
+  maintenance_time       = "02:00-04:00"
+  protection_status      = false
+  shard_mem_size         = 8
+  vpc_id                 = ctyun_vpc.vpc_test.id
+  subnet_id              = ctyun_subnet.subnet_test.id
+  security_group_id      = ctyun_security_group.security_group_test.id
+  cycle_type             = "month"
+  cycle_count            = 1
+  auto_renew             = true
   auto_renew_cycle_count = 12
 }

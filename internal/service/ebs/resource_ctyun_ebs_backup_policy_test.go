@@ -27,7 +27,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 
 	diskId := dependence.ebsID
 	//TODO 获取存储库ID替换
-	repositoryID := "671f67c4-6131-4154-8c1d-7c5b82edd1eb"
+	repositoryID := dependence.backupRepoId
 
 	bindDisksResourceName := "ctyun_ebs_backup_policy_bind_disks." + dnd
 	bindRepositoryResourceName := "ctyun_ebs_backup_policy_bind_repo." + dnd
@@ -62,8 +62,8 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.name", updatedName),
+					resource.TestCheckResourceAttr(datasourceName, "policies.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.name", updatedName),
 				),
 			},
 			// 4.绑定云硬盘
@@ -80,7 +80,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 					utils.LoadTestCase(bindDisksFile, dnd, resourceName+".id", diskId) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.resource_ids", diskId),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.resource_ids", diskId),
 				),
 			},
 			{
@@ -101,7 +101,7 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.resource_ids", ""),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.resource_ids", ""),
 				),
 			},
 			// 8.云硬盘备份策略绑定存储库
@@ -119,8 +119,8 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// 先检查列表不为空
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.#", "1"),
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.0.repository_id", repositoryID),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.#", "1"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.0.repository_id", repositoryID),
 				),
 			},
 			{
@@ -141,22 +141,39 @@ func TestAccCtyunBackupPolicy(t *testing.T) {
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +
 					utils.LoadTestCase(datasourceFile, dnd, resourceName+".id"),
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr(datasourceName, "backup_policies.0.repository_list.#", "0"),
+					resource.TestCheckResourceAttr(datasourceName, "policies.0.repository_list.#", "0"),
 				),
 			},
 			{
 				ResourceName: resourceName,
 				ImportState:  true,
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
-					ds := s.RootModule().Resources[resourceName].Primary
-					id := ds.ID
-					regionId := ds.Attributes["region_id"]
-					return fmt.Sprintf("%s,%s", id, regionId), nil
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s,%s",
+						rs.Primary.Attributes["id"],
+						rs.Primary.Attributes["region_id"],
+					), nil
 				},
-				ImportStateVerify: true,
-				ImportStateVerifyIgnore: []string{
-					"project_id",
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
+			},
+			{
+				ResourceName: resourceName,
+				ImportState:  true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					rs, ok := s.RootModule().Resources[resourceName]
+					if !ok {
+						return "", fmt.Errorf("resource not found: %s", resourceName)
+					}
+					return fmt.Sprintf("%s",
+						rs.Primary.Attributes["id"],
+					), nil
 				},
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"project_id"},
 			},
 			{
 				Config: utils.LoadTestCase(resourceFile, rnd, updatedName) +

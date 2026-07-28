@@ -3,6 +3,7 @@ package vpc
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
@@ -10,6 +11,7 @@ import (
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -23,6 +25,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"strings"
+)
+
+var (
+	_ resource.Resource                = &ctyunSecurityGroupRule{}
+	_ resource.ResourceWithConfigure   = &ctyunSecurityGroupRule{}
+	_ resource.ResourceWithImportState = &ctyunSecurityGroupRule{}
 )
 
 func NewCtyunSecurityGroupRule() resource.Resource {
@@ -31,21 +40,25 @@ func NewCtyunSecurityGroupRule() resource.Resource {
 
 type ctyunSecurityGroupRule struct {
 	meta                 *common.CtyunMetadata
+	name                 string
 	securityGroupService *business.SecurityGroupService
 }
 
 func (c *ctyunSecurityGroupRule) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_security_group_rule"
+	c.name = response.TypeName
 }
 
 func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10225510`,
+		MarkdownDescription: utils.FormatDesc("管理安全组规则", "虚拟私有云（Virtual Private Cloud，VPC）", "https://www.ctyun.cn/document/10026730/10225510"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
-				Computed:      true,
-				Description:   "id",
+				Computed:    true,
+				Description: "id",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"security_group_id": schema.StringAttribute{
 				Required:    true,
@@ -91,7 +104,7 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 			},
 			"protocol": schema.StringAttribute{
 				Required:    true,
-				Description: "协议类型: tcp、udp、icmp、any，当此值填写any时，range的值不能设置",
+				Description: "协议类型: tcp、udp、icmp、any，当此值填写any或icmp时，range的值不能设置",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
@@ -128,13 +141,17 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthAtMost(128),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"range": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "安全组开放的传输层协议相关的源端端口范围，格式如：8000-9000，如果仅开放单一端口则直接填写，如：22，中间不能有空格以及其他特殊字符；如果protocol的值为any，请保证此值留空，如果protocol的值为tcp或udp，此值必填",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
@@ -145,6 +162,7 @@ func (c *ctyunSecurityGroupRule) Schema(_ context.Context, _ resource.SchemaRequ
 					validator2.ConflictsWithEqualString(
 						path.MatchRoot("protocol"),
 						types.StringValue(business.SecurityGroupRuleProtocolAny),
+						types.StringValue(business.SecurityGroupRuleProtocolIcmp),
 					),
 					validator2.Range("-", 1, 65535),
 				},
@@ -293,11 +311,10 @@ func (c *ctyunSecurityGroupRule) Read(ctx context.Context, request resource.Read
 	}
 	instance, err := c.getAndMergeSecurityGroupRule(ctx, state)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
-	}
-	if instance == nil {
-		response.State.RemoveResource(ctx)
+		if errors.Is(err, common.ResourceNotExistError) {
+			err = nil
+			response.State.RemoveResource(ctx)
+		}
 		return
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
@@ -388,16 +405,43 @@ func (c *ctyunSecurityGroupRule) Delete(ctx context.Context, request resource.De
 	}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [securityGroupRuleId],[securityGroupId],[regionId]
 func (c *ctyunSecurityGroupRule) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
+	var err error
+	defer func() {
+		if err != nil {
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],[security_group_id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
+		}
+	}()
 	var cfg CtyunSecurityGroupRuleConfig
 	var securityGroupRuleId, securityGroupId, regionId string
-	err := terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId, &regionId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	// 根据分隔符数量判断是否输入了regionID,projectId
+	if strings.Count(request.ID, common.ImportSeparator) == 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &securityGroupRuleId, &securityGroupId, &regionId)
+		if err != nil {
+			return
+		}
 	}
 
+	if securityGroupRuleId == "" {
+		err = fmt.Errorf("security_group_rule_id不能为空")
+		return
+	}
+	if securityGroupId == "" {
+		err = fmt.Errorf(" security_group_id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 	cfg.Id = types.StringValue(securityGroupRuleId)
 	cfg.SecurityGroupId = types.StringValue(securityGroupId)
 	cfg.RegionId = types.StringValue(regionId)
@@ -430,7 +474,7 @@ func (c *ctyunSecurityGroupRule) getAndMergeSecurityGroupRule(ctx context.Contex
 	if err != nil {
 		// 如果查询不到信息会报异常，此时直接返回空
 		if err.ErrorCode() == common.OpenapiSecurityGroupRuleNotFound {
-			return nil, nil
+			return nil, common.ResourceNotExistError
 		}
 		return nil, err
 	}

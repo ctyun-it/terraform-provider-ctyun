@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/scaling"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -29,13 +29,21 @@ import (
 	"time"
 )
 
+var (
+	_ resource.Resource                = &ctyunScaling{}
+	_ resource.ResourceWithConfigure   = &ctyunScaling{}
+	_ resource.ResourceWithImportState = &ctyunScaling{}
+)
+
 type ctyunScaling struct {
 	meta          *common.CtyunMetadata
+	name          string
 	regionService *business.RegionService
 }
 
 func (c *ctyunScaling) Metadata(_ context.Context, request resource.MetadataRequest, response *resource.MetadataResponse) {
 	response.TypeName = request.ProviderTypeName + "_scaling_group"
+	c.name = response.TypeName
 }
 
 func (c *ctyunScaling) Configure(_ context.Context, request resource.ConfigureRequest, _ *resource.ConfigureResponse) {
@@ -45,52 +53,66 @@ func (c *ctyunScaling) Configure(_ context.Context, request resource.ConfigureRe
 	meta := request.ProviderData.(*common.CtyunMetadata)
 	c.meta = meta
 	c.regionService = business.NewRegionService(c.meta)
-
 }
 
 func NewCtyunScaling() resource.Resource {
 	return &ctyunScaling{}
 }
 
-// 导入命令：terraform import [配置标识].[导入配置名称] [id],[regionId],[projectId]
 func (c *ctyunScaling) ImportState(ctx context.Context, request resource.ImportStateRequest, response *resource.ImportStateResponse) {
 	var err error
 	defer func() {
 		if err != nil {
-			response.Diagnostics.AddError(err.Error(), err.Error())
+			title := fmt.Sprintf("%s导入实例: %s 失败：%s", c.name, request.ID, err.Error())
+			detail := fmt.Sprintf("导入命令：terraform import [%s].[导入配置名称] [id],<region_id>", c.name)
+			response.Diagnostics.AddError(title, detail)
 		}
 	}()
-
-	var cfg CtyunScalingConfig
-	var ID, regionId, projectId, vpcId string
-	err = terraform_extend.Split(request.ID, &ID, &regionId, &projectId, &vpcId)
-	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
-		return
+	var config CtyunScalingConfig
+	var ID, regionId string
+	// 根据分隔符数量判断是否输入了regionID
+	if strings.Count(request.ID, common.ImportSeparator) < 1 {
+		regionId = c.meta.GetExtraIfEmpty(regionId, common.ExtraRegionId)
+		err = terraform_extend.Split(request.ID, &ID)
+		if err != nil {
+			return
+		}
+	} else {
+		err = terraform_extend.Split(request.ID, &ID, &regionId)
+		if err != nil {
+			return
+		}
 	}
+
 	id, err := strconv.ParseInt(ID, 10, 64)
 	if err != nil {
+		err = fmt.Errorf("id必须是有效数字")
 		return
 	}
-	cfg.ID = types.Int64Value(id)
-	cfg.RegionID = types.StringValue(regionId)
-	cfg.ProjectID = types.StringValue(projectId)
-	cfg.VpcID = types.StringValue(vpcId)
+	if ID == "" {
+		err = fmt.Errorf("id不能为空")
+		return
+	}
+	if regionId == "" {
+		err = fmt.Errorf("region_id不能为空")
+		return
+	}
 
-	cfg.AddInstanceUUIDList = types.SetNull(types.StringType)
-	cfg.RemoveInstanceUUIDList = types.SetNull(types.StringType)
-
-	err = c.getAndMergeScaling(ctx, &cfg)
+	config.ID = types.Int64Value(id)
+	config.RegionID = types.StringValue(regionId)
+	config.AddInstanceUUIDList = types.SetNull(types.StringType)
+	config.RemoveInstanceUUIDList = types.SetNull(types.StringType)
+	config.ExpectedCount = config.ActualCount
+	err = c.getAndMergeScaling(ctx, &config)
 	if err != nil {
-		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	response.Diagnostics.Append(response.State.Set(ctx, cfg)...)
+	response.Diagnostics.Append(response.State.Set(ctx, config)...)
 }
 
 func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：：https://www.ctyun.cn/document/10027725`,
+		MarkdownDescription: utils.FormatDesc("管理弹性伸缩组", "弹性伸缩服务（CT-AS，Auto Scaling）", "https://www.ctyun.cn/document/10027725"),
 		Attributes: map[string]schema.Attribute{
 			"region_id": schema.StringAttribute{
 				Optional:    true,
@@ -100,13 +122,19 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtLeast(1),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
 				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					explanmodifier.Project(),
+				},
+				Validators: []validator.String{
+					validator2.Project(),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraProjectId, false),
 			},
@@ -114,6 +142,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				ElementType: types.StringType,
 				Optional:    true,
 				Description: "安全组ID列表。支持更新",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			//"recovery_mode": schema.Int64Attribute{
 			//	Required:    true,
@@ -196,6 +227,10 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 					validator2.ScalingCountValidate(),
 				},
 			},
+			"actual_count": schema.Int32Attribute{
+				Computed:    true,
+				Description: "当前弹性伸缩组内云主机数量",
+			},
 			"health_period": schema.Int32Attribute{
 				Required:    true,
 				Description: "健康检查时间间隔（周期），单位：秒，取值范围：[300,10080]。支持更新",
@@ -211,19 +246,31 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 					Attributes: map[string]schema.Attribute{
 						"port": schema.Int32Attribute{
 							Required:    true,
-							Description: "端口号，当status=disable时支持更新",
+							Description: "端口号，当status=disable时支持更新，取值范围：1~65535",
+							Validators: []validator.Int32{
+								int32validator.Between(1, 65535),
+							},
 						},
 						"lb_id": schema.StringAttribute{
 							Required:    true,
 							Description: "负载均衡ID，当status=disable时支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 						"weight": schema.Int32Attribute{
 							Required:    true,
 							Description: "权重，当status=disable时支持更新",
+							Validators: []validator.Int32{
+								int32validator.Between(0, 256),
+							},
 						},
 						"host_group_id": schema.StringAttribute{
 							Required:    true,
 							Description: "后端主机组ID，当status=disable时支持更新",
+							Validators: []validator.String{
+								stringvalidator.UTF8LengthAtLeast(1),
+							},
 						},
 					},
 				},
@@ -264,6 +311,9 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlStatus...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"delete_protection": schema.StringAttribute{
 				Optional:    true,
@@ -272,16 +322,25 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.ScalingControlProtectionStatus...),
 				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"add_instance_uuid_list": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "需要手动添加的云主机uuid列表。伸缩组内云主机清单可以根据data.ctyun_scaling_ecs_list获取。支持更新。",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			"remove_instance_uuid_list": schema.SetAttribute{
 				Optional:    true,
 				ElementType: types.StringType,
 				Description: "需要删除手动/自动加入伸缩组的云主机uuid列表。伸缩组内云主机清单可以根据data.ctyun_scaling_ecs_list获取。支持更新。",
+				Validators: []validator.Set{
+					setvalidator.SizeAtLeast(1),
+				},
 			},
 			//"protect_status": schema.StringAttribute{
 			//	Optional:    true,
@@ -293,9 +352,8 @@ func (c *ctyunScaling) Schema(ctx context.Context, request resource.SchemaReques
 			//	},
 			//},
 			"is_destroy": schema.BoolAttribute{
-				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
+				Optional: true,
+				//Default:     booldefault.StaticBool(false),
 				Description: "移除时是否销毁，仅当移除云主机时生效（对手动添加的机器做处理），true-ecs移出伸缩组时销毁， false-ecs移出伸缩组时不销毁，支持更新",
 			},
 			"real_count": schema.Int32Attribute{
@@ -377,7 +435,7 @@ func (c *ctyunScaling) Read(ctx context.Context, request resource.ReadRequest, r
 	// 查询远端
 	err = c.getAndMergeScaling(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "NotExists") || strings.Contains(err.Error(), "不存在") {
+		if errors.Is(err, common.ResourceNotExistError) {
 			response.State.RemoveResource(ctx)
 			err = nil
 		}
@@ -596,12 +654,14 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 	config.MinCount = types.Int32Value(scalingDetail.MinCount)
 	config.MaxCount = types.Int32Value(scalingDetail.MaxCount)
 	//  todo 考虑是否需要同步
-	//config.ExpectedCount = types.Int32Value(scalingDetail.ExpectedCount)
+	config.ActualCount = types.Int32Value(scalingDetail.ExpectedCount)
 	config.RealCount = types.Int32Value(scalingDetail.InstanceCount)
 	config.UseLb = types.Int32Value(scalingDetail.UseLb)
 	config.HealthPeriod = types.Int32Value(scalingDetail.HealthPeriod)
+	config.VpcID = types.StringValue(scalingDetail.VpcID)
 	var diags diag.Diagnostics
 	config.SecurityGroupIDList, diags = types.SetValueFrom(ctx, types.StringType, scalingDetail.SecurityGroupIDList)
+	config.ProjectID = types.StringValue(scalingDetail.ProjectIDEcs)
 	if diags.HasError() {
 		return errors.New(diags[0].Detail())
 	}
@@ -627,6 +687,8 @@ func (c *ctyunScaling) getAndMergeScaling(ctx context.Context, config *CtyunScal
 		if diags.HasError() {
 			return errors.New(diags[0].Detail())
 		}
+	} else {
+		config.LbList = types.ListNull(utils.StructToTFObjectTypes(CtyunLbInfoModel{}))
 	}
 
 	// 处理subnetIDList
@@ -660,16 +722,24 @@ func (c *ctyunScaling) getScalingDetail(ctx context.Context, config *CtyunScalin
 		err = errors.New("获取弹性伸缩列表信息返回nil，请稍后重试或联系研发人员！")
 		return nil, err
 	} else if resp.StatusCode != common.NormalStatusCode {
+		if strings.Contains(resp.Error, "Scaling.Group.NotFound") || strings.Contains(resp.Message, "未找到弹性伸缩组信息") {
+			return nil, common.ResourceNotExistError
+		}
 		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
 		return nil, err
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
 		return nil, err
 	}
+	if resp.ReturnObj.ScalingGroups == nil || len(resp.ReturnObj.ScalingGroups) == 0 {
+		err = common.ResourceNotExistError
+		return nil, err
+	}
 	if len(resp.ReturnObj.ScalingGroups) > 1 {
 		err = fmt.Errorf("根据groupid: %d 获取的弹性伸缩详情返回多个实例。具体如下:%#v\n", config.ID.ValueInt64(), resp.ReturnObj.ScalingGroups)
 		return nil, err
 	}
+
 	return resp, nil
 }
 
@@ -760,7 +830,7 @@ func (c *ctyunScaling) updateScaling(ctx context.Context, state *CtyunScalingCon
 	}
 	//  判断SubnetIDList是否需要更新
 	if !plan.SubnetIDList.IsNull() && !plan.SubnetIDList.Equal(state.SubnetIDList) {
-		// 先判断伸缩组状态，如果状态为停用可以更新。 status = 2
+		// 先判断伸缩组状态，如果状态为停用支持更新。 status = 2
 		detail, err := c.getScalingDetail(ctx, state)
 		if err != nil {
 			return err
@@ -1254,7 +1324,7 @@ func (c *ctyunScaling) updateInstanceByUUIDList(ctx context.Context, state *Ctyu
 			return err
 		}
 
-		// 轮询确认是否可以更新
+		// 轮询确认是否支持更新
 		err = c.updateInstanceBeforeLoop(ctx, state, 60)
 		if err != nil {
 			return err
@@ -1282,7 +1352,7 @@ func (c *ctyunScaling) updateInstanceByUUIDList(ctx context.Context, state *Ctyu
 			err = fmt.Errorf("待删除的云主机中有部分未加入伸缩组，符合删除条件列表为：%s", strings.Join(removeIntersection, ", "))
 			return err
 		}
-		// 轮询确认是否可以更新
+		// 轮询确认是否支持更新
 		err = c.updateInstanceBeforeLoop(ctx, state, 60)
 		if err != nil {
 			return err
@@ -1540,6 +1610,7 @@ type CtyunScalingConfig struct {
 	MinCount            types.Int32  `tfsdk:"min_count"`              // 最小云主机数
 	MaxCount            types.Int32  `tfsdk:"max_count"`              // 最大云主机数
 	ExpectedCount       types.Int32  `tfsdk:"expected_count"`         // 期望云主机数
+	ActualCount         types.Int32  `tfsdk:"actual_count"`           // 当前实例数量
 	RealCount           types.Int32  `tfsdk:"real_count"`             // 当前云主机数
 	HealthPeriod        types.Int32  `tfsdk:"health_period"`          // 健康检查时间间隔
 	LbList              types.List   `tfsdk:"lb_list"`                // 负载均衡列表

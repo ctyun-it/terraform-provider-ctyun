@@ -1,5 +1,10 @@
+---
+subcategory: "关系数据库MySQL版"
+page_title: "CTYUN: ctyun_mysql_association_eip"
+---
+
 # ctyun_mysql_association_eip (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10033813/10033927
+-> 管理MySQL实例和弹性IP的绑定关系
 
 
 
@@ -22,7 +27,7 @@ provider "ctyun" {
 resource "ctyun_vpc" "vpc_test" {
   name        = "tf-vpc-for-mysql"
   cidr        = "192.168.0.0/16"
-  description = "terraform-kafka测试使用"
+  description = "terraform-mysql测试使用"
   enable_ipv6 = true
 }
 
@@ -30,33 +35,32 @@ resource "ctyun_subnet" "subnet_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-subnet-for-mysql1"
   cidr        = "192.168.1.0/24"
-  description = "terraform-kafka测试使用"
+  description = "terraform-mysql测试使用"
   dns = [
     "114.114.114.114",
     "8.8.8.8",
-    "8.8.4.4"
   ]
 }
 resource "ctyun_security_group" "sg_mysql_test" {
   vpc_id      = ctyun_vpc.vpc_test.id
   name        = "tf-sg-for-esc"
-  description = "terraform-kafka测试使用"
+  description = "terraform-mysql测试使用"
   lifecycle {
     prevent_destroy = false
   }
 }
 
 resource "ctyun_mysql_instance" "mysql_test" {
-  cycle_type            = "on_demand"
-  vpc_id                = ctyun_vpc.vpc_test.id
-  subnet_id             = ctyun_subnet.subnet_test.id
-  security_group_id     = ctyun_security_group.sg_mysql_test.id
-  name                  = "mysql-test-web-2"
-  prod_id               = "Master2Slave80"
-  storage_type          = "SATA"
-  storage_space         = 100
-  password              = var.password
-  flavor_name           = "c7.2xlarge.4"
+  cycle_type        = "on_demand"
+  vpc_id            = ctyun_vpc.vpc_test.id
+  subnet_id         = ctyun_subnet.subnet_test.id
+  security_group_id = ctyun_security_group.sg_mysql_test.id
+  name              = "mysql-test-1"
+  prod_id           = "10001003" # 5.7单机版；可通过data.ctyun_mysql_specs查询
+  storage_type      = "SATA"
+  storage_space     = 100
+  password          = var.password
+  flavor_name       = "c7.2xlarge.4"
 }
 
 variable "password" {
@@ -72,8 +76,8 @@ resource "ctyun_eip" "eip_test" {
 }
 
 resource "ctyun_mysql_association_eip" "association_eip" {
-  eip_id = ctyun_eip.eip_test.id
-  inst_id = ctyun_mysql_instance.mysql_test.id
+  eip_id      = ctyun_eip.eip_test.id
+  instance_id = ctyun_mysql_instance.mysql_test.id
 }
 ```
 
@@ -83,14 +87,27 @@ resource "ctyun_mysql_association_eip" "association_eip" {
 ### Required
 
 - `eip_id` (String) 弹性IP的id
-- `inst_id` (String) 实例id
+- `instance_id` (String) 实例id
 
 ### Optional
 
-- `project_id` (String) 企业项目id
+- `project_id` (String, Deprecated) 企业项目id
 - `region_id` (String) 资源池Id
 
 ### Read-Only
 
 - `eip_status` (Number) 弹性ip状态 0->unbind，1->bind,2->binding
+- `id` (String) id
 - `status` (String) eip绑定状态，与eip_status一致
+## 导入
+
+使用以下语法支持导入：
+
+```shell
+# 导入MySQL实例与EIP关联资源
+#[] 标记的参数为必填参数
+#<> 标记的参数为可选参数,不填则取值环境变量值
+terraform import ctyun_mysql_association_eip.[导入配置名称] [instance_id],[eip_id],<region_id>
+# 示例
+terraform import ctyun_mysql_association_eip.example 3dd1482933a243f9bd4e8ecb3cafbddb,eip-cdefsxwxs10,bb9fdb42056f11eda1610242ac110002
+```

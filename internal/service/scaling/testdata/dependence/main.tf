@@ -23,7 +23,9 @@ resource "ctyun_subnet" "subnet_test" {
 locals {
   real_subnet_id = ctyun_subnet.subnet_test.id
 }
+data "ctyun_zones" "test" {
 
+}
 resource "ctyun_subnet" "subnet_test1" {
   vpc_id      = local.real_vpc_id
   name        = "tf-subnet-for-scaling1"
@@ -60,10 +62,17 @@ data "ctyun_images" "image_test" {
   page_size = 10
 }
 
+data "ctyun_images" "image_test2" {
+  name       = "CTyunOS 22.06 64 位"
+  visibility = "public"
+  page_no = 1
+  page_size = 10
+}
 
 
 locals {
   image_id = data.ctyun_images.image_test.images[0].id
+  image_id2 = data.ctyun_images.image_test2.images[1].id
 }
 
 resource "ctyun_keypair" "scaling_test" {
@@ -74,24 +83,26 @@ resource "ctyun_keypair" "scaling_test" {
 resource "ctyun_scaling_config" "config_test" {
   name            = "sc-for-policy"
   image_id        =  local.image_id
-  flavor_name     = "s7.large.2"
-  use_floatings   = "diable"
+  flavor_name     = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  use_floatings   = "disable"
   login_mode      = "key_pair"
   key_pair_id     = ctyun_keypair.scaling_test.id
   monitor_service = true
-  az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
+  # az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
+  # az_names        = ["cn-nm-het3-1a-public-ctcloud"]
   volumes         = [{"volume_type":"SATA", "volume_size": 40, "flag":"OS"}]
 }
 
 resource "ctyun_scaling_config" "config_test1" {
   name            = "sc-for-policy1"
   image_id        =  local.image_id
-  flavor_name     = "s7.large.2"
-  use_floatings   = "diable"
+  flavor_name     = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  use_floatings   = "disable"
   login_mode      = "key_pair"
   key_pair_id     = ctyun_keypair.scaling_test.id
   monitor_service = true
-  az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
+  # az_names        = ["cn-huadong1-jsnj1A-public-ctcloud"]
+  # az_names        = ["cn-nm-het3-1a-public-ctcloud"]
   volumes         = [{"volume_type":"SATA", "volume_size": 40, "flag":"OS"}]
 }
 
@@ -117,8 +128,12 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   cpu    = 2
   ram    = 4
   arch   = "x86"
-  series = "C"
-  type   = "CPU_C7"
+}
+
+data "ctyun_ecs_flavors" "ecs_flavor_test2" {
+  cpu    = 4
+  ram    = 8
+  arch   = "x86"
 }
 
 resource "ctyun_ecs" "ecs_test" {
@@ -126,7 +141,7 @@ resource "ctyun_ecs" "ecs_test" {
   display_name        = "tf-ecs-for-scaling-ecs1"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id =  local.real_vpc_id
   password            = var.password
@@ -146,7 +161,7 @@ resource "ctyun_ecs" "ecs_test1" {
   display_name        = "tf-ecs-for-scaling-ecs2"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id =  local.real_vpc_id
   password            = var.password
@@ -161,7 +176,7 @@ resource "ctyun_ecs" "ecs_test2" {
   display_name        = "tf-ecs-for-scaling-ecs3"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id =  local.real_vpc_id
   password            = var.password
@@ -176,7 +191,7 @@ resource "ctyun_ecs" "ecs_test3" {
   display_name        = "tf-ecs-for-scaling-ecs4"
   flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
   image_id            = data.ctyun_images.image_test.images[0].id
-  system_disk_type    = "sata"
+  system_disk_type    = "SATA"
   system_disk_size    = 40
   vpc_id =  local.real_vpc_id
   password            = var.password

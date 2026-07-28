@@ -5,6 +5,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
@@ -27,7 +28,7 @@ func (c *ctyunEcsFlavors) Metadata(_ context.Context, req datasource.MetadataReq
 
 func (c *ctyunEcsFlavors) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: `-> 详细说明请见文档：https://www.ctyun.cn/document/10026730/10118193**`,
+		MarkdownDescription: utils.FormatDesc("查询云主机可用的规格列表", "弹性云主机（CT-ECS，Elastic Cloud Server）", "https://www.ctyun.cn/document/10026730/10118193"),
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
 				Optional:    true,
@@ -157,7 +158,7 @@ func (c *ctyunEcsFlavors) Read(ctx context.Context, req datasource.ReadRequest, 
 
 	regionId := c.meta.GetExtraIfEmpty(config.RegionId.ValueString(), common.ExtraRegionId)
 	if regionId == "" {
-		msg := "regionId不能为空"
+		msg := "region_id不能为空"
 		resp.Diagnostics.AddError(msg, msg)
 		return
 	}

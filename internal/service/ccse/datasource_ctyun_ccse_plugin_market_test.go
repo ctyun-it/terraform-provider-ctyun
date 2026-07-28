@@ -10,11 +10,11 @@ import (
 
 func TestAccCtyunCcsePluginMarket(t *testing.T) {
 	datasourceFile := "datasource_ctyun_ccse_plugin_market.tf"
-	dnd1 := utils.GenerateRandomString()
+	dnd1 := utils.GenerateRandomString() + "a"
 	dnd1Name := "data.ctyun_ccse_plugin_market." + dnd1
-	dnd2 := utils.GenerateRandomString()
+	dnd2 := utils.GenerateRandomString() + "b"
 	dnd2Name := "data.ctyun_ccse_plugin_market." + dnd2
-	dnd3 := utils.GenerateRandomString()
+	dnd3 := utils.GenerateRandomString() + "c"
 	dnd3Name := "data.ctyun_ccse_plugin_market." + dnd3
 	valuesYaml := "YAML"
 	valuesJson := "JSON"
@@ -51,11 +51,11 @@ func TestAccCtyunCcsePluginMarket(t *testing.T) {
 
 func TestAccCtyunCcseTemplateMarket(t *testing.T) {
 	datasourceFile := "datasource_ctyun_ccse_template_market.tf"
-	dnd1 := utils.GenerateRandomString()
+	dnd1 := utils.GenerateRandomString() + "a"
 	dnd1Name := "data.ctyun_ccse_template_market." + dnd1
-	dnd2 := utils.GenerateRandomString()
+	dnd2 := utils.GenerateRandomString() + "b"
 	dnd2Name := "data.ctyun_ccse_template_market." + dnd2
-	dnd3 := utils.GenerateRandomString()
+	dnd3 := utils.GenerateRandomString() + "c"
 	dnd3Name := "data.ctyun_ccse_template_market." + dnd3
 	valuesYaml := "YAML"
 	valuesJson := "JSON"

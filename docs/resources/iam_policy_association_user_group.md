@@ -1,5 +1,10 @@
+---
+subcategory: "统一身份认证（Identity and Access Management，简称IAM）"
+page_title: "CTYUN: ctyun_iam_policy_association_user_group"
+---
+
 # ctyun_iam_policy_association_user_group (Resource)
--> 详细说明请见文档：https://www.ctyun.cn/document/10345725/10409392
+-> 管理策略和用户组的绑定关系
 
 
 
@@ -23,8 +28,8 @@ resource "ctyun_iam_policy" "iam_policy_global_test" {
   name        = "terraform_policy_global2"
   description = "terraform测试全局策略2"
   range       = "global"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"
@@ -44,8 +49,8 @@ resource "ctyun_iam_policy" "iam_policy_region_test" {
   name        = "terraform_policy_region2"
   description = "terraform测试资源池策略2"
   range       = "region"
-  content     = {
-    version   = "1.1"
+  content = {
+    version = "1.1"
     statement = [
       {
         effect   = "allow"
