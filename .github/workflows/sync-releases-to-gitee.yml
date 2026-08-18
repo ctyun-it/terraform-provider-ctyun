@@ -23,8 +23,9 @@ jobs:
           SYNC_ALL: ${{ github.event.inputs.sync_all }}
           TRIGGER_TAG: ${{ github.event.release.tag_name }}
         run: |
-          python3 -c '
-          import os, sys, json, urllib.request, urllib.error, tempfile, shutil
+          pip install requests -q
+          python3 << 'PYEOF'
+          import os, sys, requests, tempfile, shutil
 
           GH_REPO = os.environ["GH_REPO"]
           GITEE_REPO = os.environ["GITEE_REPO"]
@@ -33,145 +34,189 @@ jobs:
           SYNC_ALL = os.environ.get("SYNC_ALL", "false")
           TRIGGER_TAG = os.environ.get("TRIGGER_TAG", "")
 
-          def gh_api(path):
-              req = urllib.request.Request(f"https://api.github.com{path}",
-                  headers={"Authorization": f"token {GH_TOKEN}", "Accept": "application/vnd.github+json"})
-              with urllib.request.urlopen(req) as r:
-                  return json.loads(r.read())
+          GH_HEADERS = {"Authorization": "token " + GH_TOKEN, "Accept": "application/vnd.github+json"}
+          GITEE_PARAMS = {"access_token": GITEE_TOKEN}
 
-          def gitee_api(path, data=None, files=None):
-              url = f"https://gitee.com/api/v5{path}?access_token={GITEE_TOKEN}"
-              if files:
-                  boundary = "----PythonBoundary" + os.urandom(8).hex()
-                  body = b""
-                  for key, val in data.items():
-                      body += f"--{boundary}\r\n".encode()
-                      body += f'Content-Disposition: form-data; name="{key}"\r\n\r\n{val}\r\n'.encode()
-                  for key, filename, content in files:
-                      body += f"--{boundary}\r\n".encode()
-                      body += f'Content-Disposition: form-data; name="{key}"; filename="{filename}"\r\n'.encode()
-                      body += b"Content-Type: application/octet-stream\r\n\r\n"
-                      body += content + b"\r\n"
-                  body += f"--{boundary}--\r\n".encode()
-                  req = urllib.request.Request(url, data=body, method="POST",
-                      headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
-              elif data:
-                  body = json.dumps(data)
-                  req = urllib.request.Request(url, data=body.encode(), method="POST",
-                      headers={"Content-Type": "application/json"})
-              else:
-                  req = urllib.request.Request(url)
-              try:
-                  with urllib.request.urlopen(req) as r:
-                      return json.loads(r.read())
-              except urllib.error.HTTPError as e:
-                  err = e.read().decode()
-                  print(f"  Gitee API error {e.code}: {err}")
+          def log(msg):
+              print(msg, flush=True)
+
+          def gh_get(path):
+              r = requests.get("https://api.github.com" + path, headers=GH_HEADERS, timeout=30)
+              r.raise_for_status()
+              return r.json()
+
+          def gitee_get(path, params=None):
+              p = dict(GITEE_PARAMS)
+              if params:
+                  p.update(params)
+              r = requests.get("https://gitee.com/api/v5" + path, params=p, timeout=30)
+              if r.status_code != 200:
+                  log("  Gitee GET error " + str(r.status_code) + ": " + r.text)
                   return None
+              return r.json()
 
+          def gitee_post_json(path, data):
+              p = dict(GITEE_PARAMS)
+              r = requests.post("https://gitee.com/api/v5" + path, params=p, json=data, timeout=30)
+              if r.status_code not in (200, 201):
+                  log("  Gitee POST error " + str(r.status_code) + ": " + r.text)
+                  return None
+              return r.json()
+
+          def gitee_post_file(path, file_path, file_name):
+              p = dict(GITEE_PARAMS)
+              with open(file_path, "rb") as f:
+                  r = requests.post("https://gitee.com/api/v5" + path, params=p,
+                      files={"file": (file_name, f, "application/octet-stream")}, timeout=120)
+              if r.status_code not in (200, 201):
+                  log("  Gitee upload error " + str(r.status_code) + ": " + r.text)
+                  return None
+              return r.json()
+
+          log("=== Querying existing Gitee releases ===")
           existing = set()
           page = 1
           while True:
-              rels = gitee_api(f"/repos/{GITEE_REPO}/releases", data=None)
+              rels = gitee_get("/repos/" + GITEE_REPO + "/releases", {"page": page, "per_page": 100})
               if not rels:
                   break
               for r in rels:
                   existing.add(r.get("tag_name", ""))
+              log("  page " + str(page) + ": " + str(len(rels)) + " releases")
               if len(rels) < 100:
                   break
               page += 1
 
-          print(f"Found {len(existing)} releases on Gitee")
+          log("Found " + str(len(existing)) + " releases on Gitee")
 
           if SYNC_ALL == "true":
+              log("=== Fetching all GitHub releases ===")
               tags = []
               page = 1
               while True:
-                  rels = gh_api(f"/repos/{GH_REPO}/releases?per_page=100&page={page}")
+                  rels = gh_get("/repos/" + GH_REPO + "/releases?per_page=100&page=" + str(page))
                   if not rels:
                       break
                   tags.extend(r["tag_name"] for r in rels)
+                  log("  page " + str(page) + ": " + str(len(rels)) + " releases")
                   page += 1
           elif TRIGGER_TAG:
               tags = [TRIGGER_TAG]
           else:
-              rels = gh_api(f"/repos/{GH_REPO}/releases?per_page=1")
+              rels = gh_get("/repos/" + GH_REPO + "/releases?per_page=1")
               tags = [rels[0]["tag_name"]] if rels else []
 
           if not tags:
-              print("No releases to sync")
+              log("No releases to sync")
               sys.exit(0)
+
+          log("Releases to sync: " + str(tags))
 
           synced = 0
           skipped = 0
           failed = 0
+          tmp = tempfile.mkdtemp()
 
-          for tag in tags:
-              if tag in existing:
-                  print(f"[SKIP] {tag} already on Gitee")
-                  skipped += 1
-                  continue
+          try:
+              for tag in tags:
+                  log("")
+                  log("--- Processing " + tag + " ---")
 
-              print(f"[SYNC] {tag}")
+                  if tag in existing:
+                      log("[SKIP] " + tag + " already on Gitee")
+                      skipped += 1
+                      continue
 
-              try:
-                  rel = gh_api(f"/repos/{GH_REPO}/releases/tags/{tag}")
-              except Exception as e:
-                  print(f"  [ERROR] GitHub fetch failed: {e}")
-                  failed += 1
-                  continue
+                  try:
+                      rel = gh_get("/repos/" + GH_REPO + "/releases/tags/" + tag)
+                  except Exception as e:
+                      log("[ERROR] GitHub fetch failed: " + str(e))
+                      failed += 1
+                      continue
 
-              body = rel.get("body") or ""
-              if not body.strip():
-                  body = "See GitHub release for details"
-              target = rel.get("target_commitish") or "main"
+                  body = rel.get("body") or ""
+                  if not body.strip():
+                      body = "See GitHub release for details"
+                  target = rel.get("target_commitish") or "main"
+                  rel_name = rel.get("name") or tag
+                  is_prerelease = rel.get("prerelease", False)
 
-              print(f"  body length={len(body)}, target_commitish={target}")
+                  log("  body length=" + str(len(body)) + ", target=" + target)
 
-              new_rel = gitee_api(f"/repos/{GITEE_REPO}/releases", data={
-                  "tag_name": tag,
-                  "name": rel.get("name") or tag,
-                  "body": body,
-                  "target_commitish": target,
-                  "prerelease": rel.get("prerelease", False),
-              })
+                  new_rel = gitee_post_json("/repos/" + GITEE_REPO + "/releases", {
+                      "tag_name": tag,
+                      "name": rel_name,
+                      "body": body,
+                      "target_commitish": target,
+                      "prerelease": is_prerelease,
+                  })
 
-              if not new_rel or not new_rel.get("id"):
-                  print(f"  [ERROR] Failed to create release for {tag}")
-                  failed += 1
-                  continue
+                  if not new_rel or not new_rel.get("id"):
+                      log("[ERROR] Failed to create release for " + tag)
+                      failed += 1
+                      continue
 
-              gitee_id = new_rel["id"]
-              print(f"  Created Gitee release id={gitee_id}")
+                  gitee_id = new_rel["id"]
+                  log("  Created Gitee release id=" + str(gitee_id))
 
-              tmp = tempfile.mkdtemp()
-              try:
-                  for asset in rel.get("assets", []):
+                  assets = rel.get("assets", [])
+                  log("  Found " + str(len(assets)) + " assets")
+
+                  for asset in assets:
                       name = asset["name"]
-                      print(f"  Downloading {name} ...")
+                      size = asset.get("size", 0)
+                      log("  Downloading " + name + " (" + str(size // 1024) + " KB) ...")
+
+                      file_path = os.path.join(tmp, tag + "_" + name)
+                      downloaded = False
+
                       try:
-                          req = urllib.request.Request(asset["url"],
-                              headers={"Authorization": f"token {GH_TOKEN}", "Accept": "application/octet-stream"})
-                          with urllib.request.urlopen(req) as r:
-                              content = r.read()
-                      except Exception:
-                          with urllib.request.urlopen(asset["browser_download_url"]) as r:
-                              content = r.read()
+                          r = requests.get(asset["url"], headers=GH_HEADERS, timeout=120, stream=True)
+                          r.raise_for_status()
+                          with open(file_path, "wb") as f:
+                              for chunk in r.iter_content(8192):
+                                  f.write(chunk)
+                          downloaded = True
+                      except Exception as e:
+                          log("    API download failed: " + str(e))
 
-                      print(f"  Uploading {name} ({len(content)//1024} KB) ...")
-                      result = gitee_api(f"/repos/{GITEE_REPO}/releases/{gitee_id}/attach_files",
-                          data={}, files=[("file", name, content)])
+                      if not downloaded:
+                          try:
+                              r = requests.get(asset["browser_download_url"], timeout=120, stream=True)
+                              r.raise_for_status()
+                              with open(file_path, "wb") as f:
+                                  for chunk in r.iter_content(8192):
+                                      f.write(chunk)
+                              downloaded = True
+                          except Exception as e:
+                              log("    browser download failed: " + str(e))
+
+                      if not downloaded or not os.path.exists(file_path):
+                          log("  [WARN] Failed to download " + name + ", skipping")
+                          continue
+
+                      log("  Uploading " + name + " ...")
+                      result = gitee_post_file(
+                          "/repos/" + GITEE_REPO + "/releases/" + str(gitee_id) + "/attach_files",
+                          file_path, name
+                      )
                       if result:
-                          print(f"  Uploaded: {result.get(\"name\", name)}")
+                          log("  Uploaded: " + result.get("name", name))
                       else:
-                          print(f"  [WARN] Upload may have failed for {name}")
-              finally:
-                  shutil.rmtree(tmp, ignore_errors=True)
+                          log("  [WARN] Upload may have failed for " + name)
 
-              print(f"[DONE] {tag}")
-              synced += 1
+                      try:
+                          os.remove(file_path)
+                      except:
+                          pass
 
-          print(f"\nSync complete: synced={synced} skipped={skipped} failed={failed}")
+                  log("[DONE] " + tag)
+                  synced += 1
+          finally:
+              shutil.rmtree(tmp, ignore_errors=True)
+
+          log("")
+          log("=== Sync complete: synced=" + str(synced) + " skipped=" + str(skipped) + " failed=" + str(failed) + " ===")
           if failed > 0:
               sys.exit(1)
-          '
+          PYEOF
