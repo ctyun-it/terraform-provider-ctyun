@@ -96,27 +96,21 @@ jobs:
               continue
             fi
 
-            TAG_NAME=$(echo "$REL_JSON" | jq -r '.tag_name')
-            REL_NAME=$(echo "$REL_JSON" | jq -r '.name // .tag_name')
-            TARGET=$(echo "$REL_JSON" | jq -r '.target_commitish // "main"')
-            PRERELEASE=$(echo "$REL_JSON" | jq -r '.prerelease')
-
             echo "  Creating release on Gitee ..."
 
-            GITEE_REL=$(echo "$REL_JSON" | jq -r '.body // ""' | jq -Rs . | {
-              read -r ESCAPED_BODY
-              curl -s -w "\n%{http_code}" -X POST \
-                "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
-                -H "Content-Type: application/json" \
-                -d "{
-                  \"access_token\": \"$GITEE_TOKEN\",
-                  \"tag_name\": \"$TAG_NAME\",
-                  \"name\": \"$REL_NAME\",
-                  \"body\": $ESCAPED_BODY,
-                  \"target\": \"$TARGET\",
-                  \"prerelease\": $PRERELEASE
-                }"
-            })
+            REQ_JSON=$(echo "$REL_JSON" | jq '{
+              access_token: env.GITEE_TOKEN,
+              tag_name: .tag_name,
+              name: (.name // .tag_name),
+              body: (.body // ""),
+              target_commitish: (.target_commitish // "main"),
+              prerelease: (.prerelease // false)
+            }')
+
+            GITEE_REL=$(curl -s -w "\n%{http_code}" -X POST \
+              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
+              -H "Content-Type: application/json" \
+              -d "$REQ_JSON")
 
             HTTP_CODE=$(echo "$GITEE_REL" | tail -1)
             GITEE_REL_BODY=$(echo "$GITEE_REL" | sed '$d')
