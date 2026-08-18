@@ -35,7 +35,7 @@ jobs:
             PAGE=1
             TAGS=""
             while true; do
-              BATCH=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+              BATCH=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                 "https://api.github.com/repos/$GH_REPO/releases?per_page=100&page=$PAGE" \
                 | jq -r '.[].tag_name')
               [ -z "$BATCH" ] && break
@@ -47,7 +47,7 @@ jobs:
             if [ -n "$TRIGGER_TAG" ]; then
               GH_RELEASES="$TRIGGER_TAG"
             else
-              GH_RELEASES=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+              GH_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
                 "https://api.github.com/repos/$GH_REPO/releases?per_page=1" \
                 | jq -r '.[0].tag_name')
             fi
@@ -64,7 +64,7 @@ jobs:
           EXISTING_GITEE=""
           PAGE=1
           while true; do
-            BATCH=$(curl -sf \
+            BATCH=$(curl -s \
               "https://gitee.com/api/v5/repos/$GITEE_REPO/releases?per_page=100&page=$PAGE&access_token=$GITEE_TOKEN" \
               | jq -r '.[].tag_name')
             [ -z "$BATCH" ] && break
@@ -87,7 +87,7 @@ jobs:
 
             echo "[SYNC] $TAG"
 
-            REL_JSON=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+            REL_JSON=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
               "https://api.github.com/repos/$GH_REPO/releases/tags/$TAG")
 
             if [ -z "$REL_JSON" ] || echo "$REL_JSON" | jq -e '.message' > /dev/null 2>&1; then
@@ -98,28 +98,35 @@ jobs:
 
             TAG_NAME=$(echo "$REL_JSON" | jq -r '.tag_name')
             REL_NAME=$(echo "$REL_JSON" | jq -r '.name // .tag_name')
-            REL_BODY=$(echo "$REL_JSON" | jq -r '.body // ""')
             TARGET=$(echo "$REL_JSON" | jq -r '.target_commitish // "main"')
             PRERELEASE=$(echo "$REL_JSON" | jq -r '.prerelease')
 
-            ESCAPED_BODY=$(echo "$REL_BODY" | jq -Rs .)
+            echo "  Creating release on Gitee ..."
 
-            GITEE_REL=$(curl -sf -X POST \
-              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
-              -H "Content-Type: application/json" \
-              -d "{
-                \"access_token\": \"$GITEE_TOKEN\",
-                \"tag_name\": \"$TAG_NAME\",
-                \"name\": \"$REL_NAME\",
-                \"body\": $ESCAPED_BODY,
-                \"target\": \"$TARGET\",
-                \"prerelease\": $PRERELEASE
-              }")
+            GITEE_REL=$(echo "$REL_JSON" | jq -r '.body // ""' | jq -Rs . | {
+              read -r ESCAPED_BODY
+              curl -s -w "\n%{http_code}" -X POST \
+                "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"access_token\": \"$GITEE_TOKEN\",
+                  \"tag_name\": \"$TAG_NAME\",
+                  \"name\": \"$REL_NAME\",
+                  \"body\": $ESCAPED_BODY,
+                  \"target\": \"$TARGET\",
+                  \"prerelease\": $PRERELEASE
+                }"
+            })
 
-            GITEE_REL_ID=$(echo "$GITEE_REL" | jq -r '.id')
+            HTTP_CODE=$(echo "$GITEE_REL" | tail -1)
+            GITEE_REL_BODY=$(echo "$GITEE_REL" | sed '$d')
+
+            echo "  Gitee API HTTP status: $HTTP_CODE"
+
+            GITEE_REL_ID=$(echo "$GITEE_REL_BODY" | jq -r '.id')
             if [ "$GITEE_REL_ID" = "null" ] || [ -z "$GITEE_REL_ID" ]; then
               echo "[ERROR] Failed to create release on Gitee for $TAG"
-              echo "$GITEE_REL" | jq . 2>/dev/null || echo "$GITEE_REL"
+              echo "$GITEE_REL_BODY" | jq . 2>/dev/null || echo "$GITEE_REL_BODY"
               FAILED=$((FAILED + 1))
               continue
             fi
@@ -134,19 +141,30 @@ jobs:
               echo "  Downloading $ASSET_NAME ($(( ASSET_SIZE / 1024 )) KB) ..."
 
               DL_URL=$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .url')
-              curl -sfL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
-                -o "$TMP_DIR/$ASSET_NAME" "$DL_URL" || \
-              curl -sfL -o "$TMP_DIR/$ASSET_NAME" \
-                "$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')"
+              HTTP_DL=0
+              curl -sL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
+                -o "$TMP_DIR/$ASSET_NAME" -w "%{http_code}" "$DL_URL" > /dev/null && HTTP_DL=$? || true
+
+              if [ ! -s "$TMP_DIR/$ASSET_NAME" ] || [ "$HTTP_DL" -ne 0 ]; then
+                BD_URL=$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
+                curl -sL -o "$TMP_DIR/$ASSET_NAME" "$BD_URL" || true
+              fi
+
+              if [ ! -s "$TMP_DIR/$ASSET_NAME" ]; then
+                echo "    [WARN] Failed to download $ASSET_NAME, skipping"
+                continue
+              fi
 
               echo "  Uploading $ASSET_NAME to Gitee ..."
-              UPLOAD_RESP=$(curl -sf -X POST \
+              UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST \
                 "https://gitee.com/api/v5/repos/$GITEE_REPO/releases/$GITEE_REL_ID/attach_files" \
                 -F "access_token=$GITEE_TOKEN" \
                 -F "file=@$TMP_DIR/$ASSET_NAME")
 
-              UPLOAD_NAME=$(echo "$UPLOAD_RESP" | jq -r '.name // .message // "unknown"')
-              echo "  Uploaded: $UPLOAD_NAME"
+              UPLOAD_HTTP=$(echo "$UPLOAD_RESP" | tail -1)
+              UPLOAD_BODY=$(echo "$UPLOAD_RESP" | sed '$d')
+              UPLOAD_NAME=$(echo "$UPLOAD_BODY" | jq -r '.name // .message // "unknown"')
+              echo "  Upload HTTP=$UPLOAD_HTTP result=$UPLOAD_NAME"
 
               rm -f "$TMP_DIR/$ASSET_NAME"
             done
