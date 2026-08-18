@@ -1,0 +1,165 @@
+name: Sync Releases to Gitee
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      sync_all:
+        description: 'Sync all releases (not just the triggered one)'
+        required: false
+        default: 'false'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Sync releases to Gitee
+        env:
+          GH_REPO: ctyun-it/terraform-provider-ctyun
+          GITEE_REPO: ctyun-provider/terraform-provider-ctyun
+          GITHUB_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          SYNC_ALL: ${{ github.event.inputs.sync_all }}
+          TRIGGER_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          TMP_DIR=$(mktemp -d)
+
+          if [ "$SYNC_ALL" = "true" ]; then
+            PAGE=1
+            TAGS=""
+            while true; do
+              BATCH=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/$GH_REPO/releases?per_page=100&page=$PAGE" \
+                | jq -r '.[].tag_name')
+              [ -z "$BATCH" ] && break
+              TAGS="${TAGS}${BATCH}"$'\n'
+              PAGE=$((PAGE + 1))
+            done
+            GH_RELEASES=$(echo "$TAGS" | sed '/^$/d')
+          else
+            if [ -n "$TRIGGER_TAG" ]; then
+              GH_RELEASES="$TRIGGER_TAG"
+            else
+              GH_RELEASES=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+                "https://api.github.com/repos/$GH_REPO/releases?per_page=1" \
+                | jq -r '.[0].tag_name')
+            fi
+          fi
+
+          if [ -z "$GH_RELEASES" ]; then
+            echo "No releases to sync"
+            exit 0
+          fi
+
+          echo "Releases to sync:"
+          echo "$GH_RELEASES"
+
+          EXISTING_GITEE=""
+          PAGE=1
+          while true; do
+            BATCH=$(curl -sf \
+              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases?per_page=100&page=$PAGE&access_token=$GITEE_TOKEN" \
+              | jq -r '.[].tag_name')
+            [ -z "$BATCH" ] && break
+            EXISTING_GITEE="${EXISTING_GITEE}${BATCH}"$'\n'
+            PAGE=$((PAGE + 1))
+          done
+
+          SYNCED=0
+          SKIPPED=0
+          FAILED=0
+
+          while IFS= read -r TAG; do
+            [ -z "$TAG" ] && continue
+
+            if echo "$EXISTING_GITEE" | grep -qxF "$TAG"; then
+              echo "[SKIP] $TAG already on Gitee"
+              SKIPPED=$((SKIPPED + 1))
+              continue
+            fi
+
+            echo "[SYNC] $TAG"
+
+            REL_JSON=$(curl -sf -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$GH_REPO/releases/tags/$TAG")
+
+            if [ -z "$REL_JSON" ] || echo "$REL_JSON" | jq -e '.message' > /dev/null 2>&1; then
+              echo "[ERROR] Tag $TAG not found on GitHub"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+
+            TAG_NAME=$(echo "$REL_JSON" | jq -r '.tag_name')
+            REL_NAME=$(echo "$REL_JSON" | jq -r '.name // .tag_name')
+            REL_BODY=$(echo "$REL_JSON" | jq -r '.body // ""')
+            TARGET=$(echo "$REL_JSON" | jq -r '.target_commitish // "main"')
+            PRERELEASE=$(echo "$REL_JSON" | jq -r '.prerelease')
+
+            ESCAPED_BODY=$(echo "$REL_BODY" | jq -Rs .)
+
+            GITEE_REL=$(curl -sf -X POST \
+              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
+              -H "Content-Type: application/json" \
+              -d "{
+                \"access_token\": \"$GITEE_TOKEN\",
+                \"tag_name\": \"$TAG_NAME\",
+                \"name\": \"$REL_NAME\",
+                \"body\": $ESCAPED_BODY,
+                \"target\": \"$TARGET\",
+                \"prerelease\": $PRERELEASE
+              }")
+
+            GITEE_REL_ID=$(echo "$GITEE_REL" | jq -r '.id')
+            if [ "$GITEE_REL_ID" = "null" ] || [ -z "$GITEE_REL_ID" ]; then
+              echo "[ERROR] Failed to create release on Gitee for $TAG"
+              echo "$GITEE_REL" | jq . 2>/dev/null || echo "$GITEE_REL"
+              FAILED=$((FAILED + 1))
+              continue
+            fi
+
+            echo "  Created Gitee release id=$GITEE_REL_ID"
+
+            ASSET_COUNT=$(echo "$REL_JSON" | jq '.assets | length')
+            echo "  Found $ASSET_COUNT assets"
+
+            echo "$REL_JSON" | jq -r '.assets[] | "\(.name)\t\(.id)\t\(.size)"' | while IFS=$'\t' read -r ASSET_NAME ASSET_ID ASSET_SIZE; do
+              [ -z "$ASSET_NAME" ] && continue
+              echo "  Downloading $ASSET_NAME ($(( ASSET_SIZE / 1024 )) KB) ..."
+
+              DL_URL=$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .url')
+              curl -sfL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
+                -o "$TMP_DIR/$ASSET_NAME" "$DL_URL" || \
+              curl -sfL -o "$TMP_DIR/$ASSET_NAME" \
+                "$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')"
+
+              echo "  Uploading $ASSET_NAME to Gitee ..."
+              UPLOAD_RESP=$(curl -sf -X POST \
+                "https://gitee.com/api/v5/repos/$GITEE_REPO/releases/$GITEE_REL_ID/attach_files" \
+                -F "access_token=$GITEE_TOKEN" \
+                -F "file=@$TMP_DIR/$ASSET_NAME")
+
+              UPLOAD_NAME=$(echo "$UPLOAD_RESP" | jq -r '.name // .message // "unknown"')
+              echo "  Uploaded: $UPLOAD_NAME"
+
+              rm -f "$TMP_DIR/$ASSET_NAME"
+            done
+
+            echo "[DONE] $TAG"
+            SYNCED=$((SYNCED + 1))
+          done <<< "$GH_RELEASES"
+
+          echo ""
+          echo "=============================="
+          echo "Sync complete: synced=$SYNCED skipped=$SKIPPED failed=$FAILED"
+          echo "=============================="
+
+          if [ "$FAILED" -gt 0 ]; then
+            exit 1
+          fi
