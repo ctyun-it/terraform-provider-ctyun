@@ -98,17 +98,20 @@ jobs:
 
             echo "  Creating release on Gitee ..."
 
-            REQ_JSON=$(echo "$REL_JSON" | jq '{
-              access_token: env.GITEE_TOKEN,
+            REQ_JSON=$(echo "$REL_JSON" | jq --arg token "$GITEE_TOKEN" '{
+              access_token: $token,
               tag_name: .tag_name,
               name: (.name // .tag_name),
-              body: (if (.body // "") == "" then "See GitHub release for details" else .body end),
+              body: (if (.body == null or .body == "") then "See GitHub release for details" else .body end),
               target_commitish: (.target_commitish // "main"),
               prerelease: (.prerelease // false)
             }')
 
+            echo "  DEBUG body length: $(echo "$REQ_JSON" | jq '.body | length')"
+            echo "  DEBUG target_commitish: $(echo "$REQ_JSON" | jq -r '.target_commitish')"
+
             GITEE_REL=$(curl -s -w "\n%{http_code}" -X POST \
-              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases" \
+              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases?access_token=$GITEE_TOKEN" \
               -H "Content-Type: application/json" \
               -d "$REQ_JSON")
 
