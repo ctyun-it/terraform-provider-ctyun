@@ -102,7 +102,7 @@ jobs:
               access_token: env.GITEE_TOKEN,
               tag_name: .tag_name,
               name: (.name // .tag_name),
-              body: (.body // ""),
+              body: (if (.body // "") == "" then "See GitHub release for details" else .body end),
               target_commitish: (.target_commitish // "main"),
               prerelease: (.prerelease // false)
             }')
