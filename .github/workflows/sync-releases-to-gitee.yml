@@ -14,167 +14,164 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y jq
-
       - name: Sync releases to Gitee
         env:
           GH_REPO: ctyun-it/terraform-provider-ctyun
           GITEE_REPO: ctyun-provider/terraform-provider-ctyun
-          GITHUB_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_SYNC_TOKEN }}
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
           SYNC_ALL: ${{ github.event.inputs.sync_all }}
           TRIGGER_TAG: ${{ github.event.release.tag_name }}
         run: |
-          TMP_DIR=$(mktemp -d)
+          python3 -c '
+          import os, sys, json, urllib.request, urllib.error, tempfile, shutil
 
-          if [ "$SYNC_ALL" = "true" ]; then
-            PAGE=1
-            TAGS=""
-            while true; do
-              BATCH=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-                "https://api.github.com/repos/$GH_REPO/releases?per_page=100&page=$PAGE" \
-                | jq -r '.[].tag_name')
-              [ -z "$BATCH" ] && break
-              TAGS="${TAGS}${BATCH}"$'\n'
-              PAGE=$((PAGE + 1))
-            done
-            GH_RELEASES=$(echo "$TAGS" | sed '/^$/d')
-          else
-            if [ -n "$TRIGGER_TAG" ]; then
-              GH_RELEASES="$TRIGGER_TAG"
-            else
-              GH_RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-                "https://api.github.com/repos/$GH_REPO/releases?per_page=1" \
-                | jq -r '.[0].tag_name')
-            fi
-          fi
+          GH_REPO = os.environ["GH_REPO"]
+          GITEE_REPO = os.environ["GITEE_REPO"]
+          GH_TOKEN = os.environ["GH_TOKEN"]
+          GITEE_TOKEN = os.environ["GITEE_TOKEN"]
+          SYNC_ALL = os.environ.get("SYNC_ALL", "false")
+          TRIGGER_TAG = os.environ.get("TRIGGER_TAG", "")
 
-          if [ -z "$GH_RELEASES" ]; then
-            echo "No releases to sync"
-            exit 0
-          fi
+          def gh_api(path):
+              req = urllib.request.Request(f"https://api.github.com{path}",
+                  headers={"Authorization": f"token {GH_TOKEN}", "Accept": "application/vnd.github+json"})
+              with urllib.request.urlopen(req) as r:
+                  return json.loads(r.read())
 
-          echo "Releases to sync:"
-          echo "$GH_RELEASES"
+          def gitee_api(path, data=None, files=None):
+              url = f"https://gitee.com/api/v5{path}?access_token={GITEE_TOKEN}"
+              if files:
+                  boundary = "----PythonBoundary" + os.urandom(8).hex()
+                  body = b""
+                  for key, val in data.items():
+                      body += f"--{boundary}\r\n".encode()
+                      body += f'Content-Disposition: form-data; name="{key}"\r\n\r\n{val}\r\n'.encode()
+                  for key, filename, content in files:
+                      body += f"--{boundary}\r\n".encode()
+                      body += f'Content-Disposition: form-data; name="{key}"; filename="{filename}"\r\n'.encode()
+                      body += b"Content-Type: application/octet-stream\r\n\r\n"
+                      body += content + b"\r\n"
+                  body += f"--{boundary}--\r\n".encode()
+                  req = urllib.request.Request(url, data=body, method="POST",
+                      headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+              elif data:
+                  body = json.dumps(data)
+                  req = urllib.request.Request(url, data=body.encode(), method="POST",
+                      headers={"Content-Type": "application/json"})
+              else:
+                  req = urllib.request.Request(url)
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return json.loads(r.read())
+              except urllib.error.HTTPError as e:
+                  err = e.read().decode()
+                  print(f"  Gitee API error {e.code}: {err}")
+                  return None
 
-          EXISTING_GITEE=""
-          PAGE=1
-          while true; do
-            BATCH=$(curl -s \
-              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases?per_page=100&page=$PAGE&access_token=$GITEE_TOKEN" \
-              | jq -r '.[].tag_name')
-            [ -z "$BATCH" ] && break
-            EXISTING_GITEE="${EXISTING_GITEE}${BATCH}"$'\n'
-            PAGE=$((PAGE + 1))
-          done
+          existing = set()
+          page = 1
+          while True:
+              rels = gitee_api(f"/repos/{GITEE_REPO}/releases", data=None)
+              if not rels:
+                  break
+              for r in rels:
+                  existing.add(r.get("tag_name", ""))
+              if len(rels) < 100:
+                  break
+              page += 1
 
-          SYNCED=0
-          SKIPPED=0
-          FAILED=0
+          print(f"Found {len(existing)} releases on Gitee")
 
-          while IFS= read -r TAG; do
-            [ -z "$TAG" ] && continue
+          if SYNC_ALL == "true":
+              tags = []
+              page = 1
+              while True:
+                  rels = gh_api(f"/repos/{GH_REPO}/releases?per_page=100&page={page}")
+                  if not rels:
+                      break
+                  tags.extend(r["tag_name"] for r in rels)
+                  page += 1
+          elif TRIGGER_TAG:
+              tags = [TRIGGER_TAG]
+          else:
+              rels = gh_api(f"/repos/{GH_REPO}/releases?per_page=1")
+              tags = [rels[0]["tag_name"]] if rels else []
 
-            if echo "$EXISTING_GITEE" | grep -qxF "$TAG"; then
-              echo "[SKIP] $TAG already on Gitee"
-              SKIPPED=$((SKIPPED + 1))
-              continue
-            fi
+          if not tags:
+              print("No releases to sync")
+              sys.exit(0)
 
-            echo "[SYNC] $TAG"
+          synced = 0
+          skipped = 0
+          failed = 0
 
-            REL_JSON=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-              "https://api.github.com/repos/$GH_REPO/releases/tags/$TAG")
+          for tag in tags:
+              if tag in existing:
+                  print(f"[SKIP] {tag} already on Gitee")
+                  skipped += 1
+                  continue
 
-            if [ -z "$REL_JSON" ] || echo "$REL_JSON" | jq -e '.message' > /dev/null 2>&1; then
-              echo "[ERROR] Tag $TAG not found on GitHub"
-              FAILED=$((FAILED + 1))
-              continue
-            fi
+              print(f"[SYNC] {tag}")
 
-            echo "  Creating release on Gitee ..."
+              try:
+                  rel = gh_api(f"/repos/{GH_REPO}/releases/tags/{tag}")
+              except Exception as e:
+                  print(f"  [ERROR] GitHub fetch failed: {e}")
+                  failed += 1
+                  continue
 
-            REQ_JSON=$(echo "$REL_JSON" | jq --arg token "$GITEE_TOKEN" '{
-              access_token: $token,
-              tag_name: .tag_name,
-              name: (.name // .tag_name),
-              body: (if (.body == null or .body == "") then "See GitHub release for details" else .body end),
-              target_commitish: (.target_commitish // "main"),
-              prerelease: (.prerelease // false)
-            }')
+              body = rel.get("body") or ""
+              if not body.strip():
+                  body = "See GitHub release for details"
+              target = rel.get("target_commitish") or "main"
 
-            echo "  DEBUG body length: $(echo "$REQ_JSON" | jq '.body | length')"
-            echo "  DEBUG target_commitish: $(echo "$REQ_JSON" | jq -r '.target_commitish')"
+              print(f"  body length={len(body)}, target_commitish={target}")
 
-            GITEE_REL=$(curl -s -w "\n%{http_code}" -X POST \
-              "https://gitee.com/api/v5/repos/$GITEE_REPO/releases?access_token=$GITEE_TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "$REQ_JSON")
+              new_rel = gitee_api(f"/repos/{GITEE_REPO}/releases", data={
+                  "tag_name": tag,
+                  "name": rel.get("name") or tag,
+                  "body": body,
+                  "target_commitish": target,
+                  "prerelease": rel.get("prerelease", False),
+              })
 
-            HTTP_CODE=$(echo "$GITEE_REL" | tail -1)
-            GITEE_REL_BODY=$(echo "$GITEE_REL" | sed '$d')
+              if not new_rel or not new_rel.get("id"):
+                  print(f"  [ERROR] Failed to create release for {tag}")
+                  failed += 1
+                  continue
 
-            echo "  Gitee API HTTP status: $HTTP_CODE"
+              gitee_id = new_rel["id"]
+              print(f"  Created Gitee release id={gitee_id}")
 
-            GITEE_REL_ID=$(echo "$GITEE_REL_BODY" | jq -r '.id')
-            if [ "$GITEE_REL_ID" = "null" ] || [ -z "$GITEE_REL_ID" ]; then
-              echo "[ERROR] Failed to create release on Gitee for $TAG"
-              echo "$GITEE_REL_BODY" | jq . 2>/dev/null || echo "$GITEE_REL_BODY"
-              FAILED=$((FAILED + 1))
-              continue
-            fi
+              tmp = tempfile.mkdtemp()
+              try:
+                  for asset in rel.get("assets", []):
+                      name = asset["name"]
+                      print(f"  Downloading {name} ...")
+                      try:
+                          req = urllib.request.Request(asset["url"],
+                              headers={"Authorization": f"token {GH_TOKEN}", "Accept": "application/octet-stream"})
+                          with urllib.request.urlopen(req) as r:
+                              content = r.read()
+                      except Exception:
+                          with urllib.request.urlopen(asset["browser_download_url"]) as r:
+                              content = r.read()
 
-            echo "  Created Gitee release id=$GITEE_REL_ID"
+                      print(f"  Uploading {name} ({len(content)//1024} KB) ...")
+                      result = gitee_api(f"/repos/{GITEE_REPO}/releases/{gitee_id}/attach_files",
+                          data={}, files=[("file", name, content)])
+                      if result:
+                          print(f"  Uploaded: {result.get(\"name\", name)}")
+                      else:
+                          print(f"  [WARN] Upload may have failed for {name}")
+              finally:
+                  shutil.rmtree(tmp, ignore_errors=True)
 
-            ASSET_COUNT=$(echo "$REL_JSON" | jq '.assets | length')
-            echo "  Found $ASSET_COUNT assets"
+              print(f"[DONE] {tag}")
+              synced += 1
 
-            echo "$REL_JSON" | jq -r '.assets[] | "\(.name)\t\(.id)\t\(.size)"' | while IFS=$'\t' read -r ASSET_NAME ASSET_ID ASSET_SIZE; do
-              [ -z "$ASSET_NAME" ] && continue
-              echo "  Downloading $ASSET_NAME ($(( ASSET_SIZE / 1024 )) KB) ..."
-
-              DL_URL=$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .url')
-              HTTP_DL=0
-              curl -sL -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/octet-stream" \
-                -o "$TMP_DIR/$ASSET_NAME" -w "%{http_code}" "$DL_URL" > /dev/null && HTTP_DL=$? || true
-
-              if [ ! -s "$TMP_DIR/$ASSET_NAME" ] || [ "$HTTP_DL" -ne 0 ]; then
-                BD_URL=$(echo "$REL_JSON" | jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
-                curl -sL -o "$TMP_DIR/$ASSET_NAME" "$BD_URL" || true
-              fi
-
-              if [ ! -s "$TMP_DIR/$ASSET_NAME" ]; then
-                echo "    [WARN] Failed to download $ASSET_NAME, skipping"
-                continue
-              fi
-
-              echo "  Uploading $ASSET_NAME to Gitee ..."
-              UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST \
-                "https://gitee.com/api/v5/repos/$GITEE_REPO/releases/$GITEE_REL_ID/attach_files" \
-                -F "access_token=$GITEE_TOKEN" \
-                -F "file=@$TMP_DIR/$ASSET_NAME")
-
-              UPLOAD_HTTP=$(echo "$UPLOAD_RESP" | tail -1)
-              UPLOAD_BODY=$(echo "$UPLOAD_RESP" | sed '$d')
-              UPLOAD_NAME=$(echo "$UPLOAD_BODY" | jq -r '.name // .message // "unknown"')
-              echo "  Upload HTTP=$UPLOAD_HTTP result=$UPLOAD_NAME"
-
-              rm -f "$TMP_DIR/$ASSET_NAME"
-            done
-
-            echo "[DONE] $TAG"
-            SYNCED=$((SYNCED + 1))
-          done <<< "$GH_RELEASES"
-
-          echo ""
-          echo "=============================="
-          echo "Sync complete: synced=$SYNCED skipped=$SKIPPED failed=$FAILED"
-          echo "=============================="
-
-          if [ "$FAILED" -gt 0 ]; then
-            exit 1
-          fi
+          print(f"\nSync complete: synced={synced} skipped={skipped} failed={failed}")
+          if failed > 0:
+              sys.exit(1)
+          '
