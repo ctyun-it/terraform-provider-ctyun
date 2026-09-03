@@ -473,7 +473,7 @@ func (c *ctyunSecurityGroupRule) getAndMergeSecurityGroupRule(ctx context.Contex
 	response, err := c.meta.Apis.CtVpcApis.SecurityGroupRuleDescribeApi.Do(ctx, c.meta.Credential, request)
 	if err != nil {
 		// 如果查询不到信息会报异常，此时直接返回空
-		if err.ErrorCode() == common.OpenapiSecurityGroupRuleNotFound {
+		if err.ErrorCode() == common.OpenapiSecurityGroupRuleNotFound || err.ErrorCode() == common.OpenapiSecurityGroupNotFound {
 			return nil, common.ResourceNotExistError
 		}
 		return nil, err

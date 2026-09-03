@@ -8,6 +8,7 @@ import (
 	ctebs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-core"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctebs"
+	sdkPlanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/sdk/planmodifier"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
@@ -78,6 +79,7 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "磁盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，FAST-SSD：极速型SSD，不支持ISCSI模式；XSSD-0、XSSD-1、XSSD-2：X系列云硬盘，不支持加密，不支持ISCSI模式或FCSAN模式",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					sdkPlanmodifier.EbsDiskTypeNormalize(business.EbsDiskTypeMap.FromOriginalScene, business.EbsDiskTypeMapScene1),
 				},
 				Validators: []validator.String{
 					stringvalidator.Any(
@@ -107,17 +109,16 @@ func (c *ctyunEbs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-5年",
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
 				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
@@ -304,11 +305,7 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	diskType, err := business.EbsDiskTypeMap.FromOriginalScene(plan.Type.ValueString(), business.EbsDiskTypeMapScene1)
-	if err != nil {
-		// 尝试小写转大写，失败则表示本来就是大写
-		diskType = plan.Type.ValueString()
-	}
+	diskType := plan.Type.ValueString()
 
 	// 构建标签请求
 	var labels []*ctebs2.EbsNewEbsLabelsRequest
@@ -329,7 +326,7 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		KmsUUID:         plan.KmsUuid.ValueString(),
 		ProjectID:       projectId,
 		DiskMode:        diskMode.(string),
-		DiskType:        diskType.(string),
+		DiskType:        diskType,
 		DiskName:        plan.Name.ValueString(),
 		DiskSize:        plan.Size.ValueInt64(),
 		OnDemand:        &onDemand,
@@ -345,25 +342,22 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		params.DeleteSnapWithEbs = plan.DeleteSnapWithEbs.ValueBoolPointer()
 	}
 	resp, err2 := c.meta.Apis.SdkCtEbsApis.EbsNewEbsApi.Do(ctx, c.meta.SdkCredential, params)
-	var id, masterOrderId string
-	if err2 == nil {
-		if resp.StatusCode == common.ErrorStatusCode && resp.ErrorCode != common.EbsOrderInProgress {
-			err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
-			response.Diagnostics.AddError(err.Error(), err.Error())
-			return
-		}
-		if resp.ReturnObj != nil && resp.ReturnObj.Resources != nil && len(resp.ReturnObj.Resources) > 0 {
-			id = resp.ReturnObj.Resources[0].DiskID
-		}
-		masterOrderId = resp.ReturnObj.MasterOrderID
-	}
-
-	// 判断返回信息是否需要轮询
-	if resp.ErrorCode != common.EbsOrderInProgress {
+	if err2 != nil {
 		response.Diagnostics.AddError(err2.Error(), err2.Error())
 		return
 	}
-
+	var id, masterOrderId string
+	if resp.StatusCode == common.ErrorStatusCode && resp.ErrorCode != common.EbsOrderInProgress {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		response.Diagnostics.AddError(err.Error(), err.Error())
+		return
+	}
+	if resp.ReturnObj != nil {
+		masterOrderId = resp.ReturnObj.MasterOrderID
+		if resp.ReturnObj.Resources != nil && len(resp.ReturnObj.Resources) > 0 {
+			id = resp.ReturnObj.Resources[0].DiskID
+		}
+	}
 	// 轮询结果
 	helper := business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
 	loop, err := helper.OrderLoop(ctx, c.meta.Credential, masterOrderId)
@@ -371,7 +365,9 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 		response.Diagnostics.AddError(err.Error(), err.Error())
 		return
 	}
-	id = loop.Uuid[0]
+	if loop != nil && len(loop.Uuid) > 0 {
+		id = loop.Uuid[0]
+	}
 
 	plan.Id = types.StringValue(id)
 	plan.RegionId = types.StringValue(regionId)
@@ -392,6 +388,8 @@ func (c *ctyunEbs) Create(ctx context.Context, request resource.CreateRequest, r
 	if instance == nil {
 		response.State.RemoveResource(ctx)
 		return
+	} else if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		instance.CycleCount = plan.CycleCount
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
@@ -478,6 +476,8 @@ func (c *ctyunEbs) Update(ctx context.Context, request resource.UpdateRequest, r
 	if instance == nil {
 		response.State.RemoveResource(ctx)
 		return
+	} else if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		instance.CycleCount = plan.CycleCount
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, instance)...)
 }
@@ -493,10 +493,9 @@ func (c *ctyunEbs) updateIops(ctx context.Context, plan, state CtyunEbsConfig) (
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
 		return
 	}
-
 	return
 }
 
@@ -511,7 +510,7 @@ func (c *ctyunEbs) updateDeletePolicy(ctx context.Context, plan, state CtyunEbsC
 	if err != nil {
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
 		return
 	}
 
@@ -620,13 +619,7 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	if err2 != nil {
 		return nil, err2
 	}
-	if cfg.Type.ValueString() != obj.DiskType {
-		diskType, e := business.EbsDiskTypeMap.ToOriginalScene(obj.DiskType, business.EbsDiskTypeMapScene1)
-		if e != nil {
-			return nil, e
-		}
-		cfg.Type = types.StringValue(diskType.(string))
-	}
+	cfg.Type = types.StringValue(obj.DiskType)
 	cfg.Name = types.StringValue(obj.DiskName)
 	cfg.Id = types.StringValue(obj.DiskID)
 	cfg.Size = types.Int64Value(obj.DiskSize)
@@ -662,8 +655,6 @@ func (c *ctyunEbs) getAndMergeEbs(ctx context.Context, cfg CtyunEbsConfig) (*Cty
 	// 正确处理 CycleCount
 	if obj.CycleCount > 0 {
 		cfg.CycleCount = types.Int64Value(int64(obj.CycleCount))
-	} else {
-		cfg.CycleCount = types.Int64Null()
 	}
 
 	// 处理IOPS字段

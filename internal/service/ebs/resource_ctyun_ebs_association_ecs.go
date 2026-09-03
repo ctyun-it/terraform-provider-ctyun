@@ -44,7 +44,7 @@ func (c *ctyunEbsAssociation) Metadata(_ context.Context, request resource.Metad
 
 func (c *ctyunEbsAssociation) Schema(_ context.Context, _ resource.SchemaRequest, response *resource.SchemaResponse) {
 	response.Schema = schema.Schema{
-		MarkdownDescription: utils.FormatDesc("管理云硬盘和云主机的绑定关系", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10169293"),
+		MarkdownDescription: utils.FormatDesc("管理云硬盘和云主机的绑定关系（已废弃，请使用ctyun_ecs_data_volume进行绑定）", "云硬盘（CT-EVS，Elastic Volume Service）", "https://www.ctyun.cn/document/10027696/10169293"),
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				PlanModifiers: []planmodifier.String{stringplanmodifier.UseStateForUnknown()},

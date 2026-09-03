@@ -63,9 +63,13 @@ resource "ctyun_nat" "nat_cycle_test" {
 - `az_name` (String) 可用区名称，az_name为必填字段，用户如果未填写，可以从环境变量中读取，需要保证provider声明或环境变量中包含该字段的定义
 - `cycle_count` (Number) 订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
 - `description` (String) nat描述，支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}，支持更新
+- `icmp_expire_time` (Number) ICMP连接老化时间，范围10-10800，单位秒，默认值10
 - `pay_voucher_price` (String) 代金券金额，支持到小数点后两位
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
+- `tcp_delay_close_time` (Number) TCP连接延迟关闭时间，范围1-10800，单位秒，默认值1
+- `tcp_expire_time` (Number) TCP连接老化时间，范围40-10800，单位秒，默认值900
+- `udp_expire_time` (Number) UDP连接老化时间，范围40-10800，单位秒，默认值900
 
 ### Read-Only
 

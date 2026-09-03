@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -157,6 +156,16 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 					validator2.Ip(),
 				},
 			},
+			"delete_protection": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "删除保护。true=开启，false不开启。默认不开启",
+			},
+			"gw_enabled": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否启用IPv4/6网关引流，0-关闭，1-开启。目前仅个别资源池支持，若提示不支持请联系产品经理申请权限。",
+			},
 			"id": schema.StringAttribute{
 				Computed:    true,
 				Description: "负载均衡Id",
@@ -214,20 +223,19 @@ func (c *CtyunElbLoadBalancerResource) Schema(ctx context.Context, request resou
 			"cycle_count": schema.Int64Attribute{
 				Optional:    true,
 				Description: "订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年",
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
 					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					validator2.CycleCount(1, 11, 1, 3),
-				},
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
 				},
 			},
 			"pay_voucher_price": schema.StringAttribute{
@@ -288,7 +296,11 @@ func (c *CtyunElbLoadBalancerResource) Create(ctx context.Context, request resou
 	}
 	// 将轮询所得elb id 存储plan中
 	plan.ID = types.StringValue(loopResp.ElbID)
-
+	// 如果用户需要删除保护和开启vpc引流，调用update接口实现
+	err = c.updateElbConfig(ctx, plan)
+	if err != nil {
+		return
+	}
 	// 创建后反查创建后的nat信息
 	err = c.getAndMergeElb(ctx, &plan)
 	if err != nil {
@@ -370,6 +382,9 @@ func (c *CtyunElbLoadBalancerResource) Update(ctx context.Context, request resou
 		return
 	}
 	state.AzName = plan.AzName
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -603,6 +618,8 @@ func (c *CtyunElbLoadBalancerResource) getAndMergeElb(ctx context.Context, confi
 	config.UpdatedTime = types.StringValue(elbObj.UpdatedTime)
 	config.ExpiredTime = types.StringValue(elbObj.ExpiredTime)
 	config.ProjectID = types.StringValue(elbObj.ProjectID)
+	config.DeleteProtection = utils.SecBoolValue(elbObj.DeleteProtection)
+	config.GWEnabled = types.Int32Value(elbObj.GWEnabled)
 	EipInfoList := elbObj.EipInfo
 	for _, eipItem := range EipInfoList {
 		config.EipID = types.StringValue(eipItem.EipID)
@@ -622,10 +639,15 @@ func (c *CtyunElbLoadBalancerResource) updateElbInfo(ctx context.Context, state 
 	if !plan.Name.IsNull() && !plan.Name.Equal(state.Name) {
 		params.Name = plan.Name.ValueString()
 	}
-	if params.Name == "" && params.Description == "" {
+	if !plan.GWEnabled.IsNull() && !plan.GWEnabled.IsUnknown() && !plan.GWEnabled.Equal(state.GWEnabled) {
+		params.GwEnabled = plan.GWEnabled.ValueInt32Pointer()
+	}
+	if !plan.DeleteProtection.IsNull() && !plan.DeleteProtection.Equal(state.DeleteProtection) {
+		params.DeleteProtection = plan.DeleteProtection.ValueBoolPointer()
+	}
+	if params.Name == "" && params.Description == "" && params.GwEnabled == nil && params.DeleteProtection == nil {
 		return
 	}
-
 	resp, err := c.meta.Apis.SdkCtElbApis.CtelbUpdateLoadBalancerApi.Do(ctx, c.meta.SdkCredential, params)
 
 	if err != nil {
@@ -818,6 +840,28 @@ func (c *CtyunElbLoadBalancerResource) isContains(value string, collect []string
 	return false
 }
 
+func (c *CtyunElbLoadBalancerResource) updateElbConfig(ctx context.Context, plan CtyunElbLoadBalancerConfig) (err error) {
+	params := &ctelb.CtelbUpdateLoadBalancerRequest{
+		ClientToken: uuid.NewString(),
+		RegionID:    plan.RegionID.ValueString(),
+		ElbID:       plan.ID.ValueString(),
+	}
+	if !plan.DeleteProtection.IsNull() && !plan.DeleteProtection.IsUnknown() {
+		params.DeleteProtection = plan.DeleteProtection.ValueBoolPointer()
+	}
+	if !plan.GWEnabled.IsNull() && !plan.GWEnabled.IsUnknown() {
+		params.GwEnabled = plan.GWEnabled.ValueInt32Pointer()
+	}
+	resp, err := c.meta.Apis.SdkCtElbApis.CtelbUpdateLoadBalancerApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return err
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", resp.Message, resp.Description)
+		return err
+	}
+	return err
+}
+
 type CtyunElbLoadBalancerConfig struct {
 	RegionID         types.String `tfsdk:"region_id"`          //区域ID
 	ProjectID        types.String `tfsdk:"project_id"`         //企业项目 ID，默认为'0'
@@ -829,6 +873,8 @@ type CtyunElbLoadBalancerConfig struct {
 	SlaName          types.String `tfsdk:"sla_name"`           //lb的规格名称,支持elb.s1.small和elb.default，默认为elb.default
 	ResourceType     types.String `tfsdk:"resource_type"`      //资源类型。internal：内网负载均衡，external：公网负载均衡
 	PrivateIpAddress types.String `tfsdk:"private_ip_address"` //负载均衡的私有IP地址，不指定则自动分配
+	DeleteProtection types.Bool   `tfsdk:"delete_protection"`  //删除保护。false（不开启）、true（开启）
+	GWEnabled        types.Int32  `tfsdk:"gw_enabled"`         //是否启用IPv4/6网关引流
 	ID               types.String `tfsdk:"id"`                 //负载均衡ID
 	PortID           types.String `tfsdk:"port_id"`            //负载均衡实例默认创建port ID
 	Ipv6Address      types.String `tfsdk:"ipv6_address"`       //负载均衡实例的IPv6地址

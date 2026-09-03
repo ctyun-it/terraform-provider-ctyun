@@ -1,5 +1,34 @@
 # Changelog
 
+## v2.3.2 - August 31, 2026
+
+### New Resources
+
+
+### New Data Sources
+
+
+### Enhancements
+
+* resource\ctyun_sdwan: fix returnObj deserialization failure caused by type change from object to array
+* optimize cycle_type, cycle_count and auto_renew linkage, allow on_demand mode fields without triggering replace or validation conflict
+* resource\ctyun_elb_target_group: improve field description
+* resource\ctyun_eip: add new fields
+* resource\ctyun_elb_loadbalancer: add new fields
+* resource\ctyun_nat: add new fields
+* resource\ctyun_vpce_service: add new fields
+* resource\ctyun_vpce: add new fields
+* resource\ctyun_ecs,ctyun_ebm,ctyun_ebs: disk type field support case-insensitive
+
+### Bug Fixes
+
+* resource\ctyun_rabbitmq_instance: fix resource stack deletion failure when provider state is inconsistent
+* resource\ctyun_eip: fix resource deletion not synced
+
+### Deprecations
+
+
+
 ## v2.3.0 - July 16, 2026
 
 ### New Resources

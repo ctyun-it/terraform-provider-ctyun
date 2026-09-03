@@ -82,6 +82,10 @@ resource "ctyun_vpce" "test" {
 
 ### Optional
 
+- `delete_protection` (Boolean) 是否开启删除保护，true:开启，false:关闭，默认关闭，支持更新
+- `description` (String) 终端节点描述，长度0-128，支持更新
+- `enable_dns` (Boolean) 是否开启DNS，true:开启，false:关闭，支持更新
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `subnet_ip` (String) 子网IP
 - `whitelist_cidr` (Set of String) 白名单列表，当whitelist_flag=true是必填，最多同时支持20个地址，最少输入一个，支持更新

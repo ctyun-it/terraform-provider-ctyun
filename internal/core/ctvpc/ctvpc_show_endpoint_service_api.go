@@ -57,17 +57,19 @@ type CtvpcShowEndpointServiceResponse struct {
 }
 
 type CtvpcShowEndpointServiceReturnObjResponse struct {
-	ID             *string                                              `json:"ID,omitempty"`          /*  终端节点服务 ID  */
-	Name           *string                                              `json:"name,omitempty"`        /*  终端节点服务名称  */
-	VpcID          *string                                              `json:"vpcID,omitempty"`       /*  所属的专有网络 id  */
-	Description    *string                                              `json:"description,omitempty"` /*  描述  */
-	RawType        *string                                              `json:"type,omitempty"`        /*  接口还是反向，interface:接口，reverse:反向  */
-	AutoConnection *bool                                                `json:"autoConnection"`        /*  是否自动连接  */
-	Rules          []*CtvpcShowEndpointServiceReturnObjRulesResponse    `json:"rules"`                 /*  接口规则数据  */
-	Backends       []*CtvpcShowEndpointServiceReturnObjBackendsResponse `json:"backends"`              /*  后端数据  */
-	CreatedAt      *string                                              `json:"createdAt,omitempty"`   /*  创建时间  */
-	UpdatedAt      *string                                              `json:"updatedAt,omitempty"`   /*  更新时间  */
-	DnsName        *string                                              `json:"dnsName,omitempty"`     /*  域名  */
+	ID             *string                                              `json:"ID,omitempty"`             /*  终端节点服务 ID  */
+	Name           *string                                              `json:"name,omitempty"`           /*  终端节点服务名称  */
+	VpcID          *string                                              `json:"vpcID,omitempty"`          /*  所属的专有网络 id  */
+	Description    *string                                              `json:"description,omitempty"`    /*  描述  */
+	RawType        *string                                              `json:"type,omitempty"`           /*  接口还是反向，interface:接口，reverse:反向  */
+	AutoConnection *bool                                                `json:"autoConnection"`           /*  是否自动连接  */
+	Rules          []*CtvpcShowEndpointServiceReturnObjRulesResponse    `json:"rules"`                    /*  接口规则数据  */
+	Backends       []*CtvpcShowEndpointServiceReturnObjBackendsResponse `json:"backends"`                 /*  后端数据  */
+	CreatedAt      *string                                              `json:"createdAt,omitempty"`      /*  创建时间  */
+	UpdatedAt      *string                                              `json:"updatedAt,omitempty"`      /*  更新时间  */
+	DnsName        *string                                              `json:"dnsName,omitempty"`        /*  域名  */
+	ForceEnableDns *bool                                                `json:"forceEnableDns,omitempty"` /*  是否强制开启 dns  */
+	ProjectID      *string                                              `json:"projectID"`
 }
 
 type CtvpcShowEndpointServiceReturnObjRulesResponse struct {

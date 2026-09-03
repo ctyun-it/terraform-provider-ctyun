@@ -50,8 +50,9 @@ type CtvpcModifyEndpointServiceRequest struct {
 	EndpointServiceID string  `json:"endpointServiceID,omitempty"` /*  终端节点服务ID  */
 	AutoConnection    *bool   `json:"autoConnection"`              /*  是否自动连接，true/false  */
 	Name              *string `json:"name,omitempty"`              /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
-	DnsName           *string `json:"dnsName,omitempty"`           /*  dns 名字，仅支持有权限的用户修改  */
-	OaType            *string `json:"oaType,omitempty"`            /*  oa 类型，支持: tcp_option / proxy_protocol / close  */
+	DnsName           *string `json:"dnsName,omitempty"`           /*  dns名称  */
+	OaType            *string `json:"oaType,omitempty"`            /*  oa 类型，支持: tcp_option / proxy_protocol / close, 仅支持有权限的用户修改  */
+	Description       *string `json:"description,omitempty"`       /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[\]·~！@#￥%……&*（） —— -+={}\，长度 0 - 128  */
 }
 
 type CtvpcModifyEndpointServiceResponse struct {

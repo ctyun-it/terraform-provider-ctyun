@@ -30,10 +30,14 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   arch   = "x86"
 }
 
+locals {
+  available_flavor = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f if f.available == true][0]
+}
+
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-ebs"
   display_name        = "tf-ecs-for-ebs"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           = local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type    = "SATA"
   system_disk_size    = 40

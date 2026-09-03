@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
@@ -452,14 +451,11 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"auto_renew": schema.BoolAttribute{
 						Optional:    true,
 						Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，按月购买，自动续订周期为1个月；按年购买，自动续订周期为1年。",
-						Validators: []validator.Bool{
-							validator2.ConflictsWithEqualBool(
+						PlanModifiers: []planmodifier.Bool{
+							explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
 								path.MatchRoot("base_info").AtName("cycle_type"),
 								types.StringValue(business.OrderCycleTypeOnDemand),
 							),
-						},
-						PlanModifiers: []planmodifier.Bool{
-							boolplanmodifier.RequiresReplace(),
 						},
 					},
 					"cycle_type": schema.StringAttribute{
@@ -475,19 +471,18 @@ func (c *ctyunCcseCluster) Schema(_ context.Context, _ resource.SchemaRequest, r
 					"cycle_count": schema.Int64Attribute{
 						Optional:    true,
 						Description: "订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-3年",
+						PlanModifiers: []planmodifier.Int64{
+							explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+								path.MatchRoot("base_info").AtName("cycle_type"),
+								types.StringValue(business.OrderCycleTypeOnDemand),
+							),
+						},
 						Validators: []validator.Int64{
 							validator2.AlsoRequiresEqualInt64(
 								path.MatchRoot("base_info").AtName("cycle_type"),
 								types.StringValue(business.OrderCycleTypeMonth),
 								types.StringValue(business.OrderCycleTypeYear),
 							),
-							validator2.ConflictsWithEqualInt64(
-								path.MatchRoot("base_info").AtName("cycle_type"),
-								types.StringValue(business.OrderCycleTypeOnDemand),
-							),
-						},
-						PlanModifiers: []planmodifier.Int64{
-							int64planmodifier.RequiresReplace(),
 						},
 					},
 					"container_runtime": schema.StringAttribute{
@@ -961,7 +956,10 @@ func (c *ctyunCcseCluster) Update(ctx context.Context, request resource.UpdateRe
 	if err != nil {
 		return
 	}
-
+	if plan.BaseInfo.CycleType.ValueString() == business.OnDemandCycleType {
+		state.BaseInfo.CycleCount = plan.BaseInfo.CycleCount
+		state.BaseInfo.AutoRenew = plan.BaseInfo.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 

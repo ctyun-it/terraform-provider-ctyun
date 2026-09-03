@@ -92,7 +92,7 @@ resource "ctyun_rocketmq_instance" "example_single" {
 
 ### Required
 
-- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需，支持更新。当此值为month时，cycle_count为必填
+- `cycle_type` (String) 订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填
 - `disk_size` (Number) 单个节点的磁盘存储空间，单位为GB，必须为100的倍数，实例总存储空间为diskSize * nodeNum，支持更新
 - `disk_type` (String) 存储类型，支持 SAS、SSD、FAST-SSD
 - `instance_name` (String) 实例名称，支持更新
@@ -104,8 +104,8 @@ resource "ctyun_rocketmq_instance" "example_single" {
 
 ### Optional
 
-- `auto_renew` (Boolean) 是否自动续订，仅在 cycle_type 为 month 时生效。默认不自动续订
-- `auto_renew_cycle_count` (Number) 自动续订周期时长（单位：月），仅在 auto_renew 为 true 时必填。取值范围：1,2,3,4,5,6,12,24,36
+- `auto_renew` (Boolean) 是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写
+- `auto_renew_cycle_count` (Number) 自动续订时长，单位月，支持1, 2, 3, 5, 6, 7, 12, 24, 36
 - `cycle_count` (Number) 订购时长，该参数在 cycle_type 为 month 时才生效，当 cycle_type=month，支持传递 1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID

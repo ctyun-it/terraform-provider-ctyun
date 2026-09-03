@@ -69,8 +69,10 @@ resource "ctyun_elb_loadbalancer" "elb_test" {
 
 - `az_name` (String, Deprecated) 可用区
 - `cycle_count` (Number) 订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
+- `delete_protection` (Boolean) 删除保护。true=开启，false不开启。默认不开启
 - `description` (String) 支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，支持更新
 - `eip_id` (String) 弹性公网IP的ID。当resource_type=external为必填
+- `gw_enabled` (Number) 是否启用IPv4/6网关引流，0-关闭，1-开启。目前仅个别资源池支持，若提示不支持请联系产品经理申请权限。
 - `pay_voucher_price` (String) 代金券金额，支持到小数点后两位
 - `private_ip_address` (String) 负载均衡的私有IP地址，不指定则自动分配
 - `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID

@@ -14,7 +14,7 @@ provider "ctyun" {
 resource "ctyun_kafka_user" "tbidgqvfbs" {
   name        = "test_kafka_user"
   instance_id = "4bd607df61d348b1949db223614315c1"
-  password    = "sad231Dwwww"
+  password    = "yourpassword"
   permission_info = [{
     permission = "DENY"
     operation  = "READ"

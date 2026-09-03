@@ -36,6 +36,8 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 
 	updateName := "elb_pg_" + utils.GenerateRandomString()
 	updateDescription := "terraform测试——" + utils.GenerateRandomString()
+	deleteProtectionOpen := true
+	deleteProtectionClose := false
 
 	vpcID := dependence.vpcID
 	subnetID := dependence.subnetID
@@ -53,7 +55,7 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 
 			// 创建保障型elb
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, updateSlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip, deleteProtectionOpen),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", updateSlaName),
 					func(s *terraform.State) error {
@@ -91,21 +93,21 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 			},
 			// 保障型elb变配测试
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, name, update2SlaName, resourceType, vpcID, "hello!", cycleType, CycleCount, eip, deleteProtectionClose),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "sla_name", update2SlaName),
 				),
 			},
 			// 保障型elb基本信息更新测试
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip),
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip, deleteProtectionOpen),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updateName),
 					resource.TestCheckResourceAttr(resourceName, "description", updateDescription),
 				),
 			},
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip) +
+				Config: utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip, deleteProtectionClose) +
 					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`ids=%s.id`, resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(datasourceName, "elbs.#", "1"),
@@ -117,7 +119,7 @@ func TestAccCtyunElbLoadBalancerPg(t *testing.T) {
 				),
 			},
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip),
+				Config:  utils.LoadTestCase(resourceFile, rnd, subnetID, updateName, update2SlaName, resourceType, vpcID, updateDescription, cycleType, CycleCount, eip, deleteProtectionClose),
 				Destroy: true,
 			},
 		},

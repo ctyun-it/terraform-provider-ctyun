@@ -16,7 +16,6 @@ import (
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int32validator"
-	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -25,7 +24,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -227,20 +225,19 @@ func (c *CtyunSearchInstance) Schema(ctx context.Context, req resource.SchemaReq
 			"cycle_count": schema.Int64Attribute{
 				Optional:    true,
 				Description: "订购时长，cycle_type=month时取值为1-11，cycle_type=year时取值为1-5，cycle_type=on_demand时无需填写",
-				Validators: []validator.Int64{
-					int64validator.AtLeast(1),
-					validator2.AlsoRequiresEqualInt64(
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
 						path.MatchRoot("cycle_type"),
-						types.StringValue(opensearch.CycleTypeMonthlyStr),
-						types.StringValue(opensearch.CycleTypeYearlyStr),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(opensearch.CycleTypeOnDemandStr),
+						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 				},
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+				Validators: []validator.Int64{
+					validator2.AlsoRequiresEqualInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
+					validator2.CycleCount(1, 11, 1, 5),
 				},
 			},
 			"node_details": schema.SetNestedAttribute{
@@ -408,6 +405,9 @@ func (c *CtyunSearchInstance) Update(ctx context.Context, req resource.UpdateReq
 	err = c.getAndMerge(ctx, &plan)
 	if err != nil {
 		return
+	}
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
 	}
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }

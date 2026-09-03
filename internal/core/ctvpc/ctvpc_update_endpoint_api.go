@@ -51,6 +51,7 @@ type CtvpcUpdateEndpointRequest struct {
 	EndpointID        string    `json:"endpointID,omitempty"`        /*  终端节点id  */
 	EndpointName      *string   `json:"endpointName,omitempty"`      /*  终端节点名称  */
 	EnableWhitelist   *bool     `json:"enableWhitelist"`             /*  白名单开关 True.开启 False.关闭  */
+	Description       *string   `json:"description,omitempty"`       /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:"{},./;'[\]·！@#￥%……&*（） —— -+={}\《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
 	EnableDns         *bool     `json:"enableDns"`                   /*  是否开启dns, true:开启,false:关闭  */
 	Whitelist         []*string `json:"whitelist,omitempty"`         /*  白名单列表，最多支持同时添加 20 个 ip  */
 	DeleteProtection  *bool     `json:"deleteProtection"`            /*  是否开启删除保护, true:开启,false:关闭，不传默认关闭  */

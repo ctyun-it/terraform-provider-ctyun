@@ -223,10 +223,6 @@ func (c *ctyunRabbitmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					int32validator.OneOf(1, 2, 3, 5, 6, 7, 12, 24, 36),
 				},
 			},
@@ -323,9 +319,13 @@ func (c *ctyunRabbitmqInstance) Read(ctx context.Context, request resource.ReadR
 	// 查询远端
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "权限校验失败") {
+		if strings.Contains(err.Error(), "not found") ||
+			strings.Contains(err.Error(), "权限校验失败") {
 			err = nil
 			response.State.RemoveResource(ctx)
+		}
+		if strings.Contains(err.Error(), "已退订") {
+			err = nil
 		}
 		return
 	}
@@ -389,10 +389,14 @@ func (c *ctyunRabbitmqInstance) Delete(ctx context.Context, request resource.Del
 	}
 	instance, err := c.queryDetailByID(ctx, state)
 	if err != nil {
-		return
+		if strings.Contains(err.Error(), "已退订") {
+			err = nil
+		} else {
+			return
+		}
 	}
 	// 如果状态不是已退订状态，则执行退订
-	if instance.Status != business.RabbitMqStatusUnsubscribed {
+	if instance != nil && instance.Status != business.RabbitMqStatusUnsubscribed {
 		// 退订
 		err = c.unsubscribe(ctx, state)
 		if err != nil {
@@ -413,6 +417,7 @@ func (c *ctyunRabbitmqInstance) Delete(ctx context.Context, request resource.Del
 	if err != nil {
 		return
 	}
+	time.Sleep(60 * time.Second)
 	response.Diagnostics.AddWarning("删除RabbitMq集群成功", "集群退订后，若立即删除子网或安全组可能会失败，需要等待底层资源释放")
 }
 

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/business"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/common"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
@@ -18,14 +21,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"strings"
-	"time"
 )
 
 var (
@@ -135,17 +135,16 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				Optional:    true,
 				Description: "订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年",
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
 				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					validator2.CycleCount(1, 11, 1, 3),
 				},
@@ -171,6 +170,26 @@ func (c *ctyunNat) Schema(_ context.Context, request resource.SchemaRequest, res
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
+			},
+			"tcp_expire_time": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "TCP连接老化时间，范围40-10800，单位秒，默认值900",
+			},
+			"udp_expire_time": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "UDP连接老化时间，范围40-10800，单位秒，默认值900",
+			},
+			"icmp_expire_time": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "ICMP连接老化时间，范围10-10800，单位秒，默认值10",
+			},
+			"tcp_delay_close_time": schema.Int32Attribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "TCP连接延迟关闭时间，范围1-10800，单位秒，默认值1",
 			},
 			"master_order_id": schema.StringAttribute{
 				Computed:    true,
@@ -364,7 +383,9 @@ func (c *ctyunNat) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return
@@ -481,15 +502,19 @@ func (c *ctyunNat) createNat(ctx context.Context, plan *CtyunNatConfig) (returnO
 	projectID := plan.ProjectID.ValueString()
 
 	params := &ctvpc.CtvpcCreateNatGatewayRequest{
-		RegionID:    regionID,
-		VpcID:       vpcID,
-		Spec:        spec,
-		Name:        name,
-		Description: &description,
-		ClientToken: uuid.NewString(),
-		CycleType:   cycleType,
-		AzName:      azName,
-		ProjectID:   &projectID,
+		RegionID:          regionID,
+		VpcID:             vpcID,
+		Spec:              spec,
+		Name:              name,
+		Description:       &description,
+		ClientToken:       uuid.NewString(),
+		CycleType:         cycleType,
+		AzName:            azName,
+		ProjectID:         &projectID,
+		TcpExpireTime:     900,
+		UdpExpireTime:     900,
+		IcmpExpireTime:    10,
+		TcpDelayCloseTime: 1,
 	}
 	//if cycleType == business.OrderCycleTypeOnDemand {
 	//	params.CycleCount = 1
@@ -504,7 +529,18 @@ func (c *ctyunNat) createNat(ctx context.Context, plan *CtyunNatConfig) (returnO
 	if projectID != "" {
 		params.ProjectID = &projectID
 	}
-
+	if !plan.TcpExpireTime.IsNull() && !plan.TcpExpireTime.IsUnknown() {
+		params.TcpExpireTime = plan.TcpExpireTime.ValueInt32()
+	}
+	if !plan.UdpExpireTime.IsNull() && !plan.UdpExpireTime.IsUnknown() {
+		params.UdpExpireTime = plan.UdpExpireTime.ValueInt32()
+	}
+	if !plan.IcmpExpireTime.IsNull() && !plan.IcmpExpireTime.IsUnknown() {
+		params.IcmpExpireTime = plan.IcmpExpireTime.ValueInt32()
+	}
+	if !plan.TcpDelayCloseTime.IsNull() && !plan.TcpDelayCloseTime.IsUnknown() {
+		params.TcpDelayCloseTime = plan.TcpDelayCloseTime.ValueInt32()
+	}
 	// 调用创建接口
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateNatGatewayApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
@@ -562,6 +598,10 @@ func (c *ctyunNat) getAndMergeNat(ctx context.Context, cfg *CtyunNatConfig) (err
 	cfg.ExpiredTime = utils.SecStringValue(natObj.ExpiredTime)
 	cfg.AzName = utils.SecStringValue(natObj.ZoneID)
 	cfg.ProjectID = utils.SecStringValue(natObj.ProjectID)
+	cfg.TcpExpireTime = types.Int32Value(natObj.TcpExpireTime)
+	cfg.UdpExpireTime = types.Int32Value(natObj.UdpExpireTime)
+	cfg.IcmpExpireTime = types.Int32Value(natObj.IcmpExpireTime)
+	cfg.TcpDelayCloseTime = types.Int32Value(natObj.TcpDelayCloseTime)
 
 	return nil
 }
@@ -635,6 +675,18 @@ func (c *ctyunNat) updateNatInfo(ctx context.Context, state CtyunNatConfig, plan
 		Name:         plan.Name.ValueStringPointer(),
 		Description:  plan.Description.ValueStringPointer(),
 		ClientToken:  uuid.NewString(),
+	}
+	if !plan.TcpExpireTime.IsNull() && !plan.TcpExpireTime.IsUnknown() {
+		params.TcpExpireTime = plan.TcpExpireTime.ValueInt32()
+	}
+	if !plan.UdpExpireTime.IsNull() && !plan.UdpExpireTime.IsUnknown() {
+		params.UdpExpireTime = plan.UdpExpireTime.ValueInt32()
+	}
+	if !plan.IcmpExpireTime.IsNull() && !plan.IcmpExpireTime.IsUnknown() {
+		params.IcmpExpireTime = plan.IcmpExpireTime.ValueInt32()
+	}
+	if !plan.TcpDelayCloseTime.IsNull() && !plan.TcpDelayCloseTime.IsUnknown() {
+		params.TcpDelayCloseTime = plan.TcpDelayCloseTime.ValueInt32()
 	}
 	resp, err2 := c.meta.Apis.SdkCtVpcApis.CtvpcUpdateNatGatewayAttributeApi.Do(ctx, c.meta.SdkCredential, params)
 	if err2 != nil {
@@ -770,23 +822,27 @@ func (c *ctyunNat) parseNatSpec(spec string) (specInt int32) {
 }
 
 type CtyunNatConfig struct {
-	ID              types.String `tfsdk:"id"`
-	RegionID        types.String `tfsdk:"region_id"`         //区域id
-	VpcID           types.String `tfsdk:"vpc_id"`            //需要创建 NAT 网关的 VPC 的 ID
-	Spec            types.Int32  `tfsdk:"spec"`              //规格 1~4, 1表示小型, 2表示中型, 3表示大型, 4表示超大型
-	Name            types.String `tfsdk:"name"`              //支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
-	Description     types.String `tfsdk:"description"`       //支持拉丁字母、中文、数p字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}
-	CycleType       types.String `tfsdk:"cycle_type"`        //订购类型：month（包月） / year（包年）/ on_demand（按需）
-	CycleCount      types.Int64  `tfsdk:"cycle_count"`       //订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
-	AzName          types.String `tfsdk:"az_name"`           //可用区名称
-	PayVoucherPrice types.String `tfsdk:"pay_voucher_price"` //代金券金额，支持到小数点后两位
-	ProjectID       types.String `tfsdk:"project_id"`        //企业项目，不传默认为 0
-	MasterOrderID   types.String `tfsdk:"master_order_id"`   //订单id
-	NatGatewayID    types.String `tfsdk:"nat_gateway_id"`    //网关 ID
-	VpcName         types.String `tfsdk:"vpc_name"`          //NAT所属的专有网络名字
-	VpcCidr         types.String `tfsdk:"vpc_cidr"`          //当前网关所属的vpc cidr
-	CreationTime    types.String `tfsdk:"create_time"`       //NAT网关的创建时间
-	ExpiredTime     types.String `tfsdk:"expire_time"`       //NAT网关实例的过期时间
+	ID                types.String `tfsdk:"id"`
+	RegionID          types.String `tfsdk:"region_id"`            //区域id
+	VpcID             types.String `tfsdk:"vpc_id"`               //需要创建 NAT 网关的 VPC 的 ID
+	Spec              types.Int32  `tfsdk:"spec"`                 //规格 1~4, 1表示小型, 2表示中型, 3表示大型, 4表示超大型
+	Name              types.String `tfsdk:"name"`                 //支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32
+	Description       types.String `tfsdk:"description"`          //支持拉丁字母、中文、数p字, 特殊字符：~!@#$%^&*()_-+= <>?:,'{},.,/;'[]·~！@#￥%……&*（） ——-+={}
+	CycleType         types.String `tfsdk:"cycle_type"`           //订购类型：month（包月） / year（包年）/ on_demand（按需）
+	CycleCount        types.Int64  `tfsdk:"cycle_count"`          //订购时长, 当 cycleType = month, 支持订购 1 - 11 个月; 当 cycleType = year, 支持订购 1 - 3 年
+	AzName            types.String `tfsdk:"az_name"`              //可用区名称
+	PayVoucherPrice   types.String `tfsdk:"pay_voucher_price"`    //代金券金额，支持到小数点后两位
+	ProjectID         types.String `tfsdk:"project_id"`           //企业项目，不传默认为 0
+	MasterOrderID     types.String `tfsdk:"master_order_id"`      //订单id
+	NatGatewayID      types.String `tfsdk:"nat_gateway_id"`       //网关 ID
+	VpcName           types.String `tfsdk:"vpc_name"`             //NAT所属的专有网络名字
+	VpcCidr           types.String `tfsdk:"vpc_cidr"`             //当前网关所属的vpc cidr
+	CreationTime      types.String `tfsdk:"create_time"`          //NAT网关的创建时间
+	ExpiredTime       types.String `tfsdk:"expire_time"`          //NAT网关实例的过期时间
+	TcpExpireTime     types.Int32  `tfsdk:"tcp_expire_time"`      //TCP连接老化时间，范围40-10800，单位秒，默认值900。
+	UdpExpireTime     types.Int32  `tfsdk:"udp_expire_time"`      //UDP连接老化时间，范围40-10800，单位秒，默认值900。
+	IcmpExpireTime    types.Int32  `tfsdk:"icmp_expire_time"`     //ICMP连接老化时间，范围10-10800，单位秒，默认值10。
+	TcpDelayCloseTime types.Int32  `tfsdk:"tcp_delay_close_time"` // TCP连接延迟关闭时间，范围1-10800，单位秒，默认值1。
 }
 type LoopOrderResponse struct {
 	NatGatewayId         types.String

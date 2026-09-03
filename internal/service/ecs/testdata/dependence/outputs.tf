@@ -15,19 +15,19 @@ output "image_id" {
 }
 
 output "flavor_id" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  value = local.available_flavor.id
 }
 
 output "flavor_id2" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].id
+  value = local.available_flavor2.id
 }
 
 output "flavor_name" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  value = local.available_flavor.name
 }
 
 output "flavor_name2" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test2.flavors[0].name
+  value = local.available_flavor2.name
 }
 
 output "affinity_group_id" {

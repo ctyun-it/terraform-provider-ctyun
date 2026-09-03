@@ -48,6 +48,7 @@ func (a *CtvpcCreateEndpointApi) Do(ctx context.Context, credential core.Credent
 type CtvpcCreateEndpointRequest struct {
 	ClientToken       string    `json:"clientToken,omitempty"`       /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
 	RegionID          string    `json:"regionID,omitempty"`          /*  资源池ID  */
+	ProjectID         *string   `json:"projectID,omitempty"`         /*  企业项目 ID  */
 	CycleType         string    `json:"cycleType,omitempty"`         /*  收费类型：只能填写 on_demand  */
 	EndpointServiceID string    `json:"endpointServiceID,omitempty"` /*  终端节点关联的终端节点服务  */
 	IpVersion         int32     `json:"ipVersion"`                   /*  0:ipv4, 1:ipv6（暂不支持）, 2:双栈，默认0  */
@@ -59,9 +60,10 @@ type CtvpcCreateEndpointRequest struct {
 	WhitelistFlag     int32     `json:"whitelistFlag"`               /*  白名单开关 1.开启 0.关闭，默认1  */
 	Whitelist         []*string `json:"whitelist"`                   /*  白名单  */
 	Whitelist6        []*string `json:"whitelist6"`                  /*  ipv6白名单  */
-	EnableDns         *bool     `json:"enableDns"`                   /*  是否开启dns, true:开启,false:关闭  */
+	Description       *string   `json:"description,omitempty"`       /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:"{},./;'[\]·！@#￥%……&*（） —— -+={}\《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
+	EnableDns         *bool     `json:"enableDns,omitempty"`         /*  是否开启dns, true:开启,false:关闭  */
 	PayVoucherPrice   *string   `json:"payVoucherPrice,omitempty"`   /*  代金券金额，支持到小数点后两位  */
-	DeleteProtection  *bool     `json:"deleteProtection"`            /*  是否开启删除保护, true:开启,false:关闭，不传默认关闭  */
+	DeleteProtection  *bool     `json:"deleteProtection,omitempty"`  /*  是否开启删除保护, true:开启,false:关闭，不传默认关闭  */
 	ProtectionService *string   `json:"protectionService,omitempty"` /*  删除保护使能服务  */
 }
 

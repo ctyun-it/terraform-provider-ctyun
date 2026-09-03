@@ -9,6 +9,7 @@ import (
 	ctecs2 "github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctecs"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctyun-sdk-endpoint/ctimage"
+	sdkPlanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/sdk/planmodifier"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
@@ -155,6 +156,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO，SSD-genric：通用型SSD，FAST-SSD：极速型SSD",
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					sdkPlanmodifier.EbsDiskTypeNormalize(business.EbsDiskTypeMap.FromOriginalScene, business.EbsDiskTypeMapScene1),
 				},
 				Validators: []validator.String{
 					stringvalidator.Any(
@@ -258,10 +260,6 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
 					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
 			},
@@ -270,12 +268,6 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Computed:    true,
 				Default:     booldefault.StaticBool(true),
 				Description: "是否自动续订，此参数在包周期情况下才有效，当为包周期时此值默认为true，支持更新",
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
-				},
 			},
 			"status": schema.StringAttribute{
 				Optional:    true,
@@ -671,6 +663,9 @@ func (c *ctyunEcs) Update(ctx context.Context, request resource.UpdateRequest, r
 		state.PayVoucherPrice = plan.PayVoucherPrice
 		response.Diagnostics.AddWarning("pay_voucher_price的更新仅写入状态文件", "在import时，状态文件中pay_voucher_price为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.AutoRenew = plan.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -760,6 +755,9 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	if err != nil {
 		return err
 	}
+	if len(imageResponse.Images) == 0 {
+		return fmt.Errorf("invalid image response")
+	}
 	imageVisibility, exist := business.ImageVisibilityMap[imageResponse.Images[0].Visibility]
 	if !exist {
 		return fmt.Errorf("不支持的镜像种类：%s", imageResponse.Images[0].Visibility)
@@ -781,11 +779,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	}
 
 	// 系统盘类型参数
-	diskType, err2 := business.EbsDiskTypeMap.FromOriginalScene(plan.SystemDiskType.ValueString(), business.EbsDiskTypeMapScene1)
-	if err2 != nil {
-		// 尝试小写转大写，失败则表示本来就是大写
-		diskType = plan.SystemDiskType.ValueString()
-	}
+	diskType := plan.SystemDiskType.ValueString()
 
 	var securityGroupIds []types.String
 	var sgIds []*string // 修改为 []*string 类型
@@ -833,7 +827,7 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 		FlavorID:        plan.FlavorId.ValueStringPointer(),
 		ImageType:       int32(imageVisibility),
 		ImageID:         plan.ImageId.ValueString(),
-		BootDiskType:    diskType.(string),
+		BootDiskType:    diskType,
 		BootDiskSize:    boot_disk_size,
 		VpcID:           plan.VpcId.ValueString(),
 		OnDemand:        onDemand,
@@ -915,7 +909,10 @@ func (c *ctyunEcs) createInstance(ctx context.Context, plan *CtyunEcsConfig) err
 	}
 
 	// 最后设置id
-	id := loop.Uuid[0]
+	var id string
+	if loop != nil && len(loop.Uuid) > 0 {
+		id = loop.Uuid[0]
+	}
 	plan.Id = types.StringValue(id)
 
 	return nil
@@ -992,6 +989,9 @@ func (c *ctyunEcs) cycleToOnDemand(ctx context.Context, id, regionId string) (er
 	if err != nil {
 		return err
 	}
+	if len(tagResp.OrderInfo) == 0 {
+		return fmt.Errorf("invalid tagResp")
+	}
 
 	// 轮询订单打标状态
 	helper := business.NewOrderLooper(c.meta.Apis.CtEcsApis.EcsOrderQueryUuidApi)
@@ -1008,7 +1008,9 @@ func (c *ctyunEcs) cycleToOnDemand(ctx context.Context, id, regionId string) (er
 	if err != nil {
 		return err
 	}
-
+	if len(terminateCycleResp.OrderInfo) == 0 {
+		return fmt.Errorf("invalid terminateCycleResp")
+	}
 	// 轮询包周期终止订单状态
 	_, err2 := helper.OrderLoop(ctx, c.meta.Credential, terminateCycleResp.OrderInfo[0].OrderId)
 	return err2
@@ -1031,6 +1033,9 @@ func (c *ctyunEcs) onDemandToCycle(ctx context.Context, id, regionId, cycleType 
 	})
 	if err != nil {
 		return err
+	}
+	if len(resp.OrderInfo) == 0 {
+		return fmt.Errorf("invalid EcsChangeToCycleResp")
 	}
 
 	// 轮询订单状态
@@ -1479,7 +1484,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 		err = common.ResourceNotExistError
 		return
 	} else if resp.StatusCode == common.ErrorStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
 		return
 	} else if resp.ReturnObj == nil {
 		err = common.InvalidReturnObjError
@@ -1550,15 +1555,7 @@ func (c *ctyunEcs) getAndMergeEcs(ctx context.Context, cfg *CtyunEcsConfig) (err
 		return errors.New("查询系统盘信息发生错误，查询到系统盘数量" + strconv.Itoa(len(vs)))
 	}
 	result := vs[0]
-	// 大小写不同，说明plan用的是小写。
-	// 这里有个隐含case，import时必须要填写小写
-	if cfg.SystemDiskType.ValueString() != result.DiskDataType {
-		diskType, err2 := business.EbsDiskTypeMap.ToOriginalScene(result.DiskDataType, business.EbsDiskTypeMapScene1)
-		if err2 != nil {
-			return err2
-		}
-		cfg.SystemDiskType = types.StringValue(diskType.(string))
-	}
+	cfg.SystemDiskType = types.StringValue(result.DiskDataType)
 	cfg.SystemDiskSize = types.Int64Value(int64(result.DiskSize))
 	cfg.SystemDiskId = types.StringValue(result.DiskId)
 
@@ -1647,7 +1644,6 @@ func (c *ctyunEcs) getUserData(ctx context.Context, plan *CtyunEcsConfig) (err e
 
 func (c *ctyunEcs) getAutoRenew(ctx context.Context, plan *CtyunEcsConfig) (err error) {
 	if plan.ExpireTime.ValueString() == "" {
-		plan.AutoRenew = types.BoolValue(true)
 		return
 	}
 	params := &ctecs2.CtecsEcsGetAutoRenewConfigRequest{
@@ -2093,7 +2089,7 @@ func (c *ctyunEcs) updateAutoRenew(ctx context.Context, state, plan CtyunEcsConf
 	if err != nil {
 		return
 	} else if resp.StatusCode != common.NormalStatusCode {
-		err = fmt.Errorf("API return error. Message: %s Description: %s", *resp.Message, *resp.Description)
+		err = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
 		return
 	}
 	return
@@ -2197,6 +2193,7 @@ func (c *ctyunEcs) ImportState(ctx context.Context, request resource.ImportState
 		config.CycleCount = types.Int64Value(int64(cycleCount))
 	} else {
 		config.CycleCount = types.Int64Null()
+		config.AutoRenew = types.BoolValue(true)
 	}
 	config.MasterOrderId = types.StringValue("unknown")
 	response.Diagnostics.Append(response.State.Set(ctx, config)...)

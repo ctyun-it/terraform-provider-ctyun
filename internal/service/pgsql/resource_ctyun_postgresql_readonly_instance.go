@@ -22,7 +22,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -139,32 +138,28 @@ func (c *CtyunPostgresqlReadOnlyInstance) Schema(ctx context.Context, request re
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
 				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36",
+				PlanModifiers: []planmodifier.Int32{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt32(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					int32validator.Between(1, 36),
-				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，当cycle_count<12，到期自动续订1个月，当cycle_count>=12，到期自动续订12个月",
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
+				PlanModifiers: []planmodifier.Bool{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
-				},
-				PlanModifiers: []planmodifier.Bool{
-					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"flavor_name": schema.StringAttribute{
@@ -326,7 +321,6 @@ func (c *CtyunPostgresqlReadOnlyInstance) Update(ctx context.Context, request re
 	if response.Diagnostics.HasError() {
 		return
 	}
-
 	if !plan.AutoRenew.IsUnknown() && !plan.AutoRenew.IsNull() && state.AutoRenew.IsNull() {
 		state.AutoRenew = plan.AutoRenew
 		response.Diagnostics.AddWarning("auto_renew的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
@@ -334,9 +328,12 @@ func (c *CtyunPostgresqlReadOnlyInstance) Update(ctx context.Context, request re
 
 	if !plan.FlavorName.IsUnknown() && !plan.FlavorName.IsNull() && state.FlavorName.IsNull() {
 		state.FlavorName = plan.FlavorName
-		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中auto_renew为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+		response.Diagnostics.AddWarning("flavor_name的更新仅写入状态文件", "在import时，状态文件中flavor_name为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+		state.AutoRenew = plan.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -117,17 +116,16 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "订购时长，该参数在cycle_type为month或year时才生效，当cycle_type=month，支持订购1-11个月；当cycle_type=year，支持订购1-3年",
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
 				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					validator2.CycleCount(1, 11, 1, 3),
 				},
@@ -136,17 +134,16 @@ func (c *ctyunEip) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "按需计费类型，当cycle_type为on_demand时生效，bandwidth：按带宽，upflowc：按流量",
 				PlanModifiers: []planmodifier.String{
-					explanmodifier.NullIgnoreString(),
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsString(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeMonth),
+						types.StringValue(business.OrderCycleTypeYear),
+					),
 				},
 				Validators: []validator.String{
 					validator2.AlsoRequiresEqualString(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
-					validator2.ConflictsWithEqualString(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeMonth),
-						types.StringValue(business.OrderCycleTypeYear),
 					),
 					stringvalidator.OneOf(business.EipDemandBillingTypes...),
 				},
@@ -340,6 +337,11 @@ func (c *ctyunEip) Update(ctx context.Context, request resource.UpdateRequest, r
 		response.Diagnostics.AddError(ctyunRequestError.Error(), ctyunRequestError.Error())
 		return
 	}
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+	} else {
+		state.DemandBillingType = plan.DemandBillingType
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, state)...)
 }
 
@@ -435,7 +437,7 @@ func (c *ctyunEip) getAndMergeEip(ctx context.Context, cfg *CtyunEipConfig) erro
 		EipId:    cfg.Id.ValueString(),
 	})
 	if err != nil {
-		if err.ErrorCode() == common.OpenapiSubnetNotFound {
+		if err.ErrorCode() == common.OpenapiEipNotFound {
 			return common.ResourceNotExistError
 		}
 		return err
@@ -531,11 +533,13 @@ func (c *ctyunEip) create(ctx context.Context, plan CtyunEipConfig) (masterOrder
 		ClientToken:       uuid.NewString(),
 		RegionID:          plan.RegionId.ValueString(),
 		CycleType:         plan.CycleType.ValueString(),
-		CycleCount:        int32(plan.CycleCount.ValueInt64()),
 		Name:              plan.Name.ValueString(),
 		Bandwidth:         plan.Bandwidth.ValueInt32(),
 		DemandBillingType: plan.DemandBillingType.ValueStringPointer(),
 		ProjectID:         plan.ProjectId.ValueStringPointer(),
+	}
+	if params.CycleType != business.OnDemandCycleType {
+		params.CycleCount = int32(plan.CycleCount.ValueInt64())
 	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcCreateEipApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {

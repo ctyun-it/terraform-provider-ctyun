@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -150,20 +149,19 @@ func (c *ctyunSfs) Schema(ctx context.Context, request resource.SchemaRequest, r
 			"cycle_count": schema.Int64Attribute{
 				Optional:    true,
 				Description: "包周期数，cycle_type是year或month时必须指定，周期最大长度不能超过3年",
+				PlanModifiers: []planmodifier.Int64{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
 					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					validator2.CycleCount(1, 11, 1, 3),
-				},
-				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
 				},
 			},
 			"az_name": schema.StringAttribute{
@@ -344,7 +342,9 @@ func (c *ctyunSfs) Update(ctx context.Context, request resource.UpdateRequest, r
 		state.SubnetID = plan.SubnetID
 		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

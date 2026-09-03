@@ -35,20 +35,15 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   arch   = "x86"
 }
 
-# 创建数据盘资源
-resource "ctyun_ebs" "data_disk_test" {
-  name       = "tf-test-data-disk"
-  mode       = "vbd"
-  type       = "SATA"
-  size       = 60
-  cycle_type = "on_demand"
+locals {
+  available_flavor = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f if f.available == true][0]
 }
 
 # 创建ECS实例资源
 resource "ctyun_ecs" "ecs_test" {
   instance_name      = "tf-test-for-image"
   display_name       = "tf-test-for-image"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           = local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type   = "SATA"
   system_disk_size   = 60
@@ -56,6 +51,15 @@ resource "ctyun_ecs" "ecs_test" {
   subnet_id          = ctyun_subnet.subnet_test.id
   security_group_ids = [ctyun_security_group.security_group_test.id]
   cycle_type         = "on_demand"
+}
+
+# 创建数据盘资源
+resource "ctyun_ebs" "data_disk_test" {
+  name       = "tf-test-data-disk"
+  mode       = "vbd"
+  type       = "SATA"
+  size       = 60
+  cycle_type = "on_demand"
 }
 
 # 创建EBS与ECS的关联关系（显式挂载）

@@ -2,8 +2,9 @@ package ctelb
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtelbUpdateLoadBalancerApi
@@ -54,6 +55,7 @@ type CtelbUpdateLoadBalancerRequest struct {
 	Name             string `json:"name,omitempty"`        /*  唯一。支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
 	Description      string `json:"description,omitempty"` /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
 	DeleteProtection *bool  `json:"deleteProtection"`      /*  删除保护。false（不开启）、true（开启）  */
+	GwEnabled        *int32 `json:"gwEnabled"`
 }
 
 type CtelbUpdateLoadBalancerResponse struct {

@@ -46,27 +46,29 @@ func (a *CtvpcCreateEndpointServiceApi) Do(ctx context.Context, credential core.
 }
 
 type CtvpcCreateEndpointServiceRequest struct {
-	ClientToken       string                                    `json:"clientToken,omitempty"`  /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
-	RegionID          string                                    `json:"regionID,omitempty"`     /*  资源池ID  */
-	VpcID             string                                    `json:"vpcID,omitempty"`        /*  所属的专有网络id  */
-	IpVersion         int32                                     `json:"ipVersion"`              /*  0:ipv4, 1:ipv6（暂不支持）, 2:双栈，默认0  */
-	RawType           *string                                   `json:"type,omitempty"`         /*  接口、反向和网关负载均衡，interface:接口，reverse:反向，gwlb:网关负载均衡,默认为 interface  */
-	Name              string                                    `json:"name,omitempty"`         /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
-	InstanceType      *string                                   `json:"instanceType,omitempty"` /*  服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,underlay:天翼云内网资源,gwlb:网关负载均衡 当 type 为 interface 时，必填  */
-	InstanceID        *string                                   `json:"instanceID,omitempty"`   /*  服务后端实例id, 当 type 为 interface 时，必填  */
-	InstanceID6       *string                                   `json:"instanceID6,omitempty"`  /*  后端服务为havip时，v6的havip id  */
-	UnderlayIP        *string                                   `json:"underlayIP,omitempty"`   /*  instance_type为天翼云内网资源时，v4的underlay ip  */
-	UnderlayIP6       *string                                   `json:"underlayIP6,omitempty"`  /*  instance_type为天翼云内网资源时，v6的underlay ip  */
-	SubnetID          *string                                   `json:"subnetID,omitempty"`     /*  服务后端子网id，当type是reverse，且reverseIsUnderlay为false时，必填  */
-	AutoConnection    bool                                      `json:"autoConnection"`         /*  是否自动连接，true 表示自动链接，false 表示非自动链接  */
-	Rules             []*CtvpcCreateEndpointServiceRulesRequest `json:"rules"`                  /*  节点服务规则, 当 type 为 interface 时，必填  */
-	OaType            *string                                   `json:"oaType,omitempty"`       /*  oa 类型，支持: tcp_option / proxy_protocol / close  */
-	ServiceCharge     *bool                                     `json:"serviceCharge"`          /*  是否开启服务计费，一旦开启服务计费，不可修改  */
-	ForceEnableDns    *bool                                     `json:"forceEnableDns"`         /*  是否强制开启dns  */
-	DnsName           *string                                   `json:"dnsName,omitempty"`      /*  dns名称  */
-	ReverseIsUnderlay *bool                                     `json:"reverseIsUnderlay"`      /*  反向终端节点服务是否是underlay类型  */
-	TransitIP         *string                                   `json:"transitIP,omitempty"`    /*  中转ipv4 ip，当reverseIsUnderlay是True时，必填  */
-	TransitIP6        *string                                   `json:"transitIP6,omitempty"`   /*  中转ipv6 ip，当reverseIsUnderlay是True且服务是双栈时，必填  */
+	ClientToken       string                                    `json:"clientToken,omitempty"`    /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	RegionID          string                                    `json:"regionID,omitempty"`       /*  资源池ID  */
+	VpcID             string                                    `json:"vpcID,omitempty"`          /*  所属的专有网络id  */
+	IpVersion         int32                                     `json:"ipVersion"`                /*  0:ipv4, 1:ipv6（暂不支持）, 2:双栈，默认0  */
+	RawType           *string                                   `json:"type,omitempty"`           /*  接口、反向和网关负载均衡，interface:接口，reverse:反向，gwlb:网关负载均衡,默认为 interface  */
+	Name              string                                    `json:"name,omitempty"`           /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	Description       *string                                   `json:"description,omitempty"`    /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·！@#￥%……&*（） —— -+={}\|《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
+	InstanceType      *string                                   `json:"instanceType,omitempty"`   /*  服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,underlay:天翼云内网资源,gwlb:网关负载均衡 当 type 为 interface 时，必填  */
+	InstanceID        *string                                   `json:"instanceID,omitempty"`     /*  服务后端实例id, 当 type 为 interface 时，必填  */
+	InstanceID6       *string                                   `json:"instanceID6,omitempty"`    /*  后端服务为havip时，v6的havip id  */
+	UnderlayIP        *string                                   `json:"underlayIP,omitempty"`     /*  instance_type为天翼云内网资源时，v4的underlay ip  */
+	UnderlayIP6       *string                                   `json:"underlayIP6,omitempty"`    /*  instance_type为天翼云内网资源时，v6的underlay ip  */
+	SubnetID          *string                                   `json:"subnetID,omitempty"`       /*  服务后端子网id，当type是reverse，且reverseIsUnderlay为false时，必填  */
+	AutoConnection    bool                                      `json:"autoConnection"`           /*  是否自动连接，true 表示自动链接，false 表示非自动链接  */
+	Rules             []*CtvpcCreateEndpointServiceRulesRequest `json:"rules"`                    /*  节点服务规则, 当 type 为 interface 时，必填  */
+	OaType            *string                                   `json:"oaType,omitempty"`         /*  oa 类型，支持: tcp_option / proxy_protocol / close  */
+	ServiceCharge     *bool                                     `json:"serviceCharge,omitempty"`  /*  是否开启服务计费，一旦开启服务计费，不可修改  */
+	ForceEnableDns    *bool                                     `json:"forceEnableDns,omitempty"` /*  是否强制开启dns  */
+	DnsName           *string                                   `json:"dnsName,omitempty"`        /*  dns名称  */
+	ReverseIsUnderlay *bool                                     `json:"reverseIsUnderlay"`        /*  反向终端节点服务是否是underlay类型  */
+	TransitIP         *string                                   `json:"transitIP,omitempty"`      /*  中转ipv4 ip，当reverseIsUnderlay是True时，必填  */
+	TransitIP6        *string                                   `json:"transitIP6,omitempty"`     /*  中转ipv6 ip，当reverseIsUnderlay是True且服务是双栈时，必填  */
+	ProjectID         *string                                   `json:"projectID"`
 }
 
 type CtvpcCreateEndpointServiceRulesRequest struct {

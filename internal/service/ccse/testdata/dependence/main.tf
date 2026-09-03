@@ -52,14 +52,18 @@ locals {
 }
 
 data "ctyun_ecs_flavors" "ecs_flavor_test" {
-  cpu    = 4
-  ram    = 8
-  arch   = "x86"
+  cpu  = 4
+  ram  = 8
+  arch = "x86"
+}
+
+locals {
+  available_flavor = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f if f.available == true][0]
 }
 
 data "ctyun_ccse_images" "ccse_images" {
   instance_type = "ecs"
-  flavor_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  flavor_name = local.available_flavor.name
 }
 
 data "ctyun_zones" "test" {
@@ -119,7 +123,7 @@ resource "ctyun_ccse_cluster" "test" {
     instance_type = "ecs"
     mirror_id     = data.ctyun_ccse_images.ccse_images.images[0].id
     mirror_type   = 1
-    item_def_name = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+    item_def_name =  local.available_flavor.name
 
     az_infos = [
       {
@@ -219,7 +223,7 @@ data "ctyun_images" "image_test" {
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-ccse1"
   display_name        = "tf-ecs-for-ccse2"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           =  local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   security_group_ids  = [ctyun_ccse_cluster.test.base_info.security_group_id]
   system_disk_type    = "SAS"

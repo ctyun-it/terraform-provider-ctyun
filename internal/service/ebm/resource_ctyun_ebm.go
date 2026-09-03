@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctebm"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
+	sdkPlanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/sdk/planmodifier"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
@@ -20,7 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int64planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -287,6 +287,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+					sdkPlanmodifier.EbsDiskTypeNormalize(business.EbsDiskTypeMap.FromOriginalScene, business.EbsDiskTypeMapScene1),
 				},
 			},
 			"system_disk_size": schema.Int32Attribute{
@@ -369,14 +370,11 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写。",
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
+				PlanModifiers: []planmodifier.Bool{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
-				},
-				PlanModifiers: []planmodifier.Bool{
-					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"cycle_type": schema.StringAttribute{
@@ -393,17 +391,16 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "订购时长，最长订购周期为60个月（5年）；非按需时必填",
 				PlanModifiers: []planmodifier.Int64{
-					int64planmodifier.RequiresReplace(),
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt64(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
 				},
 				Validators: []validator.Int64{
 					validator2.AlsoRequiresEqualInt64(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeYear),
 						types.StringValue(business.OrderCycleTypeMonth),
-					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
@@ -610,6 +607,10 @@ func (c *ctyunEbm) Update(ctx context.Context, request resource.UpdateRequest, r
 	if err != nil {
 		return
 	}
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+		state.AutoRenew = plan.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -739,7 +740,6 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 		ImageUUID:       plan.ImageUUID.ValueString(),
 		VpcID:           plan.VpcID.ValueString(),
 		ProjectID:       &projectID,
-		AutoRenewStatus: map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()],
 		ClientToken:     uuid.NewString(),
 		OrderCount:      1,
 		NetworkCardList: []*ctebm.EbmCreateInstanceV4plusNetworkCardListRequest{{Master: true, SubnetID: plan.SubnetID.ValueString()}},
@@ -779,7 +779,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 			{
 				DiskType: "system",
 				Size:     plan.SystemDiskSize.ValueInt32(),
-				RawType:  strings.ToUpper(plan.SystemDiskType.ValueString()),
+				RawType:  plan.SystemDiskType.ValueString(),
 			},
 		}
 	}
@@ -791,6 +791,7 @@ func (c *ctyunEbm) createInstance(ctx context.Context, plan CtyunEbmConfig) (ret
 		params.InstanceChargeType = business.EbmOrderOnCycle
 		params.CycleType = strings.ToUpper(plan.CycleType.ValueString())
 		params.CycleCount = int32(plan.CycleCount.ValueInt64())
+		params.AutoRenewStatus = map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()]
 	}
 
 	resp, err := c.meta.Apis.CtEbmApis.EbmCreateInstanceV4plusApi.Do(ctx, c.meta.SdkCredential, params)
@@ -1138,16 +1139,7 @@ func (c *ctyunEbm) getAndMerge(ctx context.Context, cfg *CtyunEbmConfig) (err er
 			return err
 		}
 		if diskInfo.IsSystemVolume {
-			// 配置值不等于返回值
-			if cfg.SystemDiskType.ValueString() != diskInfo.DiskType {
-				// 没有配置，说明是导入，用大写
-				if cfg.SystemDiskType.ValueString() == "" {
-					cfg.SystemDiskType = types.StringValue(diskInfo.DiskType)
-				} else {
-					// 有配置，说明是创建，用小写
-					cfg.SystemDiskType = types.StringValue(strings.ToLower(diskInfo.DiskType))
-				}
-			}
+			cfg.SystemDiskType = types.StringValue(diskInfo.DiskType)
 			cfg.SystemDiskSize = types.Int32Value(int32(diskInfo.DiskSize))
 			cfg.SystemDiskID = types.StringValue(diskInfo.DiskID)
 		}

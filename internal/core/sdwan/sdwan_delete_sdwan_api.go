@@ -54,13 +54,8 @@ type SdwanDeleteSdwanRequest struct {
 }
 
 type SdwanDeleteSdwanResponse struct {
-	StatusCode  int32                              `json:"statusCode"`  /*  返回状态码('800为成功，900为失败)  ，默认值:800  */
-	ErrorCode   *string                            `json:"errorCode"`   /*  业务细分码，为product.module.code三段式码  */
-	Message     *string                            `json:"message"`     /*  失败时的错误描述，一般为英文描述  */
-	Description *string                            `json:"description"` /*  失败时的错误描述，一般为中文描述  */
-	ReturnObj   *SdwanDeleteSdwanReturnObjResponse `json:"returnObj"`   /*  返回参数  */
-}
-
-type SdwanDeleteSdwanReturnObjResponse struct {
-	OperationID *string `json:"operationID"` /*  操作id  */
+	StatusCode  int32   `json:"statusCode"`  /*  返回状态码('800为成功，900为失败)  ，默认值:800  */
+	ErrorCode   *string `json:"errorCode"`   /*  业务细分码，为product.module.code三段式码  */
+	Message     *string `json:"message"`     /*  失败时的错误描述，一般为英文描述  */
+	Description *string `json:"description"` /*  失败时的错误描述，一般为中文描述  */
 }

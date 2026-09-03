@@ -17,7 +17,6 @@ resource "ctyun_subnet" "subnet_test" {
   ]
 }
 
-
 resource "ctyun_elb_loadbalancer" "test" {
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-for-rule"
@@ -26,7 +25,7 @@ resource "ctyun_elb_loadbalancer" "test" {
   vpc_id        = ctyun_vpc.vpc_test.id
   cycle_type    = "on_demand"
 }
-#
+
 resource "ctyun_elb_loadbalancer" "listener_test" {
   subnet_id     = ctyun_subnet.subnet_test.id
   name          = "tf-elb-for-listener"
@@ -98,11 +97,14 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   arch   = "x86"
 }
 
-#
+locals {
+  available_flavor = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f if f.available == true][0]
+}
+
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-elb"
   display_name        = "tf-ecs-for-elb"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[2].id
+  flavor_id           = local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type    = "SSD"
   system_disk_size    = 40

@@ -140,10 +140,6 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 						types.StringValue(business.OrderCycleTypeMonth),
 						types.StringValue(business.OrderCycleTypeYear),
 					),
-					validator2.ConflictsWithEqualInt64(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					validator2.CycleCount(1, 11, 1, 5),
 				},
 			},
@@ -152,12 +148,7 @@ func (c *ctyunCcseNodePool) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Computed:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写，支持更新",
 				Default:     booldefault.StaticBool(false),
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
-				}},
+			},
 			"visibility_post_host_script": schema.StringAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -503,7 +494,10 @@ func (c *ctyunCcseNodePool) Update(ctx context.Context, request resource.UpdateR
 	if err != nil {
 		return
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+		state.AutoRenew = plan.AutoRenew
+	}
 	if !plan.UseAffinityGroup.IsUnknown() && !plan.UseAffinityGroup.IsNull() && state.UseAffinityGroup.IsNull() {
 		state.UseAffinityGroup = plan.UseAffinityGroup
 		response.Diagnostics.AddWarning("use_affinity_group的更新仅写入状态文件", "在import时，状态文件中use_affinity_group为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
@@ -911,7 +905,6 @@ func (c *ctyunCcseNodePool) getAndMerge(ctx context.Context, plan *CtyunCcseNode
 	plan.VisibilityPostHostScript = types.StringValue(p.VisibilityPostHostScript)
 	plan.VisibilityHostScript = types.StringValue(p.VisibilityHostScript)
 	plan.MaxPodNum = types.Int32Value(p.MaxPodNum)
-	plan.AutoRenew = types.BoolValue(map[int32]bool{0: false, 1: true}[p.AutoRenewStatus])
 	plan.ItemDefName = types.StringValue(p.VmSpecName)
 	plan.KeyPairName = types.StringValue(p.KeyName)
 
@@ -919,6 +912,7 @@ func (c *ctyunCcseNodePool) getAndMerge(ctx context.Context, plan *CtyunCcseNode
 	case "1":
 		plan.CycleType = types.StringValue(strings.ToLower(p.CycleType))
 		plan.CycleCount = types.Int64Value(int64(p.CycleCount))
+		plan.AutoRenew = types.BoolValue(map[int32]bool{0: false, 1: true}[p.AutoRenewStatus])
 	case "2":
 		plan.CycleType = types.StringValue(business.OnDemandCycleType)
 	}
@@ -947,7 +941,6 @@ func (c *ctyunCcseNodePool) update(ctx context.Context, plan, state CtyunCcseNod
 		NodePoolId:               state.ID.ValueString(),
 		RegionId:                 state.RegionID.ValueString(),
 		NodePoolName:             plan.NodePoolName.ValueString(),
-		AutoRenewStatus:          map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()],
 		VisibilityPostHostScript: plan.VisibilityPostHostScript.ValueString(),
 		VisibilityHostScript:     plan.VisibilityHostScript.ValueString(),
 		SysDiskType:              plan.SysDisk.Type.ValueString(),
@@ -968,10 +961,12 @@ func (c *ctyunCcseNodePool) update(ctx context.Context, plan, state CtyunCcseNod
 		params.BillMode = "1"
 		params.CycleType = "MONTH"
 		params.CycleCount = int32(plan.CycleCount.ValueInt64())
+		params.AutoRenewStatus = map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()]
 	case business.YearCycleType:
 		params.BillMode = "1"
 		params.CycleType = "YEAR"
 		params.CycleCount = int32(plan.CycleCount.ValueInt64())
+		params.AutoRenewStatus = map[bool]int32{false: 0, true: 1}[plan.AutoRenew.ValueBool()]
 	}
 
 	resp, err := c.meta.Apis.SdkCcseApis.CcseUpdateNodePoolApi.Do(ctx, c.meta.SdkCredential, params)

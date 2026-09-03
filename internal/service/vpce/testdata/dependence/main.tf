@@ -30,10 +30,14 @@ data "ctyun_ecs_flavors" "ecs_flavor_test" {
   arch   = "x86"
 }
 
+locals {
+  available_flavor = [for f in data.ctyun_ecs_flavors.ecs_flavor_test.flavors : f if f.available == true][0]
+}
+
 resource "ctyun_ecs" "ecs_test" {
   instance_name       = "tf-ecs-for-vpce"
   display_name        = "tf-ecs-for-vpce"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           = local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type    = "SATA"
   system_disk_size    = 40
@@ -47,7 +51,7 @@ resource "ctyun_ecs" "ecs_test" {
 resource "ctyun_ecs" "ecs_test2" {
   instance_name       = "tf-ecs-for-vpce2"
   display_name        = "tf-ecs-for-vpce2"
-  flavor_id           = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].id
+  flavor_id           = local.available_flavor.id
   image_id            = data.ctyun_images.image_test.images[0].id
   system_disk_type    = "SATA"
   system_disk_size    = 40
@@ -72,6 +76,7 @@ resource "ctyun_vpce_service" "vpce_service_test" {
     endpoint_port = 999
     server_port = 999
   }]
+  dns_name = "ctyun.xyz"
 }
 
 resource "ctyun_vpce_service" "reverse_vpce_service_test" {
