@@ -132,7 +132,7 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 			"proxy_protocol": schema.Int32Attribute{
 				Optional:    true,
 				Computed:    true,
-				Description: "1 开启，0 关闭，只有protocol=tcp的时候，可填写（关闭/开启proxy_protocol），其他协议默认关闭。",
+				Description: "1 开启，0 关闭，当protocol=tcp时必填，其他协议默认关闭。",
 				Default:     int32default.StaticInt32(0),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 1),

@@ -28,7 +28,7 @@ func TestAccCtyunEbs(t *testing.T) {
 
 	updatedName := "updated-ebs-" + rnd
 	updatedSize := 100
-
+	diskType := "SATA"
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
 			_, exists := s.RootModule().Resources[resourceName]
@@ -45,7 +45,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					initName,
-					"sata",
+					diskType,
 					initSize,
 					"",
 				),
@@ -93,7 +93,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -114,7 +114,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -152,7 +152,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -190,7 +190,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -266,7 +266,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -279,7 +279,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -312,7 +312,7 @@ func TestAccCtyunEbs(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					updatedName,
-					"sata",
+					diskType,
 					updatedSize,
 					"",
 				) + utils.LoadTestCase(
@@ -378,7 +378,7 @@ func TestAccCtyunEbsExtra(t *testing.T) {
 	resourceFile := "resource_ctyun_ebs.tf"
 	initName := "init-ebs-extra-" + rnd
 	initSize := 60
-
+	diskType := "XSSD-0"
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
 			_, exists := s.RootModule().Resources[resourceName]
@@ -395,7 +395,7 @@ func TestAccCtyunEbsExtra(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					initName,
-					"xssd-0",
+					diskType,
 					initSize,
 					"provisioned_iops = 1\n  delete_snap_with_ebs = true\n  multi_attach = true",
 				),
@@ -414,7 +414,7 @@ func TestAccCtyunEbsExtra(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					initName,
-					"xssd-0",
+					diskType,
 					initSize,
 					"provisioned_iops = 2\n  delete_snap_with_ebs = false\n  multi_attach = true",
 				),
@@ -428,7 +428,7 @@ func TestAccCtyunEbsExtra(t *testing.T) {
 				Config: utils.LoadTestCase(
 					resourceFile, rnd,
 					initName,
-					"xssd-0",
+					diskType,
 					initSize,
 					"provisioned_iops = 2\n  delete_snap_with_ebs = false\n  multi_attach = true",
 				),

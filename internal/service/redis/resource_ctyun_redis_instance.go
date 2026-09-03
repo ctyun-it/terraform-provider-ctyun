@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
@@ -161,10 +160,6 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
-					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					int32validator.OneOf(1, 2, 3, 4, 5, 6, 12, 24, 36),
 				},
@@ -369,20 +364,17 @@ func (c *ctyunRedisInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Computed:    true,
+				Default:     booldefault.StaticBool(false),
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写",
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
+				PlanModifiers: []planmodifier.Bool{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 				},
-				PlanModifiers: []planmodifier.Bool{
-					boolplanmodifier.RequiresReplaceIfConfigured(),
-				},
 			},
 			"auto_renew_cycle_count": schema.Int32Attribute{
 				Optional:    true,
-				Computed:    true,
 				Description: "自动续订时长，单位月，支持1, 2, 3, 5, 6, 7, 12, 24, 36",
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
@@ -632,7 +624,9 @@ func (c *ctyunRedisInstance) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
-
+	if plan.CycleType.ValueString() == business.OnDemandCycleType {
+		state.AutoRenew = plan.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -773,7 +767,6 @@ func (c *ctyunRedisInstance) checkBeforeCreate(ctx context.Context, plan CtyunRe
 
 // checkSpecParams 检查规格参数
 func (c *ctyunRedisInstance) checkSpecParams(ctx context.Context, plan CtyunRedisInstanceConfig) (err error) {
-	copiesCount := plan.ShardCount.ValueInt32()
 	shardCount := plan.ShardCount.ValueInt32()
 
 	switch plan.Edition.ValueString() {
@@ -788,9 +781,6 @@ func (c *ctyunRedisInstance) checkSpecParams(ctx context.Context, plan CtyunRedi
 	}
 	if shardCount == 0 {
 		shardCount = 1
-	}
-	if copiesCount == 0 {
-		copiesCount = 1
 	}
 
 	// 组装请求体
@@ -943,13 +933,6 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 		plan.SecondaryAzName = types.StringValue(instance.AzList[1].AzEngName)
 	}
 	plan.ActualCycleType = types.StringValue(map[int32]string{0: business.OrderCycleTypeMonth, 1: business.OrderCycleTypeOnDemand}[instance.PayType])
-	if plan.ActualCycleType.ValueString() == business.OrderCycleTypeOnDemand {
-		plan.AutoRenew = types.BoolNull()
-		plan.AutoRenewCycleCount = types.Int32Null()
-	} else if !plan.AutoRenew.ValueBool() {
-		plan.AutoRenew = types.BoolValue(false)
-		plan.AutoRenewCycleCount = types.Int32Null()
-	}
 	plan.ConnectionAddress = types.StringValue(instance.ConnectionAddress)
 	plan.Vip = types.StringValue(instance.Vip)
 	plan.MaintenanceTime = types.StringValue(instance.MaintenanceTime)
@@ -969,6 +952,7 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 	plan.CreateTime = types.StringValue(utils.FromBJTimeToUTCZ(instance.CreateTime))
 	plan.ExpireTime = types.StringValue(utils.FromBJTimeToUTCZ(instance.ExpTime))
 	plan.Name = plan.InstanceName
+	var autoRenewCycleCount int32
 	for _, p := range instance.PaasInstAttrs {
 		switch p.AttrKey {
 		case "vpcUuid":
@@ -985,9 +969,12 @@ func (c *ctyunRedisInstance) getAndMerge(ctx context.Context, plan *CtyunRedisIn
 			plan.ProjectID = types.StringValue(p.AttrVal)
 		case "autoRenewCycleCount":
 			if plan.ActualCycleType.ValueString() != business.OrderCycleTypeOnDemand {
-				plan.AutoRenewCycleCount = types.Int32Value(utils.StringToInt32Must(p.AttrVal))
+				autoRenewCycleCount = utils.StringToInt32Must(p.AttrVal)
 			}
 		}
+	}
+	if autoRenewCycleCount > 0 && plan.AutoRenew.ValueBool() {
+		plan.AutoRenewCycleCount = types.Int32Value(autoRenewCycleCount)
 	}
 	policy, err := c.getBackupPolicy(ctx, *plan)
 	if err != nil {

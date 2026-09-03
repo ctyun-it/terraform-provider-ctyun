@@ -74,12 +74,14 @@ type CtvpcShowEndpointReturnObjEndpointResponse struct {
 	EndpointObj       *CtvpcShowEndpointReturnObjEndpointEndpointObjResponse `json:"endpointObj"`                 /*  后端节点信息，可能为 null  */
 	CreatedTime       *string                                                `json:"createdTime,omitempty"`       /*  创建时间  */
 	UpdatedTime       *string                                                `json:"updatedTime,omitempty"`       /*  更新时间  */
+	ProjectID         *string                                                `json:"projectID"`
 }
 
 type CtvpcShowEndpointReturnObjEndpointEndpointObjResponse struct {
-	SubnetID  *string   `json:"subnetID,omitempty"` /*  子网id  */
-	PortID    *string   `json:"portID,omitempty"`   /*  端口id  */
-	Ip        *string   `json:"ip,omitempty"`       /*  私网地址  */
-	EnableDns int32     `json:"enableDns"`          /*  是否开启 dns  */
-	DnsNames  []*string `json:"dnsNames"`           /*  dns名称列表  */
+	SubnetID         *string   `json:"subnetID,omitempty"` /*  子网id  */
+	PortID           *string   `json:"portID,omitempty"`   /*  端口id  */
+	Ip               *string   `json:"ip,omitempty"`       /*  私网地址  */
+	EnableDns        *int32    `json:"enableDns"`          /*  是否开启 dns  */
+	DnsNames         []*string `json:"dnsNames"`           /*  dns名称列表  */
+	DeleteProtection *int32    `json:"deleteProtection"`   /*  是否开启删除保护, 1:开启,0:关闭  */
 }

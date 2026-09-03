@@ -72,10 +72,16 @@ resource "ctyun_vpce_service" "test" {
 
 ### Optional
 
+- `description` (String) 终端节点服务描述，长度0-128，支持更新
+- `dns_name` (String) DNS名称，支持更新
+- `force_enable_dns` (Boolean) 是否强制开启DNS，true:开启，false:关闭，默认关闭，不可修改
 - `instance_id` (String) 服务后端实例ID，当type为interface时必填，支持更新
 - `instance_type` (String) 服务后端实例类型，vm:虚机类型,bm:物理机,vip:vip类型,lb:负载均衡类型,当type为interface时必填。支持更新
+- `oa_type` (String) OA类型，支持: tcp_option/proxy_protocol/close，仅支持有权限的用户修改，支持更新
+- `project_id` (String) 企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID
 - `region_id` (String) 资源池ID，如果不填则默认使用provider ctyun中的region_id或环境变量中的CTYUN_REGION_ID
 - `rules` (Attributes Set) 节点服务规则，当type为interface时必填，支持更新 (see [below for nested schema](#nestedatt--rules))
+- `service_charge` (Boolean) 是否开启服务计费，不可修改
 - `subnet_id` (String) 子网ID，创建反向终端节点服务时必填
 - `whitelist_email` (Set of String) 白名单邮箱，最多支持10个，支持更新
 

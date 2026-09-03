@@ -16,7 +16,7 @@ output "security_group_id" {
 }
 
 output "flavor_name" {
-  value = data.ctyun_ecs_flavors.ecs_flavor_test.flavors[0].name
+  value = local.available_flavor.name
 }
 
 output "cluster_id" {

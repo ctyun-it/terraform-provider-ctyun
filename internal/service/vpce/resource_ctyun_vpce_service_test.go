@@ -112,3 +112,59 @@ func TestAccCtyunVpceService(t *testing.T) {
 	},
 	)
 }
+
+func TestAccCtyunVpceServiceFields(t *testing.T) {
+	rnd := utils.GenerateRandomString()
+
+	resourceName := "ctyun_vpce_service." + rnd
+	resourceFile := "resource_ctyun_vpce_service_fields.tf"
+
+	initName := "init"
+	initEndpointPort := "1"
+	initWhitelistEmail := `lity9@chinatelecom.cn`
+	initServiceCharge := "true"
+	initForceEnableDns := "true"
+
+	initDescription := "init description"
+	initDnsName := "abc.xyz"
+
+	updatedDescription := "init description"
+	updatedDnsName := "bcd.xyz"
+
+	resource.Test(t, resource.TestCase{
+		CheckDestroy: func(s *terraform.State) error {
+			_, exists := s.RootModule().Resources[resourceName]
+			if exists {
+				return fmt.Errorf("resource destroy failed")
+			}
+			return nil
+		},
+		ProtoV6ProviderFactories: service.GetTestAccProtoV6ProviderFactories(),
+		Steps: []resource.TestStep{
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, initDescription, initDnsName, dependence.vpcID, dependence.subnetID, dependence.ecsID, initServiceCharge, initForceEnableDns, initEndpointPort, initWhitelistEmail),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
+					resource.TestCheckResourceAttr(resourceName, "service_charge", initServiceCharge),
+					resource.TestCheckResourceAttr(resourceName, "force_enable_dns", initForceEnableDns),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config: utils.LoadTestCase(resourceFile, rnd, initName, updatedDescription, updatedDnsName, dependence.vpcID, dependence.subnetID, dependence.ecsID, initServiceCharge, initForceEnableDns, initEndpointPort, initWhitelistEmail),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr(resourceName, "name", initName),
+					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
+					resource.TestCheckResourceAttr(resourceName, "service_charge", initServiceCharge),
+					resource.TestCheckResourceAttr(resourceName, "force_enable_dns", initForceEnableDns),
+					resource.TestCheckResourceAttrSet(resourceName, "id"),
+				),
+			},
+			{
+				Config:  utils.LoadTestCase(resourceFile, rnd, initName, updatedDescription, updatedDnsName, dependence.vpcID, dependence.subnetID, dependence.ecsID, initServiceCharge, initForceEnableDns, initEndpointPort, initWhitelistEmail),
+				Destroy: true,
+			},
+		},
+	})
+}

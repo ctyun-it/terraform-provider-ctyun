@@ -53,3 +53,7 @@ func TestAccBatchEcs(t *testing.T) {
 func TestAccRegion(t *testing.T) {
 	runTest(t)
 }
+
+func TestAccAIScript(t *testing.T) {
+	runTest(t)
+}

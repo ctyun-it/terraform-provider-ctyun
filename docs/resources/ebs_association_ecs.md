@@ -4,7 +4,7 @@ page_title: "CTYUN: ctyun_ebs_association_ecs"
 ---
 
 # ctyun_ebs_association_ecs (Resource)
--> 管理云硬盘和云主机的绑定关系
+-> 管理云硬盘和云主机的绑定关系（已废弃，请使用ctyun_ecs_data_volume进行绑定）
 
 
 

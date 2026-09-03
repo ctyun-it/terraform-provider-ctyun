@@ -2,8 +2,9 @@ package ctvpc
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtvpcUpdateNatGatewayAttributeApi
@@ -46,11 +47,15 @@ func (a *CtvpcUpdateNatGatewayAttributeApi) Do(ctx context.Context, credential c
 }
 
 type CtvpcUpdateNatGatewayAttributeRequest struct {
-	RegionID     string  `json:"regionID,omitempty"`     /*  NAT网关所在的地域ID。  */
-	NatGatewayID string  `json:"natGatewayID,omitempty"` /*  要修改的NAT网关的ID。  */
-	Name         *string `json:"name,omitempty"`         /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
-	Description  *string `json:"description,omitempty"`  /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
-	ClientToken  string  `json:"clientToken,omitempty"`  /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	RegionID          string  `json:"regionID,omitempty"`     /*  NAT网关所在的地域ID。  */
+	NatGatewayID      string  `json:"natGatewayID,omitempty"` /*  要修改的NAT网关的ID。  */
+	Name              *string `json:"name,omitempty"`         /*  支持拉丁字母、中文、数字，下划线，连字符，中文 / 英文字母开头，不能以 http: / https: 开头，长度 2 - 32  */
+	Description       *string `json:"description,omitempty"`  /*  支持拉丁字母、中文、数字, 特殊字符：~!@#$%^&*()_-+= <>?:{},./;'[]·~！@#￥%……&*（） —— -+={}\《》？：“”【】、；‘'，。、，不能以 http: / https: 开头，长度 0 - 128  */
+	ClientToken       string  `json:"clientToken,omitempty"`  /*  客户端存根，用于保证订单幂等性, 长度 1 - 64  */
+	TcpExpireTime     int32   `json:"tcpExpireTime,omitempty"`
+	UdpExpireTime     int32   `json:"udpExpireTime"`
+	IcmpExpireTime    int32   `json:"icmpExpireTime"`
+	TcpDelayCloseTime int32   `json:"tcpDelayCloseTime"`
 }
 
 type CtvpcUpdateNatGatewayAttributeResponse struct {

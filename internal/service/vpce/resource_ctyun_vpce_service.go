@@ -9,6 +9,7 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
 	planmodifier2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
@@ -19,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/setplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -51,13 +53,19 @@ func (c *ctyunVpceService) Metadata(_ context.Context, request resource.Metadata
 type CtyunVpceServiceConfig struct {
 	ID             types.String `tfsdk:"id"`
 	RegionID       types.String `tfsdk:"region_id"`
+	ProjectID      types.String `tfsdk:"project_id"`
 	VpcID          types.String `tfsdk:"vpc_id"`
 	Type           types.String `tfsdk:"type"`
 	Name           types.String `tfsdk:"name"`
+	Description    types.String `tfsdk:"description"`
 	InstanceType   types.String `tfsdk:"instance_type"`
 	InstanceID     types.String `tfsdk:"instance_id"`
 	SubnetID       types.String `tfsdk:"subnet_id"`
 	AutoConnection types.Bool   `tfsdk:"auto_connection"`
+	ServiceCharge  types.Bool   `tfsdk:"service_charge"`
+	DnsName        types.String `tfsdk:"dns_name"`
+	ForceEnableDns types.Bool   `tfsdk:"force_enable_dns"`
+	OaType         types.String `tfsdk:"oa_type"`
 	Rules          types.Set    `tfsdk:"rules"`
 	WhitelistEmail types.Set    `tfsdk:"whitelist_email"`
 	CreateTime     types.String `tfsdk:"create_time"`
@@ -95,6 +103,18 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
 			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					planmodifier2.Project(),
+				},
+				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
+			},
 			"vpc_id": schema.StringAttribute{
 				Required:    true,
 				Description: "虚拟私有云ID",
@@ -121,6 +141,17 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Validators: []validator.String{
 					stringvalidator.UTF8LengthBetween(2, 32),
 					stringvalidator.RegexMatches(regexp.MustCompile("^[a-zA-Z\\x{4e00}-\\x{9fa5}][0-9a-zA-Z_\\x{4e00}-\\x{9fa5}-]+$"), "终端节点服务名称不符合规则"),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "终端节点服务描述，长度0-128，支持更新",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtMost(128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"instance_type": schema.StringAttribute{
@@ -165,6 +196,43 @@ func (c *ctyunVpceService) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"auto_connection": schema.BoolAttribute{
 				Required:    true,
 				Description: "是否自动连接，true表示自动链接，false表示非自动链接，支持更新",
+			},
+			"service_charge": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否开启服务计费，不可修改",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+					boolplanmodifier.RequiresReplaceIfConfigured(),
+				},
+			},
+			"dns_name": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "DNS名称，支持更新",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"force_enable_dns": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否强制开启DNS，true:开启，false:关闭，默认关闭，不可修改",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+					boolplanmodifier.RequiresReplaceIfConfigured(),
+				},
+			},
+			"oa_type": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "OA类型，支持: tcp_option/proxy_protocol/close，仅支持有权限的用户修改，支持更新",
+				Validators: []validator.String{
+					stringvalidator.OneOf("tcp_option", "proxy_protocol", "close"),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"whitelist_email": schema.SetAttribute{
 				ElementType: types.StringType,
@@ -358,6 +426,10 @@ func (c *ctyunVpceService) Update(ctx context.Context, request resource.UpdateRe
 		state.SubnetID = plan.SubnetID
 		response.Diagnostics.AddWarning("subnet_id的更新仅写入状态文件", "在import时，状态文件中subnet_id为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
+	if !plan.ServiceCharge.IsUnknown() && !plan.ServiceCharge.IsNull() && state.ServiceCharge.IsNull() {
+		state.ServiceCharge = plan.ServiceCharge
+		response.Diagnostics.AddWarning("service_charge的更新仅写入状态文件", "在import时，状态文件中service_charge为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 
@@ -441,6 +513,18 @@ func (c *ctyunVpceService) create(ctx context.Context, plan CtyunVpceServiceConf
 		InstanceID:     plan.InstanceID.ValueStringPointer(),
 		SubnetID:       plan.SubnetID.ValueStringPointer(),
 		AutoConnection: plan.AutoConnection.ValueBool(),
+		ServiceCharge:  plan.ServiceCharge.ValueBoolPointer(),
+		ForceEnableDns: plan.ForceEnableDns.ValueBoolPointer(),
+		ProjectID:      plan.ProjectID.ValueStringPointer(),
+	}
+	if plan.Description.ValueString() != "" {
+		params.Description = plan.Description.ValueStringPointer()
+	}
+	if plan.DnsName.ValueString() != "" {
+		params.DnsName = plan.DnsName.ValueStringPointer()
+	}
+	if plan.OaType.ValueString() != "" {
+		params.OaType = plan.OaType.ValueStringPointer()
 	}
 
 	err = c.calcRule(ctx, &plan)
@@ -515,6 +599,16 @@ func (c *ctyunVpceService) getAndMerge(ctx context.Context, plan *CtyunVpceServi
 	plan.Name = utils.SecStringValue(endpointService.Name)
 	plan.Type = utils.SecStringValue(endpointService.RawType)
 	plan.AutoConnection = utils.SecBoolValue(endpointService.AutoConnection)
+	plan.Description = utils.SecStringValue(endpointService.Description)
+	plan.DnsName = utils.SecStringValue(endpointService.DnsName)
+	plan.ForceEnableDns = utils.SecBoolValue(endpointService.ForceEnableDns)
+	plan.ProjectID = utils.SecStringValue(endpointService.ProjectID)
+	if plan.OaType.IsUnknown() || plan.OaType.IsNull() {
+		plan.OaType = types.StringNull()
+	}
+	if plan.ServiceCharge.IsUnknown() || plan.ServiceCharge.IsNull() {
+		plan.ServiceCharge = types.BoolNull()
+	}
 	plan.CreateTime = utils.SecStringValue(endpointService.CreatedAt)
 	plan.UpdateTime = utils.SecStringValue(endpointService.UpdatedAt)
 	if len(endpointService.Backends) != 0 {
@@ -547,6 +641,15 @@ func (c *ctyunVpceService) update(ctx context.Context, plan, state CtyunVpceServ
 		EndpointServiceID: endpointServiceID,
 		Name:              plan.Name.ValueStringPointer(),
 		AutoConnection:    plan.AutoConnection.ValueBoolPointer(),
+	}
+	if !plan.Description.Equal(state.Description) {
+		params.Description = plan.Description.ValueStringPointer()
+	}
+	if !plan.DnsName.Equal(state.DnsName) {
+		params.DnsName = plan.DnsName.ValueStringPointer()
+	}
+	if !plan.OaType.Equal(state.OaType) && plan.OaType.ValueString() != "" {
+		params.OaType = plan.OaType.ValueStringPointer()
 	}
 
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcModifyEndpointServiceApi.Do(ctx, c.meta.SdkCredential, params)

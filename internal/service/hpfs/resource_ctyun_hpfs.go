@@ -150,19 +150,18 @@ func (c *CtyunHpfs) Schema(ctx context.Context, request resource.SchemaRequest, 
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
 				Description: "订购时长，该参数当且仅当在cycle_type为month时填写，支持传递1-36，暂不支持",
+				PlanModifiers: []planmodifier.Int32{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt32(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					int32validator.Between(1, 36),
-				},
-				PlanModifiers: []planmodifier.Int32{
-					int32planmodifier.RequiresReplace(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -389,7 +388,9 @@ func (c *CtyunHpfs) Update(ctx context.Context, request resource.UpdateRequest, 
 	if err != nil {
 		return
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 	if response.Diagnostics.HasError() {
 		return

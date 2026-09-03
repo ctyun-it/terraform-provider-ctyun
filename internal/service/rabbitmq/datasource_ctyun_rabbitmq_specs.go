@@ -259,6 +259,9 @@ func (c *ctyunRabbitmqSpecs) Read(ctx context.Context, request datasource.ReadRe
 					CpuArch:  types.StringValue(r.CpuArch),
 					HostType: types.StringValue(r.HostType),
 				}
+				if len(r.Spec) == 0 {
+					continue
+				}
 				for _, sp := range r.Spec {
 					spItem := CtyunRabbitmqSpecsSkuResItemResItemsSpec{
 						SpecName:    types.StringValue(sp.SpecName),

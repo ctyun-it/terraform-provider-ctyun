@@ -2,11 +2,12 @@ package nat_test
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/service"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-	"testing"
 )
 
 func TestAccNewCtyunNatResource(t *testing.T) {
@@ -32,6 +33,16 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 	updatedName := utils.GenerateRandomString()
 	updatedDescription := utils.GenerateRandomString()
 
+	tcpExpireTime := 10800
+	udpExpireTime := 10800
+	icmpExpireTime := 800
+	tcpDelayCloseTime := 5
+
+	tcpExpireTimeUpdate := 1080
+	udpExpireTimeUpdate := 1080
+	icmpExpireTimeUpdate := 80
+	tcpDelayCloseTimeUpdate := 50
+
 	resource.Test(t, resource.TestCase{
 		CheckDestroy: func(s *terraform.State) error {
 			_, exists := s.RootModule().Resources[resourceName]
@@ -45,7 +56,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			// 1.resource create验证, cycle_type=按需
 			// 1.1 Create验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, onDemandCycleType, ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, onDemandCycleType, "", tcpExpireTime, udpExpireTime, icmpExpireTime, tcpDelayCloseTime),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
@@ -62,7 +73,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			},
 			// 1.2 resource update验证，更新nat name和description
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, updatedName, updatedDescription, onDemandCycleType, ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, updatedName, updatedDescription, onDemandCycleType, "", tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
@@ -71,7 +82,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			},
 			// 1.3 resource nat 变配验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, updatedSpec, updatedName, updatedDescription, onDemandCycleType, ""),
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, updatedSpec, updatedName, updatedDescription, onDemandCycleType, "", tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "name", updatedName),
 					resource.TestCheckResourceAttr(resourceName, "description", updatedDescription),
@@ -81,7 +92,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			},
 			// 1.4 datasource验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, updatedSpec, updatedName, updatedDescription, onDemandCycleType, "") +
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, updatedSpec, updatedName, updatedDescription, onDemandCycleType, "", tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate) +
 					utils.LoadTestCase(datasourceFile, dnd, fmt.Sprintf(`nat_gateway_id=%s.nat_gateway_id`, resourceName)),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					//resource.TestCheckResourceAttr(datasourceName, "nats.#", "1"),
@@ -118,13 +129,13 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			},
 			// 1.5  销毁
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, updatedName, updatedDescription, onDemandCycleType, ""),
+				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, updatedName, updatedDescription, onDemandCycleType, "", tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Destroy: true,
 			},
 			// 2 cycle_type = month类型
 			// 2.1 Create验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, monthCycleType, cycleCount),
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, monthCycleType, cycleCount, tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
@@ -154,13 +165,13 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			//},
 			// 销毁
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, monthCycleType, cycleCount),
+				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, monthCycleType, cycleCount, tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Destroy: true,
 			},
 			// 3 cycle_type = year类型
 			// 3.1 Create验证
 			{
-				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, yearCycleType, cycleCount),
+				Config: utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, yearCycleType, cycleCount, tcpExpireTimeUpdate, udpExpireTimeUpdate, icmpExpireTimeUpdate, tcpDelayCloseTimeUpdate),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr(resourceName, "description", initDescription),
 					resource.TestCheckResourceAttr(resourceName, "name", initName),
@@ -171,7 +182,7 @@ func TestAccNewCtyunNatResource(t *testing.T) {
 			},
 			// 销毁
 			{
-				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, yearCycleType, cycleCount),
+				Config:  utils.LoadTestCase(resourceFile, rnd, vpcId, spec, initName, initDescription, yearCycleType, cycleCount, tcpExpireTime, udpExpireTime, icmpExpireTime, tcpDelayCloseTime),
 				Destroy: true,
 			},
 		},

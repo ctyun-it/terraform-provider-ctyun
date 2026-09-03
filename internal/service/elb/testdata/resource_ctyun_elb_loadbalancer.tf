@@ -8,5 +8,6 @@ resource "ctyun_elb_loadbalancer" "%[1]s" {
   %[8]s
   %[9]s
   %[10]s
+  delete_protection = %[11]t
 }
 

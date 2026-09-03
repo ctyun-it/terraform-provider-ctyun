@@ -312,10 +312,6 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
 					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
-					),
 					int32validator.OneOf(1, 2, 3, 5, 6, 7, 12, 24, 36),
 				},
 			},
@@ -329,14 +325,11 @@ func (c *ctyunKafkaInstance) Schema(_ context.Context, _ resource.SchemaRequest,
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
 				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写",
-				Validators: []validator.Bool{
-					validator2.ConflictsWithEqualBool(
+				PlanModifiers: []planmodifier.Bool{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
-				},
-				PlanModifiers: []planmodifier.Bool{
-					explanmodifier.NullIgnoreBool(),
 				},
 			},
 			"auto_renew_cycle_count": schema.Int32Attribute{
@@ -474,6 +467,7 @@ func (c *ctyunKafkaInstance) Update(ctx context.Context, request resource.Update
 	if err != nil {
 		return
 	}
+	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
@@ -486,6 +480,9 @@ func (c *ctyunKafkaInstance) Update(ctx context.Context, request resource.Update
 	if !plan.AutoRenewCycleCount.IsUnknown() && !plan.AutoRenewCycleCount.IsNull() && state.AutoRenewCycleCount.IsNull() {
 		state.AutoRenewCycleCount = plan.AutoRenewCycleCount
 		response.Diagnostics.AddWarning("auto_renew_cycle_count的更新仅写入状态文件", "在import时，状态文件中auto_renew_cycle_count为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
+	}
+	if plan.CycleType.ValueString() == business.OnDemandCycleType {
+		state.AutoRenew = plan.AutoRenew
 	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
@@ -982,7 +979,6 @@ func (c *ctyunKafkaInstance) updateCycle(ctx context.Context, plan CtyunKafkaIns
 	} else {
 		err = c.transChargeType(ctx, plan, *state)
 	}
-	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	return
 }
 

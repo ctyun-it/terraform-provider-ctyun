@@ -2,8 +2,9 @@ package ctelb
 
 import (
 	"context"
-	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 	"net/http"
+
+	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/core"
 )
 
 // CtelbShowLoadBalancerApi
@@ -76,12 +77,13 @@ type CtelbShowLoadBalancerReturnObjResponse struct {
 	SlaName          string                                           `json:"slaName,omitempty"`          /*  规格名称  */
 	EipInfo          []*CtelbShowLoadBalancerReturnObjEipInfoResponse `json:"eipInfo"`                    /*  弹性公网IP信息  */
 	DeleteProtection *bool                                            `json:"deleteProtection"`           /*  删除保护。开启，不开启  */
-	AdminStatus      string                                           `json:"adminStatus,omitempty"`      /*  管理状态: DOWN / ACTIVE  */
-	Status           string                                           `json:"status,omitempty"`           /*  负载均衡状态: DOWN / ACTIVE  */
-	ResourceType     string                                           `json:"resourceType,omitempty"`     /*  负载均衡类型: external / internal  */
-	CreatedTime      string                                           `json:"createdTime,omitempty"`      /*  创建时间，为UTC格式  */
-	UpdatedTime      string                                           `json:"updatedTime,omitempty"`      /*  更新时间，为UTC格式  */
-	ExpiredTime      string                                           `json:"expiredTime,omitempty"`      /*  到期时间，为UTC格式  */
+	GWEnabled        int32                                            `json:"GWEnabled"`
+	AdminStatus      string                                           `json:"adminStatus,omitempty"`  /*  管理状态: DOWN / ACTIVE  */
+	Status           string                                           `json:"status,omitempty"`       /*  负载均衡状态: DOWN / ACTIVE  */
+	ResourceType     string                                           `json:"resourceType,omitempty"` /*  负载均衡类型: external / internal  */
+	CreatedTime      string                                           `json:"createdTime,omitempty"`  /*  创建时间，为UTC格式  */
+	UpdatedTime      string                                           `json:"updatedTime,omitempty"`  /*  更新时间，为UTC格式  */
+	ExpiredTime      string                                           `json:"expiredTime,omitempty"`  /*  到期时间，为UTC格式  */
 }
 
 type CtelbShowLoadBalancerReturnObjEipInfoResponse struct {

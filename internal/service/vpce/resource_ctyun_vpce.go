@@ -9,6 +9,8 @@ import (
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/core/ctvpc"
 	terraform_extend "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	defaults2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/defaults"
+	explanmodifier "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/planmodifier"
 	validator2 "github.com/ctyun-it/terraform-provider-ctyun/internal/extend/terraform/validator"
 	"github.com/ctyun-it/terraform-provider-ctyun/internal/utils"
 	"github.com/google/uuid"
@@ -17,6 +19,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -51,10 +54,14 @@ type CtyunVpceConfig struct {
 	MasterOrderID     types.String `tfsdk:"master_order_id"`
 	EndpointServiceID types.String `tfsdk:"endpoint_service_id"`
 	RegionID          types.String `tfsdk:"region_id"`
+	ProjectID         types.String `tfsdk:"project_id"`
 	VpcID             types.String `tfsdk:"vpc_id"`
 	Name              types.String `tfsdk:"name"`
 	SubnetID          types.String `tfsdk:"subnet_id"`
 	SubnetIP          types.String `tfsdk:"subnet_ip"`
+	Description       types.String `tfsdk:"description"`
+	DeleteProtection  types.Bool   `tfsdk:"delete_protection"`
+	EnableDns         types.Bool   `tfsdk:"enable_dns"`
 	WhitelistFlag     types.Bool   `tfsdk:"whitelist_flag"`
 	WhitelistCidr     types.Set    `tfsdk:"whitelist_cidr"`
 	Status            types.Int32  `tfsdk:"status"`
@@ -91,6 +98,18 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 					stringvalidator.UTF8LengthAtLeast(1),
 				},
 				Default: defaults.AcquireFromGlobalString(common.ExtraRegionId, true),
+			},
+			"project_id": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "企业项目ID，如果不填则默认使用provider ctyun中的project_id或环境变量中的CTYUN_PROJECT_ID",
+				PlanModifiers: []planmodifier.String{
+					explanmodifier.Project(),
+				},
+				Default: defaults2.AcquireFromGlobalString(common.ExtraProjectId, false),
+				Validators: []validator.String{
+					validator2.Project(),
+				},
 			},
 			"endpoint_service_id": schema.StringAttribute{
 				Required:    true,
@@ -132,6 +151,33 @@ func (c *ctyunVpce) Schema(_ context.Context, _ resource.SchemaRequest, response
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplaceIfConfigured(),
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"description": schema.StringAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "终端节点描述，长度0-128，支持更新",
+				Validators: []validator.String{
+					stringvalidator.UTF8LengthAtMost(128),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"delete_protection": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否开启删除保护，true:开启，false:关闭，默认关闭，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"enable_dns": schema.BoolAttribute{
+				Optional:    true,
+				Computed:    true,
+				Description: "是否开启DNS，true:开启，false:关闭，支持更新",
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"name": schema.StringAttribute{
@@ -364,8 +410,36 @@ func (c *ctyunVpce) loopCreate(ctx context.Context, plan CtyunVpceConfig) (maste
 	return
 }
 
+// checkEnableDns 当 enableDns=true 时，查询终端节点服务详情，检查 dnsName 不为空
+func (c *ctyunVpce) checkEnableDns(ctx context.Context, regionID, endpointServiceID string) (err error) {
+	params := &ctvpc.CtvpcShowEndpointServiceRequest{
+		RegionID:          regionID,
+		EndpointServiceID: endpointServiceID,
+	}
+	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcShowEndpointServiceApi.Do(ctx, c.meta.SdkCredential, params)
+	if err != nil {
+		return
+	} else if resp.StatusCode == common.ErrorStatusCode {
+		err = fmt.Errorf("API return error. Message: %s Description: %s", utils.SecString(resp.Message), utils.SecString(resp.Description))
+		return
+	} else if resp.ReturnObj == nil {
+		err = common.InvalidReturnObjError
+		return
+	}
+	if utils.SecString(resp.ReturnObj.DnsName) == "" {
+		err = fmt.Errorf("终端节点服务 %s 未配置 dnsName，无法开启 DNS", endpointServiceID)
+	}
+	return
+}
+
 // create 创建
 func (c *ctyunVpce) create(ctx context.Context, clientToken string, plan CtyunVpceConfig) (masterOrderID, endpointID string, err error) {
+	if plan.EnableDns.ValueBool() {
+		err = c.checkEnableDns(ctx, plan.RegionID.ValueString(), plan.EndpointServiceID.ValueString())
+		if err != nil {
+			return
+		}
+	}
 	params := &ctvpc.CtvpcCreateEndpointRequest{
 		ClientToken:       clientToken,
 		RegionID:          plan.RegionID.ValueString(),
@@ -374,6 +448,10 @@ func (c *ctyunVpce) create(ctx context.Context, clientToken string, plan CtyunVp
 		EndpointName:      plan.Name.ValueString(),
 		EndpointServiceID: plan.EndpointServiceID.ValueString(),
 		CycleType:         "on_demand",
+		Description:       plan.Description.ValueStringPointer(),
+		DeleteProtection:  plan.DeleteProtection.ValueBoolPointer(),
+		EnableDns:         plan.EnableDns.ValueBoolPointer(),
+		ProjectID:         plan.ProjectID.ValueStringPointer(),
 	}
 	WhitelistFlag := plan.WhitelistFlag.ValueBool()
 	if WhitelistFlag {
@@ -429,9 +507,10 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	plan.Name = utils.SecStringValue(endpoint.Name)
 	plan.EndpointServiceID = utils.SecStringValue(endpoint.EndpointServiceID)
 	plan.Status = types.Int32Value(endpoint.Status)
+	plan.Description = utils.SecStringValue(endpoint.Description)
 	plan.CreateTime = types.StringValue(utils.SecString(endpoint.CreatedTime))
 	plan.UpdateTime = types.StringValue(utils.SecString(endpoint.UpdatedTime))
-
+	plan.ProjectID = types.StringValue(utils.SecString(endpoint.ProjectID))
 	Whitelist := utils.SecString(endpoint.Whitelist)
 	if len(Whitelist) > 0 {
 		t := strings.Split(Whitelist, ",")
@@ -445,6 +524,8 @@ func (c *ctyunVpce) getAndMerge(ctx context.Context, plan *CtyunVpceConfig) (err
 	if endpoint.EndpointObj != nil {
 		plan.SubnetID = utils.SecStringValue(endpoint.EndpointObj.SubnetID)
 		plan.SubnetIP = utils.SecStringValue(endpoint.EndpointObj.Ip)
+		plan.DeleteProtection = types.BoolValue(utils.SecInt32(endpoint.EndpointObj.DeleteProtection) == 1)
+		plan.EnableDns = types.BoolValue(utils.SecInt32(endpoint.EndpointObj.EnableDns) == 1)
 	}
 
 	return
@@ -481,6 +562,21 @@ func (c *ctyunVpce) update(ctx context.Context, plan, state CtyunVpceConfig) (er
 		params.EnableWhitelist = &flag
 	}
 
+	if !plan.Description.Equal(state.Description) {
+		params.Description = plan.Description.ValueStringPointer()
+	}
+	if !plan.DeleteProtection.Equal(state.DeleteProtection) {
+		params.DeleteProtection = plan.DeleteProtection.ValueBoolPointer()
+	}
+	if !plan.EnableDns.Equal(state.EnableDns) {
+		if plan.EnableDns.ValueBool() {
+			err = c.checkEnableDns(ctx, regionID, plan.EndpointServiceID.ValueString())
+			if err != nil {
+				return
+			}
+		}
+		params.EnableDns = plan.EnableDns.ValueBoolPointer()
+	}
 	resp, err := c.meta.Apis.SdkCtVpcApis.CtvpcUpdateEndpointApi.Do(ctx, c.meta.SdkCredential, params)
 	if err != nil {
 		return

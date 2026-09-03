@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/int32planmodifier"
 	"regexp"
 	"strconv"
 	"strings"
@@ -24,7 +25,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -138,15 +138,30 @@ func (c *ctyunRocketmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"auto_renew": schema.BoolAttribute{
 				Optional:    true,
-				Computed:    true,
-				Default:     booldefault.StaticBool(false),
-				Description: "是否自动续订，仅在 cycle_type 为 month 时生效。默认不自动续订",
+				Description: "是否自动续订，默认非自动续订，当cycle_type不等于on_demand时才可填写",
+				PlanModifiers: []planmodifier.Bool{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsBool(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 			},
 			"auto_renew_cycle_count": schema.Int32Attribute{
 				Optional:    true,
-				Description: "自动续订周期时长（单位：月），仅在 auto_renew 为 true 时必填。取值范围：1,2,3,4,5,6,12,24,36",
+				Description: "自动续订时长，单位月，支持1, 2, 3, 5, 6, 7, 12, 24, 36",
 				Validators: []validator.Int32{
-					int32validator.OneOf(1, 2, 3, 4, 5, 6, 12, 24, 36),
+					validator2.AlsoRequiresEqualInt32(
+						path.MatchRoot("auto_renew"),
+						types.BoolValue(true),
+					),
+					validator2.ConflictsWithEqualInt32(
+						path.MatchRoot("auto_renew"),
+						types.BoolValue(false),
+					),
+					int32validator.OneOf(1, 2, 3, 5, 6, 7, 12, 24, 36),
+				},
+				PlanModifiers: []planmodifier.Int32{
+					int32planmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"node_num": schema.Int32Attribute{
@@ -221,22 +236,27 @@ func (c *ctyunRocketmqInstance) Schema(_ context.Context, _ resource.SchemaReque
 			},
 			"cycle_type": schema.StringAttribute{
 				Required:    true,
-				Description: "订购周期类型，取值范围：month：按月，on_demand：按需，支持更新。当此值为month时，cycle_count为必填",
+				Description: "订购周期类型，取值范围：month：按月，on_demand：按需。当此值为month时，cycle_count为必填",
 				Validators: []validator.String{
 					stringvalidator.OneOf(business.OrderCycleTypeMonth, business.OrderCycleTypeOnDemand),
+				},
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"cycle_count": schema.Int32Attribute{
 				Optional:    true,
 				Description: "订购时长，该参数在 cycle_type 为 month 时才生效，当 cycle_type=month，支持传递 1、2、3、4、5、6、12、24、36，从按需变为包周期时支持更新",
+				PlanModifiers: []planmodifier.Int32{
+					explanmodifier.RequiresReplaceUnlessDependencyEqualsInt32(
+						path.MatchRoot("cycle_type"),
+						types.StringValue(business.OrderCycleTypeOnDemand),
+					),
+				},
 				Validators: []validator.Int32{
 					validator2.AlsoRequiresEqualInt32(
 						path.MatchRoot("cycle_type"),
 						types.StringValue(business.OrderCycleTypeMonth),
-					),
-					validator2.ConflictsWithEqualInt32(
-						path.MatchRoot("cycle_type"),
-						types.StringValue(business.OrderCycleTypeOnDemand),
 					),
 					int32validator.OneOf(1, 2, 3, 4, 5, 6, 12, 24, 36),
 				},
@@ -351,7 +371,6 @@ func (c *ctyunRocketmqInstance) Update(ctx context.Context, request resource.Upd
 	if err != nil {
 		return
 	}
-	state.CycleType, state.CycleCount = plan.CycleType, plan.CycleCount
 	// 查询远端信息
 	err = c.getAndMerge(ctx, &state)
 	if err != nil {
@@ -362,7 +381,10 @@ func (c *ctyunRocketmqInstance) Update(ctx context.Context, request resource.Upd
 		state.ZoneList = plan.ZoneList
 		response.Diagnostics.AddWarning("zone_list的更新仅写入状态文件", "在import时，状态文件中zone_list为null，允许用模板中的值进行一次更新，该更新不触发远程调用")
 	}
-
+	if plan.CycleType.ValueString() == business.OrderCycleTypeOnDemand {
+		state.CycleCount = plan.CycleCount
+		state.AutoRenew = plan.AutoRenew
+	}
 	response.Diagnostics.Append(response.State.Set(ctx, &state)...)
 }
 

@@ -1,0 +1,32 @@
+release-note:enhancement
+resource\ctyun_sdwan: fix returnObj deserialization failure caused by type change from object to array
+
+release-note:enhancement
+optimize cycle_type, cycle_count and auto_renew linkage, allow on_demand mode fields without triggering replace or validation conflict
+
+release-note:enhancement
+resource\ctyun_elb_target_group: improve field description
+
+release-note:enhancement
+resource\ctyun_eip: add new fields
+
+release-note:enhancement
+resource\ctyun_elb_loadbalancer: add new fields
+
+release-note:enhancement
+resource\ctyun_nat: add new fields
+
+release-note:enhancement
+resource\ctyun_vpce_service: add new fields
+
+release-note:enhancement
+resource\ctyun_vpce: add new fields
+
+release-note:enhancement
+resource\ctyun_ecs,ctyun_ebm,ctyun_ebs: disk type field support case-insensitive
+
+release-note:bug
+resource\ctyun_rabbitmq_instance: fix resource stack deletion failure when provider state is inconsistent
+
+release-note:bug
+resource\ctyun_eip: fix resource deletion not synced

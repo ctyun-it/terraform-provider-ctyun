@@ -3,7 +3,7 @@ output "vpc_id" {
 }
 
 output "subnet_id" {
-  value =  ctyun_subnet.subnet_test.id
+  value = ctyun_subnet.subnet_test.id
 }
 
 output "security_group_id" {
@@ -43,7 +43,7 @@ output "instance_account_name" {
   value = ctyun_redis_account.test_instance1_account.name
 }
 output "instance_account_pswd" {
-  value = ctyun_redis_account.test_instance1_account.password
+  value     = ctyun_redis_account.test_instance1_account.password
   sensitive = true
 }
 
@@ -52,6 +52,6 @@ output "instance2_account_name" {
 }
 
 output "instance2_account_pswd" {
-  value = ctyun_redis_account.test_instance2_account.password
+  value     = ctyun_redis_account.test_instance2_account.password
   sensitive = true
 }
