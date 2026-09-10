@@ -159,10 +159,7 @@ func (c *ctyunEcs) Schema(_ context.Context, _ resource.SchemaRequest, response 
 					sdkPlanmodifier.EbsDiskTypeNormalize(business.EbsDiskTypeMap.FromOriginalScene, business.EbsDiskTypeMapScene1),
 				},
 				Validators: []validator.String{
-					stringvalidator.Any(
-						stringvalidator.OneOf(business.EbsDiskTypes...),
-						stringvalidator.OneOf(business.EbsDiskTypesUpper...),
-					),
+					stringvalidator.OneOf(business.EbsDiskTypesUpper...),
 				},
 			},
 			"system_disk_size": schema.Int64Attribute{

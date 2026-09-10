@@ -278,10 +278,7 @@ func (c *ctyunEbm) Schema(_ context.Context, _ resource.SchemaRequest, response 
 				Optional:    true,
 				Description: "系统盘类型，SATA：普通IO，SAS：高IO，SSD：超高IO",
 				Validators: []validator.String{
-					stringvalidator.Any(
-						stringvalidator.OneOf(business.EbmDiskTypes...),
-						stringvalidator.OneOf(business.EbmDiskTypesUpper...),
-					),
+					stringvalidator.OneOf(business.EbmDiskTypesUpper...),
 					stringvalidator.ConflictsWith(path.MatchRoot("system_volume_raid_uuid")),
 					stringvalidator.AlsoRequires(path.MatchRoot("system_disk_size")),
 				},

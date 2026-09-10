@@ -20,7 +20,7 @@ output "ctyun_ecs_instances_test" {
   value = data.ctyun_ecs_instances.test
 }
 # 执行云助手命令（Shell类型）
-resource "ctyun_cloud_assistant_run_command" test {
+resource "ctyun_cloud_assistant_run_command" "test" {
   instance_ids    = data.ctyun_ecs_instances.test.instances[0].id
   command_name    = "hello_terraform"
   command_type    = "shell"

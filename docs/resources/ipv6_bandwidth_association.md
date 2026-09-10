@@ -25,7 +25,7 @@ provider "ctyun" {
 
 resource "ctyun_ipv6_bandwidth_association" "test" {
   ipv6_bandwidth_id = "ipv6-bandwidth-3"
-  ipv6 = 3
+  ipv6              = "2001:0db8:0000:0000:0000:0000:0000:0001"
 }
 ```
 

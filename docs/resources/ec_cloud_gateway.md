@@ -29,13 +29,11 @@ resource "ctyun_express_connect" "example" {
 
 }
 
-
-resource "ctyun_ec_cloud_gateway" "example" {
+resource "ctyun_ec_cloud_gateway" "cloud_gateway_hgh7" {
   ec_id       = ctyun_express_connect.example.id
-  name        = "example"
-  description = "云间高速example专用"
-  region_id   = "200000003329"
-  region_name = "cn-zj-hgh7-1a-public-ctcloud"
+  name        = "cloud_gateway_hgh7"
+  description = "云间高速开发测试专用"
+  region_name = "南昌5"
 }
 ```
 
