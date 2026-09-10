@@ -14,6 +14,6 @@ provider "ctyun" {
 resource "ctyun_ebs_backup_repo" "test" {
   name =  "tf-test-ctyun_ebs_backup_repo"
   size = 100
-  cycle_count = "5"
+  cycle_count = 5
   cycle_type  = "month"
 }

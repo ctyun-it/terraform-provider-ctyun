@@ -136,10 +136,6 @@ func (c *CtyunElbTargetGroup) Schema(ctx context.Context, request resource.Schem
 				Default:     int32default.StaticInt32(0),
 				Validators: []validator.Int32{
 					int32validator.Between(0, 1),
-					validator2.AlsoRequiresEqualInt32(
-						path.MatchRoot("protocol"),
-						types.StringValue(business.ListenerProtocolTCP),
-					),
 				},
 			},
 			"project_id": schema.StringAttribute{

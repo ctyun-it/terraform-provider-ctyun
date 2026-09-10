@@ -69,7 +69,7 @@ resource "ctyun_image_from_ecs" "data_disk" {
   instance_id = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
 
   # 必选参数：数据盘ID（需挂载于指定云主机）
-  data_disk_id = "ae432721-61bf-45b7-b207-7e3256c1c2d6"
+  data_disk_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 
   # 可选参数：企业项目ID（默认0，即default项目）
   project_id = "0"

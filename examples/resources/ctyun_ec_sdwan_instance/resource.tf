@@ -19,7 +19,6 @@ resource "ctyun_ec_cloud_gateway" "example" {
   ec_id       = ctyun_express_connect.example.id
   name        = "cloud_gateway_xinan1"
   description = "云间高速开发测试专用"
-  region_id   = "200000002368"
   region_name = "西南1"
 }
 
